@@ -1,0 +1,1284 @@
+{
+  "count": 142, 
+  "results": [
+    {
+      "id": 1, 
+      "date": "2018-04-13", 
+      "su_limit_hrs": 1566761, 
+      "percent_informed": false, 
+      "account": "pliu", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 2, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 3506000, 
+      "percent_informed": false, 
+      "account": "kjordan", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 3, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 500000, 
+      "percent_informed": false, 
+      "account": "ghutchison", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 4, 
+      "date": "2018-04-13", 
+      "su_limit_hrs": 2196370, 
+      "percent_informed": false, 
+      "account": "lchong", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 5, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rcoalson", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 6, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dwaldeck", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 7, 
+      "date": "2018-04-13", 
+      "su_limit_hrs": 3556000, 
+      "percent_informed": false, 
+      "account": "kjohnson", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 8, 
+      "date": "2018-04-30", 
+      "su_limit_hrs": 1220000, 
+      "percent_informed": false, 
+      "account": "jdurrant", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 9, 
+      "date": "2018-04-30", 
+      "su_limit_hrs": 775000, 
+      "percent_informed": false, 
+      "account": "jvandegeest", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 10, 
+      "date": "2018-03-02", 
+      "su_limit_hrs": 3514093, 
+      "percent_informed": false, 
+      "account": "gmpourmpakis", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 11, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 1565054, 
+      "percent_informed": false, 
+      "account": "jkeith", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 12, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 1800000, 
+      "percent_informed": false, 
+      "account": "pgivi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 13, 
+      "date": "2018-01-09", 
+      "su_limit_hrs": 1875000, 
+      "percent_informed": false, 
+      "account": "cwilmer", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 14, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 477000, 
+      "percent_informed": false, 
+      "account": "dlambrecht", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 15, 
+      "date": "2018-04-13", 
+      "su_limit_hrs": 816000, 
+      "percent_informed": false, 
+      "account": "dzuckerman", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 16, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "hwa", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 17, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "jmccarthy", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 18, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mburton", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 19, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mganapathiraju", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 20, 
+      "date": "2017-11-03", 
+      "su_limit_hrs": -1, 
+      "percent_informed": false, 
+      "account": "sam", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 21, 
+      "date": "2017-04-07", 
+      "su_limit_hrs": -1, 
+      "percent_informed": false, 
+      "account": "root", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 22, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "pleu", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 23, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "pmunro", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 24, 
+      "date": "2018-04-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "isigal", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 25, 
+      "date": "2018-04-13", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "bermentrout", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 26, 
+      "date": "2018-07-13", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "pwipf", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 27, 
+      "date": "2018-05-05", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "djiang", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 28, 
+      "date": "2018-05-10", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "wchoyke", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 29, 
+      "date": "2018-05-20", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "lis2678-2017s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 30, 
+      "date": "2017-12-18", 
+      "su_limit_hrs": 2850000, 
+      "percent_informed": false, 
+      "account": "gwang", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 31, 
+      "date": "2018-07-06", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "nclark", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 32, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": false, 
+      "account": "salbanesi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 33, 
+      "date": "2018-07-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "sadowsky", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 34, 
+      "date": "2018-07-11", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "anaimi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 35, 
+      "date": "2018-05-01", 
+      "su_limit_hrs": 200000, 
+      "percent_informed": false, 
+      "account": "rmelhem", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 36, 
+      "date": "2017-11-06", 
+      "su_limit_hrs": 1299951, 
+      "percent_informed": true, 
+      "account": "walsaidi", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 37, 
+      "date": "2018-07-11", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "sperlman", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 38, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 940000, 
+      "percent_informed": false, 
+      "account": "abalazs", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 39, 
+      "date": "2018-07-05", 
+      "su_limit_hrs": 1500000, 
+      "percent_informed": false, 
+      "account": "slee", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 41, 
+      "date": "2018-07-19", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "nmiskov-zivanov", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 42, 
+      "date": "2018-07-21", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "abunger", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 43, 
+      "date": "2018-07-22", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mchikina", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 44, 
+      "date": "2018-07-26", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "ssaxena", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 45, 
+      "date": "2017-07-26", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "isenocak", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 46, 
+      "date": "2017-07-27", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dpekker", 
+      "limit_informed": true, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 47, 
+      "date": "2018-06-14", 
+      "su_limit_hrs": 12000, 
+      "percent_informed": false, 
+      "account": "gkitamura", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 48, 
+      "date": "2017-08-29", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": false, 
+      "account": "mbedewy", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 49, 
+      "date": "2017-08-10", 
+      "su_limit_hrs": 30000, 
+      "percent_informed": false, 
+      "account": "rkrafty", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 51, 
+      "date": "2018-02-13", 
+      "su_limit_hrs": 330000, 
+      "percent_informed": false, 
+      "account": "mcolaresi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 52, 
+      "date": "2017-09-06", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "hhochheiser", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 53, 
+      "date": "2017-09-11", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "chem1000-2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 55, 
+      "date": "2017-09-13", 
+      "su_limit_hrs": 35000, 
+      "percent_informed": false, 
+      "account": "hdaqing", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 56, 
+      "date": "2017-09-13", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "aeljaroudi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 57, 
+      "date": "2017-09-15", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "nsharma", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 58, 
+      "date": "2017-10-10", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "hhuang", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 59, 
+      "date": "2017-09-21", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": true, 
+      "account": "junyang", 
+      "limit_informed": true, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 60, 
+      "date": "2017-09-25", 
+      "su_limit_hrs": 60000, 
+      "percent_informed": false, 
+      "account": "workshops", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 64, 
+      "date": "2017-09-28", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": true, 
+      "account": "asher", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 65, 
+      "date": "2017-09-29", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "sdickerson", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 66, 
+      "date": "2017-10-05", 
+      "su_limit_hrs": 20000, 
+      "percent_informed": false, 
+      "account": "jmillstone", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 67, 
+      "date": "2017-10-07", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "hbabaee", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 68, 
+      "date": "2017-10-09", 
+      "su_limit_hrs": 60000, 
+      "percent_informed": false, 
+      "account": "cs1645-2017s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 69, 
+      "date": "2017-10-10", 
+      "su_limit_hrs": 1000000, 
+      "percent_informed": false, 
+      "account": "hban", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 70, 
+      "date": "2017-12-21", 
+      "su_limit_hrs": 875000, 
+      "percent_informed": false, 
+      "account": "mbarry", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 71, 
+      "date": "2017-10-25", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "jgillespie", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 72, 
+      "date": "2017-12-21", 
+      "su_limit_hrs": 300000, 
+      "percent_informed": true, 
+      "account": "lwang", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 73, 
+      "date": "2017-10-31", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rsingh", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 74, 
+      "date": "2017-11-01", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "wlayton", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 75, 
+      "date": "2017-11-02", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "nhan", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 76, 
+      "date": "2017-11-02", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "ling1340-2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 77, 
+      "date": "2017-11-02", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "phys1321-2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 78, 
+      "date": "2017-11-02", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "bigriggm", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 79, 
+      "date": "2017-11-07", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rhwa", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 80, 
+      "date": "2017-11-10", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": true, 
+      "account": "bioeng2370_2017f", 
+      "limit_informed": true, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 81, 
+      "date": "2017-11-10", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": false, 
+      "account": "biosc1540-2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 82, 
+      "date": "2017-11-10", 
+      "su_limit_hrs": 75000, 
+      "percent_informed": false, 
+      "account": "cs3580_2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 83, 
+      "date": "2017-11-10", 
+      "su_limit_hrs": 75000, 
+      "percent_informed": false, 
+      "account": "ece2195_2017f", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 84, 
+      "date": "2017-11-15", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "chorn", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 85, 
+      "date": "2017-12-04", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "tashman", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 86, 
+      "date": "2018-01-29", 
+      "su_limit_hrs": 84000, 
+      "percent_informed": true, 
+      "account": "jwang", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 87, 
+      "date": "2017-12-14", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dcole", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 88, 
+      "date": "2017-12-20", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "tbenos", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 89, 
+      "date": "2017-12-21", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dtaylor", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 90, 
+      "date": "2018-01-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "kkoide", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 91, 
+      "date": "2018-01-09", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dkoes", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 92, 
+      "date": "2018-01-09", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": true, 
+      "account": "jvries", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 93, 
+      "date": "2018-01-09", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "lmentch", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 94, 
+      "date": "2018-01-09", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "ece2195_2018s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 95, 
+      "date": "2018-01-12", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "shur", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 96, 
+      "date": "2018-01-12", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rnarayanasamy", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 97, 
+      "date": "2018-01-16", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "biosc1540_2018s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 98, 
+      "date": "2018-01-19", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "bandrews", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 99, 
+      "date": "2018-01-22", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "bmis2526_2018s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 100, 
+      "date": "2018-01-22", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dcoen", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 101, 
+      "date": "2018-01-23", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "hpetek", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 102, 
+      "date": "2018-01-25", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "xliang", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 103, 
+      "date": "2018-01-25", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mwood-vasey", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 104, 
+      "date": "2018-01-30", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "wxiong", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 105, 
+      "date": "2018-01-30", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "slyengar", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 106, 
+      "date": "2018-01-30", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": false, 
+      "account": "webmo", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 107, 
+      "date": "2018-02-06", 
+      "su_limit_hrs": 100000, 
+      "percent_informed": false, 
+      "account": "pyling", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 108, 
+      "date": "2018-02-07", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "tibrahim", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 109, 
+      "date": "2018-02-07", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "sgarrettroe", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 110, 
+      "date": "2018-02-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "jhanson", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 111, 
+      "date": "2018-02-12", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "tmylovanov", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 112, 
+      "date": "2018-02-14", 
+      "su_limit_hrs": 80000, 
+      "percent_informed": false, 
+      "account": "cs2770_s2018", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 113, 
+      "date": "2018-02-16", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "kehuichen", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 114, 
+      "date": "2018-02-16", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mth", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 115, 
+      "date": "2018-03-05", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "azentner", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 116, 
+      "date": "2018-03-06", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "jkitzes", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 117, 
+      "date": "2018-03-06", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dlitman", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 118, 
+      "date": "2018-03-08", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dewing", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 119, 
+      "date": "2018-03-21", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "whcdh", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 120, 
+      "date": "2018-03-21", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "yurulin", 
+      "limit_informed": false, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 121, 
+      "date": "2018-03-27", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "huiliu", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 122, 
+      "date": "2018-03-30", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "acarvunis", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 123, 
+      "date": "2018-04-03", 
+      "su_limit_hrs": 30000, 
+      "percent_informed": false, 
+      "account": "agronenborn", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 124, 
+      "date": "2018-04-04", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "amanelis", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 125, 
+      "date": "2018-04-09", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "infsci2140-2018s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 126, 
+      "date": "2018-04-09", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "math1103-2018s", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 127, 
+      "date": "2018-04-10", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "wchen", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 128, 
+      "date": "2018-04-10", 
+      "su_limit_hrs": 220000, 
+      "percent_informed": true, 
+      "account": "cbadenes", 
+      "limit_informed": true, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 129, 
+      "date": "2018-04-16", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "crunyan", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 130, 
+      "date": "2018-04-16", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "dhanley", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 131, 
+      "date": "2018-04-30", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "aberesteanu", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 132, 
+      "date": "2018-05-02", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mripoll", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 134, 
+      "date": "2018-05-14", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "LIS2678-su18", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 135, 
+      "date": "2018-05-14", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "lis2678-2018su", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 136, 
+      "date": "2018-05-15", 
+      "su_limit_hrs": 40000, 
+      "percent_informed": false, 
+      "account": "pbrusilovsky", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 137, 
+      "date": "2018-05-15", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "maklin", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 138, 
+      "date": "2018-05-18", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "eshelef", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 139, 
+      "date": "2018-05-18", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rwalsh", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 140, 
+      "date": "2018-05-25", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": true, 
+      "account": "pmenon", 
+      "limit_informed": true, 
+      "half_percent_informed": true
+    }, 
+    {
+      "id": 141, 
+      "date": "2018-05-26", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "ckammerer", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 142, 
+      "date": "2018-05-26", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "mstephens", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 143, 
+      "date": "2018-06-07", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "jlevy", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 144, 
+      "date": "2018-06-14", 
+      "su_limit_hrs": 30000, 
+      "percent_informed": false, 
+      "account": "cssd", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 145, 
+      "date": "2018-06-22", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "rmong", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 146, 
+      "date": "2018-07-03", 
+      "su_limit_hrs": 50000, 
+      "percent_informed": false, 
+      "account": "westpa_2018S", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 147, 
+      "date": "2018-07-11", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "ajones", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 148, 
+      "date": "2018-07-16", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "lborghesi", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }, 
+    {
+      "id": 149, 
+      "date": "2018-07-17", 
+      "su_limit_hrs": 10000, 
+      "percent_informed": false, 
+      "account": "gchalasani", 
+      "limit_informed": false, 
+      "half_percent_informed": false
+    }
+  ], 
+  "meta": {}
+}
