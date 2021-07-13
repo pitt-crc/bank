@@ -56,9 +56,10 @@ three_month_proposal_expiry_notification_email = """\
 To Whom It May Concern,<br><br>
 This email has been generated automatically because your proposal for account
 {} on H2P will expire in 90 days on {}. The one year allocation started on {}. 
-Once your proposal expires, your data will be saved but you will be unable to
-access H2P until you submit a new proposal or request a supplemental
-allocation. To do so, please visit
+Once your proposal expires, you will still be able to login and retrieve your 
+data but will be unable to run new compute jobs until you submit a new proposal
+or request a supplemental allocation.
+To do so, please visit
 https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
 Thanks,<br><br>
 The CRC Proposal Bot
@@ -76,9 +77,10 @@ proposal_expires_notification_email = """\
 <p>
 To Whom It May Concern,<br><br>
 This email has been generated automatically because your proposal for account
-{} on H2P has expired. The one year allocation started on {}. Your data has been 
-saved but you will be unable to access H2P until you submit a new proposal or 
-request a supplemental allocation. To do so, please visit
+{} on H2P has expired. The one year allocation started on {}. You will still be
+able to login and retrieve your data but will be unable to run new compute jobs
+until you submit a new proposal or request a supplemental allocation. 
+To do so, please visit
 https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
 Thanks,<br><br>
 The CRC Proposal Bot
