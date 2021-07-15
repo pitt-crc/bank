@@ -23,9 +23,9 @@ email_suffix = "@pitt.edu"
 #   account: The account name
 #   start: The start date of the proposal
 #   expire: The end date of the proposal
-#   usage: Summary of the proposal's SU usage
+#   usage: Tabular summary of the proposal's service unit usage
 #   perc: Usage percentage threshold that triggered the message being sent
-#   investment_status: Tabular summary of the user's current investment
+#   investment: Tabular summary of user's current usage on invested machines
 
 # An email to send when you have exceeded a proposal threshold (25%, 50%, 75%, 90%)
 notify_sus_limit_email_text = """\
@@ -44,7 +44,7 @@ Your usage is printed below:<br>
 </pre>
 Investment status (if applicable):<br>
 <pre>
-{investment_status}
+{investment}
 </pre>
 Thanks,<br><br>
 The CRC Proposal Bot

@@ -270,7 +270,7 @@ def notify_sus_limit(account):
         expire=proposal_row["end_date"].strftime(date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
-        investment_status=get_investment_status(account)
+        investment=get_investment_status(account)
     )
 
     send_email(email_html, account)
@@ -307,7 +307,7 @@ def three_month_proposal_expiry_notification(account):
         expire=proposal_row["end_date"].strftime(date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
-        investment_status=get_investment_status(account)
+        investment=get_investment_status(account)
     )
 
     send_email(email_html, account)
@@ -322,7 +322,7 @@ def proposal_expires_notification(account):
         expire=proposal_row["end_date"].strftime(date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
-        investment_status=get_investment_status(account)
+        investment=get_investment_status(account)
     )
 
     send_email(email_html, account)
