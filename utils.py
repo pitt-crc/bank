@@ -264,14 +264,13 @@ def get_investment_status(account):
 
 def notify_sus_limit(account):
     proposal_row = proposal_table.find_one(account=account)
-
-    investment_s = get_investment_status(account)
-
     email_html = notify_sus_limit_email_text.format(
-        PercentNotified(proposal_row["percent_notified"]).to_percentage(),
-        proposal_row["start_date"].strftime(date_format),
-        usage_string(account),
-        investment_s,
+        account=account,
+        start=proposal_row["start_date"].strftime(date_format),
+        expire=proposal_row["end_date"].strftime(date_format),
+        usage=usage_string(account),
+        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        investment_status=get_investment_status(account)
     )
 
     send_email(email_html, account)
@@ -303,9 +302,12 @@ def three_month_proposal_expiry_notification(account):
     proposal_row = proposal_table.find_one(account=account)
 
     email_html = three_month_proposal_expiry_notification_email.format(
-        account,
-        proposal_row["end_date"].strftime(date_format),
-        proposal_row["start_date"].strftime(date_format),
+        account=account,
+        start=proposal_row["start_date"].strftime(date_format),
+        expire=proposal_row["end_date"].strftime(date_format),
+        usage=usage_string(account),
+        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        investment_status=get_investment_status(account)
     )
 
     send_email(email_html, account)
@@ -315,9 +317,12 @@ def proposal_expires_notification(account):
     proposal_row = proposal_table.find_one(account=account)
 
     email_html = proposal_expires_notification_email.format(
-        account,
-        proposal_row["end_date"].strftime(date_format),
-        proposal_row["start_date"].strftime(date_format),
+        account=account,
+        start=proposal_row["start_date"].strftime(date_format),
+        expire=proposal_row["end_date"].strftime(date_format),
+        usage=usage_string(account),
+        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        investment_status=get_investment_status(account)
     )
 
     send_email(email_html, account)
