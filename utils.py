@@ -11,6 +11,7 @@ from email.message import EmailMessage
 from bs4 import BeautifulSoup
 from constants import (
     CLUSTERS,
+    log_file_path
     proposal_table,
     investor_table,
     date_format,
@@ -101,7 +102,7 @@ def account_exists_in_table(table, account):
 
 
 def log_action(s):
-    with open("/ihome/crc/bank/logs/crc_bank.log", "a+") as f:
+    with log_file_path.open("a+") as f:
         f.write(f"{datetime.now()}: {s}\n")
 
 
