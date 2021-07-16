@@ -6,7 +6,6 @@ from enum import Enum
 from io import StringIO
 import csv
 from math import floor
-from pathlib import Path
 from smtplib import SMTP
 from email.message import EmailMessage
 from bs4 import BeautifulSoup
