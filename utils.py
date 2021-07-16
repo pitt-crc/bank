@@ -11,7 +11,7 @@ from email.message import EmailMessage
 from bs4 import BeautifulSoup
 from constants import (
     CLUSTERS,
-    log_file_path
+    log_file_path,
     proposal_table,
     investor_table,
     date_format,
