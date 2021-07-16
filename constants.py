@@ -1,8 +1,8 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+from pathlib import Path
 import dataset
 
 # define log file path as path object and check that parent directory exists
-from pathlib import Path
 working_dir=Path(__file__).resolve().parent
 log_file_path=working_dir/'logs'/'crc_bank.log'
 log_file_path.parent.mkdir(exists_ok=True)
