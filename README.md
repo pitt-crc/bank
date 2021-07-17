@@ -19,16 +19,15 @@ TODO
 
 # Why?
 
-The Slurm association based limits didn't provide enough power for our group's
-needs.  I saw a few other banking systems, but the last commits were at least a
-year old. I thought it would be best just to write something quickly and see if
-it was of interest to the community. I don't claim this model will work for
-everyone, but it is the model we chose.
+The Slurm association based limits may not provide enough power for certain groups'
+needs.  Other banking systems tended to be outdated–their last commits being at least a
+year old. This code is written in hopes that it will prove valuable to the community. 
+This model may not work for everyone.
 
 # How?
 
-Using the existing associations in your Slurm database, we use the "RawUsage"
-from `sshare` to monitor service units (CPU hours) on the cluster. From the documentation:
+Using the existing associations in your Slurm database, "RawUsage"
+from `sshare` is utilized to monitor service units (CPU hours) on the cluster. From the documentation:
 
 ``` text
 Raw Usage
@@ -59,7 +58,7 @@ two limits:
    to use?
 2. A data limit: How long does the proposal last?
 
-In our department, we allow for single year proposals and a default of 10,000 
+Our department allows for single year proposals and a default of 10,000 
 service units.
 
 # Prerequisites
@@ -69,7 +68,7 @@ service units.
       people"
     - [docopt](http://docopt.org): "command line arguments parser, that will
       make you smile"
-- Slurm: I am using 17.11.7, but I imagine most of the queries should work for
+- Slurm: 17.11.7 is recommended, but most of the queries should work for
   older, and newer, versions.
 - SMTP: A working SMTP server to send emails via `smtplib` in python.
 
@@ -88,7 +87,7 @@ sacctmgr list account
 ```
 
 The script pulls the description and turns it into an email address to notify
-users. I like to remove `@<email.com>` ending, but you don't have too. To do
+users. Removing the `@<email.com>` can be done but is not necessary. To do
 this for existing accounts (if you are unsure):
 
 ``` bash
@@ -99,9 +98,10 @@ sacctmgr update account where account=barrymoo set description="<email>"
 
 If you have multiple Slurm clusters, this tool was designed to provide a single
 bank account for all of them. Obviously, you can modify the script to enforce
-them separately or use multiple versions. Typically, when I add an account I
-define all of the clusters explicitly (we have some clusters which their is
-no enforcement).
+them separately or use multiple versions. It is recommended to explicitly define
+all available clusters (especially if you have some clusters for which there is 
+no banking enforcement),
+
 
 ``` bash
 sacctmgr add account barrymoo description="<email>" cluster=<cluster/s>
@@ -109,9 +109,9 @@ sacctmgr add account barrymoo description="<email>" cluster=<cluster/s>
 
 ## Charging
 
-We use a MAX(CPU, Memory, GPU) charging scheme (`PriorityFlags=MAX_TRES`). For each
-cluster, we define `DefMemPerCPU=<RAM in Mb> / <cores per node>` (choosing lowest
-value on each cluster). Then:
+Our group uses a MAX(CPU, Memory, GPU) charging scheme (`PriorityFlags=MAX_TRES`). For each
+cluster, `DefMemPerCPU=<RAM in Mb> / <cores per node>` (choosing lowest
+value on each cluster) is defined. Then:
 - CPU Only Node: `TresBillingWeights="CPU=1.0,Mem=<value>G"` where `<value> = 1
   / (DefMemPerCPU / 1024)`
 - GPU Node: `TresBillingWeights="CPU=0.0,Mem=0.0G,GRES/gpu=1.0"`
