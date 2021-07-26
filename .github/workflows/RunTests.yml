@@ -21,6 +21,9 @@ jobs:
       - name: Run tests
         run: ./run_tests.sh
         shell: bash
+        env:
+          CRC_BANK_DB: ./test.db
+          CRC_TEST: true
         
         
 
