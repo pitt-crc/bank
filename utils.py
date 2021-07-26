@@ -1,27 +1,30 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
-from subprocess import Popen, PIPE
-from shlex import split
-from datetime import datetime, timedelta, date
+
+import csv
+import json
+from datetime import date, datetime, timedelta
+from email.message import EmailMessage
 from enum import Enum
 from io import StringIO
-import csv
 from math import floor
+from shlex import split
 from smtplib import SMTP
-from email.message import EmailMessage
+from subprocess import PIPE, Popen
+
+import datafreeze
 from bs4 import BeautifulSoup
+
 from constants import (
     CLUSTERS,
-    log_file_path,
-    proposal_table,
-    investor_table,
     date_format,
     email_suffix,
+    investor_table,
+    log_file_path,
     notify_sus_limit_email_text,
-    three_month_proposal_expiry_notification_email,
     proposal_expires_notification_email,
+    proposal_table,
+    three_month_proposal_expiry_notification_email
 )
-import datafreeze
-import json
 
 
 def run_command(cmd):

@@ -12,10 +12,11 @@ Options:
     -c --contribution <percent>     The percent contributed to general queue [default: 80]
 """
 
+from functools import reduce
 
 from docopt import docopt
-from functools import reduce
-from utils import unwrap_if_right, Left, Right
+
+from utils import Left, Right, unwrap_if_right
 from utils import check_service_units_valid as check_natural_number
 
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+
 import dataset
-from copy import copy
-import utils
 import pandas as pd
+
+import utils
 
 CLUSTERS = ["smp", "mpi", "gpu", "htc"]
 
@@ -20,13 +21,14 @@ for idx, entry in enumerate(entries):
     except IndexError:
         print(entry["account"])
 
-    build_dict = {}
-    build_dict["start_date"] = entry["date"]
-    build_dict["smp"] = int(row["SMP"])
-    build_dict["mpi"] = int(row["MPI"])
-    build_dict["gpu"] = int(row["GPU"])
-    build_dict["htc"] = int(row["HTC"])
-    build_dict["account"] = entry["account"]
+    build_dict = {
+        "start_date": entry["date"],
+        "smp": int(row["SMP"]),
+        "mpi": int(row["MPI"]),
+        "gpu": int(row["GPU"]),
+        "htc": int(row["HTC"]),
+        "account": entry["account"]
+    }
 
     # Determine percent_notified currently
     used_sus_per_cluster = {c: 0 for c in CLUSTERS}
