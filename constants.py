@@ -1,30 +1,26 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+"""Configuration file for the CRC bank monitoring system"""
 
 from pathlib import Path
 
 import dataset
+import environ
 
-# define log file path as path object and check that parent directory exists
-working_dir = Path(__file__).resolve().parent
-log_file_path = working_dir / 'logs' / 'crc_bank.log'
-log_file_path.parent.mkdir(exist_ok=True)
+# -- System information ------------------------------------------------------
+
+# Where to write log files to
+parent_dir = Path(__file__).resolve().parent
+log_file_path = parent_dir / 'logs' / 'crc_bank.log'  # Path to the log file
+
+# Path to the application SQLite database (must be an absolute path)
+db_path = f"sqlite:///{parent_dir / 'test.db'}"
 
 # This should contain a list of clusters you want to track usage on
 CLUSTERS = ["smp", "mpi", "gpu", "htc"]
 
-# When running the tests, uncomment the test.db line
-db = dataset.connect("sqlite:////ihome/crc/bank/crc_bank.db")
-# db = dataset.connect("sqlite:///test.db")
+# -- Email notification Settings ---------------------------------------------
 
-# None of these need to change
-proposal_table = db["proposal"]
-investor_table = db["investor"]
-investor_archive_table = db["investor_archive"]
-proposal_archive_table = db["proposal_archive"]
-date_format = "%m/%d/%y"
-
-# The email suffix for your organization
-# We assume the Description field of sacctmgr for the account contains the prefix
+# The email suffix for your organization. We assume the ``Description`` field
+# of each account in ``sacctmgr`` contains the prefix.
 email_suffix = "@pitt.edu"
 
 # The email templates below accept the following formatting fields:
@@ -43,8 +39,8 @@ notify_sus_limit_email_text = """\
 <p>
 To Whom It May Concern,<br><br>
 This email has been generated automatically because your account on H2P has
-exceeded {perc}% usage. The one year allocation started on {start}. You can request a
-supplemental allocation at
+exceeded {perc}% usage. The one year allocation started on {start}. You can 
+request a supplemental allocation at
 https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
 Your usage is printed below:<br>
 <pre>
@@ -101,3 +97,19 @@ The CRC Proposal Bot
 </body>
 </html>
 """
+
+# DO NOT CHANGE BELOW THIS LINE
+# -----------------------------
+env = environ.Env()
+db_path = env.str('CRC_BANK_DB', default=db_path)
+clusters = env.list('CRC_BANK_CLUSTERS', default=CLUSTERS)
+log_file_path = env.str('CRC_BANK_LOG', default=log_file_path)
+
+db = dataset.connect(db_path)
+proposal_table = db["proposal"]
+investor_table = db["investor"]
+investor_archive_table = db["investor_archive"]
+proposal_archive_table = db["proposal_archive"]
+date_format = "%m/%d/%y"
+
+Path(log_file_path).parent.mkdir(exist_ok=True)

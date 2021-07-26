@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 
-rm test.db proposal.json investor.json proposal_archive.json investor_archive.json
+# Clean up after test suite
+clean() {
+  test.db proposal.json investor.json proposal_archive.json investor_archive.json 2>/dev/null
+}
 
-if [ $(grep -c "^db = dataset.connect(\"sqlite:///crc_bank.db\")" constants.py) -eq 0 ]; then
-    sudo sacctmgr -i modify account where account=sam cluster=smp,gpu,mpi,htc set rawusage=0
+if [ "$CRC_TEST" = 'true' ]; then
+    #sudo sacctmgr -i modify account where account=sam cluster=smp,gpu,mpi,htc set rawusage=0
     for bat in $(ls tests/*.bats); do
         echo "====== BEGIN $bat ======"
         bats $bat
         if [ $? -ne 0 ]; then
+            clean
             exit
         fi
         echo "======  END $bat  ======"
     done
 else
-    echo "ERROR: please modify \`db = ...\` in \`constants.py\` to work on a test database!"
+    echo "CRC_TEST must be set to 'true' in working env to run tests."
+    echo "This is to protect accidental overwrite of the operational database."
 fi
+
+clean
