@@ -641,7 +641,7 @@ elif args["import_investor"]:
 
 elif args["release_hold"]:
     if geteuid() != 0:
-        exit("ERROR: `release_hold` should be run with sudo privelages")
+        exit("ERROR: `release_hold` should be run with sudo privileges")
 
     # Account must exist in database
     _ = utils.unwrap_if_right(
@@ -665,7 +665,7 @@ elif args["alloc_sus"]:
 
 elif args["reset_raw_usage"]:
     if geteuid() != 0:
-        exit("ERROR: `reset_raw_usage` should be run with sudo privelages")
+        exit("ERROR: `reset_raw_usage` should be run with sudo privileges")
 
     # Account must exist in database
     _ = utils.unwrap_if_right(
@@ -685,7 +685,7 @@ elif args["find_unlocked"]:
 
 elif args["lock_with_notification"]:
     if geteuid() != 0:
-        exit("ERROR: `lock_with_notification` should be run with sudo privelages")
+        exit("ERROR: `lock_with_notification` should be run with sudo privileges")
 
     # Account must exist in database
     _ = utils.unwrap_if_right(
