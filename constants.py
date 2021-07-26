@@ -1,10 +1,12 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+
 from pathlib import Path
+
 import dataset
 
 # define log file path as path object and check that parent directory exists
-working_dir=Path(__file__).resolve().parent
-log_file_path=working_dir/'logs'/'crc_bank.log'
+working_dir = Path(__file__).resolve().parent
+log_file_path = working_dir / 'logs' / 'crc_bank.log'
 log_file_path.parent.mkdir(exist_ok=True)
 
 # This should contain a list of clusters you want to track usage on
