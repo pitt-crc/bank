@@ -1,5 +1,6 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
 """ crc_bank.py -- Deal with crc_bank.db
+
 Usage:
     crc_bank.py insert <type> <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
     crc_bank.py modify <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
@@ -53,27 +54,18 @@ Additional Documentation:
     crc_bank.py renewal # Similar to modify, except rolls over active investments
 """
 
+import json
+from datetime import date, datetime, timedelta
+from math import ceil
+from os import geteuid
+from pathlib import Path
 
 from docopt import docopt
-from datetime import date, timedelta, datetime
-import utils
-import json
-from math import ceil
-from pathlib import Path
-from constants import (
-    CLUSTERS,
-    proposal_table,
-    investor_table,
-    proposal_archive_table,
-    investor_archive_table,
-)
-from copy import copy
-from io import StringIO
-from os import geteuid
 
+import utils
+from constants import (CLUSTERS, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
 
 args = docopt(__doc__, version="crc_bank.py version 0.0.1")
-
 
 if args["insert"]:
     # Account shouldn't exist in the proposal table already
