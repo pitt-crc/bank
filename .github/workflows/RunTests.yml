@@ -18,8 +18,8 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: Run run_tests
-        run: run_tests.sh
+      - name: Run tests
+        run: ./run_tests.sh
         shell: bash
         
         
