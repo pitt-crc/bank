@@ -12,18 +12,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Load Modules
+        run: |
+          module purge
+          module load bats
+
       - uses: actions/checkout@v2
+
       - name: Run tests
         run: ./run_tests.sh
         shell: bash
         env:
           CRC_BANK_DB: ./test.db
           CRC_TEST: true
-        
-        
-
