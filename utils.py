@@ -25,7 +25,7 @@ import json
 
 
 def run_command(cmd):
-    """Opens a pipe that runs the input in a command line environment and returns the output as a string.
+    """Open a pipe that runs the input in a command line environment and return the output as a string.
     
     Args:
         cmd: command to be run in a new pipe
@@ -49,7 +49,7 @@ class Left:
 
 
 def unwrap_if_right(x):
-    """Unwraps input if it belongs to the class 'Right' by returning the attribute 'value.'"""
+    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``."""
     
     if isinstance(x, Left):
         exit(x.reason)
@@ -57,11 +57,16 @@ def unwrap_if_right(x):
 
 
 def check_service_units_valid(units):
-    """If the units are a propper natural number, creates an instance of the service units with
-    the class 'Right,' otherwise raises exception.
+    """Return a proper natural number as a ``Right`` instance
     
     Args:
         units: Actual service units used as a parameter
+
+    Returns:
+        The passed value as an instance of ``Right``
+
+    Raises:
+        ValueError: If the input ``units`` is not a natural number
     """
     
     try:
