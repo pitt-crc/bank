@@ -49,7 +49,7 @@ class Left:
 
 
 def unwrap_if_right(x):
-    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``."""
+    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``. Otherwise, exit and raise exception."""
     
     if isinstance(x, Left):
         exit(x.reason)
