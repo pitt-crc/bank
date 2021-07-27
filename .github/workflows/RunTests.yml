@@ -14,20 +14,23 @@ jobs:
   build:
     runs-on: self-hosted
 
+    # Set default shell options for all run steps
+    defautls:
+      run:
+        shell: bash -leo pipefail {0}
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Load Modules
         run: |
           module purge
           module load bats
-        shell: bash -leo pipefail {0}
 
       - name: Checkout source
         uses: actions/checkout@v2
 
       - name: Run tests
         run: ./run_tests.sh
-        shell: bash
         env:
           CRC_BANK_DB: ./test.db
           CRC_TEST: true
