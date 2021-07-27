@@ -17,7 +17,7 @@ if [ "$CRC_BANK_TEST" = 'true' ]; then
         echo "======  END $bat  ======"
     done
 else
-    echo "$CRC_BANK_TEST must be set to 'true' in working env to run tests."
+    echo "CRC_BANK_TEST must be set to 'true' in working env to run tests."
     echo "This is to protect accidental overwrite of the operational database."
 fi
 
