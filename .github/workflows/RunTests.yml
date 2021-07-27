@@ -25,12 +25,15 @@ jobs:
         run: |
           module purge
           module load bats
+          module list
 
       - name: Checkout source
         uses: actions/checkout@v2
 
       - name: Run tests
-        run: ./run_tests.sh
+        run: |
+          module list
+          ./run_tests.sh
         env:
           CRC_BANK_DB: ./test.db
           CRC_TEST: true
