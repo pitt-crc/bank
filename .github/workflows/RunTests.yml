@@ -15,7 +15,7 @@ jobs:
     runs-on: self-hosted
 
     # Set default shell options for all run steps
-    defautls:
+    defaults:
       run:
         shell: bash -leo pipefail {0}
 
