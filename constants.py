@@ -112,7 +112,7 @@ db_test_path = Path(env.str('CRC_BANK_TEST_DB', default=db_test_path)).resolve()
 if db_path == db_test_path:
     raise RuntimeError('Path to testing and production databases cannot be the same.')
 
-db = dataset.connect(f'sqlite:///{db_test_path}' if is_testing else f'sqlite:///{db_path}')
+db = dataset.connect('sqlite:///{}'.format(db_test_path if is_testing else db_path))
 proposal_table = db["proposal"]
 investor_table = db["investor"]
 investor_archive_table = db["investor_archive"]
