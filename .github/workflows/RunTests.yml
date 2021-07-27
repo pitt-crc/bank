@@ -21,17 +21,13 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Load Modules
-        run: |
-          module purge
-          module load bats
-          module list
-
       - name: Checkout source
         uses: actions/checkout@v2
 
       - name: Run tests
         run: |
+          module purge
+          module load bats
           module list
           ./run_tests.sh
         env:
