@@ -31,4 +31,4 @@ jobs:
           module list
           ./run_tests.sh
         env:
-          CRC_TEST: true
+          $CRC_BANK_TEST: true
