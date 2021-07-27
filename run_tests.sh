@@ -2,10 +2,10 @@
 
 # Clean up after test suite
 clean() {
-  test.db proposal.json investor.json proposal_archive.json investor_archive.json 2>/dev/null
+  data/test.db proposal.json investor.json proposal_archive.json investor_archive.json 2> /dev/null
 }
 
-if [ "$CRC_TEST" = 'true' ]; then
+if [ "$CRC_BANK_TEST" = 'true' ]; then
     #sudo sacctmgr -i modify account where account=sam cluster=smp,gpu,mpi,htc set rawusage=0
     for bat in $(ls tests/*.bats); do
         echo "====== BEGIN $bat ======"
