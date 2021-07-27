@@ -12,8 +12,8 @@ parent_dir = Path(__file__).resolve().parent
 log_file_path = parent_dir / 'logs' / 'crc_bank.log'  # Path to the log file
 
 # Path to the application SQLite database (must be an absolute path)
-db_path = parent_dir / 'data' / 'crc_bank.db'
-db_test_path = parent_dir / 'data' / 'test.db'
+db_path = parent_dir / 'crc_bank.db'
+db_test_path = parent_dir / 'test.db'
 
 # This should contain a list of clusters you want to track usage on
 CLUSTERS = ["smp", "mpi", "gpu", "htc"]
