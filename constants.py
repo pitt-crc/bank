@@ -12,7 +12,8 @@ parent_dir = Path(__file__).resolve().parent
 log_file_path = parent_dir / 'logs' / 'crc_bank.log'  # Path to the log file
 
 # Path to the application SQLite database (must be an absolute path)
-db_path = f"sqlite:///{parent_dir / 'test.db'}"
+db_path = parent_dir / 'crc_bank.db'
+db_test_path = parent_dir / 'test.db'
 
 # This should contain a list of clusters you want to track usage on
 CLUSTERS = ["smp", "mpi", "gpu", "htc"]
@@ -101,11 +102,17 @@ The CRC Proposal Bot
 # DO NOT CHANGE BELOW THIS LINE
 # -----------------------------
 env = environ.Env()
-db_path = env.str('CRC_BANK_DB', default=db_path)
+is_testing = env.bool('CRC_BANK_TEST', default=False)
 clusters = env.list('CRC_BANK_CLUSTERS', default=CLUSTERS)
 log_file_path = env.str('CRC_BANK_LOG', default=log_file_path)
 
-db = dataset.connect(db_path)
+# Make sure the deployment database isn't accidentally overwritten
+db_path = Path(env.str('CRC_BANK_DB', default=db_path)).resolve()
+db_test_path = Path(env.str('CRC_BANK_TEST_DB', default=db_test_path)).resolve()
+if db_path == db_test_path:
+    raise RuntimeError('Path to testing and production databases cannot be the same.')
+
+db = dataset.connect(f'sqlite:///{db_test_path if is_testing else db_path}')
 proposal_table = db["proposal"]
 investor_table = db["investor"]
 investor_archive_table = db["investor_archive"]
