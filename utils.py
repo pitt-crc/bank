@@ -28,6 +28,15 @@ from constants import (
 
 
 def run_command(cmd):
+    """Open a pipe that runs the input in a command line environment and return the output as a string.
+    
+    Args:
+        cmd: command to be run in a new pipe
+        
+    Returns:
+        Decoded utf-8 output and error of the command pipe
+    """
+    
     out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
     return out.decode("utf-8"), err.decode("utf-8")
 
@@ -43,12 +52,26 @@ class Left:
 
 
 def unwrap_if_right(x):
+    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``. Otherwise, exit."""
+    
     if isinstance(x, Left):
         exit(x.reason)
     return x.value
 
 
 def check_service_units_valid(units):
+    """Return a proper natural number as a ``Right`` instance
+    
+    Args:
+        units: Actual service units used as a parameter
+
+    Returns:
+        The passed value as an instance of ``Right``
+
+    Raises:
+        ValueError: If the input ``units`` is not a natural number
+    """
+    
     try:
         result = int(units)
     except ValueError:
