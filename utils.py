@@ -28,15 +28,19 @@ from constants import (
 
 
 def run_command(cmd):
-    """Open a pipe that runs the input in a command line environment and return the output as a string.
-    
+    """Open a pipe that runs the input in a command line environment and return the output
+    as a string. If `echo_mode` is turned on, "echo" is prepended to `cmd` input so that
+    the SLURM command is echoed instead of run.
+     
     Args:
         cmd: command to be run in a new pipe
         
     Returns:
         Decoded utf-8 output and error of the command pipe
     """
-    
+    if (echo_mode==True):
+        echo_str="echo "
+        cmd=echo_str+cmd
     out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
     return out.decode("utf-8"), err.decode("utf-8")
 
