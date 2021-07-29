@@ -38,6 +38,7 @@ def run_command(cmd):
     Returns:
         Decoded utf-8 output and error of the command pipe
     """
+    
     if (echo_mode==True):
         echo_str="echo "
         cmd=echo_str+cmd
