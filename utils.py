@@ -63,7 +63,14 @@ def unwrap_if_right(x):
         exit(x.reason)
     return x.value
 
+def toggle_echo_mode():
+    """Turn `echo_mode` to True if it is False, and False if it True"""
+    echo_mode=not(echo_mode)
+ 
 
+------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    
 def check_service_units_valid(units):
     """Return a proper natural number as a ``Right`` instance
     
