@@ -1,6 +1,5 @@
 #!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
 """ crc_bank.py -- Deal with crc_bank.db
-------------------------------------------------------------------------------------------------------------------------
 Usage:
     crc_bank.py toggle_echo
     crc_bank.py insert <type> <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
@@ -69,13 +68,10 @@ from constants import (CLUSTERS, investor_archive_table, investor_table, proposa
 args = docopt(__doc__, version="crc_bank.py version 0.0.1")
 
 
-elif args["toggle_echo"]:
-    # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+if args["toggle_echo"]:
+    utils.toggle_echo_mode()
 
-if args["insert"]:
+elif args["insert"]:
     # Account shouldn't exist in the proposal table already
     x = utils.account_exists_in_table(proposal_table, args["<account>"])
     if isinstance(x, utils.Right):
