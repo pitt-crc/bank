@@ -26,6 +26,7 @@ from constants import (
     three_month_proposal_expiry_notification_email
 )
 
+echo_mode=False
 
 def run_command(cmd):
     """Open a pipe that runs the input in a command line environment and return the output
@@ -63,12 +64,11 @@ def unwrap_if_right(x):
         exit(x.reason)
     return x.value
 
-def toggle_echo_mode():
-    """Turn `echo_mode` to True if it is False, and False if it True"""
-    echo_mode=not(echo_mode)
- 
 
-------------------------------------------------------------------------------------------------------------------------------------------------------
+def toggle_echo_mode():
+    """Turn `echo_mode` to True if it is False, and to False if it is True"""
+    
+    echo_mode=not(echo_mode)  
     
     
 def check_service_units_valid(units):
