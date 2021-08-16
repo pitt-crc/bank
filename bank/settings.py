@@ -6,6 +6,9 @@ from typing import Any
 import dataset
 from environ.environ import Env
 
+# Appended to all environmental variables used by the parent application
+APP_PREFIX = 'BANK_'
+
 
 class Defaults:
     """Default settings for the parent application"""
@@ -109,14 +112,14 @@ class Defaults:
 class Settings(Defaults):
     """Reflects application settings as set in the working environment"""
 
-    # Appended to all environmental variables used by the parent application
-    app_prefix = 'BANK_'
-
-    def __getattr__(self, item: str) -> Any:
+    def __getattribute__(self, item: str) -> Any:
         default = getattr(super(), item)
-        env_key = self.app_prefix + item.upper()
+        env_key = APP_PREFIX + item.upper()
         return Env().get_value(env_key, cast=type(default), default=default)
 
+
+# Store runtime settings as defined at instantiation
+app_settings = Settings()
 
 db = dataset.connect(f'sqlite:///{Settings.db_test_path if Settings.is_testing else Settings.db_path}')
 proposal_table = db["proposal"]

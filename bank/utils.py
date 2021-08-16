@@ -14,8 +14,8 @@ from subprocess import PIPE, Popen
 import datafreeze
 from bs4 import BeautifulSoup
 
-from .settings import Settings, investor_table, proposal_table
 from .exceptions import CmdError
+from .settings import app_settings, investor_table, proposal_table
 
 
 class ShellCmd:
@@ -89,7 +89,7 @@ def check_service_units_valid(units):
 def check_service_units_valid_clusters(args, greater_than_ten_thousand=True):
     lefts = []
     result = {}
-    for clus in Settings.clusters:
+    for clus in app_settings.clusters:
         try:
             if args[f"--{clus}"]:
                 result[clus] = int(args[f"--{clus}"])
@@ -111,7 +111,7 @@ def check_service_units_valid_clusters(args, greater_than_ten_thousand=True):
 
 def account_and_cluster_associations_exists(account):
     missing = []
-    for cluster in Settings.clusters:
+    for cluster in app_settings.clusters:
         cmd = ShellCmd(
             f"sacctmgr -n show assoc account={account} cluster={cluster} format=account,cluster"
         )
@@ -134,13 +134,13 @@ def account_exists_in_table(table, account):
 
 
 def log_action(s):
-    with Settings.log_path.open('a+') as f:
+    with app_settings.log_path.open('a+') as f:
         f.write(f"{datetime.now()}: {s}\n")
 
 
 def get_usage_for_account(account):
     raw_usage = 0
-    for cluster in Settings.clusters:
+    for cluster in app_settings.clusters:
         cmd = ShellCmd(
             f"sshare --noheader --account={account} --cluster={cluster} --format=RawUsage"
         )
@@ -251,21 +251,21 @@ def get_raw_usage_in_hours(account, cluster):
 
 
 def lock_account(account):
-    clusters = ','.join(Settings.clusters)
+    clusters = ','.join(app_settings.clusters)
     ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=0"
     )
 
 
 def unlock_account(account):
-    clusters = ','.join(Settings.clusters)
+    clusters = ','.join(app_settings.clusters)
     ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=-1"
     )
 
 
 def reset_raw_usage(account):
-    clusters = ','.join(Settings.clusters)
+    clusters = ','.join(app_settings.clusters)
     ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set RawUsage=0"
     )
@@ -291,17 +291,17 @@ def get_investment_status(account):
         current = f"current_sus"
         withdrawn = f"withdrawn_sus"
         rollover = f"rollover_sus"
-        result_s += f"{row['service_units']:20} | {row['start_date'].strftime(Settings.date_format):>10} | {row[current]:11} | {row[withdrawn]:13} | {row[rollover]:12}\n"
+        result_s += f"{row['service_units']:20} | {row['start_date'].strftime(app_settings.date_format):>10} | {row[current]:11} | {row[withdrawn]:13} | {row[rollover]:12}\n"
 
     return result_s
 
 
 def notify_sus_limit(account):
     proposal_row = proposal_table.find_one(account=account)
-    email_html = Settings.notify_sus_limit_email_text.format(
+    email_html = app_settings.notify_sus_limit_email_text.format(
         account=account,
-        start=proposal_row["start_date"].strftime(Settings.date_format),
-        expire=proposal_row["end_date"].strftime(Settings.date_format),
+        start=proposal_row["start_date"].strftime(app_settings.date_format),
+        expire=proposal_row["end_date"].strftime(app_settings.date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
         investment=get_investment_status(account)
@@ -312,7 +312,7 @@ def notify_sus_limit(account):
 
 def get_account_email(account):
     cmd = ShellCmd(f"sacctmgr show account {account} -P format=description -n")
-    return f"{cmd.out}{Settings.email_suffix}"
+    return f"{cmd.out}{app_settings.email_suffix}"
 
 
 def send_email(email_html, account):
@@ -334,10 +334,10 @@ def send_email(email_html, account):
 def three_month_proposal_expiry_notification(account):
     proposal_row = proposal_table.find_one(account=account)
 
-    email_html = Settings.three_month_proposal_expiry_notification_email.format(
+    email_html = app_settings.three_month_proposal_expiry_notification_email.format(
         account=account,
-        start=proposal_row["start_date"].strftime(Settings.date_format),
-        expire=proposal_row["end_date"].strftime(Settings.date_format),
+        start=proposal_row["start_date"].strftime(app_settings.date_format),
+        expire=proposal_row["end_date"].strftime(app_settings.date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
         investment=get_investment_status(account)
@@ -349,10 +349,10 @@ def three_month_proposal_expiry_notification(account):
 def proposal_expires_notification(account):
     proposal_row = proposal_table.find_one(account=account)
 
-    email_html = Settings.proposal_expires_notification_email.format(
+    email_html = app_settings.proposal_expires_notification_email.format(
         account=account,
-        start=proposal_row["start_date"].strftime(Settings.date_format),
-        expire=proposal_row["end_date"].strftime(Settings.date_format),
+        start=proposal_row["start_date"].strftime(app_settings.date_format),
+        expire=proposal_row["end_date"].strftime(app_settings.date_format),
         usage=usage_string(account),
         perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
         investment=get_investment_status(account)
@@ -427,14 +427,14 @@ def freeze_if_not_empty(items, path):
 def usage_string(account):
     proposal = proposal_table.find_one(account=account)
     investments = sum(get_current_investor_sus(account))
-    proposal_total = sum([proposal[c] for c in Settings.clusters])
+    proposal_total = sum([proposal[c] for c in app_settings.clusters])
     aggregate_usage = 0
     with StringIO() as output:
         output.write(f"|{'-' * 82}|\n")
         output.write(
-            f"|{'Proposal End Date':^30}|{proposal['end_date'].strftime(Settings.date_format):^51}|\n"
+            f"|{'Proposal End Date':^30}|{proposal['end_date'].strftime(app_settings.date_format):^51}|\n"
         )
-        for cluster in Settings.clusters:
+        for cluster in app_settings.clusters:
             output.write(f"|{'-' * 82}|\n")
             output.write(
                 f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(proposal[cluster]):^82}|\n"
