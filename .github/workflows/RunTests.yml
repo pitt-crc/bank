@@ -1,34 +1,60 @@
 name: Run Tests
 
 # Controls when the workflow will run
-on: 
+on:
   push:
   pull_request:
-    branches: 
+    branches:
       - '**:**'  # Only run for pull requests submitted from forks
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: self-hosted
+  #  bash_tests:
+  #    runs-on: self-hosted
 
-    # Set default shell options for all run steps
-    defaults:
-      run:
-        shell: bash -leo pipefail {0}
+  #    # Set default shell options for all run steps
+  #    defaults:
+  #      run:
+  #        shell: bash -leo pipefail {0}
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+  #    # Steps represent a sequence of tasks that will be executed as part of the job
+  #    steps:
+  #      - name: Checkout source
+  #        uses: actions/checkout@v2
+
+  #      - name: Run tests
+  #        run: |
+  #          module purge
+  #          module load bats python/3.7.0
+  #          module list
+  #          ./run_tests.sh
+  #        env:
+  #          CRC_BANK_TEST: true
+
+  python_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Run tests
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependencies
         run: |
-          module purge
-          module load bats python/3.7.0
-          module list
-          ./run_tests.sh
-        env:
-          CRC_BANK_TEST: true
+          python -m pip install --upgrade pip
+          pip install coverage
+
+      - name: Run tests with coverage
+        run: |
+          cd tests
+          coverage run --source ../bank -m unittest
+          coverage report
