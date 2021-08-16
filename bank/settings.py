@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Any
 
-import dataset
 from environ.environ import Env
 
 # Appended to all environmental variables used by the parent application
@@ -121,11 +120,4 @@ class Settings(Defaults):
 # Provided a prebuilt ``Settings`` instance as a
 # dedicated entry point to application settings
 app_settings = Settings()
-
-db = dataset.connect(f'sqlite:///{Settings.db_test_path if Settings.is_testing else Settings.db_path}')
-proposal_table = db["proposal"]
-investor_table = db["investor"]
-investor_archive_table = db["investor_archive"]
-proposal_archive_table = db["proposal_archive"]
-
-Path(Settings.log_path).parent.mkdir(exist_ok=True)
+Path(app_settings.log_path).parent.mkdir(exist_ok=True)

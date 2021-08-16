@@ -15,7 +15,8 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
-from .settings import app_settings, investor_table, proposal_table
+from .orm import investor_table, proposal_table
+from .settings import app_settings
 
 
 class ShellCmd:
