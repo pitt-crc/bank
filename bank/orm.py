@@ -1,15 +1,24 @@
 from sqlalchemy import Column, Date, Integer, Text
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
-
-from .settings import app_settings
 
 Base = declarative_base()
 metadata = Base.metadata
 
 
-class Investor(Base):
+class CustomBase:
+    """Extends default behavior of the SQLAlchemy ``Base`` class"""
+
+    def __repr__(self) -> str:
+        # Automatically generate string representation using class attributes
+
+        attr_text = (f'{key}={val}' for key, val in self.__dict__.items() if not key.startswith('_'))
+        return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
+
+
+class Investor(Base, CustomBase):
     __tablename__ = 'investor'
 
     id = Column(Integer, primary_key=True)
@@ -23,7 +32,7 @@ class Investor(Base):
     rollover_sus = Column(Integer)
 
 
-class InvestorArchive(Base):
+class InvestorArchive(Base, CustomBase):
     __tablename__ = 'investor_archive'
 
     id = Column(Integer, primary_key=True)
@@ -37,7 +46,7 @@ class InvestorArchive(Base):
     investor_id = Column(Integer)
 
 
-class Proposal(Base):
+class Proposal(Base, CustomBase):
     __tablename__ = 'proposal'
 
     id = Column(Integer, primary_key=True)
@@ -48,7 +57,7 @@ class Proposal(Base):
     proposal_type = Column(Integer)
 
 
-class ProposalArchive(Base):
+class ProposalArchive(Base, CustomBase):
     __tablename__ = 'proposal_archive'
 
     id = Column(Integer, primary_key=True)
@@ -58,12 +67,14 @@ class ProposalArchive(Base):
 
 
 # Dynamically add columns for each of the managed clusters
-for cluster in app_settings.clusters:
+for cluster in ['mpi', 'htc', 'gpu', 'smp']:
     setattr(Proposal, cluster, Column(Integer))
     setattr(ProposalArchive, cluster, Column(Integer))
     setattr(ProposalArchive, cluster + '_usage', Column(Integer))
 
-engine = create_engine(app_settings.db_path)
+engine = create_engine('sqlite:///crc_bank.db')
 if not database_exists(engine.url):
     create_database(engine.url)
     metadata.create_all(engine)
+
+Session = sessionmaker(engine, future=True)

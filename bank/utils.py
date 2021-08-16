@@ -15,7 +15,7 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
-from .orm import investor_table, proposal_table
+from .orm import Investor, Proposal
 from .settings import app_settings
 
 
