@@ -7,7 +7,7 @@ clean() {
 
 if [ "$CRC_BANK_TEST" = 'true' ]; then
     #sudo sacctmgr -i modify account where account=sam cluster=smp,gpu,mpi,htc set rawusage=0
-    for bat in $(ls tests/*.bats); do
+    for bat in $(ls bash_tests/*.bats); do
         echo "====== BEGIN $bat ======"
         bats $bat
         if [ $? -ne 0 ]; then
