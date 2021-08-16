@@ -32,13 +32,14 @@ class ReadsEnvironmentalVariables(TestCase):
             env_name: str,
             env_val: Optional[str] = None
     ) -> None:
-        """
+        """Modify an application setting in the environment and check if it is
+        correctly recovered by the ``Settings`` object
 
         Args:
-            attr_name:
-            attr_val:
-            env_name:
-            env_val:
+            attr_name: Name of the setting as an attribute of the ``Settings`` class
+            attr_val: Expected value of the ``attr_name`` attribute
+            env_name: Name of the setting as an environmental variable
+            env_val: Value to set in the environment (Default: ``str(attr_val)``)
         """
 
         with CleanEnviron():
@@ -47,17 +48,25 @@ class ReadsEnvironmentalVariables(TestCase):
             self.assertEqual(attr_val, recovered_value)
 
     def test_pathobj_log_path(self) -> None:
+        """Test if the log path is correctly recovered as a ``Path`` object"""
+
         self.assert_setting_matches_environment(
             'log_path', Path('/this/is/a/path'), APP_PREFIX + 'LOG_PATH')
 
     def test_boolean_is_testing(self) -> None:
+        """Test if the application testing state is correctly recovered as a boolean"""
+
         self.assert_setting_matches_environment(
             'is_testing', False, APP_PREFIX + 'IS_TESTING')
 
     def test_list_clusters(self) -> None:
+        """Test if the available clusters are correctly recovered as a list"""
+
         self.assert_setting_matches_environment(
             'clusters', ['c1', 'c2'], APP_PREFIX + 'CLUSTERS', 'c1,c2')
 
     def test_str_email_suffix(self) -> None:
+        """Test if the email suffix is correctly recovered as a string"""
+
         self.assert_setting_matches_environment(
             'email_suffix', '@temp.com', APP_PREFIX + 'EMAIL_SUFFIX')
