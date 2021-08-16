@@ -14,7 +14,7 @@ from subprocess import PIPE, Popen
 import datafreeze
 from bs4 import BeautifulSoup
 
-from .constants import Settings, investor_table, proposal_table
+from .settings import Settings, investor_table, proposal_table
 from .exceptions import CmdError
 
 
