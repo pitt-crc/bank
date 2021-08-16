@@ -1,122 +1,127 @@
-"""Configuration file for the CRC bank monitoring system"""
+"""Application settings for the bank monitoring system"""
 
 from pathlib import Path
+from typing import Any
 
 import dataset
-import environ
+from environ.environ import Env
 
-# -- System information ------------------------------------------------------
 
-# Where to write log files to
-parent_dir = Path(__file__).resolve().parent
-log_file_path = parent_dir / 'logs' / 'crc_bank.log'  # Path to the log file
+class Defaults:
+    """Default settings for the parent application"""
 
-# Path to the application SQLite database (must be an absolute path)
-db_path = parent_dir / 'crc_bank.db'
-db_test_path = parent_dir / 'test.db'
+    is_testing = False
+    date_format = "%m/%d/%y"
 
-# This should contain a list of clusters you want to track usage on
-CLUSTERS = ["smp", "mpi", "gpu", "htc"]
+    # Where and how to write log files to
+    _application_dir = Path(__file__).resolve().parent
+    log_path = _application_dir / 'logs' / 'crc_bank.log'
+    log_format = '[%(asctime)s] %(levelname)s - %(message)s'
+    log_level = 'INFO'
 
-# -- Email notification Settings ---------------------------------------------
+    # Path to the application SQLite backend
+    db_path = _application_dir / 'crc_bank.db'
+    db_test_path = _application_dir / 'test.db'
 
-# The email suffix for your organization. We assume the ``Description`` field
-# of each account in ``sacctmgr`` contains the prefix.
-email_suffix = "@pitt.edu"
+    # A list of cluster names to track usage on
+    clusters = ["smp", "mpi", "gpu", "htc"]
 
-# The email templates below accept the following formatting fields:
-#   account: The account name
-#   start: The start date of the proposal
-#   expire: The end date of the proposal
-#   usage: Tabular summary of the proposal's service unit usage
-#   perc: Usage percentage threshold that triggered the message being sent
-#   investment: Tabular summary of user's current usage on invested machines
+    # The email suffix for your organization. We assume the ``Description``
+    # field of each account in ``sacctmgr`` contains the prefix.
+    email_suffix = "@pitt.edu"
 
-# An email to send when you have exceeded a proposal threshold (25%, 50%, 75%, 90%)
-notify_sus_limit_email_text = """\
-<html>
-<head></head>
-<body>
-<p>
-To Whom It May Concern,<br><br>
-This email has been generated automatically because your account on H2P has
-exceeded {perc}% usage. The one year allocation started on {start}. You can 
-request a supplemental allocation at
-https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
-Your usage is printed below:<br>
-<pre>
-{usage}
-</pre>
-Investment status (if applicable):<br>
-<pre>
-{investment}
-</pre>
-Thanks,<br><br>
-The CRC Proposal Bot
-</p>
-</body>
-</html>
-"""
+    # The email templates below accept the following formatting fields:
+    #   account: The account name
+    #   start: The start date of the proposal
+    #   expire: The end date of the proposal
+    #   usage: Tabular summary of the proposal's service unit usage
+    #   perc: Usage percentage threshold that triggered the message being sent
+    #   investment: Tabular summary of user's current usage on invested machines
 
-# An email to send when you are 90 days from the end of your proposal
-three_month_proposal_expiry_notification_email = """\
-<html>
-<head></head>
-<body>
-<p>
-To Whom It May Concern,<br><br>
-This email has been generated automatically because your proposal for account
-{account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
-Once your proposal expires, you will still be able to login and retrieve your 
-data, but you will be unable to run new compute jobs until you submit a new 
-proposal or request a supplemental allocation.
-To do so, please visit
-https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
-Thanks,<br><br>
-The CRC Proposal Bot
-</p>
-</body>
-</html>
-"""
+    # An email to send when you have exceeded a proposal threshold (25%, 50%, 75%, 90%)
+    notify_sus_limit_email_text = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your account on H2P has
+    exceeded {perc}% usage. The one year allocation started on {start}. You can 
+    request a supplemental allocation at
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
+    Your usage is printed below:<br>
+    <pre>
+    {usage}
+    </pre>
+    Investment status (if applicable):<br>
+    <pre>
+    {investment}
+    </pre>
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
 
-# An email to send when the proposal has expired
-proposal_expires_notification_email = """\
-<html>
-<head></head>
-<body>
-<p>
-To Whom It May Concern,<br><br>
-This email has been generated automatically because your proposal for account
-{account} on H2P has expired. The one year allocation started on {start}. 
-You will still be able to login and retrieve your data, but you will be unable
-to run new compute  jobs until you submit a new proposal or request a 
-supplemental allocation. To do so, please visit
-https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
-Thanks,<br><br>
-The CRC Proposal Bot
-</p>
-</body>
-</html>
-"""
+    # An email to send when you are 90 days from the end of your proposal
+    three_month_proposal_expiry_notification_email = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your proposal for account
+    {account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
+    Once your proposal expires, you will still be able to login and retrieve your 
+    data, but you will be unable to run new compute jobs until you submit a new 
+    proposal or request a supplemental allocation.
+    To do so, please visit
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
 
-# DO NOT CHANGE BELOW THIS LINE
-# -----------------------------
-env = environ.Env()
-is_testing = env.bool('CRC_BANK_TEST', default=False)
-clusters = env.list('CRC_BANK_CLUSTERS', default=CLUSTERS)
-log_file_path = env.str('CRC_BANK_LOG', default=log_file_path)
+    # An email to send when the proposal has expired
+    proposal_expires_notification_email = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your proposal for account
+    {account} on H2P has expired. The one year allocation started on {start}. 
+    You will still be able to login and retrieve your data, but you will be unable
+    to run new compute  jobs until you submit a new proposal or request a 
+    supplemental allocation. To do so, please visit
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
 
-# Make sure the deployment database isn't accidentally overwritten
-db_path = Path(env.str('CRC_BANK_DB', default=db_path)).resolve()
-db_test_path = Path(env.str('CRC_BANK_TEST_DB', default=db_test_path)).resolve()
-if db_path == db_test_path:
-    raise RuntimeError('Path to testing and production databases cannot be the same.')
 
-db = dataset.connect(f'sqlite:///{db_test_path if is_testing else db_path}')
+class Settings(Defaults):
+    """Reflects application settings as set in the working environment"""
+
+    # Appended to all environmental variables used by the parent application
+    app_prefix = 'BANK_'
+
+    def __getattr__(self, item: str) -> Any:
+        default = getattr(super(), item)
+        env_key = self.app_prefix + item.upper()
+        return Env().get_value(env_key, cast=type(default), default=default)
+
+
+db = dataset.connect(f'sqlite:///{Settings.db_test_path if Settings.is_testing else Settings.db_path}')
 proposal_table = db["proposal"]
 investor_table = db["investor"]
 investor_archive_table = db["investor_archive"]
 proposal_archive_table = db["proposal_archive"]
-date_format = "%m/%d/%y"
 
-Path(log_file_path).parent.mkdir(exist_ok=True)
+Path(Settings.log_file_path).parent.mkdir(exist_ok=True)
