@@ -42,8 +42,8 @@ class ShellCmd:
             raise ValueError('Command string cannot be empty')
 
         out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
-        self.out = out.decode("utf-8").rstrip('\n')
-        self.err = err.decode("utf-8").rstrip('\n')
+        self.out = out.decode("utf-8").strip()
+        self.err = err.decode("utf-8").strip()
 
     def raise_err(self) -> None:
         """Raise an exception if the piped command wrote to STDERR
@@ -125,7 +125,7 @@ def account_and_cluster_associations_exists(account):
         cmd = ShellCmd(
             f"sacctmgr -n show assoc account={account} cluster={cluster} format=account,cluster"
         )
-        if cmd.out.strip() == "":
+        if cmd.out == "":
             missing.append(cluster)
 
     if missing:
@@ -154,7 +154,7 @@ def get_usage_for_account(account):
         cmd = ShellCmd(
             f"sshare --noheader --account={account} --cluster={cluster} --format=RawUsage"
         )
-        raw_usage += int(cmd.out.strip().split("\n")[1])
+        raw_usage += int(cmd.out.split("\n")[1])
     return raw_usage / (60.0 * 60.0)
 
 
@@ -322,7 +322,7 @@ def notify_sus_limit(account):
 
 def get_account_email(account):
     cmd = ShellCmd(f"sacctmgr show account {account} -P format=description -n")
-    return f"{cmd.out.strip()}{email_suffix}"
+    return f"{cmd.out}{email_suffix}"
 
 
 def send_email(email_html, account):
