@@ -1,2 +1,4 @@
 sphinx
+sphinx_autodoc_typehints
 sphinx-copybutton
+sphinx-rtd-theme
