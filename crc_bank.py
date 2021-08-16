@@ -63,8 +63,9 @@ from pathlib import Path
 from docopt import docopt
 
 from bank import utils
-from bank.settings import (CLUSTERS, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
+from bank.settings import (app_settings, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
 
+CLUSTERS = app_settings.clusters
 args = docopt(__doc__, version="crc_bank.py version 0.0.1")
 
 if args["insert"]:
