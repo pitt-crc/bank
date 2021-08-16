@@ -118,7 +118,8 @@ class Settings(Defaults):
         return Env().get_value(env_key, cast=type(default), default=default)
 
 
-# Store runtime settings as defined at instantiation
+# Provided a prebuilt ``Settings`` instance as a
+# dedicated entry point to application settings
 app_settings = Settings()
 
 db = dataset.connect(f'sqlite:///{Settings.db_test_path if Settings.is_testing else Settings.db_path}')
