@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
 
+from .settings import app_settings
+
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -67,12 +69,15 @@ class ProposalArchive(Base, CustomBase):
 
 
 # Dynamically add columns for each of the managed clusters
-for cluster in ['mpi', 'htc', 'gpu', 'smp']:
+for cluster in app_settings.clusters:
     setattr(Proposal, cluster, Column(Integer))
     setattr(ProposalArchive, cluster, Column(Integer))
     setattr(ProposalArchive, cluster + '_usage', Column(Integer))
 
-engine = create_engine('sqlite:///crc_bank.db')
+# Connect to the correct backend database depending on whether or not the test suite is running
+_use_path = app_settings.db_test_path if app_settings.is_testing else app_settings.db_path
+engine = create_engine(f'sqlite:///{_use_path}')
+
 if not database_exists(engine.url):
     create_database(engine.url)
     metadata.create_all(engine)
