@@ -1,4 +1,4 @@
-import settings
+from . import settings
 
 if settings.Settings.db_path == settings.Settings.db_test_path:
     raise RuntimeError(
