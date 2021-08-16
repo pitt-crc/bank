@@ -124,4 +124,4 @@ investor_table = db["investor"]
 investor_archive_table = db["investor_archive"]
 proposal_archive_table = db["proposal_archive"]
 
-Path(Settings.log_file_path).parent.mkdir(exist_ok=True)
+Path(Settings.log_path).parent.mkdir(exist_ok=True)
