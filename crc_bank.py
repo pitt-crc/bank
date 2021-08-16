@@ -62,8 +62,8 @@ from pathlib import Path
 
 from docopt import docopt
 
-import utils
-from constants import (CLUSTERS, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
+from bank import utils
+from bank.constants import (CLUSTERS, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
 
 args = docopt(__doc__, version="crc_bank.py version 0.0.1")
 
