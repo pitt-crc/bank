@@ -14,7 +14,7 @@ from subprocess import PIPE, Popen
 import datafreeze
 from bs4 import BeautifulSoup
 
-from constants import (
+from .constants import (
     CLUSTERS,
     date_format,
     email_suffix,
@@ -25,20 +25,35 @@ from constants import (
     proposal_table,
     three_month_proposal_expiry_notification_email
 )
+from .exceptions import CmdError
 
 
-def run_command(cmd):
-    """Open a pipe that runs the input in a command line environment and return the output as a string.
-    
-    Args:
-        cmd: command to be run in a new pipe
-        
-    Returns:
-        Decoded utf-8 output and error of the command pipe
-    """
-    
-    out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
-    return out.decode("utf-8"), err.decode("utf-8")
+class ShellCmd:
+    """Executes commands using the underlying command line environment"""
+
+    def __init__(self, cmd: str) -> None:
+        """Execute the given command in the underlying shell
+
+        Args:
+            cmd: The command to be run in a new pipe
+        """
+
+        if not cmd:
+            raise ValueError('Command string cannot be empty')
+
+        out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
+        self.out = out.decode("utf-8").strip()
+        self.err = err.decode("utf-8").strip()
+
+    def raise_err(self) -> None:
+        """Raise an exception if the piped command wrote to STDERR
+
+        Raises:
+            CmdError: If there is an error output
+        """
+
+        if self.err:
+            raise CmdError(self.err)
 
 
 class Right:
@@ -53,7 +68,7 @@ class Left:
 
 def unwrap_if_right(x):
     """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``. Otherwise, exit."""
-    
+
     if isinstance(x, Left):
         exit(x.reason)
     return x.value
@@ -71,7 +86,7 @@ def check_service_units_valid(units):
     Raises:
         ValueError: If the input ``units`` is not a natural number
     """
-    
+
     try:
         result = int(units)
     except ValueError:
@@ -107,11 +122,12 @@ def check_service_units_valid_clusters(args, greater_than_ten_thousand=True):
 def account_and_cluster_associations_exists(account):
     missing = []
     for cluster in CLUSTERS:
-        out, err = run_command(
+        cmd = ShellCmd(
             f"sacctmgr -n show assoc account={account} cluster={cluster} format=account,cluster"
         )
-        if out.strip() == "":
+        if cmd.out == "":
             missing.append(cluster)
+
     if missing:
         return Left(
             f"Associations missing for account `{account}` on clusters `{','.join(missing)}`"
@@ -135,10 +151,10 @@ def log_action(s):
 def get_usage_for_account(account):
     raw_usage = 0
     for cluster in CLUSTERS:
-        out, _ = run_command(
+        cmd = ShellCmd(
             f"sshare --noheader --account={account} --cluster={cluster} --format=RawUsage"
         )
-        raw_usage += int(out.strip().split("\n")[1])
+        raw_usage += int(cmd.out.split("\n")[1])
     return raw_usage / (60.0 * 60.0)
 
 
@@ -229,9 +245,10 @@ def check_date_valid(d):
 
 
 def get_raw_usage_in_hours(account, cluster):
-    o, _ = run_command(f"sshare -A {account} -M {cluster} -P -a")
+    cmd = ShellCmd(f"sshare -A {account} -M {cluster} -P -a")
+
     # Only the second and third line are necessary, wrapped in text buffer
-    sio = StringIO("\n".join(o.split("\n")[1:3]))
+    sio = StringIO("\n".join(cmd.out.split("\n")[1:3]))
 
     # use built-in CSV reader to read header and data
     reader = csv.reader(sio, delimiter="|")
@@ -245,21 +262,21 @@ def get_raw_usage_in_hours(account, cluster):
 
 def lock_account(account):
     clusters = ",".join(CLUSTERS)
-    _, _ = run_command(
+    ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=0"
     )
 
 
 def unlock_account(account):
     clusters = ",".join(CLUSTERS)
-    _, _ = run_command(
+    ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=-1"
     )
 
 
 def reset_raw_usage(account):
     clusters = ",".join(CLUSTERS)
-    _, _ = run_command(
+    ShellCmd(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set RawUsage=0"
     )
 
@@ -304,9 +321,8 @@ def notify_sus_limit(account):
 
 
 def get_account_email(account):
-    o, _ = run_command(f"sacctmgr show account {account} -P format=description -n")
-
-    return f"{o.strip()}{email_suffix}"
+    cmd = ShellCmd(f"sacctmgr show account {account} -P format=description -n")
+    return f"{cmd.out}{email_suffix}"
 
 
 def send_email(email_html, account):
@@ -384,9 +400,9 @@ def convert_to_hours(usage):
 
 
 def get_account_usage(account, cluster, avail_sus, output):
-    o, _ = run_command(f"sshare -A {account} -M {cluster} -P -a")
+    cmd = ShellCmd(f"sshare -A {account} -M {cluster} -P -a")
     # Second line onward, required
-    sio = StringIO("\n".join(o.split("\n")[1:]))
+    sio = StringIO("\n".join(cmd.out.split("\n")[1:]))
 
     # use built-in CSV reader to read header and data
     reader = csv.reader(sio, delimiter="|")
@@ -515,10 +531,10 @@ def import_from_json(args, table, table_type):
 
 
 def is_account_locked(account):
-    out, err = run_command(
+    cmd = ShellCmd(
         f"sacctmgr -n -P show assoc account={account} format=grptresrunmins"
     )
 
-    if "cpu=0" in out:
+    if "cpu=0" in cmd.out:
         return True
     return False
