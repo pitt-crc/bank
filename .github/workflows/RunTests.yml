@@ -53,10 +53,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install coverage
 
-      - name: Install package and dependencies
-        run: pip install .
-
       - name: Run tests with coverage
         run: |
-          coverage run -m unittest
-
+          cd tests
+          coverage run --source ../bank -m unittest
+          coverage report
