@@ -151,8 +151,10 @@ elif args["info"]:
     if not Proposal.check_matching_entry_exists(account=account_name):
         exit(f"Account `{account_name}` doesn't exist in the database")
 
+    proposal = Session().query(Proposal).filter_by(account=account_name).first()
+
     # Get entire row, convert to human readable columns
-    od = proposal_table.find_one(account=account_name)
+    od = dict(proposal)
     od["proposal_type"] = utils.ProposalType(od["proposal_type"]).name
     od["percent_notified"] = utils.PercentNotified(od["percent_notified"]).name
     od["start_date"] = od["start_date"].strftime("%m/%d/%y")
@@ -163,8 +165,12 @@ elif args["info"]:
     print(json.dumps(od, indent=2))
     print()
 
-    ods = investor_table.find(account=account_name)
-    for od in ods:
+    if not Investor.check_matching_entry_exists(account=account_name):
+        exit()
+
+    investors = Session().query(Investor).filter_by(account=account_name).all()
+    for investor in investors:
+        od = dict(investor)
         od["proposal_type"] = utils.ProposalType(od["proposal_type"]).name
         od["start_date"] = od["start_date"].strftime("%m/%d/%y")
         od["end_date"] = od["end_date"].strftime("%m/%d/%y")
@@ -501,17 +507,18 @@ elif args["withdraw"]:
 
 elif args["check_proposal_violations"]:
     # Iterate over all of the proposals looking for proposal violations
-    proposals = proposal_table.find()
+    proposals = Session().query(Proposal).all()
+
     for proposal in proposals:
-        investments = sum(utils.get_available_investor_sus(proposal["account"]))
+        investments = sum(utils.get_available_investor_sus(proposal.account))
 
         subtract_previous_investment = 0
         for cluster in CLUSTERS:
-            avail_sus = proposal[cluster]
-            used_sus = utils.get_raw_usage_in_hours(proposal["account"], cluster)
+            avail_sus = getattr(proposal, cluster)
+            used_sus = utils.get_raw_usage_in_hours(proposal.account, cluster)
             if used_sus > (avail_sus + investments - subtract_investment):
                 print(
-                    f"Account {proposal['account']}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
+                    f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
                 )
             if used_sus > avail_sus:
                 subtract_previous_investment += investments - used_sus
@@ -659,15 +666,16 @@ elif args["release_hold"]:
     utils.unlock_account(account_name)
 
 elif args["alloc_sus"]:
-    proposals = proposal_table.find()
     alloc_sus = 0
-    with open("service_units.csv", "w") as fp:
+    with open("service_units.csv", "w") as fp, Session() as session:
         fp.write("account,smp,gpu,mpi,htc\n")
-        for proposal in proposals:
+        for proposal in session.query(Proposal).all():
             fp.write(
-                f"{proposal['account']},{proposal['smp']},{proposal['gpu']},{proposal['mpi']},{proposal['htc']}\n"
+                f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n"
             )
+
             alloc_sus += sum([proposal[c] for c in CLUSTERS])
+
     print(alloc_sus)
 
 elif args["reset_raw_usage"]:
@@ -683,12 +691,11 @@ elif args["reset_raw_usage"]:
     utils.reset_raw_usage(account_name)
 
 elif args["find_unlocked"]:
-    proposals = proposal_table.find()
     today = date.today()
-    for proposal in proposals:
-        is_locked = utils.is_account_locked(proposal["account"])
-        if (not is_locked) and proposal["end_date"] < today:
-            print(proposal["account"])
+    for proposal in Session().query(Proposal).all():
+        is_locked = utils.is_account_locked(proposal.account)
+        if (not is_locked) and proposal.end_date < today:
+            print(proposal.account)
 
 elif args["lock_with_notification"]:
     if geteuid() != 0:

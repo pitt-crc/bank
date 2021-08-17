@@ -20,9 +20,12 @@ class CustomBase:
 
         return db_entry is not None
 
+    def __iter__(self):
+        for column in self.__table__.columns:
+            yield column.name, getattr(self, column.name)
+
     def __repr__(self) -> str:
         # Automatically generate string representation using class attributes
-
         attr_text = (f'{key}={val}' for key, val in self.__dict__.items() if not key.startswith('_'))
         return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
 
