@@ -63,55 +63,58 @@ from pathlib import Path
 from docopt import docopt
 
 from bank import utils
-from bank.settings import (app_settings, investor_archive_table, investor_table, proposal_archive_table, proposal_table)
+from bank.orm import Investor, Proposal, Session
+from bank.settings import app_settings
 
 CLUSTERS = app_settings.clusters
 args = docopt(__doc__, version="crc_bank.py version 0.0.1")
 
 if args["insert"]:
+    account_name = args['<account>']
+
     # Account shouldn't exist in the proposal table already
-    x = utils.account_exists_in_table(proposal_table, args["<account>"])
-    if isinstance(x, utils.Right):
-        exit(f"Proposal for account `{args['<account>']}` already exists. Exiting...")
+    if Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Proposal for account `{account_name}` already exists. Exiting...")
 
     # Account associations better exist!
     _ = utils.unwrap_if_right(
-        utils.account_and_cluster_associations_exists(args["<account>"])
+        utils.account_and_cluster_associations_exists(account_name)
     )
 
     # Make sure we understand the proposal type
     proposal_type = utils.unwrap_if_right(utils.parse_proposal_type(args["<type>"]))
     proposal_duration = utils.get_proposal_duration(proposal_type)
     start_date = date.today()
-    end_date = start_date + proposal_duration
 
     # Service units should be a valid number
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
-    to_insert = {
-        "account": args["<account>"],
-        "proposal_type": proposal_type.value,
-        "percent_notified": utils.PercentNotified.Zero.value,
-        "start_date": start_date,
-        "end_date": end_date,
-    }
-    for c in CLUSTERS:
-        to_insert[c] = sus[c]
-    proposal_table.insert(to_insert)
+    new_proposal = Proposal(
+        account=account_name,
+        proposal_type=proposal_type.value,
+        percent_notified=utils.PercentNotified.Zero.value,
+        start_date=start_date,
+        end_date=start_date + proposal_duration,
+        **{c: sus[c] for c in CLUSTERS}
+    )
+
+    with Session() as session:
+        session.add(Proposal)
+        session.add()
 
     utils.log_action(
-        f"Inserted proposal with type {proposal_type.name} for {args['<account>']} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
+        f"Inserted proposal with type {proposal_type.name} for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
     )
 
 elif args["investor"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Account associations better exist!
     _ = utils.unwrap_if_right(
-        utils.account_and_cluster_associations_exists(args["<account>"])
+        utils.account_and_cluster_associations_exists(account_name)
     )
 
     # Investor accounts last 5 years
@@ -122,31 +125,34 @@ elif args["investor"]:
     # Service units should be a valid number
     sus = utils.unwrap_if_right(utils.check_service_units_valid(args["<sus>"]))
 
-    to_insert = {
-        "account": args["<account>"],
-        "proposal_type": proposal_type.value,
-        "start_date": start_date,
-        "end_date": end_date,
-        "service_units": sus,
-        "current_sus": ceil(sus / 5),
-        "withdrawn_sus": ceil(sus / 5),
-        "rollover_sus": 0,
-    }
+    current_sus = ceil(sus / 5)
+    new_investor = Investor(
+        account=account_name,
+        proposal_type=proposal_type.value,
+        start_date=start_date,
+        end_date=end_date,
+        service_units=sus,
+        current_sus=current_sus,
+        withdrawn_sus=ceil(sus / 5),
+        rollover_sus=0
+    )
 
-    investor_table.insert(to_insert)
+    with Session() as session:
+        session.add(new_investor)
+        session.commit()
 
     utils.log_action(
-        f"Inserted investment for {args['<account>']} with per year allocations of `{to_insert['current_sus']}`"
+        f"Inserted investment for {account_name} with per year allocations of `{current_sus}`"
     )
 
 elif args["info"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Get entire row, convert to human readable columns
-    od = proposal_table.find_one(account=args["<account>"])
+    od = proposal_table.find_one(account=account_name)
     od["proposal_type"] = utils.ProposalType(od["proposal_type"]).name
     od["percent_notified"] = utils.PercentNotified(od["percent_notified"]).name
     od["start_date"] = od["start_date"].strftime("%m/%d/%y")
@@ -157,7 +163,7 @@ elif args["info"]:
     print(json.dumps(od, indent=2))
     print()
 
-    ods = investor_table.find(account=args["<account>"])
+    ods = investor_table.find(account=account_name)
     for od in ods:
         od["proposal_type"] = utils.ProposalType(od["proposal_type"]).name
         od["start_date"] = od["start_date"].strftime("%m/%d/%y")
@@ -170,15 +176,15 @@ elif args["info"]:
 
 elif args["modify"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Service units should be a valid number
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Update row in database
-    od = proposal_table.find_one(account=args["<account>"])
+    od = proposal_table.find_one(account=account_name)
     proposal_duration = utils.get_proposal_duration(
         utils.ProposalType(od["proposal_type"])
     )
@@ -191,14 +197,14 @@ elif args["modify"]:
     proposal_table.update(od, ["id"])
 
     utils.log_action(
-        f"Modified proposal for {args['<account>']} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
+        f"Modified proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
     )
 
 elif args["add"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Service units should be a valid number
     sus = utils.unwrap_if_right(
@@ -206,45 +212,45 @@ elif args["add"]:
     )
 
     # Update row in database
-    od = proposal_table.find_one(account=args["<account>"])
+    od = proposal_table.find_one(account=account_name)
     for clus in CLUSTERS:
         od[clus] += sus[clus]
     proposal_table.update(od, ["id"])
 
     utils.log_action(
-        f"Added SUs to proposal for {args['<account>']}, new limits are `{od['smp']}` on SMP, `{od['mpi']}` on MPI, `{od['gpu']}` on GPU, and `{od['htc']}` on HTC"
+        f"Added SUs to proposal for {account_name}, new limits are `{od['smp']}` on SMP, `{od['mpi']}` on MPI, `{od['gpu']}` on GPU, and `{od['htc']}` on HTC"
     )
 
 elif args["change"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Service units should be a valid number
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Update row in database
-    od = proposal_table.find_one(account=args["<account>"])
+    od = proposal_table.find_one(account=account_name)
     for clus in CLUSTERS:
         od[clus] = sus[clus]
     proposal_table.update(od, ["id"])
 
     utils.log_action(
-        f"Changed proposal for {args['<account>']} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
+        f"Changed proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
     )
 
 elif args["date"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Date should be valid
     start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
 
     # Update row in database
-    od = proposal_table.find_one(account=args["<account>"])
+    od = proposal_table.find_one(account=account_name)
     proposal_duration = utils.get_proposal_duration(
         utils.ProposalType(od["proposal_type"])
     )
@@ -254,20 +260,20 @@ elif args["date"]:
     proposal_table.update(od, ["id"])
 
     utils.log_action(
-        f"Modify proposal start date for {args['<account>']} to {start_date}"
+        f"Modify proposal start date for {account_name} to {start_date}"
     )
 
 elif args["date_investment"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Date should be valid
     start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
 
     # Update row in database
-    od = investor_table.find_one(id=args["<id>"], account=args["<account>"])
+    od = investor_table.find_one(id=args["<id>"], account=account_name)
     if od:
         end_date = start_date + timedelta(days=1825)
         od["start_date"] = start_date
@@ -275,7 +281,7 @@ elif args["date_investment"]:
         investor_table.update(od, ["id"])
 
     utils.log_action(
-        f"Modify investment start date for investment #{args['<id>']} for account {args['<account>']} to {start_date}"
+        f"Modify investment start date for investment #{args['<id>']} for account {account_name} to {start_date}"
     )
 
 elif args["check_sus_limit"]:
@@ -286,37 +292,37 @@ elif args["check_sus_limit"]:
     # 4. Add archived investments associated to the current proposal
 
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Compute the Total SUs for the proposal period
-    proposal_row = proposal_table.find_one(account=args["<account>"])
+    proposal_row = proposal_table.find_one(account=account_name)
     total_sus = sum([proposal_row[cluster] for cluster in CLUSTERS])
 
     # Parse the used SUs for the proposal period
     used_sus_per_cluster = {c: 0 for c in CLUSTERS}
     for cluster in CLUSTERS:
         used_sus_per_cluster[cluster] = utils.get_raw_usage_in_hours(
-            args["<account>"], cluster
+            account_name, cluster
         )
     used_sus = sum(used_sus_per_cluster.values())
 
     # Compute the sum of investment SUs, archiving any exhausted investments
-    investor_rows = investor_table.find(account=args["<account>"])
+    investor_rows = investor_table.find(account=account_name)
     sum_investment_sus = 0
     for investor_row in investor_rows:
         # Check if investment is exhausted
         exhausted = False
         if investor_row["service_units"] - investor_row[f"withdrawn_sus"] == 0 and (
-            used_sus
-            >= (
-                total_sus
-                + sum_investment_sus
-                + investor_row[f"current_sus"]
-                + investor_row[f"rollover_sus"]
-            )
-            or investor_row[f"current_sus"] + investor_row[f"rollover_sus"] == 0
+                used_sus
+                >= (
+                        total_sus
+                        + sum_investment_sus
+                        + investor_row[f"current_sus"]
+                        + investor_row[f"rollover_sus"]
+                )
+                or investor_row[f"current_sus"] + investor_row[f"rollover_sus"] == 0
         ):
             exhausted[cluster] = True
 
@@ -328,7 +334,7 @@ elif args["check_sus_limit"]:
                 "start_date": investor_row["start_date"],
                 "end_date": investor_row["end_date"],
                 "exhaustion_date": date.today(),
-                "account": args["<account>"],
+                "account": account_name,
                 "proposal_id": proposal_row["id"],
                 "investment_id": investor_row["id"],
             }
@@ -336,7 +342,7 @@ elif args["check_sus_limit"]:
             investor_table.delete(id=investor_row["id"])
         else:
             sum_investment_sus += (
-                investor_row[f"current_sus"] + investor_row[f"rollover_sus"]
+                    investor_row[f"current_sus"] + investor_row[f"rollover_sus"]
             )
 
     total_sus += sum_investment_sus
@@ -346,7 +352,7 @@ elif args["check_sus_limit"]:
     sum_investor_archive_sus = 0
     for investor_archive_row in investor_archive_rows:
         sum_investor_archive_sus += (
-            investor_archive_row[f"current_sus"] + investor_archive_row[f"rollover_sus"]
+                investor_archive_row[f"current_sus"] + investor_archive_row[f"rollover_sus"]
         )
 
     total_sus += sum_investor_archive_sus
@@ -354,7 +360,7 @@ elif args["check_sus_limit"]:
     notification_percent = utils.PercentNotified(proposal_row["percent_notified"])
     if notification_percent == utils.PercentNotified.Hundred:
         exit(
-            f"{datetime.now()}: Skipping account {args['<account>']} because it should have already been notified and locked"
+            f"{datetime.now()}: Skipping account {account_name} because it should have already been notified and locked"
         )
 
     percent_usage = 100.0 * used_sus / total_sus
@@ -364,53 +370,53 @@ elif args["check_sus_limit"]:
     if updated_notification_percent != notification_percent:
         proposal_row["percent_notified"] = updated_notification_percent.value
         proposal_table.update(proposal_row, ["id"])
-        utils.notify_sus_limit(args["<account>"])
+        utils.notify_sus_limit(account_name)
 
         utils.log_action(
-            f"Updated proposal percent_notified to {updated_notification_percent} for {args['<account>']}"
+            f"Updated proposal percent_notified to {updated_notification_percent} for {account_name}"
         )
 
     # Lock the account if necessary
     if updated_notification_percent == utils.PercentNotified.Hundred:
-        if args["<account>"] != "root":
-            utils.lock_account(args["<account>"])
+        if account_name != "root":
+            utils.lock_account(account_name)
 
             utils.log_action(
-                f"The account for {args['<account>']} was locked due to SUs limit"
+                f"The account for {account_name} was locked due to SUs limit"
             )
 
 elif args["check_proposal_end_date"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
-    proposal_row = proposal_table.find_one(account=args["<account>"])
+    proposal_row = proposal_table.find_one(account=account_name)
     today = date.today()
     three_months_before_end_date = proposal_row["end_date"] - timedelta(days=90)
 
     if today == three_months_before_end_date:
-        utils.three_month_proposal_expiry_notification(args["<account>"])
+        utils.three_month_proposal_expiry_notification(account_name)
     elif today == proposal_row["end_date"]:
-        utils.proposal_expires_notification(args["<account>"])
-        utils.lock_account(args["<account>"])
+        utils.proposal_expires_notification(account_name)
+        utils.lock_account(account_name)
         utils.log_action(
-            f"The account for {args['<account>']} was locked because it reached the end date {proposal_row['end_date']}"
+            f"The account for {account_name} was locked because it reached the end date {proposal_row['end_date']}"
         )
 
 elif args["get_sus"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
-    proposal_row = proposal_table.find_one(account=args["<account>"])
+    proposal_row = proposal_table.find_one(account=account_name)
 
     print(f"type,{','.join(CLUSTERS)}")
     sus = [str(proposal_row[c]) for c in CLUSTERS]
     print(f"proposal,{','.join(sus)}")
 
-    investor_sus = utils.get_current_investor_sus(args["<account>"])
+    investor_sus = utils.get_current_investor_sus(account_name)
     for row in investor_sus:
         print(f"investment,{row}")
 
@@ -420,10 +426,10 @@ elif args["dump"]:
     proposal_archive_p = Path(args["<proposal_archive.json>"])
     investor_archive_p = Path(args["<investor_archive.json>"])
     if (
-        proposal_p.exists()
-        or investor_p.exists()
-        or investor_archive_p.exists()
-        or proposal_archive_p.exists()
+            proposal_p.exists()
+            or investor_p.exists()
+            or investor_archive_p.exists()
+            or proposal_archive_p.exists()
     ):
         exit(
             f"ERROR: Neither {proposal_p}, {investor_p}, {proposal_archive_p}, nor {investor_archive_p} can exist."
@@ -436,9 +442,9 @@ elif args["dump"]:
 
 elif args["withdraw"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Service units should be a valid number
     sus_to_withdraw = utils.unwrap_if_right(
@@ -446,7 +452,7 @@ elif args["withdraw"]:
     )
 
     # First check if the user has enough SUs to withdraw
-    available_investments = sum(utils.get_available_investor_sus(args["<account>"]))
+    available_investments = sum(utils.get_available_investor_sus(account_name))
 
     should_exit = False
     if sus_to_withdraw > available_investments:
@@ -458,11 +464,11 @@ elif args["withdraw"]:
         exit()
 
     # Go through investments, oldest first and start withdrawing
-    investments = investor_table.find(account=args["<account>"])
+    investments = investor_table.find(account=account_name)
     for idx, investment in enumerate(investments):
         to_withdraw = 0
         investment_remaining = (
-            investment["service_units"] - investment[f"withdrawn_sus"]
+                investment["service_units"] - investment[f"withdrawn_sus"]
         )
 
         # If not SUs to withdraw, skip the proposal entirely
@@ -485,7 +491,7 @@ elif args["withdraw"]:
         investment[f"withdrawn_sus"] += to_withdraw
         investor_table.update(investment, ["id"])
         utils.log_action(
-            f"Withdrew from investment {investment['id']} for account {args['<account>']} with value {to_withdraw}"
+            f"Withdrew from investment {investment['id']} for account {account_name} with value {to_withdraw}"
         )
 
         # Determine if we are done processing investments
@@ -512,31 +518,31 @@ elif args["check_proposal_violations"]:
 
 elif args["usage"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
-    print(utils.usage_string(args["<account>"]))
+    print(utils.usage_string(account_name))
 
 elif args["renewal"]:
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Account associations better exist!
     _ = utils.unwrap_if_right(
-        utils.account_and_cluster_associations_exists(args["<account>"])
+        utils.account_and_cluster_associations_exists(account_name)
     )
 
     # Make sure SUs are valid
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Archive current proposal, recording the usage on each cluster
-    current_proposal = proposal_table.find_one(account=args["<account>"])
+    current_proposal = proposal_table.find_one(account=account_name)
     proposal_id = current_proposal["id"]
     current_usage = {
-        c: utils.get_raw_usage_in_hours(args["<account>"], c) for c in CLUSTERS
+        c: utils.get_raw_usage_in_hours(account_name, c) for c in CLUSTERS
     }
     to_insert = {f"{c}_usage": current_usage[c] for c in CLUSTERS}
     for key in ["account", "start_date", "end_date"] + CLUSTERS:
@@ -546,14 +552,14 @@ elif args["renewal"]:
     # Archive any investments which are
     # - past their end_date
     # - withdraw + renewal leaves no current_sus and fully withdrawn account
-    investor_rows = investor_table.find(account=args["<account>"])
+    investor_rows = investor_table.find(account=account_name)
     for investor_row in investor_rows:
         archive = False
         if investor_row["end_date"] <= date.today():
             archive = True
         elif (
-            investor_row["current_sus"] == 0
-            and investor_row["withdrawn_sus"] == investor_row["service_units"]
+                investor_row["current_sus"] == 0
+                and investor_row["withdrawn_sus"] == investor_row["service_units"]
         ):
             archive = True
 
@@ -564,7 +570,7 @@ elif args["renewal"]:
                 "start_date": investor_row["start_date"],
                 "end_date": investor_row["end_date"],
                 "exhaustion_date": date.today(),
-                "account": args["<account>"],
+                "account": account_name,
                 "proposal_id": current_proposal["id"],
                 "investor_id": investor_row["id"],
             }
@@ -573,7 +579,7 @@ elif args["renewal"]:
 
     # Renewal, should exclude any previously rolled over SUs
     current_investments = sum(
-        utils.get_current_investor_sus_no_rollover(args["<account>"])
+        utils.get_current_investor_sus_no_rollover(account_name)
     )
 
     # If there are relevant investments,
@@ -596,12 +602,12 @@ elif args["renewal"]:
 
         if need_to_rollover > 0:
             # Go through investments and roll them over
-            investor_rows = investor_table.find(account=args["<account>"])
+            investor_rows = investor_table.find(account=account_name)
             for investor_row in investor_rows:
                 if need_to_rollover > 0:
                     to_withdraw = (
-                        investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
-                    ) // utils.years_left(investor_row["end_date"])
+                                          investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
+                                  ) // utils.years_left(investor_row["end_date"])
                     to_rollover = int(
                         investor_row[f"current_sus"]
                         if investor_row[f"current_sus"] < need_to_rollover
@@ -629,10 +635,10 @@ elif args["renewal"]:
     proposal_table.update(update_with, ["id"])
 
     # Set RawUsage to zero
-    utils.reset_raw_usage(args["<account>"])
+    utils.reset_raw_usage(account_name)
 
     # Unlock the account
-    utils.unlock_account(args["<account>"])
+    utils.unlock_account(account_name)
 
 elif args["import_proposal"]:
     utils.import_from_json(args, proposal_table, utils.ProposalType.Proposal)
@@ -645,12 +651,12 @@ elif args["release_hold"]:
         exit("ERROR: `release_hold` should be run with sudo privileges")
 
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Unlock the account
-    utils.unlock_account(args["<account>"])
+    utils.unlock_account(account_name)
 
 elif args["alloc_sus"]:
     proposals = proposal_table.find()
@@ -669,12 +675,12 @@ elif args["reset_raw_usage"]:
         exit("ERROR: `reset_raw_usage` should be run with sudo privileges")
 
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Unlock the account
-    utils.reset_raw_usage(args["<account>"])
+    utils.reset_raw_usage(account_name)
 
 elif args["find_unlocked"]:
     proposals = proposal_table.find()
@@ -689,13 +695,13 @@ elif args["lock_with_notification"]:
         exit("ERROR: `lock_with_notification` should be run with sudo privileges")
 
     # Account must exist in database
-    _ = utils.unwrap_if_right(
-        utils.account_exists_in_table(proposal_table, args["<account>"])
-    )
+    account_name = args['<account>']
+    if not Proposal.check_matching_entry_exists(account=account_name):
+        exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Unlock the account
-    utils.proposal_expires_notification(args["<account>"])
-    utils.lock_account(args["<account>"])
+    utils.proposal_expires_notification(account_name)
+    utils.lock_account(account_name)
 
 else:
     raise NotImplementedError("The requested command isn't implemented yet.")

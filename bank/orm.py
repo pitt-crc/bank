@@ -11,7 +11,14 @@ metadata = Base.metadata
 
 
 class CustomBase:
-    """Extends default behavior of the SQLAlchemy ``Base`` class"""
+    """Mixin for extending default behavior of ORM classes"""
+
+    @classmethod
+    def check_matching_entry_exists(cls, **kwargs):
+        with Session() as session:
+            db_entry = session.query(cls).filter_by(**kwargs).first()
+
+        return db_entry is not None
 
     def __repr__(self) -> str:
         # Automatically generate string representation using class attributes
