@@ -7,14 +7,17 @@ from email.message import EmailMessage
 from enum import Enum
 from io import StringIO
 from math import floor
+from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
+from typing import List
 
 import datafreeze
 from bs4 import BeautifulSoup
 from sqlalchemy import select
 
+from tests.orm.test_CustomBase import Base
 from .exceptions import CmdError
 from .orm import Investor, Proposal, Session
 from .settings import app_settings
@@ -412,8 +415,8 @@ def get_account_usage(account, cluster, avail_sus, output):
     return total_cluster_usage
 
 
-def freeze_if_not_empty(items, path):
-    force_eval = list(items)
+def freeze_if_not_empty(items: List[Base], path: Path):
+    force_eval = [dict(p) for p in items]
     if force_eval:
         datafreeze.freeze(force_eval, format="json", filename=path)
     else:

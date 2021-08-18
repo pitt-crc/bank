@@ -63,7 +63,7 @@ from pathlib import Path
 from docopt import docopt
 
 from bank import utils
-from bank.orm import Investor, Proposal, Session
+from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 
 CLUSTERS = app_settings.clusters
@@ -439,20 +439,15 @@ elif args["dump"]:
     investor_p = Path(args["<investor.json>"])
     proposal_archive_p = Path(args["<proposal_archive.json>"])
     investor_archive_p = Path(args["<investor_archive.json>"])
-    if (
-            proposal_p.exists()
-            or investor_p.exists()
-            or investor_archive_p.exists()
-            or proposal_archive_p.exists()
-    ):
-        exit(
-            f"ERROR: Neither {proposal_p}, {investor_p}, {proposal_archive_p}, nor {investor_archive_p} can exist."
-        )
-    else:
-        utils.freeze_if_not_empty(proposal_table.all(), proposal_p)
-        utils.freeze_if_not_empty(investor_table.all(), investor_p)
-        utils.freeze_if_not_empty(proposal_archive_table.all(), proposal_archive_p)
-        utils.freeze_if_not_empty(investor_archive_table.all(), investor_archive_p)
+    paths = (proposal_p, investor_p, investor_archive_p, proposal_archive_p)
+
+    if any(p.exists() for p in paths):
+        exit(f"ERROR: Neither {proposal_p}, {investor_p}, {proposal_archive_p}, nor {investor_archive_p} can exist.")
+
+    with Session() as session:
+        tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
+        for table, path in zip(tables, paths):
+            utils.freeze_if_not_empty(session.query(table).all(), path)
 
 elif args["withdraw"]:
     # Account must exist in database
@@ -478,12 +473,10 @@ elif args["withdraw"]:
         exit()
 
     # Go through investments, oldest first and start withdrawing
-    investments = investor_table.find(account=account_name)
+    investments = Session().query(Investor).filter_by(account=account_name).all()
     for idx, investment in enumerate(investments):
         to_withdraw = 0
-        investment_remaining = (
-                investment["service_units"] - investment[f"withdrawn_sus"]
-        )
+        investment_remaining = investment.service_units - investment.withdrawn_sus
 
         # If not SUs to withdraw, skip the proposal entirely
         if investment_remaining == 0:
@@ -501,9 +494,11 @@ elif args["withdraw"]:
             sus_to_withdraw = 0
 
         # Update the current investment and log withdrawal
-        investment[f"current_sus"] += to_withdraw
-        investment[f"withdrawn_sus"] += to_withdraw
-        investor_table.update(investment, ["id"])
+        with Session() as session:
+            investment.current_sus += to_withdraw
+            investment.withdrawn_sus += to_withdraw
+            session.commit()
+
         utils.log_action(
             f"Withdrew from investment {investment['id']} for account {account_name} with value {to_withdraw}"
         )
