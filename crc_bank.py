@@ -535,6 +535,9 @@ elif args["usage"]:
     print(utils.usage_string(account_name))
 
 elif args["renewal"]:
+
+    session = Session()
+
     # Account must exist in database
     account_name = args['<account>']
     if not Proposal.check_matching_entry_exists(account=account_name):
@@ -549,43 +552,41 @@ elif args["renewal"]:
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Archive current proposal, recording the usage on each cluster
-    current_proposal = proposal_table.find_one(account=account_name)
-    proposal_id = current_proposal["id"]
+    current_proposal = session.query(Proposal).filter_by(account=account_name).first()
+    proposal_id = current_proposal.id
     current_usage = {
         c: utils.get_raw_usage_in_hours(account_name, c) for c in CLUSTERS
     }
     to_insert = {f"{c}_usage": current_usage[c] for c in CLUSTERS}
     for key in ["account", "start_date", "end_date"] + CLUSTERS:
-        to_insert[key] = current_proposal[key]
-    proposal_archive_table.insert(to_insert)
+        to_insert[key] = getattr(current_proposal, key)
+    session.add(ProposalArchive(**to_insert))
 
     # Archive any investments which are
     # - past their end_date
     # - withdraw + renewal leaves no current_sus and fully withdrawn account
-    investor_rows = investor_table.find(account=account_name)
+    investor_rows = session.query(Investor).filter_by(account=account_name).all()
     for investor_row in investor_rows:
         archive = False
-        if investor_row["end_date"] <= date.today():
+        if investor_row.end_date <= date.today():
             archive = True
-        elif (
-                investor_row["current_sus"] == 0
-                and investor_row["withdrawn_sus"] == investor_row["service_units"]
-        ):
+
+        elif investor_row.current_sus == 0 and investor_row.withdrawn_sus == investor_row.service_units:
             archive = True
 
         if archive:
             to_insert = {
-                "service_units": investor_row["service_units"],
-                "current_sus": investor_row[f"current_sus"],
-                "start_date": investor_row["start_date"],
-                "end_date": investor_row["end_date"],
+                "service_units": investor_row.service_units,
+                "current_sus": investor_row.current_sus,
+                "start_date": investor_row.start_date,
+                "end_date": investor_row.end_date,
                 "exhaustion_date": date.today(),
                 "account": account_name,
-                "proposal_id": current_proposal["id"],
-                "investor_id": investor_row["id"],
+                "proposal_id": current_proposal.id,
+                "investor_id": investor_row.id,
             }
-            investor_archive_table.insert(to_insert)
-            investor_table.delete(id=investor_row["id"])
+            session.add(InvestorArchive(**to_insert))
+            investor_row.delete()
 
     # Renewal, should exclude any previously rolled over SUs
     current_investments = sum(
@@ -598,7 +599,7 @@ elif args["renewal"]:
         need_to_rollover = 0
         # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
         total_usage = sum([current_usage[c] for c in CLUSTERS])
-        total_proposal_sus = sum([current_proposal[c] for c in CLUSTERS])
+        total_proposal_sus = sum([getattr(current_proposal, c) for c in CLUSTERS])
         if total_usage > total_proposal_sus:
             need_to_rollover = total_proposal_sus + current_investments - total_usage
         else:
@@ -612,43 +613,41 @@ elif args["renewal"]:
 
         if need_to_rollover > 0:
             # Go through investments and roll them over
-            investor_rows = investor_table.find(account=account_name)
+            investor_rows = session.query(Investor).filter_by(account=account_name).all()
             for investor_row in investor_rows:
                 if need_to_rollover > 0:
-                    to_withdraw = (
-                                          investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
-                                  ) // utils.years_left(investor_row["end_date"])
+                    to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // utils.years_left(investor_row.end_date)
                     to_rollover = int(
-                        investor_row[f"current_sus"]
-                        if investor_row[f"current_sus"] < need_to_rollover
+                        investor_row.current_sus
+                        if investor_row.current_sus < need_to_rollover
                         else need_to_rollover
                     )
-                    investor_row[f"current_sus"] = to_withdraw
-                    investor_row[f"rollover_sus"] = to_rollover
-                    investor_row[f"withdrawn_sus"] += to_withdraw
-                    investor_table.update(investor_row, ["id"])
+                    investor_row.current_sus = to_withdraw
+                    investor_row.rollover_sus = to_rollover
+                    investor_row.withdrawn_sus += to_withdraw
                     need_to_rollover -= to_rollover
 
     # Insert new proposal
-    proposal_type = utils.ProposalType(current_proposal["proposal_type"])
+    proposal_type = utils.ProposalType(current_proposal.proposal_type)
     proposal_duration = utils.get_proposal_duration(proposal_type)
     start_date = date.today()
     end_date = start_date + proposal_duration
-    update_with = {
-        "percent_notified": utils.PercentNotified.Zero.value,
-        "start_date": start_date,
-        "end_date": end_date,
-        "id": proposal_id,
-    }
+
+    prop = session.query(Proposal).filter_by(id=proposal_id).all()
+    prop.percent_notified = utils.PercentNotified.Zero.value
+    prop.start_date = start_date
+    prop.end_date = end_date
     for c in CLUSTERS:
-        update_with[c] = sus[c]
-    proposal_table.update(update_with, ["id"])
+        setattr(prop, c, sus[c])
 
     # Set RawUsage to zero
     utils.reset_raw_usage(account_name)
 
     # Unlock the account
     utils.unlock_account(account_name)
+
+    session.commit()
+    session.close()
 
 elif args["import_proposal"]:
     utils.import_from_json(args, Proposal, utils.ProposalType.Proposal)
