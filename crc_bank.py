@@ -651,10 +651,10 @@ elif args["renewal"]:
     utils.unlock_account(account_name)
 
 elif args["import_proposal"]:
-    utils.import_from_json(args, proposal_table, utils.ProposalType.Proposal)
+    utils.import_from_json(args, Proposal, utils.ProposalType.Proposal)
 
 elif args["import_investor"]:
-    utils.import_from_json(args, investor_table, utils.ProposalType.Investor)
+    utils.import_from_json(args, Investor, utils.ProposalType.Investor)
 
 elif args["release_hold"]:
     if geteuid() != 0:

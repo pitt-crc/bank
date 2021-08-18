@@ -497,29 +497,37 @@ def ask_destructive(args):
 
 def import_from_json(args, table, table_type):
     choice = ask_destructive(args)
-    if choice == "yes" or choice == "y":
-        if table_type == ProposalType.Proposal:
-            filename = "<proposal.json>"
-        elif table_type == ProposalType.Investor:
-            filename = "<investor.json>"
-        else:
-            raise ValueError
-        with open(args[filename], "r") as fp:
-            contents = json.load(fp)
-            table.drop()
-            if "results" in contents.keys():
-                for item in contents["results"]:
-                    start_date_split = [int(x) for x in item["start_date"].split("-")]
-                    item["start_date"] = date(
-                        start_date_split[0], start_date_split[1], start_date_split[2]
-                    )
-                    end_date_split = [int(x) for x in item["end_date"].split("-")]
-                    item["end_date"] = date(
-                        end_date_split[0], end_date_split[1], end_date_split[2]
-                    )
-                    del item["id"]
+    if choice not in ("yes", "y"):
+        return
 
-                table.insert_many(contents["results"])
+    if table_type == Proposal:
+        filepath = Path(args["<proposal.json>"])
+
+    elif table_type == Investor:
+        filepath = Path(args["<investor.json>"])
+
+    else:
+        raise ValueError
+
+    with filepath.open("r") as fp, Session() as session:
+        contents = json.load(fp)
+        session.query(table).delete()  # Delete existing rows in table
+        if "results" in contents.keys():
+            for item in contents["results"]:
+                start_date_split = [int(x) for x in item["start_date"].split("-")]
+                item["start_date"] = date(
+                    start_date_split[0], start_date_split[1], start_date_split[2]
+                )
+
+                end_date_split = [int(x) for x in item["end_date"].split("-")]
+                item["end_date"] = date(
+                    end_date_split[0], end_date_split[1], end_date_split[2]
+                )
+
+                del item["id"]
+                session.add(table(**item))
+
+        session.commit()
 
 
 def is_account_locked(account):
