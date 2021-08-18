@@ -405,17 +405,17 @@ elif args["check_proposal_end_date"]:
     if not Proposal.check_matching_entry_exists(account=account_name):
         exit(f"Account `{account_name}` doesn't exist in the database")
 
-    proposal_row = proposal_table.find_one(account=account_name)
+    proposal_row = Session().query(Proposal).filter_by(account=account_name).first()
     today = date.today()
-    three_months_before_end_date = proposal_row["end_date"] - timedelta(days=90)
+    three_months_before_end_date = proposal_row.end_date - timedelta(days=90)
 
     if today == three_months_before_end_date:
         utils.three_month_proposal_expiry_notification(account_name)
-    elif today == proposal_row["end_date"]:
+    elif today == proposal_row.end_date:
         utils.proposal_expires_notification(account_name)
         utils.lock_account(account_name)
         utils.log_action(
-            f"The account for {account_name} was locked because it reached the end date {proposal_row['end_date']}"
+            f"The account for {account_name} was locked because it reached the end date {proposal_row.end_date}"
         )
 
 elif args["get_sus"]:
@@ -424,10 +424,10 @@ elif args["get_sus"]:
     if not Proposal.check_matching_entry_exists(account=account_name):
         exit(f"Account `{account_name}` doesn't exist in the database")
 
-    proposal_row = proposal_table.find_one(account=account_name)
+    proposal_row = Session().query(Proposal).filter_by(account=account_name).first()
 
     print(f"type,{','.join(CLUSTERS)}")
-    sus = [str(proposal_row[c]) for c in CLUSTERS]
+    sus = [str(getattr(proposal_row, c)) for c in CLUSTERS]
     print(f"proposal,{','.join(sus)}")
 
     investor_sus = utils.get_current_investor_sus(account_name)
