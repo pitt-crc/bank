@@ -100,7 +100,7 @@ if args["insert"]:
 
     with Session() as session:
         session.add(Proposal)
-        session.add()
+        session.commit()
 
     utils.log_action(
         f"Inserted proposal with type {proposal_type.name} for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
@@ -190,17 +190,19 @@ elif args["modify"]:
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Update row in database
-    od = proposal_table.find_one(account=account_name)
-    proposal_duration = utils.get_proposal_duration(
-        utils.ProposalType(od["proposal_type"])
-    )
-    start_date = date.today()
-    end_date = start_date + proposal_duration
-    od["start_date"] = start_date
-    od["end_date"] = end_date
-    for clus in CLUSTERS:
-        od[clus] = sus[clus]
-    proposal_table.update(od, ["id"])
+    with Session() as session:
+        od = session.query(Proposal).filter_by(account=account_name).first()
+        proposal_duration = utils.get_proposal_duration(
+            utils.ProposalType(od.proposal_type)
+        )
+        start_date = date.today()
+        end_date = start_date + proposal_duration
+        od.start_date = start_date
+        od.end_date = end_date
+        for clus in CLUSTERS:
+            setattr(od, clus, sus[clus])
+
+        session.commit()
 
     utils.log_action(
         f"Modified proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
@@ -218,10 +220,13 @@ elif args["add"]:
     )
 
     # Update row in database
-    od = proposal_table.find_one(account=account_name)
-    for clus in CLUSTERS:
-        od[clus] += sus[clus]
-    proposal_table.update(od, ["id"])
+    with Session() as session:
+        od = session.query(Proposal).filter_by(account=account_name)
+        for clus in CLUSTERS:
+            new_su = getattr(od, clus) + sus[clus]
+            setattr(od, clus, new_su)
+
+        session.commit()
 
     utils.log_action(
         f"Added SUs to proposal for {account_name}, new limits are `{od['smp']}` on SMP, `{od['mpi']}` on MPI, `{od['gpu']}` on GPU, and `{od['htc']}` on HTC"
@@ -237,10 +242,12 @@ elif args["change"]:
     sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
 
     # Update row in database
-    od = proposal_table.find_one(account=account_name)
-    for clus in CLUSTERS:
-        od[clus] = sus[clus]
-    proposal_table.update(od, ["id"])
+    with Session() as session:
+        od = session.query(Proposal).filter_by(account=account_name)
+        for clus in CLUSTERS:
+            setattr(od, clus, sus[clus])
+
+        session.commit()
 
     utils.log_action(
         f"Changed proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
@@ -256,14 +263,15 @@ elif args["date"]:
     start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
 
     # Update row in database
-    od = proposal_table.find_one(account=account_name)
-    proposal_duration = utils.get_proposal_duration(
-        utils.ProposalType(od["proposal_type"])
-    )
-    end_date = start_date + proposal_duration
-    od["start_date"] = start_date
-    od["end_date"] = end_date
-    proposal_table.update(od, ["id"])
+    with Session() as session:
+        od = session.query(Proposal).filter_by(account=account_name).first()
+        proposal_duration = utils.get_proposal_duration(
+            utils.ProposalType(od.proposal_type)
+        )
+
+        od.start_date = start_date
+        od.end_date = start_date + proposal_duration
+        session.commit()
 
     utils.log_action(
         f"Modify proposal start date for {account_name} to {start_date}"
@@ -279,12 +287,12 @@ elif args["date_investment"]:
     start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
 
     # Update row in database
-    od = investor_table.find_one(id=args["<id>"], account=account_name)
-    if od:
-        end_date = start_date + timedelta(days=1825)
-        od["start_date"] = start_date
-        od["end_date"] = end_date
-        investor_table.update(od, ["id"])
+    with Session() as session:
+        od = session.query(Investor).filter_by(id=args["<id>"], account=account_name)
+        if od:
+            od.start_date = start_date
+            od.end_date = start_date + timedelta(days=1825)
+            session.commit()
 
     utils.log_action(
         f"Modify investment start date for investment #{args['<id>']} for account {account_name} to {start_date}"
