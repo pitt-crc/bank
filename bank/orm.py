@@ -1,3 +1,5 @@
+from typing import Any, Tuple
+
 from sqlalchemy import Column, Date, Integer, Text
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -14,13 +16,10 @@ class CustomBase:
     """Mixin for extending default behavior of ORM classes"""
 
     @classmethod
-    def check_matching_entry_exists(cls, **kwargs):
-        with Session() as session:
-            db_entry = session.query(cls).filter_by(**kwargs).first()
+    def check_matching_entry_exists(cls, **kwargs) -> bool:
+        return Session().query(cls).filter_by(**kwargs).first() is not None
 
-        return db_entry is not None
-
-    def __iter__(self):
+    def __iter__(self) -> Tuple[str, Any]:
         for column in self.__table__.columns:
             yield column.name, getattr(self, column.name)
 
