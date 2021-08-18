@@ -5,7 +5,7 @@ from typing import Any
 
 from environ.environ import Env
 
-# Appended to all environmental variables used by the parent application
+# Prefix used to identify env variables as settings for this application
 APP_PREFIX = 'BANK_'
 
 
