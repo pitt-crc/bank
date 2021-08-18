@@ -305,14 +305,16 @@ elif args["check_sus_limit"]:
     # 3. Add any investment SUs to the total, archiving any exhausted investments
     # 4. Add archived investments associated to the current proposal
 
+    session = Session()
+
     # Account must exist in database
     account_name = args['<account>']
     if not Proposal.check_matching_entry_exists(account=account_name):
         exit(f"Account `{account_name}` doesn't exist in the database")
 
     # Compute the Total SUs for the proposal period
-    proposal_row = proposal_table.find_one(account=account_name)
-    total_sus = sum([proposal_row[cluster] for cluster in CLUSTERS])
+    proposal_row = session.query(Proposal).filter_by(account=account_name).first()
+    total_sus = sum([getattr(proposal_row, cluster) for cluster in CLUSTERS])
 
     # Parse the used SUs for the proposal period
     used_sus_per_cluster = {c: 0 for c in CLUSTERS}
@@ -323,55 +325,51 @@ elif args["check_sus_limit"]:
     used_sus = sum(used_sus_per_cluster.values())
 
     # Compute the sum of investment SUs, archiving any exhausted investments
-    investor_rows = investor_table.find(account=account_name)
+    investor_rows = session.query(Investor).find(account=account_name).all()
     sum_investment_sus = 0
     for investor_row in investor_rows:
         # Check if investment is exhausted
         exhausted = False
-        if investor_row["service_units"] - investor_row[f"withdrawn_sus"] == 0 and (
+        if investor_row.service_units - investor_row.withdrawn_sus == 0 and (
                 used_sus
                 >= (
                         total_sus
                         + sum_investment_sus
-                        + investor_row[f"current_sus"]
-                        + investor_row[f"rollover_sus"]
+                        + investor_row.current_sus
+                        + investor_row.rollover_sus
                 )
-                or investor_row[f"current_sus"] + investor_row[f"rollover_sus"] == 0
+                or investor_row.current_sus + investor_row.rollover_sus == 0
         ):
             exhausted[cluster] = True
 
         if exhausted:
-            to_insert = {
-                "service_units": investor_row["service_units"],
-                "current_sus": investor_row[f"current_sus"],
-                "rollover_sus": investor_row[f"rollover_sus"],
-                "start_date": investor_row["start_date"],
-                "end_date": investor_row["end_date"],
-                "exhaustion_date": date.today(),
-                "account": account_name,
-                "proposal_id": proposal_row["id"],
-                "investment_id": investor_row["id"],
-            }
-            investor_archive_table.insert(to_insert)
-            investor_table.delete(id=investor_row["id"])
-        else:
-            sum_investment_sus += (
-                    investor_row[f"current_sus"] + investor_row[f"rollover_sus"]
+            to_insert = InvestorArchive(
+                service_units=investor_row.service_units,
+                current_sus=investor_row.current_sus,
+                rollover_sus=investor_row.rollover_sus,
+                start_date=investor_row.start_date,
+                end_date=investor_row.end_date,
+                exhaustion_date=date.today(),
+                account=account_name,
+                proposal_id=proposal_row.id,
+                investment_id=investor_row.id,
             )
+            session.add(InvestorArchive)
+            investor_row.delete()
+        else:
+            sum_investment_sus += investor_row.current_sus + investor_row.rollover_sus
 
     total_sus += sum_investment_sus
 
     # Compute the sum of any archived investments associated with this proposal
-    investor_archive_rows = investor_archive_table.find(proposal_id=proposal_row["id"])
+    investor_archive_rows = session.query(InvestorArchive).filter_by(proposal_id=proposal_row.id)
     sum_investor_archive_sus = 0
     for investor_archive_row in investor_archive_rows:
-        sum_investor_archive_sus += (
-                investor_archive_row[f"current_sus"] + investor_archive_row[f"rollover_sus"]
-        )
+        sum_investor_archive_sus += investor_archive_row.current_sus + investor_archive_row.rollover_sus
 
     total_sus += sum_investor_archive_sus
 
-    notification_percent = utils.PercentNotified(proposal_row["percent_notified"])
+    notification_percent = utils.PercentNotified(proposal_row.percent_notified)
     if notification_percent == utils.PercentNotified.Hundred:
         exit(
             f"{datetime.now()}: Skipping account {account_name} because it should have already been notified and locked"
@@ -382,8 +380,7 @@ elif args["check_sus_limit"]:
     # Update percent_notified in the table and notify account owner if necessary
     updated_notification_percent = utils.find_next_notification(percent_usage)
     if updated_notification_percent != notification_percent:
-        proposal_row["percent_notified"] = updated_notification_percent.value
-        proposal_table.update(proposal_row, ["id"])
+        proposal_row.percent_notified = updated_notification_percent.value
         utils.notify_sus_limit(account_name)
 
         utils.log_action(
@@ -398,6 +395,9 @@ elif args["check_sus_limit"]:
             utils.log_action(
                 f"The account for {account_name} was locked due to SUs limit"
             )
+
+    session.commit()
+    session.close()
 
 elif args["check_proposal_end_date"]:
     # Account must exist in database
