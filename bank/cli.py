@@ -81,26 +81,26 @@ class CLIParser:
 
         parser_info = subparsers.add_parser('info')
         parser_info.set_defaults(function=Bank.info)
-        parser_info.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_info, cls.account)
 
         parser_usage = subparsers.add_parser('usage')
         parser_usage.set_defaults(function=Bank.usage)
-        parser_usage.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_usage, cls.account)
 
         parser_check_sus_limit = subparsers.add_parser('check_sus_limit')
         parser_check_sus_limit.set_defaults(function=Bank.check_sus_limit)
-        parser_check_sus_limit.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_check_sus_limit, cls.account)
 
         parser_check_proposal_end_date = subparsers.add_parser('check_proposal_end_date')
         parser_check_proposal_end_date.set_defaults(function=Bank.check_proposal_end_date)
-        parser_check_proposal_end_date.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_check_proposal_end_date, cls.account)
 
         parser_check_proposal_violations = subparsers.add_parser('check_proposal_violations')
         parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
 
         parser_get_sus = subparsers.add_parser('get_sus')
         parser_get_sus.set_defaults(function=Bank.get_sus)
-        parser_get_sus.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_get_sus, cls.account)
 
         parser_dump = subparsers.add_parser('dump')
         parser_dump.set_defaults(function=Bank.dump)
@@ -116,21 +116,21 @@ class CLIParser:
 
         parser_release_hold = subparsers.add_parser('release_hold')
         parser_release_hold.set_defaults(function=Bank.release_hold)
-        parser_release_hold.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_release_hold, cls.account)
 
         parser_alloc_sus = subparsers.add_parser('alloc_sus')
         parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
 
         parser_reset_raw_usage = subparsers.add_parser('reset_raw_usage')
         parser_reset_raw_usage.set_defaults(function=Bank.reset_raw_usage)
-        parser_reset_raw_usage.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_reset_raw_usage, cls.account)
 
         parser_find_unlocked = subparsers.add_parser('find_unlocked')
         parser_find_unlocked.set_defaults(function=Bank.find_unlocked)
 
         parser_lock_with_notification = subparsers.add_parser('lock_with_notification')
         parser_lock_with_notification.set_defaults(function=Bank.lock_with_notification)
-        parser_lock_with_notification.add_argument(**cls.account)
+        cls.add_args_to_parser(parser_lock_with_notification, cls.account)
 
         return parser
 
