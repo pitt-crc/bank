@@ -10,9 +10,7 @@ from bank.settings import app_settings
 
 
 class Bank:
-    def insert(self, args) -> None:
-        account_name = args['<account>']
-
+    def insert(self, prop_type, account_name, smp, mpi, gpu, htc) -> None:
         # Account shouldn't exist in the proposal table already
         if Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Proposal for account `{account_name}` already exists. Exiting...")
@@ -23,12 +21,13 @@ class Bank:
         )
 
         # Make sure we understand the proposal type
-        proposal_type = utils.unwrap_if_right(utils.parse_proposal_type(args["<type>"]))
+        proposal_type = utils.unwrap_if_right(utils.parse_proposal_type(prop_type))
         proposal_duration = utils.get_proposal_duration(proposal_type)
         start_date = date.today()
 
         # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
+        sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
+        utils.check_service_units_valid_clusters(sus)
 
         new_proposal = Proposal(
             account=account_name,
@@ -47,9 +46,8 @@ class Bank:
             f"Inserted proposal with type {proposal_type.name} for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
         )
 
-    def investor(self, args) -> None:
+    def investor(self, account_name, sus) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -64,7 +62,7 @@ class Bank:
         end_date = start_date + timedelta(days=1825)
 
         # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid(args["<sus>"]))
+        sus = utils.unwrap_if_right(utils.check_service_units_valid(sus))
 
         current_sus = ceil(sus / 5)
         new_investor = Investor(
@@ -120,14 +118,13 @@ class Bank:
             print(json.dumps(od, indent=2))
             print()
 
-    def modify(self, args) -> None:
+    def modify(self, account_name, smp, mpi, gpu, htc) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
-        # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
+        sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
+        utils.check_service_units_valid_clusters(sus)
 
         # Update row in database
         with Session() as session:
@@ -148,16 +145,13 @@ class Bank:
             f"Modified proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
         )
 
-    def add(self, args) -> None:
+    def add(self, account_name, smp, mpi, gpu, htc) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
-        # Service units should be a valid number
-        sus = utils.unwrap_if_right(
-            utils.check_service_units_valid_clusters(args, greater_than_ten_thousand=False)
-        )
+        sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
+        utils.check_service_units_valid_clusters(sus, greater_than_ten_thousand=False)
 
         # Update row in database
         with Session() as session:
@@ -172,14 +166,13 @@ class Bank:
             f"Added SUs to proposal for {account_name}, new limits are `{od['smp']}` on SMP, `{od['mpi']}` on MPI, `{od['gpu']}` on GPU, and `{od['htc']}` on HTC"
         )
 
-    def change(self, args) -> None:
+    def change(self, account_name, smp, mpi, gpu, htc) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
-        # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
+        sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
+        utils.check_service_units_valid_clusters(sus)
 
         # Update row in database
         with Session() as session:
@@ -216,7 +209,7 @@ class Bank:
             f"Modify proposal start date for {account_name} to {start_date}"
         )
 
-    def date_investment(self, account_name, date, inv_id ) -> None:
+    def date_investment(self, account_name, date, inv_id) -> None:
         # Account must exist in database
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
@@ -468,12 +461,11 @@ class Bank:
 
         print(utils.usage_string(account_name))
 
-    def renewal(self, args) -> None:
+    def renewal(self, account_name, smp, mpi, gpu, htc) -> None:
 
         session = Session()
 
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -483,7 +475,9 @@ class Bank:
         )
 
         # Make sure SUs are valid
-        sus = utils.unwrap_if_right(utils.check_service_units_valid_clusters(args))
+        # Service units should be a valid number
+        sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
+        utils.check_service_units_valid_clusters(sus)
 
         # Archive current proposal, recording the usage on each cluster
         current_proposal = session.query(Proposal).filter_by(account=account_name).first()
@@ -584,11 +578,11 @@ class Bank:
         session.commit()
         session.close()
 
-    def import_proposal(self, args) -> None:
-        utils.import_from_json(args, Proposal, utils.ProposalType.Proposal)
+    def import_proposal(self, path, overwrite=False) -> None:
+        utils.import_from_json(path, Proposal, overwrite)
 
-    def import_investor(self, args) -> None:
-        utils.import_from_json(args, Investor, utils.ProposalType.Investor)
+    def import_investor(self, path, overwrite=False) -> None:
+        utils.import_from_json(path, Investor, overwrite)
 
     def release_hold(self, account_name) -> None:
         if geteuid() != 0:

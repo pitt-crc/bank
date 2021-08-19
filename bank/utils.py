@@ -91,27 +91,19 @@ def check_service_units_valid(units):
     return Right(result)
 
 
-def check_service_units_valid_clusters(args, greater_than_ten_thousand=True):
-    lefts = []
-    result = {}
-    for clus in app_settings.clusters:
+def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
+    for clus, val in sus:
         try:
-            if args[f"--{clus}"]:
-                result[clus] = int(args[f"--{clus}"])
-            else:
-                result[clus] = 0
+            sus[clus] = int(val)
+
         except ValueError:
-            lefts.append(
-                f"Given non-integer value `{args[f'<{clus}>']}` for cluster `{clus}`"
-            )
-    if lefts:
-        return Left("\n".join(lefts))
-    total_sus = sum(result.values())
+           raise ValueError(f"Given non-integer value `{val}` for cluster `{clus}`")
+
+    total_sus = sum(sus.values())
     if greater_than_ten_thousand and total_sus < 10000:
-        return Left(f"Total SUs should exceed 10000 SUs, got `{total_sus}`")
+        raise ValueError(f"Total SUs should exceed 10000 SUs, got `{total_sus}`")
     elif total_sus <= 0:
-        return Left(f"Total SUs should be greater than zero, got `{total_sus}`")
-    return Right(result)
+        raise ValueError(f"Total SUs should be greater than zero, got `{total_sus}`")
 
 
 def account_and_cluster_associations_exists(account):
@@ -484,8 +476,8 @@ def years_left(end):
     return end.year - date.today().year
 
 
-def ask_destructive(args):
-    if args["--yes"]:
+def ask_destructive(force=False):
+    if force:
         choice = "yes"
     else:
         print(
@@ -495,19 +487,12 @@ def ask_destructive(args):
     return choice
 
 
-def import_from_json(args, table, table_type):
-    choice = ask_destructive(args)
+def import_from_json(filepath:str, table, overwrite:bool):
+    filepath = Path(filepath)
+
+    choice = ask_destructive(force=overwrite)
     if choice not in ("yes", "y"):
         return
-
-    if table_type == Proposal:
-        filepath = Path(args["<proposal.json>"])
-
-    elif table_type == Investor:
-        filepath = Path(args["<investor.json>"])
-
-    else:
-        raise ValueError
 
     with filepath.open("r") as fp, Session() as session:
         contents = json.load(fp)
