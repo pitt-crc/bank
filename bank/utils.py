@@ -7,15 +7,20 @@ from email.message import EmailMessage
 from enum import Enum
 from io import StringIO
 from math import floor
+from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
+from typing import List
 
 import datafreeze
 from bs4 import BeautifulSoup
+from sqlalchemy import select
 
+from tests.orm.test_CustomBase import Base
 from .exceptions import CmdError
-from .settings import app_settings, investor_table, proposal_table
+from .orm import Investor, Proposal, Session
+from .settings import app_settings
 
 
 class ShellCmd:
@@ -271,39 +276,31 @@ def reset_raw_usage(account):
     )
 
 
-def get_investment_status(account):
+def get_investment_status(account: str) -> str:
     total_investment_h = "Total Investment SUs"
     start_date_h = "Start Date"
     current_sus_h = "Current SUs"
     withdrawn_h = "Withdrawn SUs"
     rollover_h = "Rollover SUs"
 
-    total_investment_w = 20
-    start_date_w = 10
-    current_sus_w = 11
-    withdrawn_w = 13
-    rollover_w = 12
-
     result_s = f"{total_investment_h} | {start_date_h} | {current_sus_h} | {withdrawn_h} | {rollover_h}\n"
 
-    for row in investor_table.find(account=account):
-        per_year = f"per_year"
-        current = f"current_sus"
-        withdrawn = f"withdrawn_sus"
-        rollover = f"rollover_sus"
-        result_s += f"{row['service_units']:20} | {row['start_date'].strftime(app_settings.date_format):>10} | {row[current]:11} | {row[withdrawn]:13} | {row[rollover]:12}\n"
+    statement = select(Proposal).filter_by(account=account)
+    for row in Session().execute(statement).scalars().all():
+        result_s += f"{row.service_units:20} | {row.start_date.strftime(app_settings.date_format):>10} | {row.current_sus:11} | {row.withdrawn_sus:13} | {row.rollover_sus:12}\n"
 
     return result_s
 
 
-def notify_sus_limit(account):
-    proposal_row = proposal_table.find_one(account=account)
+def notify_sus_limit(account: str) -> None:
+    statement = select(Proposal).filter_by(account=account)
+    proposal = Session().execute(statement).scalars().first()
     email_html = app_settings.notify_sus_limit_email_text.format(
         account=account,
-        start=proposal_row["start_date"].strftime(app_settings.date_format),
-        expire=proposal_row["end_date"].strftime(app_settings.date_format),
+        start=proposal.start_date.strftime(app_settings.date_format),
+        expire=proposal.end_date.strftime(app_settings.date_format),
         usage=usage_string(account),
-        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        perc=PercentNotified(proposal.percent_notified).to_percentage(),
         investment=get_investment_status(account)
     )
 
@@ -331,30 +328,32 @@ def send_email(email_html, account):
         s.send_message(msg)
 
 
-def three_month_proposal_expiry_notification(account):
-    proposal_row = proposal_table.find_one(account=account)
+def three_month_proposal_expiry_notification(account: str) -> None:
+    statement = select(Proposal).filter_by(account=account)
+    proposal = Session().execute(statement).scalars().first()
 
     email_html = app_settings.three_month_proposal_expiry_notification_email.format(
         account=account,
-        start=proposal_row["start_date"].strftime(app_settings.date_format),
-        expire=proposal_row["end_date"].strftime(app_settings.date_format),
+        start=proposal.start_date.strftime(app_settings.date_format),
+        expire=proposal.end_date.strftime(app_settings.date_format),
         usage=usage_string(account),
-        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        perc=PercentNotified(proposal.percent_notified).to_percentage(),
         investment=get_investment_status(account)
     )
 
     send_email(email_html, account)
 
 
-def proposal_expires_notification(account):
-    proposal_row = proposal_table.find_one(account=account)
+def proposal_expires_notification(account: str) -> None:
+    statement = select(Proposal).filter_by(account=account)
+    proposal = Session().execute(statement).scalars().first()
 
     email_html = app_settings.proposal_expires_notification_email.format(
         account=account,
-        start=proposal_row["start_date"].strftime(app_settings.date_format),
-        expire=proposal_row["end_date"].strftime(app_settings.date_format),
+        start=proposal.start_date.strftime(app_settings.date_format),
+        expire=proposal.end_date.strftime(app_settings.date_format),
         usage=usage_string(account),
-        perc=PercentNotified(proposal_row["percent_notified"]).to_percentage(),
+        perc=PercentNotified(proposal.percent_notified).to_percentage(),
         investment=get_investment_status(account)
     )
 
@@ -363,25 +362,26 @@ def proposal_expires_notification(account):
 
 def get_available_investor_sus(account):
     res = []
-    ods = investor_table.find(account=account)
-    for od in ods:
-        res.append(od["service_units"] - od[f"withdrawn_sus"])
+    statement = select(Investor).filter_by(account=account)
+    for od in Session().execute(statement).scalars().all():
+        res.append(od.service_units - od.withdrawn_sus)
+
     return res
 
 
 def get_current_investor_sus(account):
     res = []
-    ods = investor_table.find(account=account)
-    for od in ods:
-        res.append(od[f"current_sus"] + od[f"rollover_sus"])
+    statement = select(Investor).filter_by(account=account)
+    for od in Session().execute(statement).scalars().all():
+        res.append(od.current_sus + od.rollover_sus)
     return res
 
 
 def get_current_investor_sus_no_rollover(account):
     res = []
-    ods = investor_table.find(account=account)
-    for od in ods:
-        res.append(od[f"current_sus"])
+    statement = select(Investor).filter_by(account=account)
+    for od in Session().execute(statement).scalars().all():
+        res.append(od.current_sus)
     return res
 
 
@@ -415,8 +415,8 @@ def get_account_usage(account, cluster, avail_sus, output):
     return total_cluster_usage
 
 
-def freeze_if_not_empty(items, path):
-    force_eval = list(items)
+def freeze_if_not_empty(items: List[Base], path: Path):
+    force_eval = [dict(p) for p in items]
     if force_eval:
         datafreeze.freeze(force_eval, format="json", filename=path)
     else:
@@ -425,33 +425,35 @@ def freeze_if_not_empty(items, path):
 
 
 def usage_string(account):
-    proposal = proposal_table.find_one(account=account)
+    statement = select(Proposal).filter_by(account=account)
+    proposal = Session().execute(statement).scalars().first()
+
     investments = sum(get_current_investor_sus(account))
-    proposal_total = sum([proposal[c] for c in app_settings.clusters])
+    proposal_total = sum([getattr(proposal, c) for c in app_settings.clusters])
     aggregate_usage = 0
     with StringIO() as output:
         output.write(f"|{'-' * 82}|\n")
         output.write(
-            f"|{'Proposal End Date':^30}|{proposal['end_date'].strftime(app_settings.date_format):^51}|\n"
+            f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(app_settings.date_format):^51}|\n"
         )
         for cluster in app_settings.clusters:
             output.write(f"|{'-' * 82}|\n")
             output.write(
-                f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(proposal[cluster]):^82}|\n"
+                f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(getattr(proposal, cluster)):^82}|\n"
             )
             output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
             output.write(
                 f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
             )
             output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-            total_usage = get_account_usage(account, cluster, proposal[cluster], output)
+            total_usage = get_account_usage(account, cluster, getattr(proposal, cluster), output)
             aggregate_usage += total_usage
             output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-            if proposal[cluster] == 0:
+            if getattr(proposal, cluster) == 0:
                 output.write(f"|{'Overall':^20}|{total_usage:^30d}|{'N/A':^30}|\n")
             else:
                 output.write(
-                    f"|{'Overall':^20}|{total_usage:^30d}|{100 * total_usage / proposal[cluster]:^30.2f}|\n"
+                    f"|{'Overall':^20}|{total_usage:^30d}|{100 * total_usage / getattr(proposal, cluster):^30.2f}|\n"
                 )
             output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
         output.write(f"|{'Aggregate':^82}|\n")
@@ -495,29 +497,37 @@ def ask_destructive(args):
 
 def import_from_json(args, table, table_type):
     choice = ask_destructive(args)
-    if choice == "yes" or choice == "y":
-        if table_type == ProposalType.Proposal:
-            filename = "<proposal.json>"
-        elif table_type == ProposalType.Investor:
-            filename = "<investor.json>"
-        else:
-            raise ValueError
-        with open(args[filename], "r") as fp:
-            contents = json.load(fp)
-            table.drop()
-            if "results" in contents.keys():
-                for item in contents["results"]:
-                    start_date_split = [int(x) for x in item["start_date"].split("-")]
-                    item["start_date"] = date(
-                        start_date_split[0], start_date_split[1], start_date_split[2]
-                    )
-                    end_date_split = [int(x) for x in item["end_date"].split("-")]
-                    item["end_date"] = date(
-                        end_date_split[0], end_date_split[1], end_date_split[2]
-                    )
-                    del item["id"]
+    if choice not in ("yes", "y"):
+        return
 
-                table.insert_many(contents["results"])
+    if table_type == Proposal:
+        filepath = Path(args["<proposal.json>"])
+
+    elif table_type == Investor:
+        filepath = Path(args["<investor.json>"])
+
+    else:
+        raise ValueError
+
+    with filepath.open("r") as fp, Session() as session:
+        contents = json.load(fp)
+        session.query(table).delete()  # Delete existing rows in table
+        if "results" in contents.keys():
+            for item in contents["results"]:
+                start_date_split = [int(x) for x in item["start_date"].split("-")]
+                item["start_date"] = date(
+                    start_date_split[0], start_date_split[1], start_date_split[2]
+                )
+
+                end_date_split = [int(x) for x in item["end_date"].split("-")]
+                item["end_date"] = date(
+                    end_date_split[0], end_date_split[1], end_date_split[2]
+                )
+
+                del item["id"]
+                session.add(table(**item))
+
+        session.commit()
 
 
 def is_account_locked(account):
