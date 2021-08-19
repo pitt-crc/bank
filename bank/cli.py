@@ -1,5 +1,3 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
-
 """Command line interface for the ``bank`` package"""
 
 from argparse import ArgumentParser
