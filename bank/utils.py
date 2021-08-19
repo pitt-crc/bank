@@ -2,14 +2,17 @@
 
 import json
 from datetime import date, datetime, timedelta
+from email.message import EmailMessage
 from enum import Enum
 from math import floor
 from pathlib import Path
 from shlex import split
+from smtplib import SMTP
 from subprocess import PIPE, Popen
 from typing import List
 
 import datafreeze
+from bs4 import BeautifulSoup
 
 from tests.orm.test_CustomBase import Base
 from .exceptions import CmdError
@@ -260,3 +263,26 @@ def import_from_json(args, table, table_type):
                 session.add(table(**item))
 
         session.commit()
+
+
+def send_email(account, email_html: str) -> None:
+    """Send an email to a user account
+
+    Args:
+        account: The account to send an email to
+        email_html: The content of the email
+    """
+
+    # Extract the text from the email
+    soup = BeautifulSoup(email_html, "html.parser")
+    email_text = soup.get_text()
+
+    msg = EmailMessage()
+    msg.set_content(email_text)
+    msg.add_alternative(email_html, subtype="html")
+    msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
+    msg["From"] = "noreply@pitt.edu"
+    msg["To"] = account.get_account_email()
+
+    with SMTP("localhost") as s:
+        s.send_message(msg)

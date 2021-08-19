@@ -1,9 +1,7 @@
 import csv
-from email.message import EmailMessage
 from io import StringIO
-from smtplib import SMTP
+from typing import List, Union
 
-from bs4 import BeautifulSoup
 from sqlalchemy import select
 
 from bank.utils import Left, PercentNotified, Right, ShellCmd, convert_to_hours
@@ -18,16 +16,14 @@ class Account:
         self.account_name = account_name
 
     def is_account_locked(self) -> bool:
-        """Return whether the account is locked
-
-        Returns:
-            The locked state as a boolean
-        """
+        """Return whether the account is locked"""
 
         cmd = ShellCmd(f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins')
         return 'cpu=0' in cmd.out
 
-    def usage_string(self):
+    def usage_string(self) -> str:
+        """Return the current account usage as an ascii table"""
+
         statement = select(Proposal).filter_by(account=self.account_name)
         proposal = Session().execute(statement).scalars().first()
 
@@ -107,10 +103,18 @@ class Account:
 
         return total_cluster_usage
 
-    def get_raw_usage_in_hours(self, cluster):
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+    def get_raw_usage_in_hours(self, cluster: str) -> float:
+        """Return the account's usage on a given cluster in hours
+
+        Args:
+            cluster: The name of the cluster to check usage on
+
+        Returns:
+            The account usage in hours
+        """
 
         # Only the second and third line are necessary, wrapped in text buffer
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
         sio = StringIO("\n".join(cmd.out.split("\n")[1:3]))
 
         # use built-in CSV reader to read header and data
@@ -122,23 +126,25 @@ class Account:
         raw_usage_idx = header.index("RawUsage")
         return convert_to_hours(data[raw_usage_idx])
 
-    def lock_account(self):
-        clusters = ','.join(app_settings.clusters)
-        ShellCmd(
-            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=0"
-        )
+    def lock_account(self) -> None:
+        """Lock the user account"""
 
-    def unlock_account(self):
         clusters = ','.join(app_settings.clusters)
         ShellCmd(
-            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=-1"
-        )
+            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=0")
 
-    def reset_raw_usage(self):
+    def unlock_account(self) -> None:
+        """Unlock the user account"""
+
         clusters = ','.join(app_settings.clusters)
         ShellCmd(
-            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0"
-        )
+            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=-1")
+
+    def reset_raw_usage(self) -> None:
+        """Set reset raw usage on all clusters to zero"""
+
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
     def get_investment_status(self) -> str:
         total_investment_h = "Total Investment SUs"
@@ -169,7 +175,7 @@ class Account:
 
         self.send_email(email_html)
 
-    def get_account_email(self):
+    def get_account_email(self) -> str:
         cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
         return f'{cmd.out}{app_settings.email_suffix}'
 
@@ -203,7 +209,16 @@ class Account:
 
         self.send_email(email_html)
 
-    def get_available_investor_sus(self):
+    def get_available_investor_sus(self) -> List[float]:
+        """Return available service units on invested clusters
+
+        Includes service units for any active proposals minus any
+        overdrawn units.
+
+        Returns:
+            A list of service units in each invested cluster
+        """
+
         res = []
         statement = select(Investor).filter_by(account=self.account_name)
         for od in Session().execute(statement).scalars().all():
@@ -211,21 +226,41 @@ class Account:
 
         return res
 
-    def get_current_investor_sus(self):
+    def get_current_investor_sus(self) -> List[float]:
+        """Return all account service units available on invested clusters
+
+        Includes service units for any active proposals in addition
+        to any rollover units from previous accounts
+
+        Returns:
+            A list of service units in each invested cluster
+        """
+
         res = []
         statement = select(Investor).filter_by(account=self.account_name)
         for od in Session().execute(statement).scalars().all():
             res.append(od.current_sus + od.rollover_sus)
+
         return res
 
-    def get_current_investor_sus_no_rollover(self):
+    def get_current_investor_sus_no_rollover(self) -> List[float]:
+        """Return current service units available on invested clusters
+
+        Includes service units for any active proposals in addition
+        to any rollover units from previous accounts
+
+        Returns:
+            A list of service units in each invested cluster
+        """
+
         res = []
         statement = select(Investor).filter_by(account=self.account_name)
         for od in Session().execute(statement).scalars().all():
             res.append(od.current_sus)
+
         return res
 
-    def get_usage_for_account(self):
+    def get_usage_for_account(self) -> float:
         raw_usage = 0
         for cluster in app_settings.clusters:
             cmd = ShellCmd(
@@ -234,7 +269,7 @@ class Account:
             raw_usage += int(cmd.out.split("\n")[1])
         return raw_usage / (60.0 * 60.0)
 
-    def account_and_cluster_associations_exists(self):
+    def account_and_cluster_associations_exists(self) -> Union[Left, Right]:
         missing = []
         for cluster in app_settings.clusters:
             cmd = ShellCmd(
@@ -248,25 +283,3 @@ class Account:
                 f"Associations missing for account `{self.account_name}` on clusters `{','.join(missing)}`"
             )
         return Right(self.account_name)
-
-    def account_exists_in_table(self, table):
-        q = table.find_one(account=self.account_name)
-        if not q is None:
-            return Right(q)
-        else:
-            return Left(f"Account `{self.account_name}` doesn't exist in the database")
-
-    def send_email(self, email_html):
-        # Extract the text from the email
-        soup = BeautifulSoup(email_html, "html.parser")
-        email_text = soup.get_text()
-
-        msg = EmailMessage()
-        msg.set_content(email_text)
-        msg.add_alternative(email_html, subtype="html")
-        msg["Subject"] = f"Your allocation on H2P for account: {self.account_name}"
-        msg["From"] = "noreply@pitt.edu"
-        msg["To"] = self.get_account_email()
-
-        with SMTP("localhost") as s:
-            s.send_message(msg)
