@@ -59,8 +59,7 @@ class CLIParser:
         parser_change.set_defaults(function=Bank.change)
         cls.add_args_to_parser(parser_change, cls.account, cls.smp, cls.mpi, cls.gpu, cls.htc)
 
-        parser_renewal = subparsers.add_parser('renewal',
-                                               help='Similar to modify, except rolls over active investments')
+        parser_renewal = subparsers.add_parser('renewal', help='Similar to modify, except rolls over active investments')
         parser_renewal.set_defaults(function=Bank.renewal)
         cls.add_args_to_parser(parser_renewal, cls.account, cls.smp, cls.mpi, cls.gpu, cls.htc)
 

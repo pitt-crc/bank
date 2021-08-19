@@ -1,66 +1,8 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
-""" crc_bank.py -- Deal with crc_bank.db
-
-Usage:
-    crc_bank.py insert <type> <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
-    crc_bank.py modify <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
-    crc_bank.py add <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
-    crc_bank.py change <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
-    crc_bank.py date <account> <date>
-    crc_bank.py date_investment <account> <date> <id>
-    crc_bank.py investor <account> <sus>
-    crc_bank.py withdraw <account> <sus>
-    crc_bank.py renewal <account> [-s <sus>] [-m <sus>] [-g <sus>] [-c <sus>]
-    crc_bank.py info <account>
-    crc_bank.py usage <account>
-    crc_bank.py check_sus_limit <account>
-    crc_bank.py check_proposal_end_date <account>
-    crc_bank.py check_proposal_violations
-    crc_bank.py get_sus <account>
-    crc_bank.py dump <proposal.json> <investor.json> <proposal_archive.json> <investor_archive.json>
-    crc_bank.py import_proposal <proposal.json> [-y]
-    crc_bank.py import_investor <investor.json> [-y]
-    crc_bank.py release_hold <account>
-    crc_bank.py alloc_sus
-    crc_bank.py reset_raw_usage <account>
-    crc_bank.py find_unlocked
-    crc_bank.py lock_with_notification <account>
-    crc_bank.py -h | --help
-    crc_bank.py -v | --version
-
-Options:
-    -h --help               Print this screen and exit
-    -v --version            Print the version of crc_bank.py
-    -s --smp <sus>          The smp limit in CPU Hours [default: 0]
-    -m --mpi <sus>          The mpi limit in CPU Hours [default: 0]
-    -g --gpu <sus>          The gpu limit in CPU Hours [default: 0]
-    -c --htc <sus>          The htc limit in CPU Hours [default: 0]
-    -y --yes                Automatically overwrite table
-
-Positional Arguments:
-    <account>               The associated slurm account
-    <type>                  The proposal type: proposal or class
-    <date>                  Change proposal start date (e.g 12/01/19)
-    <sus>                   The number of SUs you want to insert
-    <proposal.json>         The proposal table in JSON format
-    <investor.json>         The investor table in JSON format
-    <investor_archive.json> The investor archival table in JSON format
-
-Additional Documentation:
-    crc_bank.py insert  # insert for the first time
-    crc_bank.py modify  # change to new limits, update proposal date
-    crc_bank.py add     # add SUs on top of current values
-    crc_bank.py change  # change to new limits, don't change proposal date
-    crc_bank.py renewal # Similar to modify, except rolls over active investments
-"""
-
 import json
 from datetime import date, datetime, timedelta
 from math import ceil
 from os import geteuid
 from pathlib import Path
-
-from docopt import docopt
 
 from bank import utils
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
@@ -144,9 +86,8 @@ class Bank:
             f"Inserted investment for {account_name} with per year allocations of `{current_sus}`"
         )
 
-    def info(self, args) -> None:
+    def info(self, account_name: str) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -252,14 +193,13 @@ class Bank:
             f"Changed proposal for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
         )
 
-    def date(self, args) -> None:
+    def date(self, account_name, date) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Date should be valid
-        start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
+        start_date = utils.unwrap_if_right(utils.check_date_valid(date))
 
         # Update row in database
         with Session() as session:
@@ -276,28 +216,27 @@ class Bank:
             f"Modify proposal start date for {account_name} to {start_date}"
         )
 
-    def date_investment(self, args) -> None:
+    def date_investment(self, account_name, date, inv_id ) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Date should be valid
-        start_date = utils.unwrap_if_right(utils.check_date_valid(args["<date>"]))
+        start_date = utils.unwrap_if_right(utils.check_date_valid(date))
 
         # Update row in database
         with Session() as session:
-            od = session.query(Investor).filter_by(id=args["<id>"], account=account_name)
+            od = session.query(Investor).filter_by(id=inv_id, account=account_name)
             if od:
                 od.start_date = start_date
                 od.end_date = start_date + timedelta(days=1825)
                 session.commit()
 
         utils.log_action(
-            f"Modify investment start date for investment #{args['<id>']} for account {account_name} to {start_date}"
+            f"Modify investment start date for investment #{inv_id} for account {account_name} to {start_date}"
         )
 
-    def check_sus_limit(self, args) -> None:
+    def check_sus_limit(self, account_name) -> None:
         # This is a complicated function, the steps:
         # 1. Get proposal for account and compute the total SUs from proposal
         # 2. Determine the current usage for the user across clusters
@@ -307,7 +246,6 @@ class Bank:
         session = Session()
 
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -398,9 +336,8 @@ class Bank:
         session.commit()
         session.close()
 
-    def check_proposal_end_date(self, args) -> None:
+    def check_proposal_end_date(self, account_name) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -417,9 +354,8 @@ class Bank:
                 f"The account for {account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
-    def get_sus(self, args) -> None:
+    def get_sus(self, account_name) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -433,30 +369,30 @@ class Bank:
         for row in investor_sus:
             print(f"investment,{row}")
 
-    def dump(self, args) -> None:
-        proposal_p = Path(args["<proposal.json>"])
-        investor_p = Path(args["<investor.json>"])
-        proposal_archive_p = Path(args["<proposal_archive.json>"])
-        investor_archive_p = Path(args["<investor_archive.json>"])
+    def dump(self, proposal: str, investor: str, proposal_archive: str, investor_archive: str) -> None:
+        proposal_p = Path(proposal)
+        investor_p = Path(investor)
+        proposal_archive_p = Path(proposal_archive)
+        investor_archive_p = Path(investor_archive)
         paths = (proposal_p, investor_p, investor_archive_p, proposal_archive_p)
 
         if any(p.exists() for p in paths):
-            exit(f"ERROR: Neither {proposal_p}, {investor_p}, {proposal_archive_p}, nor {investor_archive_p} can exist.")
+            exit(
+                f"ERROR: Neither {proposal_p}, {investor_p}, {proposal_archive_p}, nor {investor_archive_p} can exist.")
 
         with Session() as session:
             tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
             for table, path in zip(tables, paths):
                 utils.freeze_if_not_empty(session.query(table).all(), path)
 
-    def withdraw(self, args) -> None:
+    def withdraw(self, account_name, sus) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Service units should be a valid number
         sus_to_withdraw = utils.unwrap_if_right(
-            utils.check_service_units_valid(args["<sus>"])
+            utils.check_service_units_valid(sus)
         )
 
         # First check if the user has enough SUs to withdraw
@@ -507,7 +443,7 @@ class Bank:
                 print(f"Finished withdrawing after {idx} iterations")
                 break
 
-    def check_proposal_violations(self, args) -> None:
+    def check_proposal_violations(self) -> None:
         # Iterate over all of the proposals looking for proposal violations
         proposals = Session().query(Proposal).all()
 
@@ -525,9 +461,8 @@ class Bank:
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus
 
-    def usage(self, args) -> None:
+    def usage(self, account_name) -> None:
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
@@ -615,7 +550,8 @@ class Bank:
                 investor_rows = session.query(Investor).filter_by(account=account_name).all()
                 for investor_row in investor_rows:
                     if need_to_rollover > 0:
-                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // utils.years_left(investor_row.end_date)
+                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // utils.years_left(
+                            investor_row.end_date)
                         to_rollover = int(
                             investor_row.current_sus
                             if investor_row.current_sus < need_to_rollover
@@ -654,19 +590,18 @@ class Bank:
     def import_investor(self, args) -> None:
         utils.import_from_json(args, Investor, utils.ProposalType.Investor)
 
-    def release_hold(self, args) -> None:
+    def release_hold(self, account_name) -> None:
         if geteuid() != 0:
             exit("ERROR: `release_hold` should be run with sudo privileges")
 
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Unlock the account
         utils.unlock_account(account_name)
 
-    def alloc_sus(self, args) -> None:
+    def alloc_sus(self) -> None:
         alloc_sus = 0
         with open("service_units.csv", "w") as fp, Session() as session:
             fp.write("account,smp,gpu,mpi,htc\n")
@@ -679,31 +614,29 @@ class Bank:
 
         print(alloc_sus)
 
-    def reset_raw_usage(self, args) -> None:
+    def reset_raw_usage(self, account_name) -> None:
         if geteuid() != 0:
             exit("ERROR: `reset_raw_usage` should be run with sudo privileges")
 
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Unlock the account
         utils.reset_raw_usage(account_name)
 
-    def find_unlocked(self, args) -> None:
+    def find_unlocked(self) -> None:
         today = date.today()
         for proposal in Session().query(Proposal).all():
             is_locked = utils.is_account_locked(proposal.account)
             if (not is_locked) and proposal.end_date < today:
                 print(proposal.account)
 
-    def lock_with_notification(self, args) -> None:
+    def lock_with_notification(self, account_name: str) -> None:
         if geteuid() != 0:
             exit("ERROR: `lock_with_notification` should be run with sudo privileges")
 
         # Account must exist in database
-        account_name = args['<account>']
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
