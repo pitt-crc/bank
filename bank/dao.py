@@ -5,7 +5,7 @@ from io import StringIO
 from math import ceil
 from os import geteuid
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from sqlalchemy import select
 
@@ -47,42 +47,48 @@ class Account:
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         )
 
-    def get_raw_usage_in_hours(self, cluster: str) -> float:
-        """Return the account's usage on a given cluster in hours
+    def _raw_cluster_usage(self, cluster: str) -> None:
+        """Return the account usage on a given cluster in seconds"""
+
+        # Only the second and third line are necessary from the output table
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        header, data = cmd.out.split('\n')[1:3]
+        raw_usage_index = header.split('|').index("RawUsage")
+        return data.split('|')[raw_usage_index]
+
+    def get_raw_usage(self, *clusters: str, in_hours=False) -> Dict[str, int]:
+        """Return the account usage on a given cluster in seconds
 
         Args:
-            cluster: The name of the cluster to check usage on
+            *clusters: The name of each cluster to check usage on
+            in_hours: Return the usage in integer hours instead of seconds
 
         Returns:
-            The account usage in hours
+            The account usage in seconds
         """
 
-        # Only the second and third line are necessary, wrapped in text buffer
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
-        sio = StringIO("\n".join(cmd.out.split("\n")[1:3]))
+        if in_hours:
+            return {c: convert_to_hours(self._raw_cluster_usage(c)) for c in clusters}
 
-        # use built-in CSV reader to read header and data
-        reader = csv.reader(sio, delimiter="|")
-        header = next(reader)
-        data = next(reader)
+        return {c: self._raw_cluster_usage(c) for c in clusters}
 
-        # Find the index of RawUsage from the header
-        raw_usage_idx = header.index("RawUsage")
-        return convert_to_hours(data[raw_usage_idx])
+    def reset_raw_usage(self, *clusters) -> None:
+        """Set raw account usage on the given clusters to zero"""
 
-    def reset_raw_usage(self) -> None:
-        """Set raw usage on all clusters for the account to zero"""
-
-        clusters = ','.join(app_settings.clusters)
+        clusters = ','.join(clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
+
+    def get_email_address(self) -> str:
+        """Return the email address affiliated with the user account"""
+
+        cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
+        return f'{cmd.out}{app_settings.email_suffix}'
 
     def get_investment_status(self) -> str:
         """Return the current status of any account investments as an ascii table"""
 
         out = f"Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n"
-
-        table_rows = Session().select(Investor).filter_by(account=self.account_name).all()
-        for row in table_rows:
+        for row in Session().select(Investor).filter_by(account=self.account_name).all():
             out += (
                 f"{row.service_units:20} | "
                 f"{row.start_date.strftime(app_settings.date_format):>10} | "
@@ -92,10 +98,6 @@ class Account:
             )
 
         return out
-
-    def get_account_email(self) -> str:
-        cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
-        return f'{cmd.out}{app_settings.email_suffix}'
 
     def notify_sus_limit(self) -> None:
         statement = select(Proposal).filter_by(account=self.account_name)
@@ -524,11 +526,7 @@ class Bank:
         total_sus = sum([getattr(proposal_row, cluster) for cluster in app_settings.clusters])
 
         # Parse the used SUs for the proposal period
-        used_sus_per_cluster = {c: 0 for c in app_settings.clusters}
-        for cluster in app_settings.clusters:
-            used_sus_per_cluster[cluster] = utils.get_raw_usage_in_hours(
-                account_name, cluster
-            )
+        used_sus_per_cluster = Account(account_name).get_raw_usage(*app_settings.clusters, in_hours=True)
         used_sus = sum(used_sus_per_cluster.values())
 
         # Compute the sum of investment SUs, archiving any exhausted investments
@@ -536,7 +534,6 @@ class Bank:
         sum_investment_sus = 0
         for investor_row in investor_rows:
             # Check if investment is exhausted
-            exhausted = False
             if investor_row.service_units - investor_row.withdrawn_sus == 0 and (
                     used_sus
                     >= (
@@ -547,9 +544,6 @@ class Bank:
                     )
                     or investor_row.current_sus + investor_row.rollover_sus == 0
             ):
-                exhausted[cluster] = True
-
-            if exhausted:
                 to_insert = InvestorArchive(
                     service_units=investor_row.service_units,
                     current_sus=investor_row.current_sus,
@@ -721,9 +715,9 @@ class Bank:
             investments = sum(utils.get_available_investor_sus(proposal.account))
 
             subtract_previous_investment = 0
-            for cluster in app_settings.clusters:
+            cluster_sus = Account(proposal.account).get_raw_usage(*app_settings.clusters, in_hours=True)
+            for cluster, used_sus in cluster_sus.items():
                 avail_sus = getattr(proposal, cluster)
-                used_sus = utils.get_raw_usage_in_hours(proposal.account, cluster)
                 if used_sus > (avail_sus + investments - subtract_investment):
                     print(
                         f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
@@ -757,9 +751,8 @@ class Bank:
         # Archive current proposal, recording the usage on each cluster
         current_proposal = session.query(Proposal).filter_by(account=account_name).first()
         proposal_id = current_proposal.id
-        current_usage = {
-            c: utils.get_raw_usage_in_hours(account_name, c) for c in app_settings.clusters
-        }
+
+        current_usage = Account(account_name).get_raw_usage(*app_settings.clusters, in_hours=True)
         to_insert = {f"{c}_usage": current_usage[c] for c in app_settings.clusters}
         for key in ["account", "start_date", "end_date"] + app_settings.clusters:
             to_insert[key] = getattr(current_proposal, key)

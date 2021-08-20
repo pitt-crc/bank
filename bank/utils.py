@@ -194,7 +194,8 @@ def check_date_valid(d):
 
 
 def convert_to_hours(usage):
-    return floor(int(usage) / (60.0 * 60.0))
+    seconds_in_hour = 60 * 60
+    return floor(int(usage) / (seconds_in_hour))
 
 
 def freeze_if_not_empty(items: List, path: Path):
@@ -266,7 +267,7 @@ def send_email(account, email_html: str) -> None:
     msg.add_alternative(email_html, subtype="html")
     msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
     msg["From"] = "noreply@pitt.edu"
-    msg["To"] = account.get_account_email()
+    msg["To"] = account.get_email_address()
 
     with SMTP("localhost") as s:
         s.send_message(msg)
