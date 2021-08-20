@@ -5,14 +5,14 @@ from io import StringIO
 from math import ceil
 from os import geteuid
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 from sqlalchemy import select
 
 from bank import utils
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
-from bank.utils import Left, PercentNotified, Right, ShellCmd, convert_to_hours
+from bank.utils import PercentNotified, ShellCmd, convert_to_hours
 
 
 class Account:
@@ -27,93 +27,25 @@ class Account:
 
         self.account_name = account_name
 
-    def is_account_locked(self) -> bool:
+    def get_locked_state(self) -> bool:
         """Return whether the account is locked"""
 
-        cmd = ShellCmd(f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins')
-        return 'cpu=0' in cmd.out
+        return 'cpu=0' in ShellCmd(
+            f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
+        ).out
 
-    def usage_string(self) -> str:
-        """Return the current account usage as an ascii table"""
+    def set_locked_state(self, locked: bool) -> None:
+        """Lock or unlock the user account
 
-        proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
+        Args:
+            locked: The lock state to set
+        """
 
-        investments = sum(self.get_current_investor_sus())
-        proposal_total = sum(getattr(self, c) for c in app_settings.clusters)
-
-        aggregate_usage = 0
-        with StringIO() as output:
-            output.write(f"|{'-' * 82}|\n")
-            output.write(
-                f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(app_settings.date_format):^51}|\n"
-            )
-            for cluster in app_settings.clusters:
-                output.write(f"|{'-' * 82}|\n")
-                output.write(
-                    f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(getattr(proposal, cluster)):^82}|\n"
-                )
-                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-                output.write(
-                    f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
-                )
-                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-                total_usage = self.get_account_usage(cluster, getattr(proposal, cluster), output)
-                aggregate_usage += total_usage
-                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-                if getattr(proposal, cluster) == 0:
-                    output.write(f"|{'Overall':^20}|{total_usage:^30d}|{'N/A':^30}|\n")
-                else:
-                    output.write(
-                        f"|{'Overall':^20}|{total_usage:^30d}|{100 * total_usage / getattr(proposal, cluster):^30.2f}|\n"
-                    )
-                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
-            output.write(f"|{'Aggregate':^82}|\n")
-            output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
-            if investments > 0:
-                investments_total = f"{investments:d}^a"
-                output.write(f"|{'Investments Total':^40}|{investments_total:^41}|\n")
-                output.write(
-                    f"|{'Aggregate Usage (no investments)':^40}|{100 * aggregate_usage / proposal_total:^41.2f}|\n"
-                )
-                output.write(
-                    f"|{'Aggregate Usage':^40}|{100 * aggregate_usage / (proposal_total + investments):^41.2f}|\n"
-                )
-            else:
-                output.write(
-                    f"|{'Aggregate Usage':^40}|{100 * aggregate_usage / proposal_total:^41.2f}|\n"
-                )
-            if investments > 0:
-                output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
-                output.write(
-                    f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
-                )
-            output.write(f"|{'-' * 82}|\n")
-            return output.getvalue().strip()
-
-    def get_account_usage(self, cluster, avail_sus, output):
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
-        # Second line onward, required
-        sio = StringIO("\n".join(cmd.out.split("\n")[1:]))
-
-        # use built-in CSV reader to read header and data
-        reader = csv.reader(sio, delimiter="|")
-        header = next(reader)
-        raw_usage_idx = header.index("RawUsage")
-        user_idx = header.index("User")
-        for idx, data in enumerate(reader):
-            if idx != 0:
-                user = data[user_idx]
-                usage = convert_to_hours(data[raw_usage_idx])
-                if avail_sus == 0:
-                    output.write(f"|{user:^20}|{usage:^30}|{'N/A':^30}|\n")
-                else:
-                    output.write(
-                        f"|{user:^20}|{usage:^30}|{100.0 * usage / avail_sus:^30.2f}|\n"
-                    )
-            else:
-                total_cluster_usage = convert_to_hours(data[raw_usage_idx])
-
-        return total_cluster_usage
+        lock_state_int = 0 if locked else -1
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
+        )
 
     def get_raw_usage_in_hours(self, cluster: str) -> float:
         """Return the account's usage on a given cluster in hours
@@ -138,24 +70,8 @@ class Account:
         raw_usage_idx = header.index("RawUsage")
         return convert_to_hours(data[raw_usage_idx])
 
-    def lock_account(self) -> None:
-        """Lock the user account"""
-
-        clusters = ','.join(app_settings.clusters)
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=0'
-        )
-
-    def unlock_account(self) -> None:
-        """Unlock the user account"""
-
-        clusters = ','.join(app_settings.clusters)
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=-1'
-        )
-
     def reset_raw_usage(self) -> None:
-        """Set reset raw usage on all clusters to zero"""
+        """Set raw usage on all clusters for the account to zero"""
 
         clusters = ','.join(app_settings.clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
@@ -177,6 +93,10 @@ class Account:
 
         return out
 
+    def get_account_email(self) -> str:
+        cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
+        return f'{cmd.out}{app_settings.email_suffix}'
+
     def notify_sus_limit(self) -> None:
         statement = select(Proposal).filter_by(account=self.account_name)
         proposal = Session().execute(statement).scalars().first()
@@ -189,11 +109,7 @@ class Account:
             investment=self.get_investment_status()
         )
 
-        self.send_email(email_html)
-
-    def get_account_email(self) -> str:
-        cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
-        return f'{cmd.out}{app_settings.email_suffix}'
+        utils.send_email(self, email_html)
 
     def three_month_proposal_expiry_notification(self) -> None:
         statement = select(Proposal).filter_by(account=self.account_name)
@@ -208,7 +124,7 @@ class Account:
             investment=self.get_investment_status()
         )
 
-        self.send_email(email_html)
+        utils.send_email(self, email_html)
 
     def proposal_expires_notification(self) -> None:
         statement = select(Proposal).filter_by(account=self.account_name)
@@ -223,7 +139,7 @@ class Account:
             investment=self.get_investment_status()
         )
 
-        self.send_email(email_html)
+        utils.send_email(self, email_html)
 
     def get_available_investor_sus(self) -> List[float]:
         """Return available service units on invested clusters
@@ -279,26 +195,99 @@ class Account:
     def get_usage_for_account(self) -> float:
         raw_usage = 0
         for cluster in app_settings.clusters:
-            cmd = ShellCmd(
-                f"sshare --noheader --account={self.account_name} --cluster={cluster} --format=RawUsage"
-            )
+            cmd = ShellCmd(f"sshare --noheader --account={self.account_name} --cluster={cluster} --format=RawUsage")
             raw_usage += int(cmd.out.split("\n")[1])
+
         return raw_usage / (60.0 * 60.0)
 
-    def account_and_cluster_associations_exists(self) -> Union[Left, Right]:
+    def raise_cluster_associations_exist(self) -> None:
+        """Raise exception if account associations do not exist for all clusters"""
+
         missing = []
         for cluster in app_settings.clusters:
-            cmd = ShellCmd(
-                f"sacctmgr -n show assoc account={self.account_name} cluster={cluster} format=account,cluster"
-            )
-            if cmd.out == "":
+            stmt = f"sacctmgr -n show assoc account={self.account_name} cluster={cluster} format=account,cluster"
+            if ShellCmd(stmt).out == "":
                 missing.append(cluster)
 
         if missing:
-            return Left(
-                f"Associations missing for account `{self.account_name}` on clusters `{','.join(missing)}`"
-            )
-        return Right(self.account_name)
+            raise ValueError(
+                f"Associations missing for account `{self.account_name}` on clusters `{','.join(missing)}`")
+
+    def usage_string(self) -> str:
+        """Return the current account usage as an ascii table"""
+
+        # Get total sus in all clusters
+        proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
+        proposal_total = sum(getattr(self, c) for c in app_settings.clusters)
+        investments_total = sum(self.get_current_investor_sus())
+
+        aggregate_usage = 0
+        with StringIO() as output:
+            output.write(f"|{'-' * 82}|\n")
+            output.write(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(app_settings.date_format):^51}|\n")
+            for cluster in app_settings.clusters:
+                output.write(f"|{'-' * 82}|\n")
+                output.write(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(getattr(proposal, cluster)):^82}|\n")
+                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
+                output.write(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n")
+                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
+
+                total_usage = self.get_account_usage(cluster, getattr(proposal, cluster), output)
+                aggregate_usage += total_usage
+
+                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
+                if getattr(proposal, cluster) == 0:
+                    output.write(f"|{'Overall':^20}|{total_usage:^30d}|{'N/A':^30}|\n")
+
+                else:
+                    output.write(
+                        f"|{'Overall':^20}|{total_usage:^30d}|{100 * total_usage / getattr(proposal, cluster):^30.2f}|\n")
+
+                output.write(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n")
+
+            output.write(f"|{'Aggregate':^82}|\n")
+            output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
+            if investments_total > 0:
+                investments_str = f"{investments_total:d}^a"
+                output.write(f"|{'Investments Total':^40}|{investments_str:^41}|\n")
+                output.write(
+                    f"|{'Aggregate Usage (no investments)':^40}|{100 * aggregate_usage / proposal_total:^41.2f}|\n")
+                output.write(
+                    f"|{'Aggregate Usage':^40}|{100 * aggregate_usage / (proposal_total + investments_total):^41.2f}|\n")
+
+            else:
+                output.write(f"|{'Aggregate Usage':^40}|{100 * aggregate_usage / proposal_total:^41.2f}|\n")
+
+            if investments_total > 0:
+                output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
+                output.write(f"|{'^a Investment SUs can be used across any cluster':^82}|\n")
+
+            output.write(f"|{'-' * 82}|\n")
+            return output.getvalue().strip()
+
+    def get_account_usage(self, cluster, avail_sus, output):
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        # Second line onward, required
+        sio = StringIO("\n".join(cmd.out.split("\n")[1:]))
+
+        # use built-in CSV reader to read header and data
+        reader = csv.reader(sio, delimiter="|")
+        header = next(reader)
+        raw_usage_idx = header.index("RawUsage")
+        user_idx = header.index("User")
+        for idx, data in enumerate(reader):
+            if idx != 0:
+                user = data[user_idx]
+                usage = convert_to_hours(data[raw_usage_idx])
+                if avail_sus == 0:
+                    output.write(f"|{user:^20}|{usage:^30}|{'N/A':^30}|\n")
+
+                else:
+                    output.write(f"|{user:^20}|{usage:^30}|{100.0 * usage / avail_sus:^30.2f}|\n")
+            else:
+                total_cluster_usage = convert_to_hours(data[raw_usage_idx])
+
+        return total_cluster_usage
 
 
 class Bank:
@@ -308,9 +297,7 @@ class Bank:
             exit(f"Proposal for account `{account_name}` already exists. Exiting...")
 
         # Account associations better exist!
-        _ = utils.unwrap_if_right(
-            utils.account_and_cluster_associations_exists(account_name)
-        )
+        Account(account_name).raise_cluster_associations_exist()
 
         # Make sure we understand the proposal type
         proposal_type = utils.unwrap_if_right(utils.parse_proposal_type(prop_type))
@@ -344,9 +331,7 @@ class Bank:
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Account associations better exist!
-        _ = utils.unwrap_if_right(
-            utils.account_and_cluster_associations_exists(account_name)
-        )
+        Account(account_name).raise_cluster_associations_exist()
 
         # Investor accounts last 5 years
         proposal_type = utils.ProposalType.Investor
@@ -612,7 +597,7 @@ class Bank:
         # Lock the account if necessary
         if updated_notification_percent == utils.PercentNotified.Hundred:
             if account_name != "root":
-                utils.lock_account(account_name)
+                Account(account_name).set_locked_state(True)
 
                 utils.log_action(
                     f"The account for {account_name} was locked due to SUs limit"
@@ -634,7 +619,7 @@ class Bank:
             utils.three_month_proposal_expiry_notification(account_name)
         elif today == proposal_row.end_date:
             utils.proposal_expires_notification(account_name)
-            utils.lock_account(account_name)
+            Account(account_name).set_locked_state(True)
             utils.log_action(
                 f"The account for {account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
@@ -762,9 +747,7 @@ class Bank:
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Account associations better exist!
-        _ = utils.unwrap_if_right(
-            utils.account_and_cluster_associations_exists(account_name)
-        )
+        Account(account_name).raise_cluster_associations_exist()
 
         # Make sure SUs are valid
         # Service units should be a valid number
@@ -865,7 +848,7 @@ class Bank:
         utils.reset_raw_usage(account_name)
 
         # Unlock the account
-        utils.unlock_account(account_name)
+        Account(account_name).set_locked_state(False)
 
         session.commit()
         session.close()
@@ -885,7 +868,7 @@ class Bank:
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Unlock the account
-        utils.unlock_account(account_name)
+        Account(account_name).set_locked_state(False)
 
     def alloc_sus(self) -> None:
         alloc_sus = 0
@@ -914,7 +897,7 @@ class Bank:
     def find_unlocked(self) -> None:
         today = date.today()
         for proposal in Session().query(Proposal).all():
-            is_locked = utils.is_account_locked(proposal.account)
+            is_locked = Account(proposal.account).get_locked_state()
             if (not is_locked) and proposal.end_date < today:
                 print(proposal.account)
 
@@ -926,6 +909,6 @@ class Bank:
         if not Proposal.check_matching_entry_exists(account=account_name):
             exit(f"Account `{account_name}` doesn't exist in the database")
 
-        # Unlock the account
+        # Lock the account
         utils.proposal_expires_notification(account_name)
-        utils.lock_account(account_name)
+        Account(account_name).set_locked_state(True)
