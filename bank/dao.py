@@ -284,7 +284,7 @@ class Bank:
                     proposal_id=proposal_row.id,
                     investment_id=investor_row.id,
                 )
-                session.add(InvestorArchive)
+                session.add(to_insert)
                 investor_row.delete()
             else:
                 sum_investment_sus += investor_row.current_sus + investor_row.rollover_sus
