@@ -19,6 +19,12 @@ class Account:
     """Data access for user account information"""
 
     def __init__(self, account_name: str) -> None:
+        """Data access for user account information
+
+        args:
+            account_name: The name of the user account
+        """
+
         self.account_name = account_name
 
     def is_account_locked(self) -> bool:
@@ -30,11 +36,11 @@ class Account:
     def usage_string(self) -> str:
         """Return the current account usage as an ascii table"""
 
-        statement = select(Proposal).filter_by(account=self.account_name)
-        proposal = Session().execute(statement).scalars().first()
+        proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
 
         investments = sum(self.get_current_investor_sus())
-        proposal_total = sum([getattr(proposal, c) for c in app_settings.clusters])
+        proposal_total = sum(getattr(self, c) for c in app_settings.clusters)
+
         aggregate_usage = 0
         with StringIO() as output:
             output.write(f"|{'-' * 82}|\n")
@@ -137,14 +143,16 @@ class Account:
 
         clusters = ','.join(app_settings.clusters)
         ShellCmd(
-            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=0")
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=0'
+        )
 
     def unlock_account(self) -> None:
         """Unlock the user account"""
 
         clusters = ','.join(app_settings.clusters)
         ShellCmd(
-            f"sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=-1")
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu=-1'
+        )
 
     def reset_raw_usage(self) -> None:
         """Set reset raw usage on all clusters to zero"""
@@ -153,19 +161,21 @@ class Account:
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
     def get_investment_status(self) -> str:
-        total_investment_h = "Total Investment SUs"
-        start_date_h = "Start Date"
-        current_sus_h = "Current SUs"
-        withdrawn_h = "Withdrawn SUs"
-        rollover_h = "Rollover SUs"
+        """Return the current status of any account investments as an ascii table"""
 
-        result_s = f"{total_investment_h} | {start_date_h} | {current_sus_h} | {withdrawn_h} | {rollover_h}\n"
+        out = f"Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n"
 
-        statement = select(Proposal).filter_by(account=self.account_name)
-        for row in Session().execute(statement).scalars().all():
-            result_s += f"{row.service_units:20} | {row.start_date.strftime(app_settings.date_format):>10} | {row.current_sus:11} | {row.withdrawn_sus:13} | {row.rollover_sus:12}\n"
+        table_rows = Session().select(Investor).filter_by(account=self.account_name).all()
+        for row in table_rows:
+            out += (
+                f"{row.service_units:20} | "
+                f"{row.start_date.strftime(app_settings.date_format):>10} | "
+                f"{row.current_sus:11} | "
+                f"{row.withdrawn_sus:13} | "
+                f"{row.rollover_sus:12}\n"
+            )
 
-        return result_s
+        return out
 
     def notify_sus_limit(self) -> None:
         statement = select(Proposal).filter_by(account=self.account_name)
