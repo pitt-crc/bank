@@ -4,12 +4,14 @@ import json
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from enum import Enum
+from functools import wraps
 from math import floor
+from os import geteuid
 from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
-from typing import List
+from typing import Any, List
 
 import datafreeze
 from bs4 import BeautifulSoup
@@ -45,6 +47,29 @@ class ShellCmd:
 
         if self.err:
             raise CmdError(self.err)
+
+
+class RequireRoot:
+    """Function decorator for requiring root privileges"""
+
+    @staticmethod
+    def require_root_access() -> None:
+        """Raise an error if the current session does not have root permissions
+
+        Raises:
+            RuntimeError: If session is not root
+        """
+
+        if geteuid() != 0:
+            raise RuntimeError("This action must be run with sudo privileges")
+
+    def __new__(self, func: callable) -> callable:
+        @wraps(func)
+        def wrapped(*args, **kwargs) -> Any:
+            self.require_root_access()
+            return func(*args, **kwargs)
+
+        return wrapped
 
 
 class Right:
@@ -88,7 +113,7 @@ def check_service_units_valid(units):
 
 
 def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
-    for clus, val in sus:
+    for clus, val in sus.items():
         try:
             sus[clus] = int(val)
 

@@ -3,7 +3,6 @@ import json
 from datetime import date, datetime, timedelta
 from io import StringIO
 from math import ceil
-from os import geteuid
 from pathlib import Path
 from typing import Dict, List
 
@@ -12,7 +11,7 @@ from sqlalchemy import select
 from bank import utils
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
-from bank.utils import PercentNotified, ShellCmd, convert_to_hours
+from bank.utils import PercentNotified, RequireRoot, ShellCmd, convert_to_hours
 
 
 class Account:
@@ -26,6 +25,26 @@ class Account:
         """
 
         self.account_name = account_name
+
+    def check_has_proposal(self, raise_if: bool = False) -> bool:
+        """Return if the account has an associated proposal in the database
+
+        Args:
+            raise_if: Raise an error if the return matches this value
+
+        Returns:
+            Whether a database entry exists as a boolean
+
+        Raises:
+            A ``ValueError`` if the return value matches ``raise_if``
+        """
+
+        has_proposal = Proposal.check_matching_entry_exists(account=self.account_name)
+        if has_proposal is raise_if:
+            condition = 'already exists' if has_proposal else 'does not exist'
+            raise RuntimeError(f'Proposal for account `{self.account_name}` {condition}.')
+
+        return has_proposal
 
     def get_locked_state(self) -> bool:
         """Return whether the account is locked"""
@@ -202,7 +221,7 @@ class Account:
 
         return raw_usage / (60.0 * 60.0)
 
-    def raise_cluster_associations_exist(self) -> None:
+    def raise_missing_cluster_associations(self) -> None:
         """Raise exception if account associations do not exist for all clusters"""
 
         missing = []
@@ -220,7 +239,7 @@ class Account:
 
         # Get total sus in all clusters
         proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
-        proposal_total = sum(getattr(self, c) for c in app_settings.clusters)
+        proposal_total = sum(getattr(proposal, c) for c in app_settings.clusters)
         investments_total = sum(self.get_current_investor_sus())
 
         aggregate_usage = 0
@@ -293,30 +312,41 @@ class Account:
 
 
 class Bank:
-    def insert(self, prop_type, account_name, smp, mpi, gpu, htc) -> None:
-        # Account shouldn't exist in the proposal table already
-        if Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Proposal for account `{account_name}` already exists. Exiting...")
 
-        # Account associations better exist!
-        Account(account_name).raise_cluster_associations_exist()
+    @staticmethod
+    def insert(prop_type: str, account_name: str, smp: int, mpi: int, gpu: int, htc: int) -> None:
+        """Create a new proposal for the given account
+
+        Args:
+            prop_type: The type of proposal
+            account_name: The name of the account to add a proposal for
+            smp: Service units to add on the SMP cluster
+            mpi: Service units to add on the MPI cluster
+            gpu: Service units to add on the GPU cluster
+            htc: Service units to add on the HTC cluster
+        """
+
+        # Account should have associations but not exist in the proposal table
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=True)
+        account.raise_missing_cluster_associations()
 
         # Make sure we understand the proposal type
         proposal_type = utils.unwrap_if_right(utils.parse_proposal_type(prop_type))
         proposal_duration = utils.get_proposal_duration(proposal_type)
-        start_date = date.today()
 
         # Service units should be a valid number
         sus = {'smp': smp, 'htc': htc, 'mpi': mpi, 'gpu': gpu}
         utils.check_service_units_valid_clusters(sus)
 
+        start_date = date.today()
         new_proposal = Proposal(
-            account=account_name,
+            account=account.account_name,
             proposal_type=proposal_type.value,
             percent_notified=utils.PercentNotified.Zero.value,
             start_date=start_date,
             end_date=start_date + proposal_duration,
-            **{c: sus[c] for c in app_settings.clusters}
+            **sus
         )
 
         with Session() as session:
@@ -324,16 +354,22 @@ class Bank:
             session.commit()
 
         utils.log_action(
-            f"Inserted proposal with type {proposal_type.name} for {account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
+            f"Inserted proposal with type {proposal_type.name} for {account.account_name} with `{sus['smp']}` on SMP, `{sus['mpi']}` on MPI, `{sus['gpu']}` on GPU, and `{sus['htc']}` on HTC"
         )
 
-    def investor(self, account_name, sus) -> None:
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
+    @staticmethod
+    def investor(account_name: str, sus:int) -> None:
+        """Add a new investor proposal for the given account
 
-        # Account associations better exist!
-        Account(account_name).raise_cluster_associations_exist()
+        Args:
+            account_name: The name of the account
+            sus: The number of service units to add
+        """
+        
+        # Account should have associations but not exist in the proposal table
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=False)
+        account.raise_missing_cluster_associations()
 
         # Investor accounts last 5 years
         proposal_type = utils.ProposalType.Investor
@@ -364,10 +400,8 @@ class Bank:
         )
 
     def info(self, account_name: str) -> None:
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
-
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=False)
         proposal = Session().query(Proposal).filter_by(account=account_name).first()
 
         # Get entire row, convert to human readable columns
@@ -741,7 +775,7 @@ class Bank:
             exit(f"Account `{account_name}` doesn't exist in the database")
 
         # Account associations better exist!
-        Account(account_name).raise_cluster_associations_exist()
+        Account(account_name).raise_missing_cluster_associations()
 
         # Make sure SUs are valid
         # Service units should be a valid number
@@ -852,15 +886,10 @@ class Bank:
     def import_investor(self, path, overwrite=False) -> None:
         utils.import_from_json(path, Investor, overwrite)
 
+    @RequireRoot
     def release_hold(self, account_name) -> None:
-        if geteuid() != 0:
-            exit("ERROR: `release_hold` should be run with sudo privileges")
-
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
-
-        # Unlock the account
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=True)
         Account(account_name).set_locked_state(False)
 
     def alloc_sus(self) -> None:
@@ -868,40 +897,42 @@ class Bank:
         with open("service_units.csv", "w") as fp, Session() as session:
             fp.write("account,smp,gpu,mpi,htc\n")
             for proposal in session.query(Proposal).all():
-                fp.write(
-                    f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n"
-                )
+                fp.write(f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n")
 
                 alloc_sus += sum([proposal[c] for c in app_settings.clusters])
 
         print(alloc_sus)
 
-    def reset_raw_usage(self, account_name) -> None:
-        if geteuid() != 0:
-            exit("ERROR: `reset_raw_usage` should be run with sudo privileges")
+    @RequireRoot
+    def reset_raw_usage(self, account_name: str) -> None:
+        """Reset raw usage for the given account
 
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
+        Args:
+            account_name: The name of the account to reset
+        """
 
-        # Unlock the account
-        utils.reset_raw_usage(account_name)
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=True)
+        account.reset_raw_usage()
 
     def find_unlocked(self) -> None:
+        """Print the names for all unlocked, unexpired accounts"""
+
         today = date.today()
         for proposal in Session().query(Proposal).all():
             is_locked = Account(proposal.account).get_locked_state()
             if (not is_locked) and proposal.end_date < today:
                 print(proposal.account)
 
+    @RequireRoot
     def lock_with_notification(self, account_name: str) -> None:
-        if geteuid() != 0:
-            exit("ERROR: `lock_with_notification` should be run with sudo privileges")
+        """Lock the specified user account and send a proposal expiration email
 
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
+        Args:
+            account_name: The name of the account to lock
+        """
 
-        # Lock the account
-        utils.proposal_expires_notification(account_name)
-        Account(account_name).set_locked_state(True)
+        account = Account(account_name)
+        account.check_has_proposal(raise_if=True)
+        account.set_locked_state(True)
+        account.proposal_expires_notification()
