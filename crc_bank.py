@@ -15,6 +15,7 @@ sus = dict(flags='--sus', type=int, help='The number of SUs you want to insert')
 
 proposal = dict(flags='--proposal', type=Path, help='Path of the proposal table in JSON format')
 investor = dict(flags='--investor', type=Path, help='Path of the investor table in JSON format')
+allocated = dict(flags='--path', type=Path, help='Path of the exported file')
 proposal_arch = dict(flags='--proposal_archive', type=Path, help='Path of the proposal archive table in JSON format')
 investor_arch = dict(flags='--investor_archive', type=Path, help='Path of the investor archive table in JSON format')
 overwrite = dict(flags='-y', action='store_true', help='Automatically overwrite table data')
@@ -57,7 +58,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
         parser_modify = self.subparsers.add_parser('modify', help='Change to new limits, update proposal date')
-        parser_modify.set_defaults(function=Bank.modify)
+        parser_modify.set_defaults()
         self.add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
@@ -68,8 +69,7 @@ class CLIParser(ArgumentParser):
         parser_change.set_defaults(function=Bank.change)
         self.add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
-        parser_renewal = self.subparsers.add_parser('renewal',
-                                                    help='Similar to modify, except rolls over active investments')
+        parser_renewal = self.subparsers.add_parser('renewal', help='Similar to modify, except rolls over active investments')
         parser_renewal.set_defaults(function=Bank.renewal)
         self.add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
@@ -90,7 +90,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function=Bank.info)
+        parser_info.set_defaults()
         self.add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
@@ -130,6 +130,7 @@ class CLIParser(ArgumentParser):
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
         parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
+        self.add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
         parser_reset_raw_usage.set_defaults(function=Bank.reset_raw_usage)
