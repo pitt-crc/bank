@@ -16,6 +16,10 @@ metadata = Base.metadata
 class CustomBase:
     """Mixin for defining default behavior of ORM classes"""
 
+    def update(self, **items):
+        for key in set(items).intersection(self.__dict__):
+            setattr(self, key, items[key])
+
     @classmethod
     def check_matching_entry_exists(cls, **kwargs) -> bool:
         return Session().query(cls).filter_by(**kwargs).first() is not None
