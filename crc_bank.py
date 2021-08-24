@@ -5,19 +5,19 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from bank.dao import Bank
+from bank.dao import Bank, Account
 
 # Reusable definitions for command line arguments
-account = dict(flags='--account', type=str, help='The associated slurm account')
+account = dict(flags='--account', type=Account, help='The associated slurm account')
 prop_type = dict(flags='--type', type=str, help='The proposal type: proposal or class')
 date = dict(flags='--date', help='The proposal start date (e.g 12/01/19)')
 sus = dict(flags='--sus', type=int, help='The number of SUs you want to insert')
 
 proposal = dict(flags='--proposal', type=Path, help='Path of the proposal table in JSON format')
 investor = dict(flags='--investor', type=Path, help='Path of the investor table in JSON format')
-allocated = dict(flags='--path', type=Path, help='Path of the exported file')
 proposal_arch = dict(flags='--proposal_archive', type=Path, help='Path of the proposal archive table in JSON format')
 investor_arch = dict(flags='--investor_archive', type=Path, help='Path of the investor archive table in JSON format')
+allocated = dict(flags='--path', type=Path, help='Path of the exported file')
 overwrite = dict(flags='-y', action='store_true', help='Automatically overwrite table data')
 
 smp = dict(flags=('-s', '--smp'), type=int, help='The smp limit in CPU Hours', default=0)
@@ -62,11 +62,11 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
-        parser_add.set_defaults(function=Bank.add)
+        parser_add.set_defaults()
         self.add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
         parser_change = self.subparsers.add_parser('change', help="Change to new limits, don't change proposal date")
-        parser_change.set_defaults(function=Bank.change)
+        parser_change.set_defaults()
         self.add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Similar to modify, except rolls over active investments')
@@ -74,11 +74,11 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
         parser_date = self.subparsers.add_parser('date')
-        parser_date.set_defaults(function=Bank.date)
+        parser_date.set_defaults()
         self.add_args_to_parser(parser_date, account, date)
 
         parser_date_investment = self.subparsers.add_parser('date_investment')
-        parser_date_investment.set_defaults(function=Bank.date_investment)
+        parser_date_investment.set_defaults()
         self.add_args_to_parser(parser_date_investment, account, date, inv_id)
 
         parser_investor = self.subparsers.add_parser('investor')
@@ -98,22 +98,22 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_usage, account)
 
         parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
-        parser_check_sus_limit.set_defaults(function=Bank.check_sus_limit)
+        parser_check_sus_limit.set_defaults()
         self.add_args_to_parser(parser_check_sus_limit, account)
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
-        parser_check_proposal_end_date.set_defaults(function=Bank.check_proposal_end_date)
+        parser_check_proposal_end_date.set_defaults()
         self.add_args_to_parser(parser_check_proposal_end_date, account)
 
         parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
         parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
-        parser_get_sus.set_defaults(function=Bank.get_sus)
+        parser_get_sus.set_defaults()
         self.add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')
-        parser_dump.set_defaults(function=Bank.dump)
+        parser_dump.set_defaults()
         self.add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
 
         parser_import_proposal = self.subparsers.add_parser('import_proposal')

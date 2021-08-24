@@ -314,17 +314,16 @@ class Account:
 class Bank:
 
     @staticmethod
-    def insert(prop_type: str, account_name: str, **sus_per_cluster: int) -> None:
+    def insert(prop_type: str, account: Account, **sus_per_cluster: int) -> None:
         """Create a new proposal for the given account
 
         Args:
             prop_type: The type of proposal
-            account_name: The name of the account to add a proposal for
+            account: The account to add a proposal for
             **sus_per_cluster: Service units to add on to each cluster
         """
 
         # Account should have associations but not exist in the proposal table
-        account = Account(account_name)
         account.check_has_proposal(raise_if=True)
         account.raise_missing_cluster_associations()
         utils.check_service_units_valid_clusters(sus_per_cluster)
@@ -346,20 +345,18 @@ class Bank:
             session.commit()
 
         su_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(
-            f"Inserted proposal with type {proposal_type.name} for {account.account_name} with {su_string}")
+        utils.log_action(f"Inserted proposal with type {proposal_type.name} for {account.account_name} with {su_string}")
 
     @staticmethod
-    def investor(account_name: str, sus: int) -> None:
+    def investor(account: Account, sus: int) -> None:
         """Add a new investor proposal for the given account
 
         Args:
-            account_name: The name of the account
+            account: The account to add sus to
             sus: The number of service units to add
         """
 
         # Account should have associations but not exist in the proposal table
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
         account.raise_missing_cluster_associations()
 
@@ -373,7 +370,7 @@ class Bank:
         current_sus = ceil(sus / 5)
 
         new_investor = Investor(
-            account=account_name,
+            account=account.account_name,
             proposal_type=proposal_type.value,
             start_date=start_date,
             end_date=end_date,
@@ -387,26 +384,25 @@ class Bank:
             session.add(new_investor)
             session.commit()
 
-        utils.log_action(f"Inserted investment for {account_name} with per year allocations of `{current_sus}`")
+        utils.log_action(f"Inserted investment for {account.account_name} with per year allocations of `{current_sus}`")
 
     @staticmethod
-    def info(account_name: str) -> None:
+    def info(account: Account) -> None:
         """Print proposal information for the given account
 
         Args:
-            account_name: The name of the account
+            account: The account to print information for
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
-        proposal = Session().query(Proposal).filter_by(account=account_name).first()
+        proposal = Session().query(Proposal).filter_by(account=account.account_name).first()
 
         print('Proposal')
         print('---------------')
         print(json.dumps(proposal.to_json(), indent=2))
         print()
 
-        investors = Session().query(Investor).filter_by(account=account_name).all()
+        investors = Session().query(Investor).filter_by(account=account.account_name).all()
         for investor in investors:
             print(f'Investment: {investor.id:3}')
             print(f'---------------')
@@ -414,40 +410,40 @@ class Bank:
             print()
 
     @staticmethod
-    def modify(account_name, **sus_per_cluster: int) -> None:
+    def modify(account:Account, **sus_per_cluster: int) -> None:
         """Extend the proposal on an account 365 days and add the given number of service units"""
 
         # Account must exist in database
-        Account(account_name).check_has_proposal(raise_if=False)
+        account.check_has_proposal(raise_if=False)
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
         with Session() as session:
-            proposal = session.query(Proposal).filter_by(account=account_name).first()
+            proposal = session.query(Proposal).filter_by(account=account.account_name).first()
             proposal.start_date = date.today()
             proposal.end_date = date.today() + timedelta(days=365)
             proposal.update(sus_per_cluster)
             session.commit()
 
         sus_as_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Modified proposal for {account_name} with {sus_as_string}")
+        utils.log_action(f"Modified proposal for {account.account_name} with {sus_as_string}")
 
     @staticmethod
-    def add(account_name: str, **sus_per_cluster: int) -> None:
+    def add(account: Account, **sus_per_cluster: int) -> None:
         """Add service units for the given account / clusters
 
         Args:
-            account_name: The name of the account to add service units to
+            account: The account to add service units to
             **sus_per_cluster: Service units to add on to each cluster
         """
 
         # Account must exist in database
-        Account(account_name).check_has_proposal(raise_if=False)
+        account.check_has_proposal(raise_if=False)
         utils.check_service_units_valid_clusters(sus_per_cluster, greater_than_ten_thousand=False)
 
         # Update row in database
         with Session() as session:
-            proposal = session.query(Proposal).filter_by(account=account_name)
+            proposal = session.query(Proposal).filter_by(account=account.account_name)
             for clus in app_settings.clusters:
                 new_su = getattr(proposal, clus) + sus_per_cluster[clus]
                 setattr(proposal, clus, new_su)
@@ -455,40 +451,38 @@ class Bank:
             session.commit()
 
         su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Added SUs to proposal for {account_name}, new limits are {su_string}")
+        utils.log_action(f"Added SUs to proposal for {account.account_name}, new limits are {su_string}")
 
     @staticmethod
-    def change(account_name: str, **sus_per_cluster: int) -> None:
+    def change(account: Account, **sus_per_cluster: int) -> None:
         """Replace the currently allocated service units for an account with new values
 
         Args:
-            account_name: The name of the account to add service units to
+            account: The account to add service units to
             **sus_per_cluster: New service unit allocation on to each cluster
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
         with Session() as session:
-            proposal = session.query(Proposal).filter_by(account=account_name)
+            proposal = session.query(Proposal).filter_by(account=account.account_name)
             proposal.update(sus_per_cluster)
             session.commit()
 
         su_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Changed proposal for {account_name} with {su_string}")
+        utils.log_action(f"Changed proposal for {account.account_name} with {su_string}")
 
     @staticmethod
-    def date(account_name: str, start_date: datetime) -> None:
+    def date(account: Account, start_date: datetime) -> None:
         """Change the start date on an account's proposal
         
         Args:
-            account_name: The name of the account
+            account: The account to modify
             start_date: The new start date
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
 
         date_str = start_date.strftime(app_settings.date_format)
@@ -497,26 +491,24 @@ class Bank:
 
         # Update row in database
         with Session() as session:
-            proposal = session.query(Proposal).filter_by(account=account_name).first()
+            proposal = session.query(Proposal).filter_by(account=account.account_name).first()
             proposal.start_date = start_date
             proposal.end_date = start_date + timedelta(days=365)
             session.commit()
 
-        utils.log_action(f'Modified proposal start date for {account_name} to {date_str}')
+        utils.log_action(f'Modified proposal start date for {account.account_name} to {date_str}')
 
     @staticmethod
-    def date_investment(account_name: str, start_date: datetime, inv_id: int) -> None:
+    def date_investment(account: Account, start_date: datetime, inv_id: int) -> None:
         """Change the start date on an account's investment
         
         Args:
-            account_name: The name of the account
+            account: The account to modify
             start_date: The new start date
             inv_id: The investment id
         """
 
-        # Account must exist in database
-        if not Proposal.check_matching_entry_exists(account=account_name):
-            exit(f"Account `{account_name}` doesn't exist in the database")
+        account.check_has_proposal(raise_if=False)
 
         # Date should be valid
         date_str = start_date.strftime(app_settings.date_format)
@@ -525,17 +517,17 @@ class Bank:
 
         # Update row in database
         with Session() as session:
-            investment = session.query(Investor).filter_by(id=inv_id, account=account_name)
+            investment = session.query(Investor).filter_by(id=inv_id, account=account.account_name)
             if investment:
                 investment.start_date = start_date
                 investment.end_date = start_date + timedelta(days=1825)
                 session.commit()
 
         utils.log_action(
-            f"Modify investment start date for investment #{inv_id} for account {account_name} to {start_date}")
+            f"Modify investment start date for investment #{inv_id} for account {account.account_name} to {start_date}")
 
     @staticmethod
-    def check_sus_limit(account_name: str) -> None:
+    def check_sus_limit(account: Account) -> None:
         # This is a complicated function, the steps:
         # 1. Get proposal for account and compute the total SUs from proposal
         # 2. Determine the current usage for the user across clusters
@@ -543,7 +535,6 @@ class Bank:
         # 4. Add archived investments associated to the current proposal
 
         session = Session()
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
 
         # Compute the Total SUs for the proposal period
@@ -626,17 +617,16 @@ class Bank:
         session.close()
 
     @staticmethod
-    def check_proposal_end_date(account_name: str) -> None:
+    def check_proposal_end_date(account: Account) -> None:
         """Alert and lock the user account if it is beyond it's proposal end date
         
         Args:
-            account_name: The name of the account
+            account: The account check
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
 
-        proposal_row = Session().query(Proposal).filter_by(account=account_name).first()
+        proposal_row = Session().query(Proposal).filter_by(account=account.account_name).first()
         today = date.today()
         three_months_before_end_date = proposal_row.end_date - timedelta(days=90)
 
@@ -651,17 +641,16 @@ class Bank:
             )
 
     @staticmethod
-    def get_sus(account_name: str) -> None:
+    def get_sus(account: Account) -> None:
         """Print the current service units for the given account
 
         Args:
-            account_name: The name of the account
+            account: The account to inspect
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
 
-        proposal_row = Session().query(Proposal).filter_by(account=account_name).first()
+        proposal_row = Session().query(Proposal).filter_by(account=account.account_name).first()
         print(f"type,{','.join(app_settings.clusters)}")
         sus = [str(getattr(proposal_row, c)) for c in app_settings.clusters]
         print(f"proposal,{','.join(sus)}")
@@ -692,9 +681,8 @@ class Bank:
             for table, path in zip(tables, paths):
                 utils.freeze_if_not_empty(session.query(table).all(), path)
 
-    def withdraw(self, account_name: str, sus: int) -> None:
+    def withdraw(self, account: Account, sus: int) -> None:
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
 
         # Service units should be a valid number
@@ -758,17 +746,15 @@ class Bank:
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus
 
-    def usage(self, account_name) -> None:
+    def usage(self, account: Account) -> None:
         """Print the current service usage of the given account"""
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
         print(account.usage_string())
 
-    def renewal(self, account_name, **sus) -> None:
+    def renewal(self, account: Account, **sus) -> None:
 
         # Account associations better exist!
-        account = Account(account_name)
         account.check_has_proposal(raise_if=False)
         account.raise_missing_cluster_associations()
 
@@ -881,16 +867,11 @@ class Bank:
         utils.import_from_json(path, Investor, overwrite)
 
     @RequireRoot
-    def release_hold(self, account_name: str) -> None:
-        """Release the hold on a user account
+    def release_hold(self, account: Account) -> None:
+        """Release the hold on a user account"""
 
-        Args:
-            account_name: The name of the account
-        """
-
-        account = Account(account_name)
         account.check_has_proposal(raise_if=True)
-        Account(account_name).set_locked_state(False)
+        account.set_locked_state(False)
 
     def alloc_sus(self, path: Path) -> None:
         """Export allocated service units to a CSV file
@@ -908,14 +889,13 @@ class Bank:
                 ofile.write(f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n")
 
     @RequireRoot
-    def reset_raw_usage(self, account_name: str) -> None:
+    def reset_raw_usage(self, account: Account) -> None:
         """Reset raw usage for the given account
 
         Args:
-            account_name: The name of the account to reset
+            account: The account to reset
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=True)
         account.reset_raw_usage()
 
@@ -930,14 +910,13 @@ class Bank:
                 print(proposal.account)
 
     @RequireRoot
-    def lock_with_notification(self, account_name: str) -> None:
+    def lock_with_notification(self, account: Account) -> None:
         """Lock the specified user account and send a proposal expiration email
 
         Args:
-            account_name: The name of the account to lock
+            account: The account to lock
         """
 
-        account = Account(account_name)
         account.check_has_proposal(raise_if=True)
         account.set_locked_state(True)
         account.proposal_expires_notification()
