@@ -888,8 +888,9 @@ class Bank:
             for proposal in proposals:
                 ofile.write(f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n")
 
+    @staticmethod
     @RequireRoot
-    def reset_raw_usage(self, account: Account) -> None:
+    def reset_raw_usage(account: Account) -> None:
         """Reset raw usage for the given account
 
         Args:
@@ -899,7 +900,8 @@ class Bank:
         account.check_has_proposal(raise_if=True)
         account.reset_raw_usage()
 
-    def find_unlocked(self) -> None:
+    @staticmethod
+    def find_unlocked() -> None:
         """Print the names for all unexpired proposals with unlocked accounts"""
 
         today = date.today()
@@ -909,8 +911,9 @@ class Bank:
             if not (is_locked or is_expired):
                 print(proposal.account)
 
+    @staticmethod
     @RequireRoot
-    def lock_with_notification(self, account: Account) -> None:
+    def lock_with_notification(account: Account) -> None:
         """Lock the specified user account and send a proposal expiration email
 
         Args:
