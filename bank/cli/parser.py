@@ -28,26 +28,7 @@ inv_id = dict(flags='--id', help='The investment proposal id')
 class CLIParser(ArgumentParser):
     """Parser for command line arguments"""
 
-    @staticmethod
-    def add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, required: bool = False) -> None:
-        """Add argument definitions to the command line parser
-
-        Args:
-            parser: The parser to add arguments to
-            *arg_definitions: Dictionary with arguments for ``parser.add_argument``
-            required: If the given arguments should be required
-        """
-
-        for arg_def in arg_definitions:
-            arg_def = arg_def.copy()
-            flags = arg_def.pop('flags')
-            if isinstance(flags, str):
-                parser.add_argument(flags, **arg_def, required=required)
-
-            else:
-                parser.add_argument(*flags, **arg_def, required=required)
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
@@ -67,8 +48,7 @@ class CLIParser(ArgumentParser):
         parser_change.set_defaults()
         self.add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
-        parser_renewal = self.subparsers.add_parser('renewal',
-                                                    help='Similar to modify, except rolls over active investments')
+        parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         parser_renewal.set_defaults(function=Bank.renewal)
         self.add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
@@ -141,3 +121,31 @@ class CLIParser(ArgumentParser):
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         parser_lock_with_notification.set_defaults(function=Bank.lock_with_notification)
         self.add_args_to_parser(parser_lock_with_notification, account)
+
+    @staticmethod
+    def add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, required: bool = False) -> None:
+        """Add argument definitions to the command line parser
+
+        Args:
+            parser: The parser to add arguments to
+            *arg_definitions: Dictionary with arguments for ``parser.add_argument``
+            required: If the given arguments should be required
+        """
+
+        for arg_def in arg_definitions:
+            arg_def = arg_def.copy()
+            flags = arg_def.pop('flags')
+            if isinstance(flags, str):
+                parser.add_argument(flags, **arg_def, required=required)
+
+            else:
+                parser.add_argument(*flags, **arg_def, required=required)
+
+    def execute(self) -> None:
+        """Entry point for running the command line parser
+
+        Parse command line arguments and evaluate the corresponding function
+        """
+
+        parsed_args = vars(self.parse_args())
+        parsed_args.pop('function')(parsed_args)

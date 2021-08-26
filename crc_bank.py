@@ -3,5 +3,4 @@
 from bank.cli import CLIParser
 
 if __name__ == '__main__':
-    parsed_args = vars(CLIParser().parse_args())
-    parsed_args.pop('function')(parsed_args)
+    CLIParser().execute()
