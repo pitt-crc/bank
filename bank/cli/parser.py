@@ -1,9 +1,10 @@
-"""Command line interface for the ``bank`` package"""
+"""Command line parsing for the ``bank`` package"""
 
 from argparse import ArgumentParser
 from pathlib import Path
 
 from bank.dao import Account, Bank
+from . import interface
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')
@@ -70,7 +71,7 @@ class CLIParser(ArgumentParser):
 
         parser_info = self.subparsers.add_parser('info')
         parser_info.set_defaults()
-        self.add_args_to_parser(parser_info, account)
+        self.add_args_to_parser(interface.info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
         parser_usage.set_defaults(function=Bank.usage)
