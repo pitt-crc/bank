@@ -1,23 +1,41 @@
-from typing import Any, Tuple
+from datetime import datetime
+from typing import Any, Dict, Tuple, Union
 
-from sqlalchemy import Column, Date, Integer, Text
-from sqlalchemy import create_engine
+from sqlalchemy import Column, Date, Enum, Integer, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
-
+import enum
 from .settings import app_settings
+from .utils import PercentNotified, ProposalType
 
 Base = declarative_base()
 metadata = Base.metadata
 
 
 class CustomBase:
-    """Mixin for extending default behavior of ORM classes"""
+    """Mixin for defining default behavior of ORM classes"""
+
+    def update(self, **items):
+        for key in set(items).intersection(self.__dict__):
+            setattr(self, key, items[key])
 
     @classmethod
     def check_matching_entry_exists(cls, **kwargs) -> bool:
         return Session().query(cls).filter_by(**kwargs).first() is not None
+
+    def to_json(self) -> Dict[str, Union[int, str]]:
+        out = dict()
+        for k, v in self:
+            if hasattr(v, 'strftime'):
+                v = v.strftime(app_settings.date_format)
+
+            elif isinstance(v, enum.Enum):
+                v = v.name
+
+            out[k] = v
+
+        return out
 
     def __iter__(self) -> Tuple[str, Any]:
         for column in self.__table__.columns:
@@ -64,8 +82,8 @@ class Proposal(Base, CustomBase):
     account = Column(Text)
     start_date = Column(Date)
     end_date = Column(Date)
-    percent_notified = Column(Integer)
-    proposal_type = Column(Integer)
+    percent_notified = Column(Enum(PercentNotified))
+    proposal_type = Column(Enum(ProposalType))
 
 
 class ProposalArchive(Base, CustomBase):
