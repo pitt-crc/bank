@@ -1,10 +1,9 @@
 import csv
-import json
 from datetime import date, datetime, timedelta
 from io import StringIO
 from math import ceil
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 
@@ -25,6 +24,18 @@ class Account:
         """
 
         self.account_name = account_name
+
+    def get_proposals(self) -> Tuple[Optional[Proposal], List[Investor]]:
+        """Return any proposals associated with the account
+
+        Returns:
+            The primary user proposal
+            A list of investments associated with the account
+        """
+
+        proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
+        investments = Session().query(Investor).filter_by(account=self.account_name).all()
+        return proposal, investments
 
     def check_has_proposal(self, raise_if: bool = False) -> bool:
         """Return if the account has an associated proposal in the database
@@ -345,7 +356,8 @@ class Bank:
             session.commit()
 
         su_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Inserted proposal with type {proposal_type.name} for {account.account_name} with {su_string}")
+        utils.log_action(
+            f"Inserted proposal with type {proposal_type.name} for {account.account_name} with {su_string}")
 
     @staticmethod
     def investor(account: Account, sus: int) -> None:
@@ -387,30 +399,7 @@ class Bank:
         utils.log_action(f"Inserted investment for {account.account_name} with per year allocations of `{current_sus}`")
 
     @staticmethod
-    def info(account: Account) -> None:
-        """Print proposal information for the given account
-
-        Args:
-            account: The account to print information for
-        """
-
-        account.check_has_proposal(raise_if=False)
-        proposal = Session().query(Proposal).filter_by(account=account.account_name).first()
-
-        print('Proposal')
-        print('---------------')
-        print(json.dumps(proposal.to_json(), indent=2))
-        print()
-
-        investors = Session().query(Investor).filter_by(account=account.account_name).all()
-        for investor in investors:
-            print(f'Investment: {investor.id:3}')
-            print(f'---------------')
-            print(json.dumps(investor.to_json(), indent=2))
-            print()
-
-    @staticmethod
-    def modify(account:Account, **sus_per_cluster: int) -> None:
+    def modify(account: Account, **sus_per_cluster: int) -> None:
         """Extend the proposal on an account 365 days and add the given number of service units"""
 
         # Account must exist in database
