@@ -109,7 +109,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_release_hold, account)
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
-        parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
+        parser_alloc_sus.set_defaults(function=interface.alloc_sus)
         self.add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')

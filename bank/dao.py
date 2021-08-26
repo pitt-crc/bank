@@ -864,23 +864,6 @@ class Bank:
         account.check_has_proposal(raise_if=True)
         account.set_locked_state(False)
 
-    def alloc_sus(self, path: Path) -> None:
-        """Export allocated service units to a CSV file
-
-        Args:
-            path: The path to write exported data to
-        """
-
-        with Session() as session:
-            proposals = session.query(Proposal).all()
-
-        columns = ('account', *app_settings.clusters)
-        with path.open("w") as ofile:
-            ofile.write(','.join(columns) + '\n')
-            for proposal in proposals:
-                row_values = (getattr(proposal, col) for col in columns)
-                ofile.write(','.join(row_values) + "\n")
-
     @staticmethod
     @RequireRoot
     def reset_raw_usage(account: Account) -> None:
