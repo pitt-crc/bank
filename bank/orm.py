@@ -1,11 +1,11 @@
-from datetime import datetime
+import enum
 from typing import Any, Dict, Tuple, Union
 
 from sqlalchemy import Column, Date, Enum, Integer, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
-import enum
+
 from .settings import app_settings
 from .utils import PercentNotified, ProposalType
 
@@ -16,33 +16,53 @@ metadata = Base.metadata
 class CustomBase:
     """Mixin for defining default behavior of ORM classes"""
 
-    def update(self, **items):
-        for key in set(items).intersection(self.__dict__):
+    def __getitem__(self, item: str) -> Any:
+        """Support dictionary like fetching of attribute values"""
+
+        if item not in self.__table__.columns:
+            raise KeyError(f'Table `{self.__tablename__}` has no column `{item}`')
+
+        return getattr(self, item)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Support dictionary like setting of attribute values"""
+
+        if key not in self.__table__.columns:
+            raise KeyError(f'Table `{self.__tablename__}` has no column `{key}`')
+
+        setattr(self, key, value)
+
+    def update(self, **items: Any) -> None:
+        """Update column """
+
+        for key in set(items).intersection(self.__table__.columns):
             setattr(self, key, items[key])
 
-    @classmethod
-    def check_matching_entry_exists(cls, **kwargs) -> bool:
-        return Session().query(cls).filter_by(**kwargs).first() is not None
-
     def to_json(self) -> Dict[str, Union[int, str]]:
-        out = dict()
-        for k, v in self:
-            if hasattr(v, 'strftime'):
-                v = v.strftime(app_settings.date_format)
+        """Return the row object as a json compatible dictionary"""
 
-            elif isinstance(v, enum.Enum):
-                v = v.name
+        # Convert data to human readable format
+        return_dict = dict()
+        for col, value in self:
+            if hasattr(value, 'strftime'):
+                value = value.strftime(app_settings.date_format)
 
-            out[k] = v
+            elif isinstance(value, enum.Enum):
+                value = value.name
 
-        return out
+            return_dict[col] = value
+
+        return return_dict
 
     def __iter__(self) -> Tuple[str, Any]:
+        """Iterate over pairs of column names and values for the current row"""
+
         for column in self.__table__.columns:
             yield column.name, getattr(self, column.name)
 
     def __repr__(self) -> str:
-        # Automatically generate string representation using class attributes
+        """Automatically generate a string representation using class attributes"""
+
         attr_text = (f'{key}={val}' for key, val in self.__dict__.items() if not key.startswith('_'))
         return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
 

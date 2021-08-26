@@ -50,7 +50,9 @@ class Account:
             A ``ValueError`` if the return value matches ``raise_if``
         """
 
-        has_proposal = Proposal.check_matching_entry_exists(account=self.account_name)
+        with Session() as session:
+            has_proposal = session.query(Proposal).filter_by(account=self.account_name).first() is not None
+
         if has_proposal is raise_if:
             condition = 'already exists' if has_proposal else 'does not exist'
             raise RuntimeError(f'Proposal for account `{self.account_name}` {condition}.')
@@ -872,10 +874,12 @@ class Bank:
         with Session() as session:
             proposals = session.query(Proposal).all()
 
+        columns = ('account', *app_settings.clusters)
         with path.open("w") as ofile:
-            ofile.write("account,smp,gpu,mpi,htc\n")
+            ofile.write(','.join(columns) + '\n')
             for proposal in proposals:
-                ofile.write(f"{proposal.account},{proposal.smp},{proposal.gpu},{proposal.mpi},{proposal.htc}\n")
+                row_values = (getattr(proposal, col) for col in columns)
+                ofile.write(','.join(row_values) + "\n")
 
     @staticmethod
     @RequireRoot
