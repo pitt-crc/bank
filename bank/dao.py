@@ -69,18 +69,23 @@ class Account:
             f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
         ).out
 
-    def set_locked_state(self, locked: bool) -> None:
+    @RequireRoot
+    def set_locked_state(self, locked: bool, notify: bool = False) -> None:
         """Lock or unlock the user account
 
         Args:
             locked: The lock state to set
         """
 
+        self.check_has_proposal(raise_if=False)
         lock_state_int = 0 if locked else -1
         clusters = ','.join(app_settings.clusters)
-        ShellCmd(
+        cmd = ShellCmd(
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         )
+        cmd.raise_err()
+        if notify:
+            self.proposal_expires_notification()
 
     def _raw_cluster_usage(self, cluster: str) -> None:
         """Return the account usage on a given cluster in seconds"""
@@ -107,9 +112,11 @@ class Account:
 
         return {c: self._raw_cluster_usage(c) for c in clusters}
 
+    @RequireRoot
     def reset_raw_usage(self, *clusters) -> None:
         """Set raw account usage on the given clusters to zero"""
 
+        self.check_has_proposal(raise_if=False)
         clusters = ','.join(clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
@@ -840,35 +847,3 @@ class Bank:
 
     def import_investor(self, path, overwrite=False) -> None:
         utils.import_from_json(path, Investor, overwrite)
-
-    @RequireRoot
-    def release_hold(self, account: Account) -> None:
-        """Release the hold on a user account"""
-
-        account.check_has_proposal(raise_if=True)
-        account.set_locked_state(False)
-
-    @staticmethod
-    @RequireRoot
-    def reset_raw_usage(account: Account) -> None:
-        """Reset raw usage for the given account
-
-        Args:
-            account: The account to reset
-        """
-
-        account.check_has_proposal(raise_if=True)
-        account.reset_raw_usage()
-
-    @staticmethod
-    @RequireRoot
-    def lock_with_notification(account: Account) -> None:
-        """Lock the specified user account and send a proposal expiration email
-
-        Args:
-            account: The account to lock
-        """
-
-        account.check_has_proposal(raise_if=True)
-        account.set_locked_state(True)
-        account.proposal_expires_notification()

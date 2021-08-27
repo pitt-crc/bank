@@ -105,7 +105,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_import_investor, investor, overwrite)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
-        parser_release_hold.set_defaults(function=Bank.release_hold)
+        parser_release_hold.set_defaults(function=lambda account: account.set_locked_state(False, notify=False))
         self.add_args_to_parser(parser_release_hold, account)
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
@@ -113,14 +113,14 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
-        parser_reset_raw_usage.set_defaults(function=Bank.reset_raw_usage)
+        parser_reset_raw_usage.set_defaults(function=lambda acc: acc.reset_raw_usage)
         self.add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
         parser_find_unlocked.set_defaults(function=interface.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        parser_lock_with_notification.set_defaults(function=Bank.lock_with_notification)
+        parser_lock_with_notification.set_defaults(function=lambda account: account.set_locked_state(True, notify=True))
         self.add_args_to_parser(parser_lock_with_notification, account)
 
     @staticmethod
