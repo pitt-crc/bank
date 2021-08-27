@@ -33,8 +33,11 @@ class Account:
             A list of investments associated with the account
         """
 
-        proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
-        investments = Session().query(Investor).filter_by(account=self.account_name).all()
+        self.check_has_proposal(raise_if=False)
+        with Session() as session:
+            proposal = session.query(Proposal).filter_by(account=self.account_name).first()
+            investments = session.query(Investor).filter_by(account=self.account_name).all()
+
         return proposal, investments
 
     def check_has_proposal(self, raise_if: bool = False) -> bool:
@@ -630,8 +633,6 @@ class Bank:
             utils.log_action(
                 f"The account for {account.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
-
-
 
     @staticmethod
     def dump(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:

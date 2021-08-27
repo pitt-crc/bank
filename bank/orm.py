@@ -1,5 +1,5 @@
 import enum
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from sqlalchemy import Column, Date, Enum, Integer, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
