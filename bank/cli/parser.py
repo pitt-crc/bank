@@ -89,7 +89,7 @@ class CLIParser(ArgumentParser):
         parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
-        parser_get_sus.set_defaults()
+        parser_get_sus.set_defaults(function=interface.get_sus)
         self.add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')

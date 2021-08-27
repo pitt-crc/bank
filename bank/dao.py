@@ -631,24 +631,7 @@ class Bank:
                 f"The account for {account.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
-    @staticmethod
-    def get_sus(account: Account) -> None:
-        """Print the current service units for the given account
 
-        Args:
-            account: The account to inspect
-        """
-
-        account.check_has_proposal(raise_if=False)
-
-        proposal_row = Session().query(Proposal).filter_by(account=account.account_name).first()
-        print(f"type,{','.join(app_settings.clusters)}")
-        sus = [str(getattr(proposal_row, c)) for c in app_settings.clusters]
-        print(f"proposal,{','.join(sus)}")
-
-        investor_sus = account.get_current_investor_sus()
-        for row in investor_sus:
-            print(f"investment,{row}")
 
     @staticmethod
     def dump(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
