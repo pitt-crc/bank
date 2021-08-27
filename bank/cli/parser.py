@@ -70,8 +70,8 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults()
-        self.add_args_to_parser(interface.info, account)
+        parser_info.set_defaults(function=interface.info)
+        self.add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
         parser_usage.set_defaults(function=Bank.usage)
@@ -117,7 +117,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=Bank.find_unlocked)
+        parser_find_unlocked.set_defaults(function=interface.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         parser_lock_with_notification.set_defaults(function=Bank.lock_with_notification)

@@ -861,17 +861,6 @@ class Bank:
         account.reset_raw_usage()
 
     @staticmethod
-    def find_unlocked() -> None:
-        """Print the names for all unexpired proposals with unlocked accounts"""
-
-        today = date.today()
-        for proposal in Session().query(Proposal).all():
-            is_locked = Account(proposal.account).get_locked_state()
-            is_expired = proposal.end_date >= today
-            if not (is_locked or is_expired):
-                print(proposal.account)
-
-    @staticmethod
     @RequireRoot
     def lock_with_notification(account: Account) -> None:
         """Lock the specified user account and send a proposal expiration email

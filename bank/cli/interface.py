@@ -4,6 +4,7 @@ import csv
 import json
 import os
 import sys
+from datetime import date
 from pathlib import Path
 
 from ..dao import Account
@@ -27,6 +28,17 @@ def alloc_sus(path: Path) -> None:
         writer.writerow(columns)
         for proposal in proposals:
             writer.writerow(proposal[col] for col in columns)
+
+
+def find_unlocked() -> None:
+    """Print the names for all unexpired proposals with unlocked accounts"""
+
+    today = date.today()
+    for proposal in Session().query(Proposal).all():
+        is_locked = Account(proposal.account).get_locked_state()
+        is_expired = proposal.end_date >= today
+        if not (is_locked or is_expired):
+            print(proposal.account)
 
 
 def get_sus(account: Account) -> None:
