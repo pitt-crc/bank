@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from bank.dao import Account, Bank
+from bank.dao import Account
 from . import interface
 
 # Reusable definitions for command line arguments
@@ -31,42 +31,46 @@ class CLIParser(ArgumentParser):
 
     def __init__(self) -> None:
         super().__init__()
+
+        # Each subparser evaluates a different function. The parent class
+        # Will automatically identify which function to evaluate (and with
+        # which arguments) based on what is specified here.
         self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
         parser_insert = self.subparsers.add_parser('insert', help='Insert for the first time.')
-        parser_insert.set_defaults(function=Bank.insert)
+        parser_insert.set_defaults(function='account.insert')
         self.add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
         parser_modify = self.subparsers.add_parser('modify', help='Change to new limits, update proposal date')
-        parser_modify.set_defaults()
+        parser_modify.set_defaults(function='account.modify')
         self.add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
-        parser_add.set_defaults()
+        parser_add.set_defaults(function='account.add')
         self.add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
         parser_change = self.subparsers.add_parser('change', help="Change to new limits, don't change proposal date")
-        parser_change.set_defaults()
+        parser_change.set_defaults(function='account.change')
         self.add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        parser_renewal.set_defaults(function=Bank.renewal)
+        parser_renewal.set_defaults(function='account.renewal')
         self.add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
         parser_date = self.subparsers.add_parser('date')
-        parser_date.set_defaults()
+        parser_date.set_defaults(function='account.date')
         self.add_args_to_parser(parser_date, account, date)
 
         parser_date_investment = self.subparsers.add_parser('date_investment')
-        parser_date_investment.set_defaults()
+        parser_date_investment.set_defaults(function='account.date_investment')
         self.add_args_to_parser(parser_date_investment, account, date, inv_id)
 
         parser_investor = self.subparsers.add_parser('investor')
-        parser_investor.set_defaults(function=Bank.investor)
+        parser_investor.set_defaults(function='account.investor')
         self.add_args_to_parser(parser_investor, account, sus)
 
         parser_withdraw = self.subparsers.add_parser('withdraw')
-        parser_withdraw.set_defaults(function=Bank.withdraw)
+        parser_withdraw.set_defaults(function='account.withdraw')
         self.add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
@@ -74,38 +78,38 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
-        parser_usage.set_defaults(function=Bank.usage)
+        parser_usage.set_defaults(function='account.usage')
         self.add_args_to_parser(parser_usage, account)
 
         parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
-        parser_check_sus_limit.set_defaults()
+        parser_check_sus_limit.set_defaults(function='account.check_sus_limit')
         self.add_args_to_parser(parser_check_sus_limit, account)
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
-        parser_check_proposal_end_date.set_defaults()
+        parser_check_proposal_end_date.set_defaults(function='account.check_proposal_end_date')
         self.add_args_to_parser(parser_check_proposal_end_date, account)
 
         parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
-        parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
+        parser_check_proposal_violations.set_defaults(function=interface.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
         parser_get_sus.set_defaults(function=interface.get_sus)
         self.add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')
-        parser_dump.set_defaults()
+        parser_dump.set_defaults(function=interface.dump)
         self.add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
 
         parser_import_proposal = self.subparsers.add_parser('import_proposal')
-        parser_import_proposal.set_defaults(function=Bank.import_proposal)
+        parser_import_proposal.set_defaults(function=interface.import_proposal)
         self.add_args_to_parser(parser_import_proposal, proposal, overwrite)
 
         parser_import_investor = self.subparsers.add_parser('import_investor')
-        parser_import_investor.set_defaults(function=Bank.import_investor)
+        parser_import_investor.set_defaults(function=interface.import_investor)
         self.add_args_to_parser(parser_import_investor, investor, overwrite)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
-        parser_release_hold.set_defaults(function=lambda account: account.set_locked_state(False, notify=False))
+        parser_release_hold.set_defaults(function='account.set_locked_state')
         self.add_args_to_parser(parser_release_hold, account)
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
@@ -113,14 +117,14 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
-        parser_reset_raw_usage.set_defaults(function=lambda acc: acc.reset_raw_usage)
+        parser_reset_raw_usage.set_defaults(function='account.reset_raw_usage')
         self.add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
         parser_find_unlocked.set_defaults(function=interface.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        parser_lock_with_notification.set_defaults(function=lambda account: account.set_locked_state(True, notify=True))
+        parser_lock_with_notification.set_defaults(function='account.set_locked_state')
         self.add_args_to_parser(parser_lock_with_notification, account)
 
     @staticmethod
@@ -148,5 +152,13 @@ class CLIParser(ArgumentParser):
         Parse command line arguments and evaluate the corresponding function
         """
 
+        # Get parsed arguments as a dictionary
         parsed_args = vars(self.parse_args())
-        parsed_args.pop('function')(parsed_args)
+
+        # Evaluate the ``Account`` method as specified by the command line arguments
+        function = parsed_args.pop('function')
+        if isinstance(function, str):
+            instance_name, method_name = function.split('.')
+            function = getattr(parsed_args.pop(instance_name), function)
+
+        function(parsed_args)
