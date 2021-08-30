@@ -1,20 +1,21 @@
-.. CRC Bank documentation master file, created by
-   sphinx-quickstart on Mon Aug 16 08:11:19 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to CRC Bank's documentation!
-====================================
+CRC Bank Utility
+================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :hidden:
+   :maxdepth: 0
+   :titlesonly:
+
+   Overview<self>
 
 
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: API Reference
+   :titlesonly:
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   api/cli.rst
+   api/dao.rst
+   api/orm.rst
+   api/settings.rst

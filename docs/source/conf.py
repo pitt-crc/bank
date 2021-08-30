@@ -6,21 +6,17 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+from pathlib import Path
 
+package_source_path = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(package_source_path))
 
 # -- Project information -----------------------------------------------------
 
 project = 'CRC Bank'
 copyright = '2021, Pitt CRC'
 author = 'Pitt CRC'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,7 +41,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
 
 # -- Options for HTML output -------------------------------------------------
 
