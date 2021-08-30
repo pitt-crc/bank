@@ -72,7 +72,7 @@ class Defaults:
     db_test_path = _application_dir / 'test.db'
 
     # A list of cluster names to track usage on
-    clusters = ("smp", "mpi", "gpu", "htc")
+    clusters = ["smp", "mpi", "gpu", "htc"]
 
     # The email suffix for your organization. We assume the ``Description``
     # field of each account in ``sacctmgr`` contains the prefix.
