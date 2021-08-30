@@ -1,6 +1,6 @@
 from typing import Type
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Date, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -8,9 +8,10 @@ def create_table_with_mixin(*mixins: Type):
     """Create a dummy SQLAlchemy table with the given mixins
 
     Columns in the returned table and their data types:
-        i (int)
-        int_col (int)
-        str_col (str)
+        id (Integer)
+        int_col (Integer)
+        str_col (Text)
+        date_col (Date)
 
     Args:
         *mixins, THe mixins for the returned table
@@ -31,5 +32,6 @@ def create_table_with_mixin(*mixins: Type):
         id = Column(Integer, primary_key=True)
         int_col = Column(Integer)
         str_col = Column(Text)
+        date_col = Column(Date)
 
     return DummyTable

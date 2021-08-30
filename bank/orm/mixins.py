@@ -57,8 +57,8 @@ class ExportMixin:
 
         # Convert data to human readable format
         return_dict = dict()
-        for col in self.__table.columns:
-            value = getattr(self, col)
+        for col in self.__table__.columns:
+            value = getattr(self, col.name)
 
             if hasattr(value, 'strftime'):
                 value = value.strftime(app_settings.date_format)
@@ -66,7 +66,7 @@ class ExportMixin:
             elif isinstance(value, enum.Enum):
                 value = value.name
 
-            return_dict[col] = value
+            return_dict[col.name] = value
 
         return return_dict
 
