@@ -7,6 +7,7 @@ CRC Bank Utility
    :titlesonly:
 
    Overview<self>
+   overview/command_line.rst
 
 
 .. toctree::
