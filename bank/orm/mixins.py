@@ -50,6 +50,8 @@ class AutoReprMixin:
 
 @declarative_mixin
 class ExportMixin:
+    """Adds methods for exporting tables to different file formats and data types"""
+
     def to_json(self) -> Dict[str, Union[int, str]]:
         """Return the row object as a json compatible dictionary"""
 

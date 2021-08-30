@@ -5,6 +5,7 @@ from bank.settings import app_settings
 
 
 class TestHasDynamicColumns(TestCase):
+    """Test for dynamically added columns based on administered cluster names"""
 
     def runTest(self) -> None:
         columns = app_settings.clusters + [f'{c}_usage' for c in app_settings.clusters]
