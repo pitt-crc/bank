@@ -3,8 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from bank.dao import Account
-from . import interface
+from bank.dao import Account, Bank
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')
@@ -74,7 +73,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function=interface.info)
+        parser_info.set_defaults(function='account.info')
         self.add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
@@ -90,22 +89,22 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_check_proposal_end_date, account)
 
         parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
-        parser_check_proposal_violations.set_defaults(function=interface.check_proposal_violations)
+        parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
-        parser_get_sus.set_defaults(function=interface.get_sus)
+        parser_get_sus.set_defaults(function='account.get_sus')
         self.add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')
-        parser_dump.set_defaults(function=interface.dump)
+        parser_dump.set_defaults(function=Bank.dump)
         self.add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
 
         parser_import_proposal = self.subparsers.add_parser('import_proposal')
-        parser_import_proposal.set_defaults(function=interface.import_proposal)
+        parser_import_proposal.set_defaults(function=Bank.import_proposal)
         self.add_args_to_parser(parser_import_proposal, proposal, overwrite)
 
         parser_import_investor = self.subparsers.add_parser('import_investor')
-        parser_import_investor.set_defaults(function=interface.import_investor)
+        parser_import_investor.set_defaults(function=Bank.import_investor)
         self.add_args_to_parser(parser_import_investor, investor, overwrite)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
@@ -113,7 +112,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_release_hold, account)
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
-        parser_alloc_sus.set_defaults(function=interface.alloc_sus)
+        parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
         self.add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
@@ -121,7 +120,7 @@ class CLIParser(ArgumentParser):
         self.add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=interface.find_unlocked)
+        parser_find_unlocked.set_defaults(function=Bank.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         parser_lock_with_notification.set_defaults(function='account.set_locked_state')

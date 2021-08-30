@@ -1,5 +1,9 @@
 import csv
-from datetime import date, datetime, timedelta
+import json
+import os
+import sys
+from datetime import date
+from datetime import datetime, timedelta
 from io import StringIO
 from math import ceil
 from pathlib import Path
@@ -24,6 +28,22 @@ class Account:
         """
 
         self.account_name = account_name
+
+    def info(self) -> None:
+        """Print proposal information for the given account"""
+
+        proposal, investments = self.get_proposals()
+        if proposal:
+            print('Proposal')
+            print('---------------')
+            print(json.dumps(proposal.to_json(), indent=2))
+            print()
+
+        for investor in investments:
+            print(f'Investment: {investor.id:3}')
+            print(f'---------------')
+            print(json.dumps(investor.to_json(), indent=2))
+            print()
 
     def get_proposals(self) -> Tuple[Optional[Proposal], List[Investor]]:
         """Return any proposals associated with the account
@@ -620,28 +640,6 @@ class Account:
                 f"The account for {self.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
-    @staticmethod
-    def dump(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
-        """Export the database to the given file paths in json format
-
-        Args:
-            proposal: Path to write the proposal table to
-            investor: Path to write the investor table to
-            proposal_archive: Path to write the proposal archive to
-            investor_archive: Path to write the investor archive to
-        """
-
-        paths = (proposal, investor, proposal_archive, investor_archive)
-        tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
-
-        for p in paths:
-            if p.exists():
-                raise FileExistsError(f"Path already exists: {p}")
-
-        with Session() as session:
-            for table, path in zip(tables, paths):
-                utils.freeze_if_not_empty(session.query(table).all(), path)
-
     def withdraw(self, sus: int) -> None:
 
         self.check_has_proposal(raise_if=False)
@@ -687,25 +685,6 @@ class Account:
             # Determine if we are done processing investments
             if sus_to_withdraw == 0:
                 return
-
-    def check_proposal_violations(self) -> None:
-        # Iterate over all of the proposals looking for proposal violations
-        proposals = Session().query(Proposal).all()
-
-        for proposal in proposals:
-            account = Account(proposal.account)
-            investments = sum(account.get_available_investor_sus())
-
-            subtract_previous_investment = 0
-            cluster_sus = Account(proposal.account).get_raw_usage(*app_settings.clusters, in_hours=True)
-            for cluster, used_sus in cluster_sus.items():
-                avail_sus = getattr(proposal, cluster)
-                if used_sus > (avail_sus + investments - subtract_investment):
-                    print(
-                        f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
-                    )
-                if used_sus > avail_sus:
-                    subtract_previous_investment += investments - used_sus
 
     def usage(self) -> None:
         """Print the current service usage of the given account"""
@@ -821,6 +800,21 @@ class Account:
         session.commit()
         session.close()
 
+    def get_sus(self) -> None:
+        """Print the current service units for the given account in CSV format"""
+
+        proposal, investments = self.get_proposals()
+        proposal_sus = (proposal[c] for c in app_settings.clusters)
+        investor_sus = [['investment', inv.current_sus + inv.rollover_sus] for inv in investments]
+
+        writer = csv.writer(sys.stdout, lineterminator=os.linesep)
+        writer.writerow(['type', *app_settings.clusters])
+        writer.writerow(['proposal', *proposal_sus])
+        writer.writerows(investor_sus)
+
+
+class Bank:
+
     @staticmethod
     def import_proposal(self, path, overwrite=False) -> None:
         utils.import_from_json(path, Proposal, overwrite)
@@ -828,3 +822,74 @@ class Account:
     @staticmethod
     def import_investor(self, path, overwrite=False) -> None:
         utils.import_from_json(path, Investor, overwrite)
+
+    @staticmethod
+    def alloc_sus(path: Path) -> None:
+        """Export allocated service units to a CSV file
+
+        Args:
+            path: The path to write exported data to
+        """
+
+        with Session() as session:
+            proposals = session.query(Proposal).all()
+
+        columns = ('account', *app_settings.clusters)
+        with path.open('w', newline='') as ofile:
+            writer = csv.writer(ofile)
+            writer.writerow(columns)
+            for proposal in proposals:
+                writer.writerow(proposal[col] for col in columns)
+
+    @staticmethod
+    def find_unlocked() -> None:
+        """Print the names for all unexpired proposals with unlocked accounts"""
+
+        today = date.today()
+        for proposal in Session().query(Proposal).all():
+            is_locked = Account(proposal.account).get_locked_state()
+            is_expired = proposal.end_date >= today
+            if not (is_locked or is_expired):
+                print(proposal.account)
+
+    @staticmethod
+    def check_proposal_violations() -> None:
+        # Iterate over all of the proposals looking for proposal violations
+        proposals = Session().query(Proposal).all()
+
+        for proposal in proposals:
+            account = Account(proposal.account)
+            investments = sum(account.get_available_investor_sus())
+
+            subtract_previous_investment = 0
+            cluster_sus = Account(proposal.account).get_raw_usage(*app_settings.clusters, in_hours=True)
+            for cluster, used_sus in cluster_sus.items():
+                avail_sus = getattr(proposal, cluster)
+                if used_sus > (avail_sus + investments - subtract_investment):
+                    print(
+                        f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
+                    )
+                if used_sus > avail_sus:
+                    subtract_previous_investment += investments - used_sus
+
+    @staticmethod
+    def dump(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
+        """Export the database to the given file paths in json format
+
+        Args:
+            proposal: Path to write the proposal table to
+            investor: Path to write the investor table to
+            proposal_archive: Path to write the proposal archive to
+            investor_archive: Path to write the investor archive to
+        """
+
+        paths = (proposal, investor, proposal_archive, investor_archive)
+        tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
+
+        for p in paths:
+            if p.exists():
+                raise FileExistsError(f"Path already exists: {p}")
+
+        with Session() as session:
+            for table, path in zip(tables, paths):
+                utils.freeze_if_not_empty(session.query(table).all(), path)
