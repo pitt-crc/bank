@@ -3,14 +3,12 @@ from unittest import TestCase
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 
-from bank.orm.mixins import CustomBase
+from bank.orm.mixins import DictAccessPatternMixin
 
 Base = declarative_base()
 
 
-class DummyTable(Base, CustomBase):
-    """A dummy table for testing that uses the custom mixin we want to test"""
-
+class DummyTable(Base, DictAccessPatternMixin):
     __tablename__ = 'test_table'
     id = Column(Integer, primary_key=True)
     int_col = Column(Integer)
@@ -33,4 +31,3 @@ class TestClassIsIterable(TestCase):
 
         self.assertEqual(dummy_obj.int_col, obj_as_dict['int_col'])
         self.assertEqual(dummy_obj.str_col, obj_as_dict['str_col'])
-
