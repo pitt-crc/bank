@@ -1,3 +1,6 @@
+"""The ``orm`` module acts as an object oriented interface for the underlying
+application database."""
+
 import sqlalchemy
 import sqlalchemy_utils
 from sqlalchemy.orm import sessionmaker
