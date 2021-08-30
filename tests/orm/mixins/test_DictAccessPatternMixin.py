@@ -28,21 +28,41 @@ class TestKeyIndexing(TestCase):
     """Test subclassed tables support key based indexing"""
 
     def test_get_item(self) -> None:
+        """Test row values can be retrieved via key indexing"""
+
         table_row = DummyTable(int_col=1, str_col='a')
         self.assertEqual(table_row.int_col, table_row['int_col'])
         self.assertEqual(table_row.str_col, table_row['str_col'])
 
+    def test_set_item_error(self) -> None:
+        """Test for raised errors when setting a column that doesn't exist"""
+
+        table_row = DummyTable(int_col=1, str_col='a')
+        with self.assertRaises(KeyError):
+            table_row['not_a_column'] = 1
+
     def test_set_item(self) -> None:
+        """Test row values can be set via key indexing"""
+
         table_row = DummyTable(int_col=1, str_col='a')
         table_row['str_col'] = 'b'
         self.assertEqual('b', table_row.str_col)
         self.assertEqual('b', table_row['str_col'])
+
+    def test_get_item_error(self) -> None:
+        """Test for raised errors when getting a column that doesn't exist"""
+
+        table_row = DummyTable(int_col=1, str_col='a')
+        with self.assertRaises(KeyError):
+            var = table_row['not_a_column']
 
 
 class TestUpdate(TestCase):
     """Tests for the ``update`` method"""
 
     def test_row_is_updated(self) -> None:
+        """Test the row instance is updated by the function call"""
+
         table_row = DummyTable(int_col=1, str_col='a')
         new_values = dict(int_col=2, str_col='b')
 
