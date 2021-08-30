@@ -18,7 +18,7 @@ jobs:
       uses: sphinx-notes/pages@master
       with:
         target_branch: gh-pages  # Git branch where assets will be deployed
-        documentation_path: docs # Relative path under repository to documentation source files
+        documentation_path: ./docs/ # Relative path under repository to documentation source files
     
     - name: Push changes
       uses: ad-m/github-push-action@master
