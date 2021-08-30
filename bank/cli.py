@@ -38,97 +38,97 @@ class CLIParser(ArgumentParser):
 
         parser_insert = self.subparsers.add_parser('insert', help='Insert for the first time.')
         parser_insert.set_defaults(function='account.insert')
-        self.add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
         parser_modify = self.subparsers.add_parser('modify', help='Change to new limits, update proposal date')
         parser_modify.set_defaults(function='account.modify')
-        self.add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
         parser_add.set_defaults(function='account.add')
-        self.add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
         parser_change = self.subparsers.add_parser('change', help="Change to new limits, don't change proposal date")
         parser_change.set_defaults(function='account.change')
-        self.add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         parser_renewal.set_defaults(function='account.renewal')
-        self.add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
         parser_date = self.subparsers.add_parser('date')
         parser_date.set_defaults(function='account.date')
-        self.add_args_to_parser(parser_date, account, date)
+        self._add_args_to_parser(parser_date, account, date)
 
         parser_date_investment = self.subparsers.add_parser('date_investment')
         parser_date_investment.set_defaults(function='account.date_investment')
-        self.add_args_to_parser(parser_date_investment, account, date, inv_id)
+        self._add_args_to_parser(parser_date_investment, account, date, inv_id)
 
         parser_investor = self.subparsers.add_parser('investor')
         parser_investor.set_defaults(function='account.investor')
-        self.add_args_to_parser(parser_investor, account, sus)
+        self._add_args_to_parser(parser_investor, account, sus)
 
         parser_withdraw = self.subparsers.add_parser('withdraw')
         parser_withdraw.set_defaults(function='account.withdraw')
-        self.add_args_to_parser(parser_withdraw, account, sus)
+        self._add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
         parser_info.set_defaults(function='account.info')
-        self.add_args_to_parser(parser_info, account)
+        self._add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
         parser_usage.set_defaults(function='account.usage')
-        self.add_args_to_parser(parser_usage, account)
+        self._add_args_to_parser(parser_usage, account)
 
         parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
         parser_check_sus_limit.set_defaults(function='account.check_sus_limit')
-        self.add_args_to_parser(parser_check_sus_limit, account)
+        self._add_args_to_parser(parser_check_sus_limit, account)
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
         parser_check_proposal_end_date.set_defaults(function='account.check_proposal_end_date')
-        self.add_args_to_parser(parser_check_proposal_end_date, account)
+        self._add_args_to_parser(parser_check_proposal_end_date, account)
 
         parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
         parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
         parser_get_sus.set_defaults(function='account.get_sus')
-        self.add_args_to_parser(parser_get_sus, account)
+        self._add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')
         parser_dump.set_defaults(function=Bank.dump)
-        self.add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
+        self._add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
 
         parser_import_proposal = self.subparsers.add_parser('import_proposal')
         parser_import_proposal.set_defaults(function=Bank.import_proposal)
-        self.add_args_to_parser(parser_import_proposal, proposal, overwrite)
+        self._add_args_to_parser(parser_import_proposal, proposal, overwrite)
 
         parser_import_investor = self.subparsers.add_parser('import_investor')
         parser_import_investor.set_defaults(function=Bank.import_investor)
-        self.add_args_to_parser(parser_import_investor, investor, overwrite)
+        self._add_args_to_parser(parser_import_investor, investor, overwrite)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
         parser_release_hold.set_defaults(function='account.set_locked_state')
-        self.add_args_to_parser(parser_release_hold, account)
+        self._add_args_to_parser(parser_release_hold, account)
 
         parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
         parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
-        self.add_args_to_parser(parser_alloc_sus, allocated)
+        self._add_args_to_parser(parser_alloc_sus, allocated)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
         parser_reset_raw_usage.set_defaults(function='account.reset_raw_usage')
-        self.add_args_to_parser(parser_reset_raw_usage, account)
+        self._add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
         parser_find_unlocked.set_defaults(function=Bank.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         parser_lock_with_notification.set_defaults(function='account.set_locked_state')
-        self.add_args_to_parser(parser_lock_with_notification, account)
+        self._add_args_to_parser(parser_lock_with_notification, account)
 
     @staticmethod
-    def add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, required: bool = False) -> None:
-        """Add argument definitions to the command line parser
+    def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, required: bool = False) -> None:
+        """Add argument definitions to the given command line subparser
 
         Args:
             parser: The parser to add arguments to
