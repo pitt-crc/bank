@@ -1,4 +1,9 @@
-"""Custom exceptions raised by the ``bank`` application."""
+"""The ``exceptions`` module defines custom exceptions raised by the
+parent application.
+
+API Reference
+-------------
+"""
 
 
 class CmdError(Exception):

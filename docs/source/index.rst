@@ -19,3 +19,4 @@ CRC Bank Utility
    api/dao.rst
    api/orm/orm.rst
    api/settings.rst
+   api/exceptions.rst

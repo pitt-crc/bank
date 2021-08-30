@@ -1,5 +1,5 @@
-bank.settings
-=============
+bank.exceptions
+===============
 
 .. automodule:: bank.exceptions
    :members:
