@@ -31,7 +31,8 @@ extensions = [
     'sphinx.ext.napoleon',  # Napoleon need to be loaded BEFORE sphinx_autodoc_typehints
     'sphinx_copybutton',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme'
+    'sphinx_rtd_theme',
+    'sphinxarg.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -61,13 +61,15 @@ You will probably want to check the limits once a day. The checks which are comp
 
 1. Have you overdrawn your limit? If yes, email account manager, put hold on
    account
-    - Is the account above 25% of their limit? If yes, email account manager
-    - Is the account above 50% of their limit? If yes, email account manager
-    - Is the account above 75% of their limit? If yes, email account manager
-    - Is the account above 90% of their limit? If yes, email account manager
+
+  - Is the account above 25% of their limit? If yes, email account manager
+  - Is the account above 50% of their limit? If yes, email account manager
+  - Is the account above 75% of their limit? If yes, email account manager
+  - Is the account above 90% of their limit? If yes, email account manager
+
 2. Has your proposal ended? If yes, email account manager
-    - Is the account 3 months away from reaching this limit? If yes, email
-      account manager
+
+  - Is the account 3 months away from reaching this limit? If yes, email account manager
 
 
 .. toctree::
