@@ -17,5 +17,5 @@ CRC Bank Utility
 
    api/cli.rst
    api/dao.rst
-   api/orm.rst
+   api/orm/orm.rst
    api/settings.rst
