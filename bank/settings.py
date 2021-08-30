@@ -40,7 +40,7 @@ most cases.
 
 .. important::
   Application settings are read from the working environment in realtime.
-  At no time are environmental variables cached from the workiung environment.
+  At no time are environmental variables cached from the working environment.
 
 API Reference
 -------------
