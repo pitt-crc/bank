@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from bank import utils
+from bank.exceptions import MissingProposalError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd, convert_to_hours
@@ -29,6 +30,21 @@ class Account:
 
         self.account_name = account_name
 
+    def get_proposals(self) -> Tuple[Optional[Proposal], List[Investor]]:
+        """Return any proposals associated with the account
+
+        Returns:
+            The primary user proposal
+            A list of investments associated with the account
+        """
+
+        self.raise_missing_proposal()
+        with Session() as session:
+            proposal = session.query(Proposal).filter_by(account=self.account_name).first()
+            investments = session.query(Investor).filter_by(account=self.account_name).all()
+
+        return proposal, investments
+
     def info(self) -> None:
         """Print proposal information for the given account"""
 
@@ -45,49 +61,22 @@ class Account:
             print(json.dumps(investor.to_json(), indent=2))
             print()
 
-    def get_proposals(self) -> Tuple[Optional[Proposal], List[Investor]]:
-        """Return any proposals associated with the account
-
-        Returns:
-            The primary user proposal
-            A list of investments associated with the account
-        """
-
-        self.check_has_proposal(raise_if=False)
-        with Session() as session:
-            proposal = session.query(Proposal).filter_by(account=self.account_name).first()
-            investments = session.query(Investor).filter_by(account=self.account_name).all()
-
-        return proposal, investments
-
-    def check_has_proposal(self, raise_if: bool = False) -> bool:
+    def raise_missing_proposal(self) -> None:
         """Return if the account has an associated proposal in the database
-
-        Args:
-            raise_if: Raise an error if the return matches this value
-
-        Returns:
-            Whether a database entry exists as a boolean
 
         Raises:
             A ``ValueError`` if the return value matches ``raise_if``
         """
 
         with Session() as session:
-            has_proposal = session.query(Proposal).filter_by(account=self.account_name).first() is not None
-
-        if has_proposal is raise_if:
-            condition = 'already exists' if has_proposal else 'does not exist'
-            raise RuntimeError(f'Proposal for account `{self.account_name}` {condition}.')
-
-        return has_proposal
+            if session.query(Proposal).filter_by(account=self.account_name).first() is None:
+                raise MissingProposalError(f'Proposal for account `{self.account_name}` does not exist.')
 
     def get_locked_state(self) -> bool:
         """Return whether the account is locked"""
 
-        return 'cpu=0' in ShellCmd(
-            f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
-        ).out
+        cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
+        return 'cpu=0' in ShellCmd(cmd).out
 
     @RequireRoot
     def set_locked_state(self, locked: bool, notify: bool = False) -> None:
@@ -97,7 +86,7 @@ class Account:
             locked: The lock state to set
         """
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         lock_state_int = 0 if locked else -1
         clusters = ','.join(app_settings.clusters)
         cmd = ShellCmd(
@@ -136,7 +125,7 @@ class Account:
     def reset_raw_usage(self, *clusters) -> None:
         """Set raw account usage on the given clusters to zero"""
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         clusters = ','.join(clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
@@ -363,7 +352,7 @@ class Account:
         """
 
         # Account should have associations but not exist in the proposal table
-        self.check_has_proposal(raise_if=True)
+        self.raise_missing_proposal()
         self.raise_missing_cluster_associations()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
@@ -395,7 +384,7 @@ class Account:
         """
 
         # Account should have associations but not exist in the proposal table
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         self.raise_missing_cluster_associations()
 
         # Investor accounts last 5 years
@@ -428,7 +417,7 @@ class Account:
         """Extend the proposal on an account 365 days and add the given number of service units"""
 
         # Account must exist in database
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
@@ -450,7 +439,7 @@ class Account:
         """
 
         # Account must exist in database
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster, greater_than_ten_thousand=False)
 
         # Update row in database
@@ -472,7 +461,7 @@ class Account:
             **sus_per_cluster: New service unit allocation on to each cluster
         """
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
@@ -491,7 +480,7 @@ class Account:
             start_date: The new start date
         """
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
 
         date_str = start_date.strftime(app_settings.date_format)
         if start_date > datetime.today():
@@ -514,7 +503,7 @@ class Account:
             inv_id: The investment id
         """
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
 
         # Date should be valid
         date_str = start_date.strftime(app_settings.date_format)
@@ -540,7 +529,7 @@ class Account:
         # 4. Add archived investments associated to the current proposal
 
         session = Session()
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
 
         # Compute the Total SUs for the proposal period
         proposal_row = session.query(Proposal).filter_by(account=self.account_name).first()
@@ -624,7 +613,7 @@ class Account:
     def check_proposal_end_date(self) -> None:
         """Alert and lock the user account if it is beyond it's proposal end date"""
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
 
         proposal_row = Session().query(Proposal).filter_by(account=self.account_name).first()
         today = date.today()
@@ -642,7 +631,7 @@ class Account:
 
     def withdraw(self, sus: int) -> None:
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
 
         # Service units should be a valid number
         sus_to_withdraw = utils.unwrap_if_right(
@@ -689,13 +678,13 @@ class Account:
     def usage(self) -> None:
         """Print the current service usage of the given account"""
 
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         print(self.usage_string())
 
     def renewal(self, **sus) -> None:
 
         # Account associations better exist!
-        self.check_has_proposal(raise_if=False)
+        self.raise_missing_proposal()
         self.raise_missing_cluster_associations()
 
         session = Session()
