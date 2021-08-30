@@ -44,7 +44,7 @@ class AutoReprMixin:
     """Automatically generate a string representation using class attributes"""
 
     def __repr__(self) -> str:
-        attr_text = (f'{key}={val}' for key, val in self.__table__.columns)
+        attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
         return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
 
 

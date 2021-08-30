@@ -3,7 +3,7 @@ from unittest import TestCase
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 
-from bank.orm import CustomBase
+from bank.orm.mixins import CustomBase
 
 Base = declarative_base()
 
