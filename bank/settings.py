@@ -1,14 +1,12 @@
 """The ``settings`` module provides access to application settings. It
-includes definitions for default settings in addition to access to settings
+includes definitions for default values in addition to application settings
 defined in the working environment.
-
-For a complete list of application settings, see the Installation page.
 
 Usage Example
 -------------
 
 The ``Defaults`` class provides access to default application settings.
-Values for each setting can be accessed via attributes:
+Values for each setting are accessible via attributes:
 
 .. doctest:: python
 
@@ -23,9 +21,9 @@ Values for each setting can be accessed via attributes:
   (smp, mpi, gpu, htc)
 
 
-The ``Settings`` class acts as an extension of the ``Defaults`` class, but
+The ``Settings`` class is similar to the ``Defaults`` class, but
 allows for default settings to be overwritten via environmental variables.
-The ``Settings`` class should be used instead of the ``Defaults`` class in
+The ``Settings`` class should be used instead of ``Defaults`` in
 most cases.
 
 .. doctest:: python
