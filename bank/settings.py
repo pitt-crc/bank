@@ -1,4 +1,52 @@
-"""Application settings for the bank monitoring system"""
+"""The ``settings`` module provides access to application settings. It
+includes definitions for default settings in addition to access to settings
+defined in the working environment.
+
+For a complete list of application settings, see the Installation page.
+
+Usage Example
+-------------
+
+The ``Defaults`` class provides access to default application settings.
+Values for each setting can be accessed via attributes:
+
+.. doctest:: python
+
+  >>> from bank.settings import Defaults
+
+  >>> # The datetime format used when displaying or parsing dates
+  >>> print(Defaults.date_format)
+  %m/%d/%y
+
+  >>> # The names of each cluster being administrated
+  >>> print(Defaults.clusters)
+  (smp, mpi, gpu, htc)
+
+
+The ``Settings`` class acts as an extension of the ``Defaults`` class, but
+allows for default settings to be overwritten via environmental variables.
+The ``Settings`` class should be used instead of the ``Defaults`` class in
+most cases.
+
+.. doctest:: python
+
+  >>> import os
+  >>> from bank.settings import Settings
+
+  >>> # Specify the date format as an environmental variable
+  >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
+
+  >>> settings = Settings()
+  >>> print(settings.date_format)
+  %m-%d-%y
+
+.. important::
+  Application settings are read from the working environment in realtime.
+  At no time are environmental variables cached from the workiung environment.
+
+API Reference
+-------------
+"""
 
 from pathlib import Path
 from typing import Any
@@ -26,7 +74,7 @@ class Defaults:
     db_test_path = _application_dir / 'test.db'
 
     # A list of cluster names to track usage on
-    clusters = ["smp", "mpi", "gpu", "htc"]
+    clusters = ("smp", "mpi", "gpu", "htc")
 
     # The email suffix for your organization. We assume the ``Description``
     # field of each account in ``sacctmgr`` contains the prefix.
@@ -108,11 +156,11 @@ class Defaults:
     """
 
 
-class Settings(Defaults):
+class Settings:
     """Reflects application settings as set in the working environment"""
 
     def __getattribute__(self, item: str) -> Any:
-        default = getattr(super(), item)
+        default = getattr(Defaults, item)
         env_key = APP_PREFIX + item.upper()
         return Env().get_value(env_key, cast=type(default), default=default)
 
