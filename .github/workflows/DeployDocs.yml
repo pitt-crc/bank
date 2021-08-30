@@ -23,7 +23,6 @@ jobs:
     - name: Build and Commit
       uses: sphinx-notes/pages@master
       with:
-        target_branch: gh-pages # Git branch where assets will be deployed
         documentation_path: docs/source # Relative path under repository to documentation source files
     
     - name: Push changes
