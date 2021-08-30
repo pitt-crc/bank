@@ -9,40 +9,19 @@ on:
 jobs:
   Build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.8
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -r docs/requirements.txt
-
-      - name: Build Documentation
-        working-directory: ./docs
-        run: make html
-
-      - name: Commit documentation changes
-        run: |
-          git clone https://github.com/pitt-crc/bank.git --branch gh-pages --single-branch gh-pages --depth 1
-
-          rm -rf gh-pages/*  # clear old files away
-          cp -r docs/build/html/* gh-pages/  # Add new doc files
-          
-          cd gh-pages
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add .
-          git commit -m "Update documentation" -a || true
-
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          branch: gh-pages
-          directory: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout
+      uses: actions/checkout@development
+   
+    - name: Build and Commit
+      uses: sphinx-notes/pages@development
+      with:
+        target_branch: gh-pages  # Git branch where assets will be deployed
+        documentation_path: docs # Relative path under repository to documentation source files
+    
+    - name: Push changes
+      uses: ad-m/github-push-action@development
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: gh-pages
