@@ -27,10 +27,10 @@ class DictAccessPatternMixin:
         setattr(self, key, value)
 
     def update(self, **items: Any) -> None:
-        """Update column """
+        """Update column"""
 
-        for key in set(items).intersection(self.__table__.columns):
-            setattr(self, key, items[key])
+        for key, val in items.items():
+            setattr(self, key, val)
 
     def __iter__(self) -> Tuple[str, Any]:
         """Iterate over pairs of column names and values for the current row"""
@@ -50,13 +50,15 @@ class AutoReprMixin:
 
 @declarative_mixin
 class ExportMixin:
+    """Adds methods for exporting tables to different file formats and data types"""
+
     def to_json(self) -> Dict[str, Union[int, str]]:
         """Return the row object as a json compatible dictionary"""
 
         # Convert data to human readable format
         return_dict = dict()
-        for col in self.__table.columns:
-            value = getattr(self, col)
+        for col in self.__table__.columns:
+            value = getattr(self, col.name)
 
             if hasattr(value, 'strftime'):
                 value = value.strftime(app_settings.date_format)
@@ -64,7 +66,7 @@ class ExportMixin:
             elif isinstance(value, enum.Enum):
                 value = value.name
 
-            return_dict[col] = value
+            return_dict[col.name] = value
 
         return return_dict
 
