@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from bank.orm.mixins import DictAccessPatternMixin
-from utils import create_table_with_mixin
+from .utils import create_table_with_mixin
 
 DummyTable = create_table_with_mixin(DictAccessPatternMixin)
 
