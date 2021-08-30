@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from bank.orm.mixins import ExportMixin
 from bank.settings import app_settings
-from .utils import create_table_with_mixin
+from .utils import DummyEnum, create_table_with_mixin
 
 DummyTable = create_table_with_mixin(ExportMixin)
 
@@ -14,7 +14,7 @@ class ExportingToJson(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now())
+        cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
         cls.row_as_json = cls.test_row.to_json()
 
     def test_date_format_matches_settings(self) -> None:
@@ -24,8 +24,10 @@ class ExportingToJson(TestCase):
         recovered_date = datetime.strptime(self.row_as_json['date_col'], app_settings.date_format)
         self.assertEqual(recovered_date.date(), self.test_row.date_col.date())
 
-    def test_enum_cast_to_int(self) -> None:
-        self.fail()
+    def test_enum_cast_to_str(self) -> None:
+        """Test enum types are cast to strings"""
+
+        self.assertEqual(self.test_row.enum_col.name, self.row_as_json['enum_col'])
 
     def test_return_is_json_parsable(self) -> None:
         """Test the returned dictionary is parsable by the json package"""

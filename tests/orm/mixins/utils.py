@@ -1,7 +1,14 @@
+import enum
 from typing import Type
 
-from sqlalchemy import Column, Date, Integer, Text
+from sqlalchemy import Column, Date, Enum, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
+
+
+class DummyEnum(enum.Enum):
+    one = 1
+    two = 2
+    three = 3
 
 
 def create_table_with_mixin(*mixins: Type):
@@ -33,5 +40,6 @@ def create_table_with_mixin(*mixins: Type):
         int_col = Column(Integer)
         str_col = Column(Text)
         date_col = Column(Date)
+        enum_col = Column(Enum(DummyEnum))
 
     return DummyTable
