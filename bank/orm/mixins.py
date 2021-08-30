@@ -27,10 +27,10 @@ class DictAccessPatternMixin:
         setattr(self, key, value)
 
     def update(self, **items: Any) -> None:
-        """Update column """
+        """Update column"""
 
-        for key in set(items).intersection(self.__table__.columns):
-            setattr(self, key, items[key])
+        for key, val in items.items():
+            setattr(self, key, val)
 
     def __iter__(self) -> Tuple[str, Any]:
         """Iterate over pairs of column names and values for the current row"""
