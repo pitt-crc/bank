@@ -12,16 +12,16 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@master
    
     - name: Build and Commit
-      uses: sphinx-notes/pages@1.0
+      uses: sphinx-notes/pages@master
       with:
         target_branch: gh-pages  # Git branch where assets will be deployed
         documentation_path: docs # Relative path under repository to documentation source files
     
     - name: Push changes
-      uses: ad-m/github-push-action@v0.6.0
+      uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
