@@ -72,24 +72,6 @@ class RequireRoot:
         return wrapped
 
 
-class Right:
-    def __init__(self, value):
-        self.value = value
-
-
-class Left:
-    def __init__(self, reason):
-        self.reason = reason
-
-
-def unwrap_if_right(x):
-    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``. Otherwise, exit."""
-
-    if isinstance(x, Left):
-        exit(x.reason)
-    return x.value
-
-
 def check_service_units_valid(units):
     """Return a proper natural number as a ``Right`` instance
     
@@ -103,13 +85,8 @@ def check_service_units_valid(units):
         ValueError: If the input ``units`` is not a natural number
     """
 
-    try:
-        result = int(units)
-    except ValueError:
-        return Left(f"Given `{units}` which isn't a natural number")
-    if result <= 0:
-        return Left(f"Given `{units}` which isn't a natural number")
-    return Right(result)
+    if units <= 0:
+        raise ValueError(f"SUs must be greater than or equal to zero, got `{units}`")
 
 
 def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):

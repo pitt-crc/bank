@@ -393,7 +393,7 @@ class Account:
         end_date = start_date + timedelta(days=1825)
 
         # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid(sus))
+        utils.check_service_units_valid(sus)
         current_sus = ceil(sus / 5)
 
         new_investor = Investor(
@@ -634,9 +634,7 @@ class Account:
         self.raise_missing_proposal()
 
         # Service units should be a valid number
-        sus_to_withdraw = utils.unwrap_if_right(
-            utils.check_service_units_valid(sus)
-        )
+        utils.check_service_units_valid(sus)
 
         # First check if the user has enough SUs to withdraw
         available_investments = sum(self.get_available_investor_sus())
