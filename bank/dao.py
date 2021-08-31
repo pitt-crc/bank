@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from bank import utils
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, TableOverwriteError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd, convert_to_hours
@@ -393,7 +393,7 @@ class Account:
         end_date = start_date + timedelta(days=1825)
 
         # Service units should be a valid number
-        sus = utils.unwrap_if_right(utils.check_service_units_valid(sus))
+        utils.check_service_units_valid(sus)
         current_sus = ceil(sus / 5)
 
         new_investor = Investor(
@@ -634,9 +634,7 @@ class Account:
         self.raise_missing_proposal()
 
         # Service units should be a valid number
-        sus_to_withdraw = utils.unwrap_if_right(
-            utils.check_service_units_valid(sus)
-        )
+        utils.check_service_units_valid(sus)
 
         # First check if the user has enough SUs to withdraw
         available_investments = sum(self.get_available_investor_sus())
@@ -757,8 +755,8 @@ class Account:
                 investor_rows = session.query(Investor).filter_by(account=self.account_name).all()
                 for investor_row in investor_rows:
                     if need_to_rollover > 0:
-                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // utils.years_left(
-                            investor_row.end_date)
+                        years_left = investor_row.end_date.year - date.today().year
+                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // years_left
                         to_rollover = int(
                             investor_row.current_sus
                             if investor_row.current_sus < need_to_rollover
@@ -805,12 +803,30 @@ class Account:
 class Bank:
 
     @staticmethod
-    def import_proposal(self, path, overwrite=False) -> None:
-        utils.import_from_json(path, Proposal, overwrite)
+    def import_from_json(filepath: Path, table, overwrite: bool) -> None:
 
-    @staticmethod
+        with filepath.open("r") as fp, Session() as session:
+            table_is_empty = session.query(table).first() is None
+            if not (table_is_empty or overwrite):
+                raise TableOverwriteError('Table is not empty. Specify ``overwrite=True`` to allow overwriting')
+
+            session.query(table).delete()  # Delete existing rows in table
+
+            contents = json.load(fp)
+            if 'results' in contents.keys():
+                for item in contents['results']:
+                    del item['id']
+                    item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
+                    item['end_date'] = datetime.strptime(item['end_date'], app_settings.date_format)
+                    session.add(table(**item))
+
+            session.commit()
+
+    def import_proposal(self, path, overwrite=False) -> None:
+        self.import_from_json(path, Proposal, overwrite)
+
     def import_investor(self, path, overwrite=False) -> None:
-        utils.import_from_json(path, Investor, overwrite)
+        self.import_from_json(path, Investor, overwrite)
 
     @staticmethod
     def alloc_sus(path: Path) -> None:

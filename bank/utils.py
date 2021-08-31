@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
@@ -72,24 +72,6 @@ class RequireRoot:
         return wrapped
 
 
-class Right:
-    def __init__(self, value):
-        self.value = value
-
-
-class Left:
-    def __init__(self, reason):
-        self.reason = reason
-
-
-def unwrap_if_right(x):
-    """Unwrap input if it belongs to the class ``Right`` by returning the attribute ``value``. Otherwise, exit."""
-
-    if isinstance(x, Left):
-        exit(x.reason)
-    return x.value
-
-
 def check_service_units_valid(units):
     """Return a proper natural number as a ``Right`` instance
     
@@ -103,13 +85,8 @@ def check_service_units_valid(units):
         ValueError: If the input ``units`` is not a natural number
     """
 
-    try:
-        result = int(units)
-    except ValueError:
-        return Left(f"Given `{units}` which isn't a natural number")
-    if result <= 0:
-        return Left(f"Given `{units}` which isn't a natural number")
-    return Right(result)
+    if units <= 0:
+        raise ValueError(f"SUs must be greater than or equal to zero, got `{units}`")
 
 
 def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
@@ -135,12 +112,12 @@ def log_action(s):
 
 def find_next_notification(usage):
     members = list(PercentNotified)
-
     exceeded = [usage > x.to_percentage() for x in members]
 
     try:
         index = exceeded.index(False)
         result = PercentNotified.Zero if index == 0 else members[index - 1]
+
     except ValueError:
         result = PercentNotified.Hundred
 
@@ -202,18 +179,6 @@ class ProposalType(Enum):
             raise ValueError(f'Invalid proposal type: `{name}`')
 
 
-def check_date_valid(d):
-    try:
-        date = datetime.strptime(d, "%m/%d/%y")
-    except:
-        return Left(f"Could not parse date (e.g. 12/01/19), got `{date}`")
-
-    if date > date.today():
-        return Left(f"Parsed `{date}`, but start dates shouldn't be in the future")
-
-    return Right(date)
-
-
 def convert_to_hours(usage):
     seconds_in_hour = 60 * 60
     return floor(int(usage) / (seconds_in_hour))
@@ -226,49 +191,6 @@ def freeze_if_not_empty(items: List, path: Path):
     else:
         with open(path, "w") as f:
             f.write("{}\n")
-
-
-def years_left(end):
-    return end.year - date.today().year
-
-
-def ask_destructive(force=False):
-    if force:
-        choice = "yes"
-    else:
-        print(
-            "DANGER: This function OVERWRITES crc_bank.db, are you sure you want to do this? [y/N]"
-        )
-        choice = input().lower()
-    return choice
-
-
-# def import_from_json(filepath: str, table, overwrite: bool):
-#     filepath = Path(filepath)
-#
-#     choice = ask_destructive(force=overwrite)
-#     if choice not in ("yes", "y"):
-#         return
-#
-#     with filepath.open("r") as fp, Session() as session:
-#         contents = json.load(fp)
-#         session.query(table).delete()  # Delete existing rows in table
-#         if "results" in contents.keys():
-#             for item in contents["results"]:
-#                 start_date_split = [int(x) for x in item["start_date"].split("-")]
-#                 item["start_date"] = date(
-#                     start_date_split[0], start_date_split[1], start_date_split[2]
-#                 )
-#
-#                 end_date_split = [int(x) for x in item["end_date"].split("-")]
-#                 item["end_date"] = date(
-#                     end_date_split[0], end_date_split[1], end_date_split[2]
-#                 )
-#
-#                 del item["id"]
-#                 session.add(table(**item))
-#
-#         session.commit()
 
 
 def send_email(account, email_html: str) -> None:
