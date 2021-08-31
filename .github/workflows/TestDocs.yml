@@ -1,0 +1,46 @@
+name: Documentation
+
+on:
+  pull_request:
+    branches:
+      - master
+      - development
+
+jobs:
+  Test-Build-Succeeds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          pip install requirements.txt
+          pip install -r docs/requirements.txt
+
+      - name: Build Documentation
+        working-directory: ./docs
+        run: make html SPHINXOPTS="-W --keep-going"  # Raise warnings as errors, but keep building anyways.
+
+  Test-Examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          pip install requirements.txt
+          pip install -r docs/requirements.txt
+
+      - name: Run doctest
+        working-directory: ./docs
+        run: make doctest
