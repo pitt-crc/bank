@@ -755,8 +755,8 @@ class Account:
                 investor_rows = session.query(Investor).filter_by(account=self.account_name).all()
                 for investor_row in investor_rows:
                     if need_to_rollover > 0:
-                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // utils.years_left(
-                            investor_row.end_date)
+                        years_left = investor_row.end_date.year - date.today().year
+                        to_withdraw = (investor_row.service_units - investor_row.withdrawn_sus) // years_left
                         to_rollover = int(
                             investor_row.current_sus
                             if investor_row.current_sus < need_to_rollover

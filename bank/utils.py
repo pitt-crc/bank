@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
@@ -112,12 +112,12 @@ def log_action(s):
 
 def find_next_notification(usage):
     members = list(PercentNotified)
-
     exceeded = [usage > x.to_percentage() for x in members]
 
     try:
         index = exceeded.index(False)
         result = PercentNotified.Zero if index == 0 else members[index - 1]
+
     except ValueError:
         result = PercentNotified.Hundred
 
@@ -191,10 +191,6 @@ def freeze_if_not_empty(items: List, path: Path):
     else:
         with open(path, "w") as f:
             f.write("{}\n")
-
-
-def years_left(end):
-    return end.year - date.today().year
 
 
 def send_email(account, email_html: str) -> None:
