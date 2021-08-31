@@ -1,5 +1,11 @@
 """The ``orm`` module acts as an object oriented interface for the underlying
-application database."""
+application database.
+
+.. sadisplay::
+    :module: bank.orm
+    :alt: My Schema
+
+"""
 
 import sqlalchemy
 import sqlalchemy_utils
@@ -13,6 +19,6 @@ _use_path = app_settings.db_test_path if app_settings.is_testing else app_settin
 engine = sqlalchemy.create_engine(f'sqlite:///{_use_path}')
 Session = sessionmaker(engine, future=True)
 
-if not sqlalchemy_utils.database_exists(engine.url):
-    sqlalchemy_utils.create_database(engine.url)
-    metadata.create_all(engine)
+#if not sqlalchemy_utils.database_exlsists(engine.url):
+#    sqlalchemy_utils.create_database(engine.url)
+#    metadata.create_all(engine)

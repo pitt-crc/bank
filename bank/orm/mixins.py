@@ -1,3 +1,9 @@
+"""Mixin classes for extending the default behavior of SQLAlchemy tables
+
+API Reference
+-------------
+"""
+
 import enum
 from typing import Any, Dict, Tuple, Union
 

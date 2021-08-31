@@ -32,7 +32,8 @@ extensions = [
     'sphinx_copybutton',
     'sphinx_autodoc_typehints',
     'sphinx_rtd_theme',
-    'sphinxarg.ext'
+    'sphinxarg.ext',
+    'sphinxcontrib.sadisp'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -42,6 +43,11 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+# Configuration options for sphinxcontrib.sadisp
+plantuml = 'java -jar plantuml.jar'.split()
+graphviz = 'dot -Tpng'.split()
+sadisplay_default_render = 'graphviz'
 
 # -- Options for HTML output -------------------------------------------------
 
