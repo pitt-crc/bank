@@ -1,3 +1,9 @@
+"""Object oriented interface for tables in the application database.
+
+API Reference
+-------------
+"""
+
 from sqlalchemy import Column, Date, Enum, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 
