@@ -270,14 +270,24 @@ def ask_destructive(force=False):
 #
 #         session.commit()
 
-class Mail():
+class EmailTemplate:
     def __init__(self, msg:str):
         self.msg= msg
-    
-    def format(account)->Mail:
-        mail.format(account).send_to_account(account)
-        
-   # def send_email(self, account, email_html: str) -> None:
+       
+    def format(self, account, proposal)->EmailTemplate:
+        format_message=self.msg.format(
+            account=self.account_name,
+            start=proposal.start_date.strftime(app_settings.date_format),
+            expire=proposal.end_date.strftime(app_settings.date_format),
+            usage=self.usage_string(),
+            perc=PercentNotified(proposal.percent_notified).to_percentage(),
+            investment=self.get_investment_status())
+
+        return EmailTemplate(format_message)
+        #return self.__class__(format_message)
+
+    '''
+    def send_email(self, account, email_html: str) -> None:
     """Send an email to a user account
 
     Args:
@@ -286,7 +296,7 @@ class Mail():
     """
 
     # Extract the text from the email
-    '''
+    
     soup = BeautifulSoup(email_html, "html.parser")
     email_text = soup.get_text()
 
