@@ -243,34 +243,6 @@ def ask_destructive(force=False):
     return choice
 
 
-# def import_from_json(filepath: str, table, overwrite: bool):
-#     filepath = Path(filepath)
-#
-#     choice = ask_destructive(force=overwrite)
-#     if choice not in ("yes", "y"):
-#         return
-#
-#     with filepath.open("r") as fp, Session() as session:
-#         contents = json.load(fp)
-#         session.query(table).delete()  # Delete existing rows in table
-#         if "results" in contents.keys():
-#             for item in contents["results"]:
-#                 start_date_split = [int(x) for x in item["start_date"].split("-")]
-#                 item["start_date"] = date(
-#                     start_date_split[0], start_date_split[1], start_date_split[2]
-#                 )
-#
-#                 end_date_split = [int(x) for x in item["end_date"].split("-")]
-#                 item["end_date"] = date(
-#                     end_date_split[0], end_date_split[1], end_date_split[2]
-#                 )
-#
-#                 del item["id"]
-#                 session.add(table(**item))
-#
-#         session.commit()
-
-
 def send_email(account, email_html: str) -> None:
     """Send an email to a user account
 

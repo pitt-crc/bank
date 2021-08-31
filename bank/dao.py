@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from bank import utils
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, TableOverwriteError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd, convert_to_hours
@@ -805,12 +805,30 @@ class Account:
 class Bank:
 
     @staticmethod
-    def import_proposal(self, path, overwrite=False) -> None:
-        utils.import_from_json(path, Proposal, overwrite)
+    def import_from_json(filepath: Path, table, overwrite: bool) -> None:
 
-    @staticmethod
+        with filepath.open("r") as fp, Session() as session:
+            table_is_empty = session.query(table).first() is None
+            if not (table_is_empty or overwrite):
+                raise TableOverwriteError('Table is not empty. Specify ``overwrite=True`` to allow overwriting')
+
+            session.query(table).delete()  # Delete existing rows in table
+
+            contents = json.load(fp)
+            if 'results' in contents.keys():
+                for item in contents['results']:
+                    del item['id']
+                    item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
+                    item['end_date'] = datetime.strptime(item['end_date'], app_settings.date_format)
+                    session.add(table(**item))
+
+            session.commit()
+
+    def import_proposal(self, path, overwrite=False) -> None:
+        self.import_from_json(path, Proposal, overwrite)
+
     def import_investor(self, path, overwrite=False) -> None:
-        utils.import_from_json(path, Investor, overwrite)
+        self.import_from_json(path, Investor, overwrite)
 
     @staticmethod
     def alloc_sus(path: Path) -> None:

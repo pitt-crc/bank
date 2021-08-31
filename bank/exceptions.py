@@ -12,3 +12,7 @@ class CmdError(Exception):
 
 class MissingProposalError(Exception):
     """Raised when an account is missing a proposal in the bank database"""
+
+
+class TableOverwriteError(Exception):
+    """Raised when database entries are about to be overwritten"""
