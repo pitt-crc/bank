@@ -5,6 +5,7 @@ from __future__ import annotations
 from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
+from logging import getLogger
 from math import floor
 from os import geteuid
 from pathlib import Path
@@ -17,6 +18,8 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
+
+LOG = getLogger('bank.utils')
 
 
 class ShellCmd:
@@ -32,6 +35,7 @@ class ShellCmd:
         if not cmd:
             raise ValueError('Command string cannot be empty')
 
+        LOG.debug(f'executing `{cmd}`')
         out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
         self.out = out.decode("utf-8").strip()
         self.err = err.decode("utf-8").strip()
