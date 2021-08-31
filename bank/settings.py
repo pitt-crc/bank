@@ -63,8 +63,8 @@ class Defaults:
 
     # Where and how to write log files to
     _application_dir = Path(__file__).resolve().parent
-    log_path = _application_dir / 'logs' / 'crc_bank.log'
-    log_format = '[%(asctime)s] %(levelname)s - %(message)s'
+    log_path = _application_dir / 'crc_bank.log'
+    log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
     log_level = 'INFO'
 
     # Path to the application SQLite backend
@@ -166,4 +166,3 @@ class Settings:
 # Provided a prebuilt ``Settings`` instance as a
 # dedicated entry point to application settings
 app_settings = Settings()
-Path(app_settings.log_path).parent.mkdir(exist_ok=True)

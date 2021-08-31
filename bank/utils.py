@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
+from logging import getLogger
 from math import floor
 from os import geteuid
 from pathlib import Path
@@ -18,7 +18,8 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
-from .settings import app_settings
+
+LOG = getLogger('bank.utils')
 
 
 class ShellCmd:
@@ -34,6 +35,7 @@ class ShellCmd:
         if not cmd:
             raise ValueError('Command string cannot be empty')
 
+        LOG.debug(f'executing `{cmd}`')
         out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
         self.out = out.decode("utf-8").strip()
         self.err = err.decode("utf-8").strip()
@@ -103,11 +105,6 @@ def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
 
     elif total_sus <= 0:
         raise ValueError(f"Total SUs should be greater than zero, got `{total_sus}`")
-
-
-def log_action(s):
-    with app_settings.log_path.open('a+') as f:
-        f.write(f"{datetime.now()}: {s}\n")
 
 
 def find_next_notification(usage):
