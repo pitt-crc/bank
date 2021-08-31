@@ -202,18 +202,6 @@ class ProposalType(Enum):
             raise ValueError(f'Invalid proposal type: `{name}`')
 
 
-def check_date_valid(d):
-    try:
-        date = datetime.strptime(d, "%m/%d/%y")
-    except:
-        return Left(f"Could not parse date (e.g. 12/01/19), got `{date}`")
-
-    if date > date.today():
-        return Left(f"Parsed `{date}`, but start dates shouldn't be in the future")
-
-    return Right(date)
-
-
 def convert_to_hours(usage):
     seconds_in_hour = 60 * 60
     return floor(int(usage) / (seconds_in_hour))
@@ -230,17 +218,6 @@ def freeze_if_not_empty(items: List, path: Path):
 
 def years_left(end):
     return end.year - date.today().year
-
-
-def ask_destructive(force=False):
-    if force:
-        choice = "yes"
-    else:
-        print(
-            "DANGER: This function OVERWRITES crc_bank.db, are you sure you want to do this? [y/N]"
-        )
-        choice = input().lower()
-    return choice
 
 
 def send_email(account, email_html: str) -> None:
