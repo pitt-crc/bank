@@ -270,8 +270,14 @@ def ask_destructive(force=False):
 #
 #         session.commit()
 
-
-def send_email(account, email_html: str) -> None:
+class Mail():
+    def __init__(self, msg:str):
+        self.msg= msg
+    
+    def format(account)->Mail:
+        mail.format(account).send_to_account(account)
+        
+   # def send_email(self, account, email_html: str) -> None:
     """Send an email to a user account
 
     Args:
@@ -280,6 +286,7 @@ def send_email(account, email_html: str) -> None:
     """
 
     # Extract the text from the email
+    '''
     soup = BeautifulSoup(email_html, "html.parser")
     email_text = soup.get_text()
 
@@ -292,3 +299,4 @@ def send_email(account, email_html: str) -> None:
 
     with SMTP("localhost") as s:
         s.send_message(msg)
+'''
