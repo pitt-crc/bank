@@ -1,4 +1,4 @@
-"""Mixin classes for extending the default behavior of SQLAlchemy tables
+"""Mixin classes for extending the default behavior of SQLAlchemy tables.
 
 Usage Examples
 --------------
@@ -51,7 +51,11 @@ from bank.settings import app_settings
 
 @declarative_mixin
 class DictAccessPatternMixin:
-    """Allows values in a table row to be accessed via indexing in addition to as attributes"""
+    """Adds support for getting/setting row values via indexing by column name.
+
+    By default, SQLAlchemy tables only support getting data via attributes.
+    This class adds support for dictionary-like data access.
+    """
 
     def __getitem__(self, item: str) -> Any:
         """Support dictionary like fetching of attribute values"""
@@ -70,7 +74,11 @@ class DictAccessPatternMixin:
         setattr(self, key, value)
 
     def update(self, **items: Any) -> None:
-        """Update column"""
+        """Update row values with the given values
+
+        Args:
+            **items: The column name and new value as keyword arguments
+        """
 
         for key, val in items.items():
             setattr(self, key, val)
@@ -84,7 +92,7 @@ class DictAccessPatternMixin:
 
 @declarative_mixin
 class AutoReprMixin:
-    """Automatically generate a string representation using class attributes"""
+    """Automatically generate human readable representations when casting tables to strings."""
 
     def __repr__(self) -> str:
         attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
@@ -93,10 +101,10 @@ class AutoReprMixin:
 
 @declarative_mixin
 class ExportMixin:
-    """Adds methods for exporting tables to different file formats and data types"""
+    """Adds methods for exporting tables to different file formats and data types."""
 
     def to_json(self) -> Dict[str, Union[int, str]]:
-        """Return the row object as a json compatible dictionary"""
+        """Return the row object as a json compatible dictionary."""
 
         # Convert data to human readable format
         return_dict = dict()
@@ -115,4 +123,4 @@ class ExportMixin:
 
 
 class CustomBase(DictAccessPatternMixin, AutoReprMixin, ExportMixin):
-    """Custom SQLAlchemy base class for incorporating all available mixins"""
+    """Custom SQLAlchemy base class that incorporates all available mixins."""
