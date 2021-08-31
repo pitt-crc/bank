@@ -19,6 +19,6 @@ _use_path = app_settings.db_test_path if app_settings.is_testing else app_settin
 engine = sqlalchemy.create_engine(f'sqlite:///{_use_path}')
 Session = sessionmaker(engine, future=True)
 
-#if not sqlalchemy_utils.database_exlsists(engine.url):
-#    sqlalchemy_utils.create_database(engine.url)
-#    metadata.create_all(engine)
+if not sqlalchemy_utils.database_exists(engine.url):
+    sqlalchemy_utils.create_database(engine.url)
+    metadata.create_all(engine)
