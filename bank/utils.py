@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
@@ -18,7 +17,6 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
-from .settings import app_settings
 
 
 class ShellCmd:
@@ -103,11 +101,6 @@ def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
 
     elif total_sus <= 0:
         raise ValueError(f"Total SUs should be greater than zero, got `{total_sus}`")
-
-
-def log_action(s):
-    with app_settings.log_path.open('a+') as f:
-        f.write(f"{datetime.now()}: {s}\n")
 
 
 def find_next_notification(usage):

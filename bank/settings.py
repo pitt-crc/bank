@@ -65,7 +65,7 @@ class Defaults:
     _application_dir = Path(__file__).resolve().parent
     log_path = _application_dir / 'crc_bank.log'
     log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
-    log_level = 'DEBUG'
+    log_level = 'INFO'
 
     # Path to the application SQLite backend
     db_path = _application_dir / 'crc_bank.db'

@@ -20,5 +20,5 @@ logging.basicConfig(
     filemode='a')
 
 # Set logging level for third part packages
-for log_name in ('sqlalchemy.engine', 'environ.environ'):
+for log_name in ('sqlalchemy.engine', 'environ.environ', 'bank.dao'):
     logging.getLogger(log_name).setLevel(settings.app_settings.log_level)

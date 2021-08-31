@@ -5,6 +5,7 @@ import sys
 from datetime import date
 from datetime import datetime, timedelta
 from io import StringIO
+from logging import getLogger
 from math import ceil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -16,6 +17,8 @@ from bank.exceptions import MissingProposalError, TableOverwriteError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd, convert_to_hours
+
+LOG = getLogger('bank.dao')
 
 
 class Account:
@@ -373,7 +376,7 @@ class Account:
             session.commit()
 
         su_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(
+        LOG.info(
             f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {su_string}")
 
     def investor(self, sus: int) -> None:
@@ -411,7 +414,7 @@ class Account:
             session.add(new_investor)
             session.commit()
 
-        utils.log_action(f"Inserted investment for {self.account_name} with per year allocations of `{current_sus}`")
+        LOG.info(f"Inserted investment for {self.account_name} with per year allocations of `{current_sus}`")
 
     def modify(self, **sus_per_cluster: int) -> None:
         """Extend the proposal on an account 365 days and add the given number of service units"""
@@ -429,7 +432,7 @@ class Account:
             session.commit()
 
         sus_as_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Modified proposal for {self.account_name} with {sus_as_string}")
+        LOG.info(f"Modified proposal for {self.account_name} with {sus_as_string}")
 
     def add(self, **sus_per_cluster: int) -> None:
         """Add service units for the given account / clusters
@@ -452,7 +455,7 @@ class Account:
             session.commit()
 
         su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
+        LOG.info(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
 
     def change(self, **sus_per_cluster: int) -> None:
         """Replace the currently allocated service units for an account with new values
@@ -471,7 +474,7 @@ class Account:
             session.commit()
 
         su_string = ', '.join(f'{sus_per_cluster[k]} on {k}' for k in app_settings.clusters)
-        utils.log_action(f"Changed proposal for {self.account_name} with {su_string}")
+        LOG.info(f"Changed proposal for {self.account_name} with {su_string}")
 
     def date(self, start_date: datetime) -> None:
         """Change the start date on an account's proposal
@@ -493,7 +496,7 @@ class Account:
             proposal.end_date = start_date + timedelta(days=365)
             session.commit()
 
-        utils.log_action(f'Modified proposal start date for {self.account_name} to {date_str}')
+        LOG.info(f'Modified proposal start date for {self.account_name} to {date_str}')
 
     def date_investment(self, start_date: datetime, inv_id: int) -> None:
         """Change the start date on an account's investment
@@ -518,7 +521,7 @@ class Account:
                 investment.end_date = start_date + timedelta(days=1825)
                 session.commit()
 
-        utils.log_action(
+        LOG.info(
             f"Modify investment start date for investment #{inv_id} for account {self.account_name} to {start_date}")
 
     def check_sus_limit(self) -> None:
@@ -594,7 +597,7 @@ class Account:
             proposal_row.percent_notified = updated_notification_percent.value
             self.notify_sus_limit()
 
-            utils.log_action(
+            LOG.info(
                 f"Updated proposal percent_notified to {updated_notification_percent} for {account.account_name}"
             )
 
@@ -603,7 +606,7 @@ class Account:
             if self.account_name != "root":
                 self.set_locked_state(True)
 
-                utils.log_action(
+                LOG.info(
                     f"The account for {self.account_name} was locked due to SUs limit"
                 )
 
@@ -625,7 +628,7 @@ class Account:
         elif today == proposal_row.end_date:
             self.proposal_expires_notification()
             self.set_locked_state(True)
-            utils.log_action(
+            LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
@@ -666,7 +669,7 @@ class Account:
                 investment.withdrawn_sus += to_withdraw
                 session.commit()
 
-            utils.log_action(
+            LOG.info(
                 f"Withdrew from investment {investment.id} for account {self.account_name} with value {to_withdraw}")
 
             # Determine if we are done processing investments
