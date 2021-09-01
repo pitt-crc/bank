@@ -1,0 +1,92 @@
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - CREATE TABLE DB(id int);
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - COMMIT
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - DROP TABLE DB;
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - COMMIT
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - BEGIN (implicit)
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA main.table_info("investor")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA temp.table_info("investor")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA main.table_info("investor_archive")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA temp.table_info("investor_archive")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA main.table_info("proposal")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA temp.table_info("proposal")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA main.table_info("proposal_archive")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - PRAGMA temp.table_info("proposal_archive")
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [raw sql] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - 
+CREATE TABLE investor (
+	id INTEGER NOT NULL, 
+	account TEXT, 
+	start_date DATE, 
+	end_date DATE, 
+	proposal_type INTEGER, 
+	service_units INTEGER, 
+	current_sus INTEGER, 
+	withdrawn_sus INTEGER, 
+	rollover_sus INTEGER, 
+	PRIMARY KEY (id)
+)
+
+
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [no key 0.00009s] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - 
+CREATE TABLE investor_archive (
+	id INTEGER NOT NULL, 
+	account TEXT, 
+	start_date DATE, 
+	end_date DATE, 
+	exhaustion_date DATE, 
+	service_units INTEGER, 
+	current_sus INTEGER, 
+	proposal_id INTEGER, 
+	investor_id INTEGER, 
+	PRIMARY KEY (id)
+)
+
+
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [no key 0.00009s] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - 
+CREATE TABLE proposal (
+	id INTEGER NOT NULL, 
+	account TEXT, 
+	start_date DATE, 
+	end_date DATE, 
+	percent_notified VARCHAR(11), 
+	proposal_type VARCHAR(8), 
+	smp INTEGER, 
+	mpi INTEGER, 
+	gpu INTEGER, 
+	htc INTEGER, 
+	PRIMARY KEY (id)
+)
+
+
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [no key 0.00025s] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - 
+CREATE TABLE proposal_archive (
+	id INTEGER NOT NULL, 
+	account TEXT, 
+	start_date DATE, 
+	end_date DATE, 
+	smp INTEGER, 
+	smp_usage INTEGER, 
+	mpi INTEGER, 
+	mpi_usage INTEGER, 
+	gpu INTEGER, 
+	gpu_usage INTEGER, 
+	htc INTEGER, 
+	htc_usage INTEGER, 
+	PRIMARY KEY (id)
+)
+
+
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - [no key 0.00011s] ()
+[INFO] 09/01/21 - sqlalchemy.engine.Engine - COMMIT
