@@ -1,4 +1,4 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+"""The ``utils`` module provides general utilities for the parent application"""
 
 from __future__ import annotations
 
