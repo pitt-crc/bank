@@ -2,7 +2,7 @@ import csv
 import json
 import os
 import sys
-from datetime import date, time, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from io import StringIO
 from logging import getLogger
 from math import ceil
@@ -15,7 +15,7 @@ from bank import utils
 from bank.exceptions import MissingProposalError, TableOverwriteError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
-from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd
+from bank.utils import ProposalType, RequireRoot, ShellCmd
 
 LOG = getLogger('bank.dao')
 
@@ -160,7 +160,7 @@ class Account:
             start=proposal.start_date.strftime(app_settings.date_format),
             expire=proposal.end_date.strftime(app_settings.date_format),
             usage=self.usage_string(),
-            perc=PercentNotified(proposal.percent_notified).to_percentage(),
+            perc=proposal.percent_notified,
             investment=self.get_investment_status()
         )
 
@@ -175,7 +175,7 @@ class Account:
             start=proposal.start_date.strftime(app_settings.date_format),
             expire=proposal.end_date.strftime(app_settings.date_format),
             usage=self.usage_string(),
-            perc=PercentNotified(proposal.percent_notified).to_percentage(),
+            perc=proposal.percent_notified,
             investment=self.get_investment_status()
         )
 
@@ -190,7 +190,7 @@ class Account:
             start=proposal.start_date.strftime(app_settings.date_format),
             expire=proposal.end_date.strftime(app_settings.date_format),
             usage=self.usage_string(),
-            perc=PercentNotified(proposal.percent_notified).to_percentage(),
+            perc=proposal.percent_notified,
             investment=self.get_investment_status()
         )
 
@@ -364,7 +364,7 @@ class Account:
         new_proposal = Proposal(
             account=self.account_name,
             proposal_type=proposal_type.value,
-            percent_notified=PercentNotified.Zero.value,
+            percent_notified=0,
             start_date=start_date,
             end_date=start_date + proposal_duration,
             **sus_per_cluster
@@ -547,14 +547,14 @@ class Account:
         for investor_row in investor_rows:
             # Check if investment is exhausted
             if investor_row.service_units - investor_row.withdrawn_sus == 0 and (
-                    used_sus
-                    >= (
-                            total_sus
-                            + sum_investment_sus
-                            + investor_row.current_sus
-                            + investor_row.rollover_sus
-                    )
-                    or investor_row.current_sus + investor_row.rollover_sus == 0
+                used_sus
+                >= (
+                    total_sus
+                    + sum_investment_sus
+                    + investor_row.current_sus
+                    + investor_row.rollover_sus
+                )
+                or investor_row.current_sus + investor_row.rollover_sus == 0
             ):
                 to_insert = InvestorArchive(
                     service_units=investor_row.service_units,
@@ -582,8 +582,8 @@ class Account:
 
         total_sus += sum_investor_archive_sus
 
-        notification_percent = utils.PercentNotified(proposal_row.percent_notified)
-        if notification_percent == utils.PercentNotified.Hundred:
+        notification_percent = proposal_row.percent_notified
+        if notification_percent == 100:
             exit(
                 f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked"
             )
@@ -601,7 +601,7 @@ class Account:
             )
 
         # Lock the account if necessary
-        if updated_notification_percent == utils.PercentNotified.Hundred:
+        if updated_notification_percent == 100:
             if self.account_name != "root":
                 self.set_locked_state(True)
 
@@ -776,7 +776,7 @@ class Account:
         end_date = start_date + proposal_duration
 
         prop = session.query(Proposal).filter_by(id=proposal_id).all()
-        prop.percent_notified = utils.PercentNotified.Zero.value
+        prop.percent_notified = 0
         prop.start_date = start_date
         prop.end_date = end_date
         for c in app_settings.clusters:
