@@ -1,5 +1,3 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
-
 from __future__ import annotations
 
 from email.message import EmailMessage
@@ -8,13 +6,11 @@ from functools import wraps
 from logging import getLogger
 from math import floor
 from os import geteuid
-from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
-from typing import Any, List
+from typing import Any
 
-import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
@@ -179,15 +175,6 @@ class ProposalType(Enum):
 def convert_to_hours(usage):
     seconds_in_hour = 60 * 60
     return floor(int(usage) / (seconds_in_hour))
-
-
-def freeze_if_not_empty(items: List, path: Path):
-    force_eval = [dict(p) for p in items]
-    if force_eval:
-        datafreeze.freeze(force_eval, format="json", filename=path)
-    else:
-        with open(path, "w") as f:
-            f.write("{}\n")
 
 
 def send_email(account, email_html: str) -> None:

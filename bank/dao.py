@@ -55,7 +55,7 @@ class Account:
         if proposal:
             print('Proposal')
             print('---------------')
-            print(json.dumps(proposal.to_json(), indent=2))
+            print(json.dumps(proposal.row_to_json(), indent=2))
             print()
 
         for investor in investments:
@@ -548,14 +548,14 @@ class Account:
         for investor_row in investor_rows:
             # Check if investment is exhausted
             if investor_row.service_units - investor_row.withdrawn_sus == 0 and (
-                    used_sus
-                    >= (
-                            total_sus
-                            + sum_investment_sus
-                            + investor_row.current_sus
-                            + investor_row.rollover_sus
-                    )
-                    or investor_row.current_sus + investor_row.rollover_sus == 0
+                used_sus
+                >= (
+                    total_sus
+                    + sum_investment_sus
+                    + investor_row.current_sus
+                    + investor_row.rollover_sus
+                )
+                or investor_row.current_sus + investor_row.rollover_sus == 0
             ):
                 to_insert = InvestorArchive(
                     service_units=investor_row.service_units,
@@ -893,11 +893,9 @@ class Bank:
 
         paths = (proposal, investor, proposal_archive, investor_archive)
         tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
+        if any(p.exists() for p in paths):
+            raise FileExistsError(f"One or more of the given file paths already exist.")
 
-        for p in paths:
-            if p.exists():
-                raise FileExistsError(f"Path already exists: {p}")
-
-        with Session() as session:
-            for table, path in zip(tables, paths):
-                utils.freeze_if_not_empty(session.query(table).all(), path)
+        for table, path in zip(tables, paths):
+            with Session() as session, path.open('w') as ofile:
+                json.dump(session.query(table).all(), ofile, default=lambda obj: obj.row_to_json())

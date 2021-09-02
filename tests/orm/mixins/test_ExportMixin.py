@@ -15,7 +15,7 @@ class ExportingToJson(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
-        cls.row_as_json = cls.test_row.to_json()
+        cls.row_as_json = cls.test_row.row_to_json()
 
     def test_date_format_matches_settings(self) -> None:
         """Test dates are converted to strings using the date format from application settings"""
