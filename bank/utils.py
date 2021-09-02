@@ -6,7 +6,6 @@ from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
 from logging import getLogger
-from math import floor
 from os import geteuid
 from pathlib import Path
 from shlex import split
@@ -174,11 +173,6 @@ class ProposalType(Enum):
 
         except AttributeError:
             raise ValueError(f'Invalid proposal type: `{name}`')
-
-
-def convert_to_hours(usage):
-    seconds_in_hour = 60 * 60
-    return floor(int(usage) / (seconds_in_hour))
 
 
 def freeze_if_not_empty(items: List, path: Path):

@@ -2,8 +2,7 @@ import csv
 import json
 import os
 import sys
-from datetime import date
-from datetime import datetime, timedelta
+from datetime import date, time, datetime, timedelta
 from io import StringIO
 from logging import getLogger
 from math import ceil
@@ -16,7 +15,7 @@ from bank import utils
 from bank.exceptions import MissingProposalError, TableOverwriteError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
-from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd, convert_to_hours
+from bank.utils import PercentNotified, ProposalType, RequireRoot, ShellCmd
 
 LOG = getLogger('bank.dao')
 
@@ -99,7 +98,7 @@ class Account:
         if notify:
             self.proposal_expires_notification()
 
-    def _raw_cluster_usage(self, cluster: str) -> None:
+    def _raw_cluster_usage(self, cluster: str) -> int:
         """Return the account usage on a given cluster in seconds"""
 
         # Only the second and third line are necessary from the output table
@@ -120,7 +119,7 @@ class Account:
         """
 
         if in_hours:
-            return {c: convert_to_hours(self._raw_cluster_usage(c)) for c in clusters}
+            return {c: time(second=self._raw_cluster_usage(c)).hour for c in clusters}
 
         return {c: self._raw_cluster_usage(c) for c in clusters}
 
@@ -334,14 +333,14 @@ class Account:
         for idx, data in enumerate(reader):
             if idx != 0:
                 user = data[user_idx]
-                usage = convert_to_hours(data[raw_usage_idx])
+                usage = time(second=data[raw_usage_idx]).hour
                 if avail_sus == 0:
                     output.write(f"|{user:^20}|{usage:^30}|{'N/A':^30}|\n")
 
                 else:
                     output.write(f"|{user:^20}|{usage:^30}|{100.0 * usage / avail_sus:^30.2f}|\n")
             else:
-                total_cluster_usage = convert_to_hours(data[raw_usage_idx])
+                total_cluster_usage = time(second=data[raw_usage_idx]).hour
 
         return total_cluster_usage
 
