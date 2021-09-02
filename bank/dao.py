@@ -824,29 +824,31 @@ class Bank:
         """Print the names for all unexpired proposals with unlocked accounts"""
 
         with Session() as session:
-            proposals = session.query(Proposal).filter_by(Proposal.end_date >= date.today()).all()
+            proposals = session.query(Proposal).filter_by(Proposal.end_date < date.today()).all()
 
         for proposal in proposals:
-            if not Account(proposal.account).get_locked_state():
-                print(proposal.account)
+            account = Account(proposal.account)
+            if not account.get_locked_state():
+                print(account.account_name)
 
     @staticmethod
     def check_proposal_violations() -> None:
-        # Iterate over all of the proposals looking for proposal violations
-        proposals = Session().query(Proposal).all()
+        """Iterate over all proposals and print any accounts with proposal violations"""
+
+        with Session() as session:
+            proposals = session.query(Proposal).all()
 
         for proposal in proposals:
             account = Account(proposal.account)
             investments = sum(account.get_available_investor_sus())
+            cluster_sus = account.get_raw_usage(*app_settings.clusters, in_hours=True)
 
             subtract_previous_investment = 0
-            cluster_sus = Account(proposal.account).get_raw_usage(*app_settings.clusters, in_hours=True)
             for cluster, used_sus in cluster_sus.items():
                 avail_sus = getattr(proposal, cluster)
                 if used_sus > (avail_sus + investments - subtract_previous_investment):
-                    print(
-                        f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments}"
-                    )
+                    print(f"Account {account.account_name}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments}")
+
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus
 
@@ -889,7 +891,8 @@ class Bank:
                 session.query(table).delete()  # Delete existing rows in table
 
             else:
-                raise TableOverwriteError('Table is not empty. Specify ``overwrite=True`` to allow overwriting')
+                raise TableOverwriteError(
+                    f'Table {table.__tablename__} is not empty. Specify ``overwrite=True`` to allow overwriting')
 
             for item in json.load(fp):
                 item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
