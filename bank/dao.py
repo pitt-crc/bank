@@ -853,11 +853,11 @@ class Bank:
     def find_unlocked() -> None:
         """Print the names for all unexpired proposals with unlocked accounts"""
 
-        today = date.today()
-        for proposal in Session().query(Proposal).all():
-            is_locked = Account(proposal.account).get_locked_state()
-            is_expired = proposal.end_date >= today
-            if not (is_locked or is_expired):
+        with Session() as session:
+            proposals = session.query(Proposal).filter_by(Proposal.end_date >= date.today()).all()
+
+        for proposal in proposals:
+            if not Account(proposal.account).get_locked_state():
                 print(proposal.account)
 
     @staticmethod
