@@ -9,6 +9,8 @@ from math import ceil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import pandas as pd
+from sqlalchemy import create_engine
 from sqlalchemy import select
 
 from bank import utils
@@ -54,7 +56,7 @@ class Account:
         if proposal:
             print('Proposal')
             print('---------------')
-            print(json.dumps(proposal.to_json(), indent=2))
+            print(json.dumps(proposal.row_to_json(), indent=2))
             print()
 
         for investor in investments:
@@ -805,32 +807,6 @@ class Account:
 class Bank:
 
     @staticmethod
-    def import_from_json(filepath: Path, table, overwrite: bool) -> None:
-
-        with filepath.open("r") as fp, Session() as session:
-            table_is_empty = session.query(table).first() is None
-            if not (table_is_empty or overwrite):
-                raise TableOverwriteError('Table is not empty. Specify ``overwrite=True`` to allow overwriting')
-
-            session.query(table).delete()  # Delete existing rows in table
-
-            contents = json.load(fp)
-            if 'results' in contents.keys():
-                for item in contents['results']:
-                    del item['id']
-                    item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
-                    item['end_date'] = datetime.strptime(item['end_date'], app_settings.date_format)
-                    session.add(table(**item))
-
-            session.commit()
-
-    def import_proposal(self, path, overwrite=False) -> None:
-        self.import_from_json(path, Proposal, overwrite)
-
-    def import_investor(self, path, overwrite=False) -> None:
-        self.import_from_json(path, Investor, overwrite)
-
-    @staticmethod
     def alloc_sus(path: Path) -> None:
         """Export allocated service units to a CSV file
 
@@ -838,65 +814,88 @@ class Bank:
             path: The path to write exported data to
         """
 
-        with Session() as session:
-            proposals = session.query(Proposal).all()
-
+        engine = create_engine(app_settings.db_path)
         columns = ('account', *app_settings.clusters)
-        with path.open('w', newline='') as ofile:
-            writer = csv.writer(ofile)
-            writer.writerow(columns)
-            for proposal in proposals:
-                writer.writerow(proposal[col] for col in columns)
+        pd.read_sql_table(Proposal.__tablename__, engine, columns=columns).to_csv(path)
 
     @staticmethod
     def find_unlocked() -> None:
         """Print the names for all unexpired proposals with unlocked accounts"""
 
-        today = date.today()
-        for proposal in Session().query(Proposal).all():
-            is_locked = Account(proposal.account).get_locked_state()
-            is_expired = proposal.end_date >= today
-            if not (is_locked or is_expired):
-                print(proposal.account)
+        with Session() as session:
+            proposals = session.query(Proposal).filter_by(Proposal.end_date < date.today()).all()
+
+        for proposal in proposals:
+            account = Account(proposal.account)
+            if not account.get_locked_state():
+                print(account.account_name)
 
     @staticmethod
     def check_proposal_violations() -> None:
-        # Iterate over all of the proposals looking for proposal violations
-        proposals = Session().query(Proposal).all()
+        """Iterate over all proposals and print any accounts with proposal violations"""
+
+        with Session() as session:
+            proposals = session.query(Proposal).all()
 
         for proposal in proposals:
             account = Account(proposal.account)
             investments = sum(account.get_available_investor_sus())
+            cluster_sus = account.get_raw_usage(*app_settings.clusters, in_hours=True)
 
             subtract_previous_investment = 0
-            cluster_sus = Account(proposal.account).get_raw_usage(*app_settings.clusters, in_hours=True)
             for cluster, used_sus in cluster_sus.items():
                 avail_sus = getattr(proposal, cluster)
-                if used_sus > (avail_sus + investments - subtract_investment):
-                    print(
-                        f"Account {proposal.account}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments[cluster]}"
-                    )
+                if used_sus > (avail_sus + investments - subtract_previous_investment):
+                    print(f"Account {account.account_name}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments}")
+
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus
 
     @staticmethod
-    def dump(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
-        """Export the database to the given file paths in json format
+    def dump_to_json(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
+        """Export user allocation data to json format
 
         Args:
-            proposal: Path to write the proposal table to
-            investor: Path to write the investor table to
+            proposal: Path to write the proposal data to
+            investor: Path to write the investor data to
             proposal_archive: Path to write the proposal archive to
             investor_archive: Path to write the investor archive to
         """
 
         paths = (proposal, investor, proposal_archive, investor_archive)
         tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
+        if any(p.exists() for p in paths):
+            raise FileExistsError(f"One or more of the given file paths already exist.")
 
-        for p in paths:
-            if p.exists():
-                raise FileExistsError(f"Path already exists: {p}")
+        for table, path in zip(tables, paths):
+            with Session() as session, path.open('w') as ofile:
+                json.dump(session.query(table).all(), ofile, default=lambda obj: obj.row_to_json())
 
-        with Session() as session:
-            for table, path in zip(tables, paths):
-                utils.freeze_if_not_empty(session.query(table).all(), path)
+    @staticmethod
+    def import_from_json(filepath: Path, table, overwrite: bool) -> None:
+        """Import data from a json file
+
+        This function deletes any existing data in the destination table and
+        replaces it with the imported data. Existing data will only be dropped
+        if ``overwrite=True``.
+
+        Args:
+            filepath: The path to load data from
+            table: The database table to import to
+            overwrite: Whether to allow existing tables to be dropped
+        """
+
+        with filepath.open("r") as fp, Session() as session:
+            if overwrite or session.query(table).first() is None:
+                session.query(table).delete()  # Delete existing rows in table
+
+            else:
+                raise TableOverwriteError(
+                    f'Table {table.__tablename__} is not empty. Specify ``overwrite=True`` to allow overwriting')
+
+            for item in json.load(fp):
+                item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
+                item['end_date'] = datetime.strptime(item['end_date'], app_settings.date_format)
+                session.add(table(**item))
+
+            session.commit()

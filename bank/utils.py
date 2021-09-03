@@ -7,13 +7,11 @@ from enum import Enum
 from functools import wraps
 from logging import getLogger
 from os import geteuid
-from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
-from typing import Any, List
+from typing import Any
 
-import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
@@ -133,15 +131,6 @@ class ProposalType(Enum):
 
         except AttributeError:
             raise ValueError(f'Invalid proposal type: `{name}`')
-
-
-def freeze_if_not_empty(items: List, path: Path):
-    force_eval = [dict(p) for p in items]
-    if force_eval:
-        datafreeze.freeze(force_eval, format="json", filename=path)
-    else:
-        with open(path, "w") as f:
-            f.write("{}\n")
 
 
 def send_email(account, email_html: str) -> None:

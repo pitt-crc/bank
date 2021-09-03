@@ -3,7 +3,9 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
+from bank import orm
 from bank.dao import Account, Bank
+from functools import partial
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')
@@ -96,15 +98,17 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_get_sus, account)
 
         parser_dump = self.subparsers.add_parser('dump')
-        parser_dump.set_defaults(function=Bank.dump)
+        parser_dump.set_defaults(function=Bank.dump_to_json)
         self._add_args_to_parser(parser_dump, proposal, investor, proposal_arch, investor_arch)
 
+        import_proposal = partial(Bank.import_from_json, table=orm.Proposal)
         parser_import_proposal = self.subparsers.add_parser('import_proposal')
-        parser_import_proposal.set_defaults(function=Bank.import_proposal)
+        parser_import_proposal.set_defaults(function=import_proposal)
         self._add_args_to_parser(parser_import_proposal, proposal, overwrite)
 
+        import_investor = partial(Bank.import_from_json, table=orm.Investor)
         parser_import_investor = self.subparsers.add_parser('import_investor')
-        parser_import_investor.set_defaults(function=Bank.import_investor)
+        parser_import_investor.set_defaults(function=import_investor)
         self._add_args_to_parser(parser_import_investor, investor, overwrite)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
