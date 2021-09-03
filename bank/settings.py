@@ -86,7 +86,8 @@ class Defaults:
     #   perc: Usage percentage threshold that triggered the message being sent
     #   investment: Tabular summary of user's current usage on invested machines
 
-    # An email to send when you have exceeded a proposal threshold (25%, 50%, 75%, 90%)
+    # An email to send when you have exceeded a proposal threshold
+    notify_levels = (25, 50, 75, 90)
     notify_sus_limit_email_text = """\
     <html>
     <head></head>

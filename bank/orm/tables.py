@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from .mixins import CustomBase
 from ..settings import app_settings
-from ..utils import PercentNotified, ProposalType
+from ..utils import ProposalType
 
 Base = declarative_base(cls=CustomBase)
 metadata = Base.metadata
@@ -50,8 +50,19 @@ class Proposal(Base, CustomBase):
     account = Column(Text)
     start_date = Column(Date)
     end_date = Column(Date)
-    percent_notified = Column(Enum(PercentNotified))
+    _percent_notified = Column('percent_notified', Integer)
     proposal_type = Column(Enum(ProposalType))
+
+    @property
+    def percent_notified(self) -> int:
+        return self._percent_notified
+
+    @percent_notified.setter
+    def percent_notified(self, val: int) -> None:
+        if (val < 0) or (100 < val):
+            raise ValueError('percent_notified value must be between 0 and 100')
+
+        self._percent_notified = val
 
 
 class ProposalArchive(Base, CustomBase):
