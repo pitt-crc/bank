@@ -1,4 +1,4 @@
-#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
+"""The ``utils`` module provides general utilities for the parent application"""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ from email.message import EmailMessage
 from enum import Enum
 from functools import wraps
 from logging import getLogger
-from math import floor
 from os import geteuid
 from pathlib import Path
 from shlex import split
@@ -18,6 +17,7 @@ import datafreeze
 from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
+from .settings import app_settings
 
 LOG = getLogger('bank.utils')
 
@@ -108,58 +108,17 @@ def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
 
 
 def find_next_notification(usage):
-    members = list(PercentNotified)
+    members = app_settings.notify_levels
     exceeded = [usage > x.to_percentage() for x in members]
 
     try:
         index = exceeded.index(False)
-        result = PercentNotified.Zero if index == 0 else members[index - 1]
+        result = 0 if index == 0 else members[index - 1]
 
     except ValueError:
-        result = PercentNotified.Hundred
+        result = 100
 
     return result
-
-
-class PercentNotified(Enum):
-    Zero = 0
-    TwentyFive = 1
-    Fifty = 2
-    SeventyFive = 3
-    Ninety = 4
-    Hundred = 5
-
-    def succ(self):
-        cls = self.__class__
-        members = list(cls)
-        index = members.index(self) + 1
-        if index >= len(members):
-            return members[0]
-        else:
-            return members[index]
-
-    def pred(self):
-        cls = self.__class__
-        members = list(cls)
-        index = members.index(self) - 1
-        if index < 0:
-            return members[5]
-        else:
-            return members[index]
-
-    def to_percentage(self):
-        if self == PercentNotified.Zero:
-            return 0.0
-        elif self == PercentNotified.TwentyFive:
-            return 25.0
-        elif self == PercentNotified.Fifty:
-            return 50.0
-        elif self == PercentNotified.SeventyFive:
-            return 75.0
-        elif self == PercentNotified.Ninety:
-            return 90.0
-        else:
-            return 100.0
 
 
 class ProposalType(Enum):
@@ -174,11 +133,6 @@ class ProposalType(Enum):
 
         except AttributeError:
             raise ValueError(f'Invalid proposal type: `{name}`')
-
-
-def convert_to_hours(usage):
-    seconds_in_hour = 60 * 60
-    return floor(int(usage) / (seconds_in_hour))
 
 
 def freeze_if_not_empty(items: List, path: Path):
