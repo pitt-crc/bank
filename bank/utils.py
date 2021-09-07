@@ -203,14 +203,13 @@ class ProposalType(Enum):
 
 
 def check_date_valid(d):
-    """
-    Checks if date is valid
+    """Checks if date is valid
 
     Args:
-    d: date
+        d: date
 
     Returns:
-    a valid date
+        a valid date
     """
     try:
         date = datetime.strptime(d, "%m/%d/%y")
@@ -224,8 +223,7 @@ def check_date_valid(d):
 
 
 def convert_to_hours(usage):
-    """
-    Converts hours to seconds
+    """Converts hours to seconds
 
     Args:
 
@@ -236,12 +234,11 @@ def convert_to_hours(usage):
 
 
 def freeze_if_not_empty(items: List, path: Path):
-    """
-    Checks if list filename is empty or not
+    """Checks if list filename is empty or not
 
     Args:
-    items: a list
-    path: filename parg
+        items: a list
+        path: filename parg
     """
     force_eval = [dict(p) for p in items]
     if force_eval:
@@ -252,27 +249,25 @@ def freeze_if_not_empty(items: List, path: Path):
 
 
 def years_left(end):
-    """
-    Determines how many years left
+    """Determines how many years left
 
     Args:
-    end: the last year left
+        end: the last year left
 
     Returns:
-    years left in proposal
+        years left in proposal
     """
     return end.year - date.today().year
 
 
 def ask_destructive(force=False):
-    """
-    Checks if function is destructive
+    """Checks if function is destructive
 
     Args: 
-    force: defaults to False
+        force: defaults to False
 
     Returns:
-    a choice that shows if function is destructive or not 
+        a choice that shows if function is destructive or not 
     """
     if force:
         choice = "yes"
@@ -313,22 +308,20 @@ def ask_destructive(force=False):
 
 class EmailTemplate:
     def __init__(self, msg:str):
-        """
-        Args:
-        msg: message in email
+        """Args:
+            msg: message in email
         """
         self.msg= msg
        
     def format(self, account, proposal)->EmailTemplate:
-        """
-        Formats email
+        """Formats email
 
         Args:
-        account: the account to send an email to 
-        proposal: the email proposal for account
+            account: the account to send an email to 
+            proposal: the email proposal for account
 
         Returns:
-        copy of format email message
+            copy of format email message
         """
         format_message=self.msg.format(
             account=self.account_name,
