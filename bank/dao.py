@@ -61,7 +61,7 @@ class Account:
 
         for investor in investments:
             print(f'Investment: {investor.id:3}')
-            print(f'---------------')
+            print('---------------')
             print(json.dumps(investor.to_json(), indent=2))
             print()
 
@@ -107,7 +107,7 @@ class Account:
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
         header, data = cmd.out.split('\n')[1:3]
         raw_usage_index = header.split('|').index("RawUsage")
-        return data.split('|')[raw_usage_index]
+        return int(data.split('|')[raw_usage_index])
 
     def get_raw_usage(self, *clusters: str, in_hours=False) -> Dict[str, int]:
         """Return the account usage on a given cluster in seconds
@@ -479,7 +479,7 @@ class Account:
 
     def date(self, start_date: datetime) -> None:
         """Change the start date on an account's proposal
-        
+
         Args:
             start_date: The new start date
         """
@@ -864,7 +864,7 @@ class Bank:
         paths = (proposal, investor, proposal_archive, investor_archive)
         tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
         if any(p.exists() for p in paths):
-            raise FileExistsError(f"One or more of the given file paths already exist.")
+            raise FileExistsError('One or more of the given file paths already exist.')
 
         for table, path in zip(tables, paths):
             with Session() as session, path.open('w') as ofile:
