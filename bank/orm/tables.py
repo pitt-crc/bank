@@ -65,7 +65,7 @@ class Proposal(Base, CustomBase):
 
     @percent_notified.setter
     def percent_notified(self, val: int) -> None:
-        if (val < 0) or (100 < val):
+        if (val < 0) or (val > 100):
             raise ValueError('percent_notified value must be between 0 and 100')
 
         self._percent_notified = val

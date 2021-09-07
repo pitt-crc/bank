@@ -501,7 +501,7 @@ class Account:
 
     def date_investment(self, start_date: datetime, inv_id: int) -> None:
         """Change the start date on an account's investment
-        
+
         Args:
             start_date: The new start date
             inv_id: The investment id
@@ -586,9 +586,8 @@ class Account:
 
         notification_percent = proposal_row.percent_notified
         if notification_percent == 100:
-            exit(
-                f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked"
-            )
+            print(f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked")
+            return
 
         percent_usage = 100.0 * used_sus / total_sus
 
@@ -633,12 +632,12 @@ class Account:
                 f"The account for {self.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
-    def withdraw(self, sus: int) -> None:
+    def withdraw(self, sus_to_withdraw: int) -> None:
 
         self.raise_missing_proposal()
 
         # Service units should be a valid number
-        utils.check_service_units_valid(sus)
+        utils.check_service_units_valid(sus_to_withdraw)
 
         # First check if the user has enough SUs to withdraw
         available_investments = sum(self.get_available_investor_sus())

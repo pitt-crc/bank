@@ -63,10 +63,10 @@ class RequireRoot:
         if geteuid() != 0:
             raise RuntimeError("This action must be run with sudo privileges")
 
-    def __new__(self, func: callable) -> callable:
+    def __new__(cls, func: callable) -> callable:
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            self.require_root_access()
+            cls.require_root_access()
             return func(*args, **kwargs)
 
         return wrapped
