@@ -8,7 +8,7 @@ class TestHasDynamicColumns(TestCase):
     """Test for dynamically added columns based on administered cluster names"""
 
     def runTest(self) -> None:
-        columns = app_settings.clusters + (f'{c}_usage' for c in app_settings.clusters)
+        columns = app_settings.clusters + [f'{c}_usage' for c in app_settings.clusters]
         for col in columns:
             try:
                 getattr(ProposalArchive, col)

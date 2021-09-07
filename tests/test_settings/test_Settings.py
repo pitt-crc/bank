@@ -63,7 +63,7 @@ class ReadsEnvironmentalVariables(TestCase):
         """Test if the available clusters are correctly recovered as a list"""
 
         self.assert_setting_matches_environment(
-            'clusters', ('c1', 'c2'), APP_PREFIX + 'CLUSTERS', 'c1,c2')
+            'clusters', ['c1', 'c2'], APP_PREFIX + 'CLUSTERS', 'c1,c2')
 
     def test_str_email_suffix(self) -> None:
         """Test if the email suffix is correctly recovered as a string"""
