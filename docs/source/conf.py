@@ -13,7 +13,7 @@ sys.path.insert(0, str(package_source_path))
 
 project = 'CRC Bank'
 copyright = '2021, Pitt CRC'
-author = 'Pitt CRC'
+author = 'Pitt CRC, Barry Moore II'
 
 # -- General configuration ---------------------------------------------------
 
