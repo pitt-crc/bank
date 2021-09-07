@@ -126,7 +126,7 @@ class Account:
         return {c: self._raw_cluster_usage(c) for c in clusters}
 
     @RequireRoot
-    def reset_raw_usage(self, *clusters) -> None:
+    def reset_raw_usage(self, *clusters: str) -> None:
         """Set raw account usage on the given clusters to zero"""
 
         self.raise_missing_proposal()
@@ -599,7 +599,7 @@ class Account:
             self.notify_sus_limit()
 
             LOG.info(
-                f"Updated proposal percent_notified to {updated_notification_percent} for {account.account_name}"
+                f"Updated proposal percent_notified to {updated_notification_percent} for {self.account_name}"
             )
 
         # Lock the account if necessary
