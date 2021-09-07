@@ -61,10 +61,12 @@ jobs:
         run: |
           coverage run -m unittest
           coverage report
+          coverage xml -o report_${{ matrix.python-version }}.xml
 
   codacy-coverage-reporter:
     runs-on: ubuntu-latest
     name: codacy-coverage-reporter
+    needs: python_tests
     steps:
       - uses: actions/checkout@v2
       - name: Run codacy-coverage-reporter
