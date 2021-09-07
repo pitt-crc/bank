@@ -285,7 +285,7 @@ class EmailTemplate:
 
         return EmailTemplate(format_message)
         #return self.__class__(format_message)
-
+        
     '''
     def send_email(self, account, email_html: str) -> None:
     """Send an email to a user account
