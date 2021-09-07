@@ -263,11 +263,11 @@ def years_left(end):
 def ask_destructive(force=False):
     """Checks if function is destructive
 
-    Args: 
+    Args:
         force: defaults to False
 
     Returns:
-        a choice that shows if function is destructive or not 
+        a choice that shows if function is destructive or not
     """
     if force:
         choice = "yes"
