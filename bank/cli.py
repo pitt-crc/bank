@@ -1,11 +1,11 @@
 """Command line parsing for the ``bank`` package"""
 
 from argparse import ArgumentParser
+from functools import partial
 from pathlib import Path
 
 from bank import orm
 from bank.dao import Account, Bank
-from functools import partial
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')
