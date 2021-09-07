@@ -61,7 +61,7 @@ class Account:
 
         for investor in investments:
             print(f'Investment: {investor.id:3}')
-            print(f'---------------')
+            print('---------------')
             print(json.dumps(investor.to_json(), indent=2))
             print()
 
@@ -107,7 +107,7 @@ class Account:
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
         header, data = cmd.out.split('\n')[1:3]
         raw_usage_index = header.split('|').index("RawUsage")
-        return data.split('|')[raw_usage_index]
+        return int(data.split('|')[raw_usage_index])
 
     def get_raw_usage(self, *clusters: str, in_hours=False) -> Dict[str, int]:
         """Return the account usage on a given cluster in seconds
@@ -126,7 +126,7 @@ class Account:
         return {c: self._raw_cluster_usage(c) for c in clusters}
 
     @RequireRoot
-    def reset_raw_usage(self, *clusters) -> None:
+    def reset_raw_usage(self, *clusters: str) -> None:
         """Set raw account usage on the given clusters to zero"""
 
         self.raise_missing_proposal()
@@ -142,7 +142,7 @@ class Account:
     def get_investment_status(self) -> str:
         """Return the current status of any account investments as an ascii table"""
 
-        out = f"Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n"
+        out = 'Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n'
         for row in Session().select(Investor).filter_by(account=self.account_name).all():
             out += (
                 f"{row.service_units:20} | "
@@ -479,7 +479,7 @@ class Account:
 
     def date(self, start_date: datetime) -> None:
         """Change the start date on an account's proposal
-        
+
         Args:
             start_date: The new start date
         """
@@ -501,7 +501,7 @@ class Account:
 
     def date_investment(self, start_date: datetime, inv_id: int) -> None:
         """Change the start date on an account's investment
-        
+
         Args:
             start_date: The new start date
             inv_id: The investment id
@@ -586,9 +586,8 @@ class Account:
 
         notification_percent = proposal_row.percent_notified
         if notification_percent == 100:
-            exit(
-                f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked"
-            )
+            print(f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked")
+            return
 
         percent_usage = 100.0 * used_sus / total_sus
 
@@ -599,7 +598,7 @@ class Account:
             self.notify_sus_limit()
 
             LOG.info(
-                f"Updated proposal percent_notified to {updated_notification_percent} for {account.account_name}"
+                f"Updated proposal percent_notified to {updated_notification_percent} for {self.account_name}"
             )
 
         # Lock the account if necessary
@@ -633,12 +632,12 @@ class Account:
                 f"The account for {self.account_name} was locked because it reached the end date {proposal_row.end_date}"
             )
 
-    def withdraw(self, sus: int) -> None:
+    def withdraw(self, sus_to_withdraw: int) -> None:
 
         self.raise_missing_proposal()
 
         # Service units should be a valid number
-        utils.check_service_units_valid(sus)
+        utils.check_service_units_valid(sus_to_withdraw)
 
         # First check if the user has enough SUs to withdraw
         available_investments = sum(self.get_available_investor_sus())
@@ -772,7 +771,6 @@ class Account:
                         need_to_rollover -= to_rollover
 
         # Insert new proposal
-        proposal_type = utils.ProposalType(current_proposal.proposal_type)
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         end_date = start_date + proposal_duration
@@ -865,7 +863,7 @@ class Bank:
         paths = (proposal, investor, proposal_archive, investor_archive)
         tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
         if any(p.exists() for p in paths):
-            raise FileExistsError(f"One or more of the given file paths already exist.")
+            raise FileExistsError('One or more of the given file paths already exist.')
 
         for table, path in zip(tables, paths):
             with Session() as session, path.open('w') as ofile:

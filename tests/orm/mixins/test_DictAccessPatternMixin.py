@@ -9,7 +9,8 @@ DummyTable = create_table_with_mixin(DictAccessPatternMixin)
 class TestClassIsIterable(TestCase):
     """Test subclassed tables are iterable"""
 
-    def test_is_iterable(self) -> None:
+    @staticmethod
+    def test_is_iterable() -> None:
         """Test instances can be cast to an iterator"""
 
         iter(DummyTable(int_col=1, str_col='a'))
@@ -54,7 +55,7 @@ class TestKeyIndexing(TestCase):
 
         table_row = DummyTable(int_col=1, str_col='a')
         with self.assertRaises(KeyError):
-            var = table_row['not_a_column']
+            table_row['not_a_column']
 
 
 class TestUpdate(TestCase):

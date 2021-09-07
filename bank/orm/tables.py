@@ -16,6 +16,8 @@ metadata = Base.metadata
 
 
 class Investor(Base):
+    """Class representation of the ``investor`` table"""
+
     __tablename__ = 'investor'
 
     id = Column(Integer, primary_key=True)
@@ -30,6 +32,8 @@ class Investor(Base):
 
 
 class InvestorArchive(Base):
+    """Class representation of the ``investor_archive`` table"""
+
     __tablename__ = 'investor_archive'
 
     id = Column(Integer, primary_key=True)
@@ -44,6 +48,8 @@ class InvestorArchive(Base):
 
 
 class Proposal(Base, CustomBase):
+    """Class representation of the ``proposal`` table"""
+
     __tablename__ = 'proposal'
 
     id = Column(Integer, primary_key=True)
@@ -59,13 +65,15 @@ class Proposal(Base, CustomBase):
 
     @percent_notified.setter
     def percent_notified(self, val: int) -> None:
-        if (val < 0) or (100 < val):
+        if (val < 0) or (val > 100):
             raise ValueError('percent_notified value must be between 0 and 100')
 
         self._percent_notified = val
 
 
 class ProposalArchive(Base, CustomBase):
+    """Class representation of the ``proposal_archive`` table"""
+
     __tablename__ = 'proposal_archive'
 
     id = Column(Integer, primary_key=True)

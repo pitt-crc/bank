@@ -11,6 +11,6 @@ class TestHasDynamicColumns(TestCase):
         for cluster in app_settings.clusters:
             try:
                 getattr(Proposal, cluster)
-                
+
             except AttributeError:
                 self.fail(f'Table {Proposal.__tablename__} has no column {cluster}')
