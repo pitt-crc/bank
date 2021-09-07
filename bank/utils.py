@@ -203,6 +203,15 @@ class ProposalType(Enum):
 
 
 def check_date_valid(d):
+    """
+    Checks if date is valid
+
+    Args:
+    d: date
+
+    Returns:
+    a valid date
+    """
     try:
         date = datetime.strptime(d, "%m/%d/%y")
     except:
@@ -215,11 +224,25 @@ def check_date_valid(d):
 
 
 def convert_to_hours(usage):
+    """
+    Converts hours to seconds
+
+    Args:
+
+    usage: variable for hours
+    """
     seconds_in_hour = 60 * 60
     return floor(int(usage) / (seconds_in_hour))
 
 
 def freeze_if_not_empty(items: List, path: Path):
+    """
+    Checks if list filename is empty or not
+
+    Args:
+    items: a list
+    path: filename parg
+    """
     force_eval = [dict(p) for p in items]
     if force_eval:
         datafreeze.freeze(force_eval, format="json", filename=path)
@@ -229,10 +252,28 @@ def freeze_if_not_empty(items: List, path: Path):
 
 
 def years_left(end):
+    """
+    Determines how many years left
+
+    Args:
+    end: the last year left
+
+    Returns:
+    years left in proposal
+    """
     return end.year - date.today().year
 
 
 def ask_destructive(force=False):
+    """
+    Checks if function is destructive
+
+    Args: 
+    force: defaults to False
+
+    Returns:
+    a choice that shows if function is destructive or not 
+    """
     if force:
         choice = "yes"
     else:
@@ -272,9 +313,23 @@ def ask_destructive(force=False):
 
 class EmailTemplate:
     def __init__(self, msg:str):
+        """
+        Args:
+        msg: message in email
+        """
         self.msg= msg
        
     def format(self, account, proposal)->EmailTemplate:
+        """
+        Formats email
+
+        Args:
+        account: the account to send an email to 
+        proposal: the email proposal for account
+
+        Returns:
+        copy of format email message
+        """
         format_message=self.msg.format(
             account=self.account_name,
             start=proposal.start_date.strftime(app_settings.date_format),
