@@ -54,7 +54,7 @@ class TestKeyIndexing(TestCase):
 
         table_row = DummyTable(int_col=1, str_col='a')
         with self.assertRaises(KeyError):
-            var = table_row['not_a_column']
+            table_row['not_a_column']
 
 
 class TestUpdate(TestCase):

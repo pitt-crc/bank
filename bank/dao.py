@@ -142,7 +142,7 @@ class Account:
     def get_investment_status(self) -> str:
         """Return the current status of any account investments as an ascii table"""
 
-        out = f"Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n"
+        out = 'Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs\n'
         for row in Session().select(Investor).filter_by(account=self.account_name).all():
             out += (
                 f"{row.service_units:20} | "
@@ -772,7 +772,6 @@ class Account:
                         need_to_rollover -= to_rollover
 
         # Insert new proposal
-        proposal_type = utils.ProposalType(current_proposal.proposal_type)
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         end_date = start_date + proposal_duration

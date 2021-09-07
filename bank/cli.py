@@ -162,6 +162,6 @@ class CLIParser(ArgumentParser):
         function = parsed_args.pop('function')
         if isinstance(function, str):
             instance_name, method_name = function.split('.')
-            function = getattr(parsed_args.pop(instance_name), function)
+            function = getattr(parsed_args.pop(instance_name), method_name)
 
         function(parsed_args)
