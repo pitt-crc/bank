@@ -341,27 +341,27 @@ class EmailTemplate:
         return EmailTemplate(format_message)
         #return self.__class__(format_message)
         
-    '''
-    def send_email(self, account, email_html: str) -> None:
-    """Send an email to a user account
+    #'''
+    #def send_email(self, account, email_html: str) -> None:
+   # """Send an email to a user account
 
-    Args:
-        account: The account to send an email to
-        email_html: The content of the email
-    """
+    #Args:
+    #    account: The account to send an email to
+    #    email_html: The content of the email
+    #"""
 
     # Extract the text from the email
     
-    soup = BeautifulSoup(email_html, "html.parser")
-    email_text = soup.get_text()
+   # soup = BeautifulSoup(email_html, "html.parser")
+    #email_text = soup.get_text()
 
-    msg = EmailMessage()
-    msg.set_content(email_text)
-    msg.add_alternative(email_html, subtype="html")
-    msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
-    msg["From"] = "noreply@pitt.edu"
-    msg["To"] = account.get_email_address()
+    #msg = EmailMessage()
+    #msg.set_content(email_text)
+    #msg.add_alternative(email_html, subtype="html")
+    #msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
+    #msg["From"] = "noreply@pitt.edu"
+    #msg["To"] = account.get_email_address()
 
-    with SMTP("localhost") as s:
-        s.send_message(msg)
-'''
+    #with SMTP("localhost") as s:
+     #   s.send_message(msg)
+#'''
