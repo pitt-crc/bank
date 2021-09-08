@@ -5,12 +5,6 @@ from . import settings
 # Temporarily disable log messages from the environment package
 logging.getLogger('environ.environ').setLevel('ERROR')
 
-if settings.app_settings.db_path == settings.app_settings.db_test_path:
-    raise RuntimeError(
-        'Path to testing and production databases are configured to be the same. '
-        'Exiting to protect deployment database from accidental overwrite.'
-    )
-
 # Configure logging using application settings
 logging.basicConfig(
     filename=settings.app_settings.log_path,

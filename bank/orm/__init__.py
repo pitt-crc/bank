@@ -15,7 +15,7 @@ from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metada
 from ..settings import app_settings
 
 engine = sqlalchemy.create_engine(app_settings.db_path)
-Session = sessionmaker(engine, future=True)
+Session = sessionmaker(bind=engine, future=True)
 
 if not sqlalchemy_utils.database_exists(engine.url):
     sqlalchemy_utils.create_database(engine.url)
