@@ -69,7 +69,6 @@ class Defaults:
 
     # Path to the application SQLite backend
     db_path = f'sqlite:///{_application_dir / "crc_bank.db"}'
-    db_test_path = f'sqlite:///{_application_dir / "test.db"}'
 
     # A list of cluster names to track usage on
     clusters = ["smp", "mpi", "gpu", "htc"]
