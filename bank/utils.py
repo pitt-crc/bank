@@ -154,3 +154,8 @@ def send_email(account, email_html: str) -> None:
 
     with SMTP("localhost") as s:
         s.send_message(msg)
+
+
+class Sacctmgr:
+
+    def lock_accout

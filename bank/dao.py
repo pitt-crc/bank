@@ -7,7 +7,7 @@ from io import StringIO
 from logging import getLogger
 from math import ceil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import pandas as pd
 from sqlalchemy import create_engine
@@ -34,7 +34,12 @@ class Account:
 
         self.account_name = account_name
 
-    def get_proposals(self) -> Tuple[Optional[Proposal], List[Investor]]:
+        # Make sure the account name has a corresponding proposal
+        with Session() as session:
+            if session.query(Proposal.name).filter_by(account=account_name).first() is None:
+                raise MissingProposalError(f'Proposal for account `{account_name}` does not exist.')
+
+    def get_proposals(self) -> Tuple[Proposal, List[Investor]]:
         """Return any proposals associated with the account
 
         Returns:
@@ -42,7 +47,6 @@ class Account:
             A list of investments associated with the account
         """
 
-        self.raise_missing_proposal()
         with Session() as session:
             proposal = session.query(Proposal).filter_by(account=self.account_name).first()
             investments = session.query(Investor).filter_by(account=self.account_name).all()
@@ -53,28 +57,9 @@ class Account:
         """Print proposal information for the given account"""
 
         proposal, investments = self.get_proposals()
-        if proposal:
-            print('Proposal')
-            print('---------------')
-            print(json.dumps(proposal.row_to_json(), indent=2))
-            print()
-
+        print(proposal.pretty_string())
         for investor in investments:
-            print(f'Investment: {investor.id:3}')
-            print('---------------')
-            print(json.dumps(investor.to_json(), indent=2))
-            print()
-
-    def raise_missing_proposal(self) -> None:
-        """Return if the account has an associated proposal in the database
-
-        Raises:
-            A ``ValueError`` if the return value matches ``raise_if``
-        """
-
-        with Session() as session:
-            if session.query(Proposal).filter_by(account=self.account_name).first() is None:
-                raise MissingProposalError(f'Proposal for account `{self.account_name}` does not exist.')
+            print(investor.pretty_string())
 
     def get_locked_state(self) -> bool:
         """Return whether the account is locked"""
@@ -88,19 +73,18 @@ class Account:
 
         Args:
             locked: The lock state to set
+            notify: Send an email notifying the account holder of the new locked state
         """
 
-        self.raise_missing_proposal()
         lock_state_int = 0 if locked else -1
         clusters = ','.join(app_settings.clusters)
-        cmd = ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
-        )
-        cmd.raise_err()
+        cmd = f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
+
+        ShellCmd(cmd).raise_err()
         if notify:
             self.proposal_expires_notification()
 
-    def _raw_cluster_usage(self, cluster: str) -> int:
+    def raw_cluster_usage(self, cluster: str) -> int:
         """Return the account usage on a given cluster in seconds"""
 
         # Only the second and third line are necessary from the output table
@@ -121,15 +105,14 @@ class Account:
         """
 
         if in_hours:
-            return {c: time(second=self._raw_cluster_usage(c)).hour for c in clusters}
+            return {c: time(second=self.raw_cluster_usage(c)).hour for c in clusters}
 
-        return {c: self._raw_cluster_usage(c) for c in clusters}
+        return {c: self.raw_cluster_usage(c) for c in clusters}
 
     @RequireRoot
     def reset_raw_usage(self, *clusters: str) -> None:
         """Set raw account usage on the given clusters to zero"""
 
-        self.raise_missing_proposal()
         clusters = ','.join(clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
@@ -356,7 +339,6 @@ class Account:
         """
 
         # Account should have associations but not exist in the proposal table
-        self.raise_missing_proposal()
         self.raise_missing_cluster_associations()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
@@ -586,7 +568,8 @@ class Account:
 
         notification_percent = proposal_row.percent_notified
         if notification_percent == 100:
-            print(f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked")
+            print(
+                f"{datetime.now()}: Skipping account {self.account_name} because it should have already been notified and locked")
             return
 
         percent_usage = 100.0 * used_sus / total_sus
@@ -844,7 +827,8 @@ class Bank:
             for cluster, used_sus in cluster_sus.items():
                 avail_sus = getattr(proposal, cluster)
                 if used_sus > (avail_sus + investments - subtract_previous_investment):
-                    print(f"Account {account.account_name}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments}")
+                    print(
+                        f"Account {account.account_name}, Cluster {cluster}, Used SUs {used_sus}, Avail SUs {avail_sus}, Investment SUs {investments}")
 
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus

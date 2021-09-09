@@ -42,6 +42,7 @@ API Reference
 """
 
 import enum
+import json
 from typing import Any, Dict, Tuple, Union
 
 from sqlalchemy.orm import declarative_mixin
@@ -91,15 +92,6 @@ class DictAccessPatternMixin:
 
 
 @declarative_mixin
-class AutoReprMixin:
-    """Automatically generate human readable representations when casting tables to strings."""
-
-    def __repr__(self) -> str:
-        attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
-        return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
-
-
-@declarative_mixin
 class ExportMixin:
     """Adds methods for exporting tables to different file formats and data types."""
 
@@ -120,6 +112,22 @@ class ExportMixin:
             return_dict[col.name] = value
 
         return return_dict
+
+
+@declarative_mixin
+class AutoReprMixin(ExportMixin):
+    """Automatically generate human readable representations when casting tables to strings."""
+
+    def __repr__(self) -> str:
+        attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
+        return f'<{self.__tablename__}(' + ', '.join(attr_text) + ')>'
+
+    def pretty_string(self) -> str:
+        """Return a human readable representation of the entire table row"""
+
+        json_str = json.dumps(self.row_to_json(), indent=2) + '\n'
+        lines = (str(self.__class__.__name__), '---------------', json_str)
+        return '\n'.join(lines)
 
 
 class CustomBase(DictAccessPatternMixin, AutoReprMixin, ExportMixin):
