@@ -53,12 +53,6 @@ class ReadsEnvironmentalVariables(TestCase):
         self.assert_setting_matches_environment(
             'log_path', Path('/this/is/a/path'), APP_PREFIX + 'LOG_PATH')
 
-    def test_boolean_is_testing(self) -> None:
-        """Test if the application testing state is correctly recovered as a boolean"""
-
-        self.assert_setting_matches_environment(
-            'is_testing', False, APP_PREFIX + 'IS_TESTING')
-
     def test_list_clusters(self) -> None:
         """Test if the available clusters are correctly recovered as a list"""
 

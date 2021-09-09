@@ -5,8 +5,8 @@ defined in the working environment.
 Usage Example
 -------------
 
-The ``Defaults`` class provides access to default application settings.
-Values for each setting are accessible via attributes:
+The ``Defaults`` class provides access to default values for application
+settings. Values for each setting are accessible via attributes:
 
 .. doctest:: python
 
@@ -34,13 +34,18 @@ most cases.
   >>> # Specify the date format as an environmental variable
   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
 
+  >>> # Environmental variables are cached each time a new Settings instance is created
   >>> settings = Settings()
   >>> print(settings.date_format)
   %m-%d-%y
 
-.. important::
-  Application settings are read from the working environment in realtime.
-  At no time are environmental variables cached from the working environment.
+Most of the time you will want to use the application settings as defined
+when the package was first instantiated. These are avaialbe via a prebuilt
+``Settings`` instance:
+
+.. doctest:: python
+
+   >>> from bank.settings import app_settings
 
 API Reference
 -------------
@@ -157,10 +162,15 @@ class Defaults:
 class Settings:
     """Reflects application settings as set in the working environment"""
 
-    def __getattribute__(self, item: str) -> Any:
+    def __init__(self) -> None:
+        # Cache the current working environment
+        self._env = Env()
+
+    def __getattr__(self, item: str) -> Any:
+        env = object.__getattribute__(self, '_env')
         default = getattr(Defaults, item)
         env_key = APP_PREFIX + item.upper()
-        return Env().get_value(env_key, cast=type(default), default=default)
+        return env.get_value(env_key, cast=type(default), default=default)
 
 
 # Provided a prebuilt ``Settings`` instance as a
