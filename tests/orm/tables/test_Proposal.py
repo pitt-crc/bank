@@ -14,3 +14,25 @@ class TestHasDynamicColumns(TestCase):
 
             except AttributeError:
                 self.fail(f'Table {Proposal.__tablename__} has no column {cluster}')
+
+
+class TestColumnValueValidation(TestCase):
+    """Tests for the validation of values assigned to attributes vis setters"""
+
+    def test_percent_notified_validation(self) -> None:
+        """Test for ValueError when percent_notified is not between 0 and 100"""
+
+        with self.assertRaises(ValueError):
+            Proposal(percent_notified=-1)
+
+        with self.assertRaises(ValueError):
+            Proposal(percent_notified=101)
+
+        Proposal(percent_notified=0)
+        Proposal(percent_notified=100)
+
+    def test_percent_notified_setter(self) -> None:
+        """Test for ValueError when percent_notified is not between 0 and 100"""
+
+        proposal = Proposal(percent_notified=50)
+        self.assertEqual(50, proposal.percent_notified)
