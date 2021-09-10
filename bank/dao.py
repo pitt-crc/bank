@@ -1,7 +1,4 @@
 import csv
-import json
-import os
-import sys
 from datetime import date, datetime, time, timedelta
 from io import StringIO
 from logging import getLogger
@@ -14,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import select
 
 from bank import utils
-from bank.exceptions import MissingProposalError, TableOverwriteError
+from bank.exceptions import MissingProposalError
 from bank.orm import Investor, InvestorArchive, Proposal, ProposalArchive, Session
 from bank.settings import app_settings
 from bank.utils import ProposalType, RequireRoot, ShellCmd
@@ -747,18 +744,6 @@ class Account:
         session.commit()
         session.close()
 
-    def get_sus(self) -> None:
-        """Print the current service units for the given account in CSV format"""
-
-        proposal, investments = self._get_proposals()
-        proposal_sus = (proposal[c] for c in app_settings.clusters)
-        investor_sus = [['investment', inv.current_sus + inv.rollover_sus] for inv in investments]
-
-        writer = csv.writer(sys.stdout, lineterminator=os.linesep)
-        writer.writerow(['type', *app_settings.clusters])
-        writer.writerow(['proposal', *proposal_sus])
-        writer.writerows(investor_sus)
-
 
 class Bank:
 
@@ -807,52 +792,3 @@ class Bank:
 
                 if used_sus > avail_sus:
                     subtract_previous_investment += investments - used_sus
-
-    @staticmethod
-    def dump_to_json(proposal: Path, investor: Path, proposal_archive: Path, investor_archive: Path) -> None:
-        """Export user allocation data to json format
-
-        Args:
-            proposal: Path to write the proposal data to
-            investor: Path to write the investor data to
-            proposal_archive: Path to write the proposal archive to
-            investor_archive: Path to write the investor archive to
-        """
-
-        paths = (proposal, investor, proposal_archive, investor_archive)
-        tables = (Proposal, ProposalArchive, Investor, InvestorArchive)
-        if any(p.exists() for p in paths):
-            raise FileExistsError('One or more of the given file paths already exist.')
-
-        for table, path in zip(tables, paths):
-            with Session() as session, path.open('w') as ofile:
-                json.dump(session.query(table).all(), ofile, default=lambda obj: obj.row_to_json())
-
-    @staticmethod
-    def import_from_json(filepath: Path, table, overwrite: bool) -> None:
-        """Import data from a json file
-
-        This function deletes any existing data in the destination table and
-        replaces it with the imported data. Existing data will only be dropped
-        if ``overwrite=True``.
-
-        Args:
-            filepath: The path to load data from
-            table: The database table to import to
-            overwrite: Whether to allow existing tables to be dropped
-        """
-
-        with filepath.open("r") as fp, Session() as session:
-            if overwrite or session.query(table).first() is None:
-                session.query(table).delete()  # Delete existing rows in table
-
-            else:
-                raise TableOverwriteError(
-                    f'Table {table.__tablename__} is not empty. Specify ``overwrite=True`` to allow overwriting')
-
-            for item in json.load(fp):
-                item['start_date'] = datetime.strptime(item['start_date'], app_settings.date_format)
-                item['end_date'] = datetime.strptime(item['end_date'], app_settings.date_format)
-                session.add(table(**item))
-
-            session.commit()
