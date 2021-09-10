@@ -344,7 +344,7 @@ class Account:
         """
 
         # Account should have associations but not exist in the proposal table
-        self.raise_missing_proposal()
+
         self.raise_missing_cluster_associations()
 
         # Investor accounts last 5 years
@@ -376,8 +376,6 @@ class Account:
     def modify(self, **sus_per_cluster: int) -> None:
         """Extend the proposal on an account 365 days and add the given number of service units"""
 
-        # Account must exist in database
-        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
@@ -398,8 +396,6 @@ class Account:
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        # Account must exist in database
-        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster, greater_than_ten_thousand=False)
 
         # Update row in database
@@ -421,7 +417,6 @@ class Account:
             **sus_per_cluster: New service unit allocation on to each cluster
         """
 
-        self.raise_missing_proposal()
         utils.check_service_units_valid_clusters(sus_per_cluster)
 
         # Update row in database
@@ -439,8 +434,6 @@ class Account:
         Args:
             start_date: The new start date
         """
-
-        self.raise_missing_proposal()
 
         date_str = start_date.strftime(app_settings.date_format)
         if start_date > datetime.today():
@@ -462,8 +455,6 @@ class Account:
             start_date: The new start date
             inv_id: The investment id
         """
-
-        self.raise_missing_proposal()
 
         # Date should be valid
         date_str = start_date.strftime(app_settings.date_format)
@@ -489,7 +480,6 @@ class Account:
         # 4. Add archived investments associated to the current proposal
 
         session = Session()
-        self.raise_missing_proposal()
 
         # Compute the Total SUs for the proposal period
         proposal_row = session.query(Proposal).filter_by(account=self.account_name).first()
@@ -573,8 +563,6 @@ class Account:
     def check_proposal_end_date(self) -> None:
         """Alert and lock the user account if it is beyond it's proposal end date"""
 
-        self.raise_missing_proposal()
-
         proposal_row = Session().query(Proposal).filter_by(account=self.account_name).first()
         today = date.today()
         three_months_before_end_date = proposal_row.end_date - timedelta(days=90)
@@ -590,8 +578,6 @@ class Account:
             )
 
     def withdraw(self, sus_to_withdraw: int) -> None:
-
-        self.raise_missing_proposal()
 
         # Service units should be a valid number
         utils.check_service_units_valid(sus_to_withdraw)
@@ -636,13 +622,12 @@ class Account:
     def usage(self) -> None:
         """Print the current service usage of the given account"""
 
-        self.raise_missing_proposal()
         print(self.usage_string())
 
     def renewal(self, **sus) -> None:
 
         # Account associations better exist!
-        self.raise_missing_proposal()
+
         self.raise_missing_cluster_associations()
 
         session = Session()
