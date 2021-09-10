@@ -3,11 +3,8 @@ from datetime import date, datetime, time, timedelta
 from io import StringIO
 from logging import getLogger
 from math import ceil
-from pathlib import Path
 from typing import Dict, List, Tuple
 
-import pandas as pd
-from sqlalchemy import create_engine
 from sqlalchemy import select
 
 from bank import utils
@@ -731,18 +728,6 @@ class Account:
 
 
 class Bank:
-
-    @staticmethod
-    def alloc_sus(path: Path) -> None:
-        """Export allocated service units to a CSV file
-
-        Args:
-            path: The path to write exported data to
-        """
-
-        engine = create_engine(app_settings.db_path)
-        columns = ('account', *app_settings.clusters)
-        pd.read_sql_table(Proposal.__tablename__, engine, columns=columns).to_csv(path)
 
     @staticmethod
     def find_unlocked() -> None:

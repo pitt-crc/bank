@@ -101,10 +101,6 @@ class CLIParser(ArgumentParser):
         parser_release_hold.set_defaults(function='account.set_locked_state')
         self._add_args_to_parser(parser_release_hold, account)
 
-        parser_alloc_sus = self.subparsers.add_parser('alloc_sus')
-        parser_alloc_sus.set_defaults(function=Bank.alloc_sus)
-        self._add_args_to_parser(parser_alloc_sus, allocated)
-
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
         parser_reset_raw_usage.set_defaults(function='account.reset_raw_usage')
         self._add_args_to_parser(parser_reset_raw_usage, account)
