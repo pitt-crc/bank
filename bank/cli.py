@@ -75,7 +75,7 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function='account.info')
+        parser_info.set_defaults(function='account.proposal_info')
         self._add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')

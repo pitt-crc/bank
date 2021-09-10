@@ -36,15 +36,15 @@ class Account:
 
         # Make sure the account name has a corresponding proposal
         with Session() as session:
-            if session.query(Proposal.name).filter_by(account=account_name).first() is None:
+            if session.query(Proposal.account).filter_by(account=account_name).first() is None:
                 raise MissingProposalError(f'Proposal for account `{account_name}` does not exist.')
 
-    def get_proposals(self) -> Tuple[Proposal, List[Investor]]:
+    def _get_proposals(self) -> Tuple[Proposal, List[Investor]]:
         """Return any proposals associated with the account
 
         Returns:
-            The primary user proposal
-            A list of investments associated with the account
+            - The primary user proposal
+            - A list of investments associated with the account
         """
 
         with Session() as session:
@@ -53,13 +53,13 @@ class Account:
 
         return proposal, investments
 
-    def info(self) -> None:
+    def proposal_info(self) -> None:
         """Print proposal information for the given account"""
 
-        proposal, investments = self.get_proposals()
-        print(proposal.pretty_string())
+        proposal, investments = self._get_proposals()
+        print(proposal)
         for investor in investments:
-            print(investor.pretty_string())
+            print(investor)
 
     def get_locked_state(self) -> bool:
         """Return whether the account is locked"""
@@ -181,56 +181,33 @@ class Account:
 
         utils.send_email(self, email_html)
 
-    def get_available_investor_sus(self) -> List[float]:
-        """Return available service units on invested clusters
+    def get_total_investor_sus(self, subtract_withdrawals: bool = False, include_rollovers: bool = False) -> int:
+        """Return total service units on invested clusters
 
         Includes service units for any active proposals minus any
         overdrawn units.
 
-        Returns:
-            A list of service units in each invested cluster
-        """
-
-        res = []
-        statement = select(Investor).filter_by(account=self.account_name)
-        for od in Session().execute(statement).scalars().all():
-            res.append(od.service_units - od.withdrawn_sus)
-
-        return res
-
-    def get_current_investor_sus(self) -> List[float]:
-        """Return all account service units available on invested clusters
-
-        Includes service units for any active proposals in addition
-        to any rollover units from previous accounts
+        Args:
+            subtract_withdrawals: Subtract any overdrawn units from the returned values
+            include_rollovers: Include any rollover units from previous allocations
 
         Returns:
             A list of service units in each invested cluster
         """
 
-        res = []
-        statement = select(Investor).filter_by(account=self.account_name)
-        for od in Session().execute(statement).scalars().all():
-            res.append(od.current_sus + od.rollover_sus)
+        with Session() as session:
+            investments = session.query(Investor).filter_by(account=self.account_name).all()
 
-        return res
+        total = 0
+        for inv in investments:
+            total += inv.service_units
+            if subtract_withdrawals:
+                total -= inv.withdrawn_sus
 
-    def get_current_investor_sus_no_rollover(self) -> List[float]:
-        """Return current service units available on invested clusters
+            if include_rollovers:
+                total += inv.rollover_sus
 
-        Includes service units for any active proposals in addition
-        to any rollover units from previous accounts
-
-        Returns:
-            A list of service units in each invested cluster
-        """
-
-        res = []
-        statement = select(Investor).filter_by(account=self.account_name)
-        for od in Session().execute(statement).scalars().all():
-            res.append(od.current_sus)
-
-        return res
+        return total
 
     def get_usage_for_account(self) -> float:
         raw_usage = 0
@@ -259,7 +236,7 @@ class Account:
         # Get total sus in all clusters
         proposal = Session().query(Proposal).filter_by(account=self.account_name).first()
         proposal_total = sum(getattr(proposal, c) for c in app_settings.clusters)
-        investments_total = sum(self.get_current_investor_sus())
+        investments_total = self.get_total_investor_sus(include_rollovers=True)
 
         aggregate_usage = 0
         with StringIO() as output:
@@ -623,7 +600,7 @@ class Account:
         utils.check_service_units_valid(sus_to_withdraw)
 
         # First check if the user has enough SUs to withdraw
-        available_investments = sum(self.get_available_investor_sus())
+        available_investments = self.get_total_investor_sus(subtract_withdrawals=True)
         if sus_to_withdraw > available_investments:
             raise RuntimeError(
                 f"Requested to withdraw {sus_to_withdraw} but the account only has {available_investments} SUs to withdraw")
@@ -714,9 +691,7 @@ class Account:
                 investor_row.delete()
 
         # Renewal, should exclude any previously rolled over SUs
-        current_investments = sum(
-            self.get_current_investor_sus_no_rollover()
-        )
+        current_investments = self.get_total_investor_sus()
 
         # If there are relevant investments,
         #     check if there is any rollover
@@ -775,7 +750,7 @@ class Account:
     def get_sus(self) -> None:
         """Print the current service units for the given account in CSV format"""
 
-        proposal, investments = self.get_proposals()
+        proposal, investments = self._get_proposals()
         proposal_sus = (proposal[c] for c in app_settings.clusters)
         investor_sus = [['investment', inv.current_sus + inv.rollover_sus] for inv in investments]
 
@@ -820,7 +795,7 @@ class Bank:
 
         for proposal in proposals:
             account = Account(proposal.account)
-            investments = sum(account.get_available_investor_sus())
+            investments = account.get_total_investor_sus(subtract_withdrawals=True)
             cluster_sus = account.get_raw_usage(*app_settings.clusters, in_hours=True)
 
             subtract_previous_investment = 0
