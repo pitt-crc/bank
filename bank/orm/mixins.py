@@ -122,7 +122,7 @@ class AutoReprMixin(ExportMixin):
         """Return a human readable representation of the entire table row"""
 
         json_str = json.dumps(self.row_to_json(), indent=2).strip('{}')
-        lines = (str(self.__class__.__name__), '---------------', json_str, '')
+        lines = (str(self.__tablename__), '---------------', json_str, '')
         return '\n'.join(lines)
 
 

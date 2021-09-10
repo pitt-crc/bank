@@ -10,8 +10,7 @@ class SubparserNames(TestCase):
         'insert', 'modify', 'add', 'change', 'renewal', 'date',
         'date_investment', 'investor', 'withdraw', 'info', 'usage',
         'check_sus_limit', 'check_proposal_end_date', 'check_proposal_violations',
-        'get_sus', 'dump', 'import_proposal', 'import_investor', 'release_hold',
-        'alloc_sus', 'reset_raw_usage', 'find_unlocked', 'lock_with_notification'
+        'get_sus', 'release_hold', 'reset_raw_usage', 'find_unlocked', 'lock_with_notification'
     ]
 
     def runTest(self) -> None:

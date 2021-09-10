@@ -1,10 +1,8 @@
 """Command line parsing for the ``bank`` package"""
 
 from argparse import ArgumentParser
-from functools import partial
 from pathlib import Path
 
-from bank import orm
 from bank.dao import Account, Bank
 
 # Reusable definitions for command line arguments

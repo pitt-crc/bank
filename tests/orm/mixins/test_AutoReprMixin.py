@@ -17,8 +17,8 @@ class StringRepresentation(TestCase):
     def test_string_contains_column_values(self) -> None:
         """Test string representations include column values"""
 
-        self.assertIn('int_col=1', self.obj_as_str)
-        self.assertIn('str_col=a', self.obj_as_str)
+        self.assertIn('"int_col": 1', self.obj_as_str)
+        self.assertIn('"str_col": "a"', self.obj_as_str)
 
     def test_string_contains_table_name(self) -> None:
         """Test string representations include the table name"""

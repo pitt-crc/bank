@@ -66,7 +66,7 @@ class Account:
         """Lock or unlock the user account
 
         Args:
-            locked: The lock state to set
+            locked: The new lock state to set
             notify: Send an email notifying the account holder of the new locked state
         """
 
@@ -78,7 +78,7 @@ class Account:
         if notify:
             self.proposal_expires_notification()
 
-    def raw_cluster_usage(self, cluster: str) -> int:
+    def _raw_cluster_usage(self, cluster: str) -> int:
         """Return the account usage on a given cluster in seconds"""
 
         # Only the second and third line are necessary from the output table
@@ -99,9 +99,9 @@ class Account:
         """
 
         if in_hours:
-            return {c: time(second=self.raw_cluster_usage(c)).hour for c in clusters}
+            return {c: time(second=self._raw_cluster_usage(c)).hour for c in clusters}
 
-        return {c: self.raw_cluster_usage(c) for c in clusters}
+        return {c: self._raw_cluster_usage(c) for c in clusters}
 
     @RequireRoot
     def reset_raw_usage(self, *clusters: str) -> None:
