@@ -6,7 +6,7 @@ API Reference
 
 from logging import getLogger
 
-from sqlalchemy import Column, Date, Enum, Integer, Text
+from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -85,11 +85,13 @@ class Proposal(Base, CustomBase):
 
     __tablename__ = 'proposal'
     id = Column(Integer, primary_key=True)
-    account = relationship('Account', back_populates='proposal')
+    account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
     _percent_notified = Column('percent_notified', Integer)
     proposal_type = Column(Enum(ProposalType))
+
+    account = relationship('Account', back_populates='proposal')
 
     @property
     def percent_notified(self) -> int:
@@ -118,7 +120,7 @@ class Investor(Base):
 
     __tablename__ = 'investor'
     id = Column(Integer, primary_key=True)
-    account = relationship('Account', back_populates='investments')
+    account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
     proposal_type = Column(Integer)
@@ -126,6 +128,8 @@ class Investor(Base):
     current_sus = Column(Integer)
     withdrawn_sus = Column(Integer)
     rollover_sus = Column(Integer)
+
+    account = relationship('Account', back_populates='investments')
 
 
 class InvestorArchive(Base):

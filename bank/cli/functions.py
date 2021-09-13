@@ -1,7 +1,7 @@
+from datetime import date
 from logging import getLogger
 
-from bank.cli.parser import date
-from bank.orm import Proposal, Session, Account
+from bank.orm import Account, Proposal, Session
 from bank.settings import app_settings
 from bank.utils import ShellCmd
 
@@ -16,7 +16,7 @@ def info(account_name: str) -> None:
     """
 
     with Session() as session:
-        account = session.query(Account).filter(account_name=account_name).first()
+        account = session.query(Account).filter(Account.account_name == account_name).first()
 
     # Print all database entries associate with the account as an ascii table
     print(account.proposal.row_to_ascii_table())
