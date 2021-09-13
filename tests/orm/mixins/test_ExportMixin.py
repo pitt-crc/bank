@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from unittest import TestCase
 
+import bank.cli.parser
 from bank.orm.mixins import ExportMixin
 from bank.settings import app_settings
 from .utils import DummyEnum, create_table_with_mixin
@@ -22,7 +23,7 @@ class ExportingToJson(TestCase):
 
         # Parse the returned date string and see if it matches the original datetime object
         recovered_date = datetime.strptime(self.row_as_json['date_col'], app_settings.date_format)
-        self.assertEqual(recovered_date.date(), self.test_row.date_col.date())
+        self.assertEqual(recovered_date.date(), bank.cli.parser.date())
 
     def test_enum_cast_to_str(self) -> None:
         """Test enum types are cast to strings"""

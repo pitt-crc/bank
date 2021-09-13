@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from bank.cli import CLIParser
+from bank.cli.parser import CLIParser
 
 
 class SubparserNames(TestCase):

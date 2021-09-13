@@ -1,23 +1,20 @@
-"""Command line parsing for the ``bank`` package"""
-
 from argparse import ArgumentParser
 from pathlib import Path
 
-from bank.dao import Account, Bank
+from bank.cli import functions
+from bank.dao import Account
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')
 prop_type = dict(flags='--type', type=str, help='The proposal type: proposal or class')
 date = dict(flags='--date', help='The proposal start date (e.g 12/01/19)')
 sus = dict(flags='--sus', type=int, help='The number of SUs you want to insert')
-
 proposal = dict(flags='--proposal', type=Path, help='Path of the proposal table in JSON format')
 investor = dict(flags='--investor', type=Path, help='Path of the investor table in JSON format')
 proposal_arch = dict(flags='--proposal_archive', type=Path, help='Path of the proposal archive table in JSON format')
 investor_arch = dict(flags='--investor_archive', type=Path, help='Path of the investor archive table in JSON format')
 allocated = dict(flags='--path', type=Path, help='Path of the exported file')
 overwrite = dict(flags='-y', action='store_true', help='Automatically overwrite table data')
-
 smp = dict(flags=('-s', '--smp'), type=int, help='The smp limit in CPU Hours', default=0)
 mpi = dict(flags=('-m', '--mpi'), type=int, help='The mpi limit in CPU Hours', default=0)
 gpu = dict(flags=('-g', '--gpu'), type=int, help='The gpu limit in CPU Hours', default=0)
@@ -73,11 +70,11 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_withdraw, account, sus)
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function='account.proposal_info')
+        parser_info.set_defaults(function=functions.info)
         self._add_args_to_parser(parser_info, account)
 
         parser_usage = self.subparsers.add_parser('usage')
-        parser_usage.set_defaults(function='account.usage')
+        parser_usage.set_defaults(function=functions.usage)
         self._add_args_to_parser(parser_usage, account)
 
         parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
@@ -89,14 +86,14 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_check_proposal_end_date, account)
 
         parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
-        parser_check_proposal_violations.set_defaults(function=Bank.check_proposal_violations)
+        parser_check_proposal_violations.set_defaults(function=functions.check_proposal_violations)
 
         parser_get_sus = self.subparsers.add_parser('get_sus')
         parser_get_sus.set_defaults(function='account.get_sus')
         self._add_args_to_parser(parser_get_sus, account)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
-        parser_release_hold.set_defaults(function='account.set_locked_state')
+        parser_release_hold.set_defaults(function=functions.release_hold)
         self._add_args_to_parser(parser_release_hold, account)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
@@ -104,10 +101,10 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_reset_raw_usage, account)
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=Bank.find_unlocked)
+        parser_find_unlocked.set_defaults(function=functions.find_unlocked)
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        parser_lock_with_notification.set_defaults(function='account.set_locked_state')
+        parser_lock_with_notification.set_defaults(function=functions.lock_with_notification)
         self._add_args_to_parser(parser_lock_with_notification, account)
 
     @staticmethod
@@ -122,26 +119,14 @@ class CLIParser(ArgumentParser):
 
         for arg_def in arg_definitions:
             arg_def = arg_def.copy()
-            flags = arg_def.pop('flags')
-            if isinstance(flags, str):
-                parser.add_argument(flags, **arg_def, required=required)
+            arg_def.setdefault('required', required)
+            parser.add_argument(**arg_def)
 
-            else:
-                parser.add_argument(*flags, **arg_def, required=required)
-
-    def execute(self) -> None:
+    def execute(self, *args, **kwargs) -> None:
         """Entry point for running the command line parser
 
         Parse command line arguments and evaluate the corresponding function
         """
 
-        # Get parsed arguments as a dictionary
-        parsed_args = vars(self.parse_args())
-
-        # Evaluate the ``Account`` method as specified by the command line arguments
-        function = parsed_args.pop('function')
-        if isinstance(function, str):
-            instance_name, method_name = function.split('.')
-            function = getattr(parsed_args.pop(instance_name), method_name)
-
-        function(parsed_args)
+        parsed_args = vars(self.parse_args(*args, **kwargs))  # Get parsed arguments as a dictionary
+        parsed_args.pop('function')(parsed_args)
