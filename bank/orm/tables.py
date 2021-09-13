@@ -12,7 +12,7 @@ from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from bank.utils import RequireRoot, ShellCmd
+from bank.utils import ShellCmd
 from .mixins import CustomBase
 from ..exceptions import MissingProposalError
 from ..settings import app_settings
@@ -56,41 +56,6 @@ class Account(Base):
 
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
-
-    @locked_state.setter
-    @RequireRoot
-    def locked_state(self, locked: bool) -> None:
-        """Lock or unlock the user account
-
-        Args:
-            locked: The new lock state to set
-        """
-
-        LOG.info(f'Setting lock state for account `{self.account_name}` to `{locked}`')
-
-        # Construct a shell command using the ``sacctmgr`` command line tool
-        lock_state_int = 0 if locked else -1
-        clusters = ','.join(app_settings.clusters)
-        cmd = f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
-        ShellCmd(cmd).raise_err()
-
-    @RequireRoot
-    def reset_raw_usage(self, *clusters: str) -> None:
-        """Set raw account usage on the given clusters to zero"""
-
-        LOG.info(f'Resetting raw usage for account `{self.account_name}`')
-        clusters = ','.join(clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
-
-    def notify(self, message_template):
-        """Set an email notification to the user account
-
-        Args:
-            message_template: Template for the email message to send
-        """
-
-        LOG.debug(f'Sending email notification to account `{self.account_name}` ({self.email})')
-        raise NotImplementedError()
 
 
 class Proposal(Base, CustomBase):

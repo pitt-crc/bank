@@ -107,13 +107,12 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_lock_with_notification, account)
 
     @staticmethod
-    def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, required: bool = False) -> None:
+    def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict) -> None:
         """Add argument definitions to the given command line subparser
 
         Args:
             parser: The parser to add arguments to
             *arg_definitions: Dictionary with arguments for ``parser.add_argument``
-            required: If the given arguments should be required
         """
 
         for arg_def in arg_definitions:

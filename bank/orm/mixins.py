@@ -133,7 +133,7 @@ class ExportMixin:
     def row_to_ascii_table(self) -> str:
         """Return a human readable representation of the entire table row"""
 
-        json_str = json.dumps(self.row_to_json(), indent=2).strip('{}')
+        json_str = json.dumps(self.row_to_json(), indent=2).strip('{\n}')
         lines = (str(self.__tablename__), '---------------', json_str, '')
         return '\n'.join(lines)
 

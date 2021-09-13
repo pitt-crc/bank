@@ -51,9 +51,14 @@ def release_hold(account: str) -> None:
         account: The name of the account  to unlock
     """
 
+    # Construct a shell command using the ``sacctmgr`` command line tool
+    clusters = ','.join(app_settings.clusters)
+    cmd = f'sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=-1'
+    ShellCmd(cmd).raise_err()
+
     with Session() as session:
         account = session.query(Account).filter(account_name=account).first()
-        account.set_locked_state(locked=False, notify=False)
+        account.notify(app_settings.proposal_expires_notification)
 
 
 def usage(account: str) -> None:
@@ -63,18 +68,20 @@ def usage(account: str) -> None:
         account: The name of the account  to print information for
     """
 
+    # Get proposal data from the database
     with Session() as session:
-        account = session.query(Account).filter(account_name=account).first()
+        account_row = session.query(Account).filter(Account.account_name == account).first()
 
     print(','.join(('type', *app_settings.clusters)))
-    print('proposal:', account.proposal.row_to_csv(app_settings.clusters))
-    for inv in account.investments:
+    print('proposal:', account_row.proposal.row_to_csv(app_settings.clusters))
+    for inv in account_row.investments:
         print(f'investment ({inv.id}):', inv.row_to_csv(app_settings.clusters))
 
 
 def find_unlocked() -> None:
     """Print the names for all unexpired proposals with unlocked accounts"""
 
+    # Query database for accounts that are unlocked and expired
     with Session() as session:
         proposals = session.query(Proposal).filter_by(
             (Proposal.end_date < date.today()) and (not Proposal.account.locked_state)
