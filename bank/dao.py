@@ -1,5 +1,6 @@
+from datetime import time
 from logging import getLogger
-from typing import List
+from typing import Dict, List
 
 from bank.exceptions import MissingProposalError
 from bank.orm import Investor, Proposal, Session
@@ -79,6 +80,48 @@ class Account:
 
         if notify:
             self.notify(app_settings.proposal_expires_notification)
+
+    def _raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the account usage on a given cluster
+
+        Args:
+            cluster: The name of the cluster to check usage on
+            in_hours: Return the usage in integer hours instead of seconds
+
+        Returns:
+            The account usage for the given cluster
+        """
+
+        # Only the second and third line are necessary from the output table
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        header, data = cmd.out.split('\n')[1:3]
+        raw_usage_index = header.split('|').index("RawUsage")
+
+        usage = int(data.split('|')[raw_usage_index])  # Cluster usage in seconds
+        if in_hours:
+            usage = time(second=usage).hour
+
+        return usage
+
+    def get_raw_usage(self, in_hours=False) -> Dict[str, int]:
+        """Return the account usage on each cluster in seconds
+
+        Args:
+            in_hours: Return the usage in integer hours instead of seconds
+
+        Returns:
+            The account usage per cluster as a dictionary
+        """
+
+        return {c: self._raw_cluster_usage(c, in_hours) for c in app_settings.clusters}
+
+    @RequireRoot
+    def reset_raw_usage(self, *clusters: str) -> None:
+        """Set raw account usage on the given clusters to zero"""
+
+        LOG.info(f'Resetting raw usage for account `{self.account_name}`')
+        clusters = ','.join(clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
     def notify(self, message_template):
         """Set an email notification to the user account

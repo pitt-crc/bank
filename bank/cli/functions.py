@@ -1,4 +1,3 @@
-import bank.cli.parser
 from bank.cli.parser import date
 from bank.dao import Account
 from bank.orm import Proposal, Session
@@ -55,7 +54,9 @@ def find_unlocked() -> None:
     """Print the names for all unexpired proposals with unlocked accounts"""
 
     with Session() as session:
-        proposals = session.query(Proposal).filter_by(Proposal.end_date < date.today()).all()
+        proposals = session.query(Proposal).filter_by(
+            Proposal.end_date < date.today()
+        ).all()
 
     for proposal in proposals:
         account = Account(proposal.account)
@@ -63,3 +64,11 @@ def find_unlocked() -> None:
             print(account.account_name)
 
 
+def reset_raw_usage(account: Account):
+    """Print account usage as comma seperated values
+
+    Args:
+        account: The account to print information for
+    """
+
+    account.reset_raw_usage(*app_settings.clusters)
