@@ -87,9 +87,9 @@ class CLIParser(ArgumentParser):
         # parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
         # parser_check_proposal_violations.set_defaults(function=functions.check_proposal_violations)
 
-        # parser_get_sus = self.subparsers.add_parser('get_sus')
-        # parser_get_sus.set_defaults(function='account.get_sus')
-        # self._add_args_to_parser(parser_get_sus, account)
+        parser_get_sus = self.subparsers.add_parser('get_sus')
+        parser_get_sus.set_defaults(function=functions.get_sus)
+        self._add_args_to_parser(parser_get_sus, account)
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
         parser_release_hold.set_defaults(function=functions.release_hold)

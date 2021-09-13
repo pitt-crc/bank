@@ -25,6 +25,23 @@ def info(account: str) -> None:
             print(inv.row_to_ascii_table())
 
 
+def get_sus(account: str) -> None:
+    """Print proposal information for the given account
+
+    Args:
+        account: The name of the account to print information for
+    """
+
+    with Session() as session:
+        account = session.query(Account).filter(Account.account_name == account).first()
+        account.require_proposal()
+
+        # Print all database entries associate with the account in csv format
+        print('Proposal:', account.proposal.row_to_csv(app_settings.clusters))
+        for inv in account.investments:
+            print(f'Investment {inv.id}:', inv.row_to_csv(app_settings.clusters))
+
+
 def lock_with_notification(account: str) -> None:
     """Lock the given user account
 
