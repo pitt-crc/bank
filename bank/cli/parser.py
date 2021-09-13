@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 from bank.cli import functions
-from bank.dao import Account
+from bank.orm import Account
 
 # Reusable definitions for command line arguments
 account = dict(flags='--account', type=Account, help='The associated slurm account')

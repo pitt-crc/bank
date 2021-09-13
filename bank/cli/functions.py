@@ -1,15 +1,22 @@
+from logging import getLogger
+
 from bank.cli.parser import date
-from bank.dao import Account
-from bank.orm import Proposal, Session
+from bank.orm import Proposal, Session, Account
 from bank.settings import app_settings
+from bank.utils import ShellCmd
+
+LOG = getLogger('bank.cli')
 
 
-def info(account: Account) -> None:
+def info(account_name: str) -> None:
     """Print proposal information for the given account
 
     Args:
-        account: The account to print information for
+        account_name: The name of the account to print information for
     """
+
+    with Session() as session:
+        account = session.query(Account).filter(account_name=account_name).first()
 
     # Print all database entries associate with the account as an ascii table
     print(account.proposal.row_to_ascii_table())
@@ -17,32 +24,47 @@ def info(account: Account) -> None:
         print(inv.row_to_ascii_table())
 
 
-def lock_with_notification(account: Account) -> None:
+def lock_with_notification(account_name: str) -> None:
     """Lock the given user account
 
     Args:
-        account: The account to lock
+        account_name: The name of the account to lock
     """
 
-    account.set_locked_state(locked=True, notify=True)
+    LOG.info(f'Locking account `{account_name}`')
+    with Session() as session:
+        account = session.query(Account).filter(account_name=account_name).first()
+
+    # Construct a shell command using the ``sacctmgr`` command line tool
+    clusters = ','.join(app_settings.clusters)
+    cmd = f'sacctmgr -i modify account where account={account_name} cluster={clusters} set GrpTresRunMins=cpu=0'
+    ShellCmd(cmd).raise_err()
+
+    account.notify(app_settings.proposal_expires_notification)
 
 
-def release_hold(account: Account) -> None:
+def release_hold(account_name: str) -> None:
     """Unlock the given user account
 
     Args:
-        account: The account to unlock
+        account_name: The name of the account  to unlock
     """
+
+    with Session() as session:
+        account = session.query(Account).filter(account_name=account_name).first()
 
     account.set_locked_state(locked=False, notify=False)
 
 
-def usage(account: Account) -> None:
+def usage(account_name: str) -> None:
     """Print account usage as comma seperated values
 
     Args:
-        account: The account to print information for
+        account_name: The name of the account  to print information for
     """
+
+    with Session() as session:
+        account = session.query(Account).filter(account_name=account_name).first()
 
     print(','.join(('type', *app_settings.clusters)))
     print('proposal:', account.proposal.row_to_csv(app_settings.clusters))
@@ -55,20 +77,20 @@ def find_unlocked() -> None:
 
     with Session() as session:
         proposals = session.query(Proposal).filter_by(
-            Proposal.end_date < date.today()
+            (Proposal.end_date < date.today()) and (not Proposal.account.locked_state)
         ).all()
 
     for proposal in proposals:
-        account = Account(proposal.account)
-        if not account.locked_state:
-            print(account.account_name)
+        print(proposal.account.account_name)
 
 
-def reset_raw_usage(account: Account):
+def reset_raw_usage(account_name: str):
     """Print account usage as comma seperated values
 
     Args:
-        account: The account to print information for
+        account_name: The name of the account  to print information for
     """
 
-    account.reset_raw_usage(*app_settings.clusters)
+    LOG.info(f'Resetting raw usage for account `{account_name}`')
+    clusters = ','.join(app_settings.clusters)
+    ShellCmd(f'sacctmgr -i modify account where account={account_name} cluster={clusters} set RawUsage=0')
