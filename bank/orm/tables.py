@@ -4,6 +4,8 @@ API Reference
 -------------
 """
 
+from __future__ import annotations
+
 from logging import getLogger
 
 from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, Text
@@ -12,6 +14,7 @@ from sqlalchemy.orm import relationship
 
 from bank.utils import RequireRoot, ShellCmd
 from .mixins import CustomBase
+from ..exceptions import MissingProposalError
 from ..settings import app_settings
 from ..utils import ProposalType
 
@@ -26,9 +29,19 @@ class Account(Base):
 
     __tablename__ = 'account'
     id = Column(Integer, primary_key=True)
-    account_name = Column(Text)
-    proposal = relationship('Proposal', back_populates='account')
+    account_name = Column(Text(length=60))
+    proposal = relationship('Proposal', back_populates='account', uselist=False)
     investments = relationship('Investor', back_populates='account')
+
+    def require_proposal(self) -> None:
+        """Raise an error if the account does not have a proposal
+
+        Raises:
+            MissingProposalError
+        """
+
+        if self.proposal is None:
+            raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
 
     @property
     def email(self) -> str:

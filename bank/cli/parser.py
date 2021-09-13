@@ -126,5 +126,6 @@ class CLIParser(ArgumentParser):
         Parse command line arguments and evaluate the corresponding function
         """
 
-        parsed_args = vars(self.parse_args(*args, **kwargs))  # Get parsed arguments as a dictionary
-        parsed_args.pop('function')(parsed_args)
+        cli_kwargs = vars(self.parse_args(*args, **kwargs))  # Get parsed arguments as a dictionary
+        cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
+        cli_kwargs.pop('function')(**cli_kwargs)
