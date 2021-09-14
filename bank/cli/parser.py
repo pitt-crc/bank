@@ -39,25 +39,22 @@ class CLIParser(ArgumentParser):
         parser_insert.set_defaults(function=functions.insert)
         self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
-        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add',
+                                                help='Add SUs to an existing user proposal on top of current values.')
         parser_add.set_defaults(function=functions.add)
         self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
-        parser_change = self.subparsers.add_parser('change', help="Replace to new limits, don't change proposal date")
-        parser_change.set_defaults(function=functions.change)
+        parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account's proposal")
+        parser_change.set_defaults(function=functions.modify)
         self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
-        # parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        # parser_renewal.set_defaults(function='account.renewal')
-        # self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
+        parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
+        parser_renewal.set_defaults(function='account.renewal')
+        self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
         parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
         parser_investor.set_defaults(function=functions.investor)
         self._add_args_to_parser(parser_investor, account, sus)
-
-        # parser_date = self.subparsers.add_parser('date')
-        # parser_date.set_defaults(function='account.date')
-        # self._add_args_to_parser(parser_date, account, date)
 
         # parser_date_investment = self.subparsers.add_parser('date_investment')
         # parser_date_investment.set_defaults(function='account.date_investment')
