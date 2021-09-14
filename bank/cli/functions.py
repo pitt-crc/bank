@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 from logging import getLogger
 
 from bank.orm import Account, Proposal, Session
+from bank.orm.enum import ProposalType
 from bank.settings import app_settings
 from bank.utils import ShellCmd
 
@@ -25,6 +26,35 @@ def info(account: str) -> None:
             print(inv.row_to_ascii_table())
 
 
+def insert(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:
+    """Create a new proposal for the given account
+
+    Args:
+        account_name: The account name to add a proposal for
+        prop_type: The type of proposal
+        **sus_per_cluster: Service units to add on to each cluster
+    """
+
+    proposal_type = ProposalType.from_string(prop_type)
+    proposal_duration = timedelta(days=365)
+    start_date = date.today()
+    new_proposal = Proposal(
+        proposal_type=proposal_type.value,
+        percent_notified=0,
+        start_date=start_date,
+        end_date=start_date + proposal_duration,
+        **sus_per_cluster
+    )
+
+    with Session() as session:
+        account = session.query(Account).filter(Account.account_name == account_name)
+        account.proposal = new_proposal
+        session.commit()
+
+    sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
+    LOG.info(f"Inserted proposal with type {proposal_type.name} for {account_name} with {sus_as_str}")
+
+
 def get_sus(account: str) -> None:
     """Print proposal information for the given account
 
@@ -42,7 +72,7 @@ def get_sus(account: str) -> None:
             print(f'Investment {inv.id}:', inv.row_to_csv(app_settings.clusters))
 
 
-def set_account_lock(account: str, lock_state:bool, notify: bool) -> None:
+def set_account_lock(account: str, lock_state: bool, notify: bool) -> None:
     """Unlock the given user account
 
     Args:

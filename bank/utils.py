@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from email.message import EmailMessage
-from enum import Enum
 from functools import wraps
 from logging import getLogger
 from os import geteuid
@@ -117,20 +116,6 @@ def find_next_notification(usage):
         result = 100
 
     return result
-
-
-class ProposalType(Enum):
-    Proposal = 0
-    Class = 1
-    Investor = 2
-
-    @classmethod
-    def from_string(cls, name: str) -> ProposalType:
-        try:
-            return cls(getattr(cls, name.title()))
-
-        except AttributeError:
-            raise ValueError(f'Invalid proposal type: `{name}`')
 
 
 def send_email(account, email_html: str) -> None:

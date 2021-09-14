@@ -33,9 +33,13 @@ class CLIParser(ArgumentParser):
         # which arguments) based on what is specified here.
         self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-        # parser_insert = self.subparsers.add_parser('insert', help='Insert for the first time.')
-        # parser_insert.set_defaults(function='account.insert')
-        # self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
+        parser_insert = self.subparsers.add_parser('insert', help='Insert for the first time.')
+        parser_insert.set_defaults(function=functions.insert)
+        self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
+
+        # parser_investor = self.subparsers.add_parser('investor')
+        # parser_investor.set_defaults(function='account.investor')
+        # self._add_args_to_parser(parser_investor, account, sus)
 
         # parser_modify = self.subparsers.add_parser('modify', help='Change to new limits, update proposal date')
         # parser_modify.set_defaults(function='account.modify')
@@ -60,10 +64,6 @@ class CLIParser(ArgumentParser):
         # parser_date_investment = self.subparsers.add_parser('date_investment')
         # parser_date_investment.set_defaults(function='account.date_investment')
         # self._add_args_to_parser(parser_date_investment, account, date, inv_id)
-
-        # parser_investor = self.subparsers.add_parser('investor')
-        # parser_investor.set_defaults(function='account.investor')
-        # self._add_args_to_parser(parser_investor, account, sus)
 
         # parser_withdraw = self.subparsers.add_parser('withdraw')
         # parser_withdraw.set_defaults(function='account.withdraw')
