@@ -88,7 +88,7 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
-    def _raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+    def raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
         """Return the account usage on a given cluster in seconds"""
 
         # Only the second and third line are necessary from the output table
@@ -101,9 +101,6 @@ class SlurmAccount:
             usage = time(second=usage).hour
 
         return usage
-
-    def raw_cluster_usage(self, in_hours=False):
-        return {c: self._raw_cluster_usage(c, in_hours=in_hours) for c in app_settings.clusters}
 
     def reset_raw_usage(self):
         clusters = ','.join(app_settings.clusters)

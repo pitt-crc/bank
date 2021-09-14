@@ -123,6 +123,31 @@ def change(account_name, **sus_per_cluster: int) -> None:
         LOG.info(f"Changed proposal for {account_name} to {su_string}")
 
 
+def renewal(account_name, **sus) -> None:
+    with Session() as session:
+        account = session.query(Account).filter(Account.account_name == account_name).first()
+
+        # Move the old account proposal to the archive table
+        session.add(account.proposal.to_archive_object())
+        account.proposal.delete()
+
+        # Move any expired investments to the archive table
+        for investment in account.investments:
+            if investment.expired:
+                session.add(investment.to_archive_obj())
+                investment.delete()
+
+        # Add new proposal and rollover investment service units
+        account.proposal = Proposal(**sus)
+        account.rollover_investments()
+        session.commit()
+
+    # Set RawUsage to zero and unlock the account
+    slurm_acct = SlurmAccount(account_name)
+    slurm_acct.reset_raw_usage()
+    slurm_acct.set_locked_state(False)
+
+
 def get_sus(account: str) -> None:
     """Print proposal information for the given account
 
