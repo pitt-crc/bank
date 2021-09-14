@@ -87,6 +87,46 @@ def investor(account_name, sus: int) -> None:
     LOG.info(f"Inserted investment for {account_name} with per year allocations of `{sus}`")
 
 
+def add(account_name, **sus_per_cluster: int) -> None:
+    """Add service units for the given account / clusters
+
+    Args:
+        account_name: The account name to add a proposal for
+        **sus_per_cluster: Service units to add on to each cluster
+    """
+
+    # Update row in database
+    with Session() as session:
+        account = session.query(Account).filter_by(Account.account_name == account_name)
+        for cluster, su in sus_per_cluster.items():
+            setattr(account.proposal, cluster, getattr(account.proposal, cluster) + su)
+
+        session.commit()
+
+        su_string = ', '.join(f'{getattr(account.proposal, k)} on {k}' for k in app_settings.clusters)
+        LOG.info(f"Added SUs to proposal for {account_name}, new limits are {su_string}")
+
+
+def change(account_name, **sus_per_cluster: int) -> None:
+    """Replace the currently allocated service units for an account with new values
+
+    Args:
+        account_name: The account name to add a proposal for
+        **sus_per_cluster: New service unit allocation on to each cluster
+    """
+
+    # Update row in database
+    with Session() as session:
+        account = session.query(Account).filter_by(Account.account_name == account_name)
+        for cluster, su in sus_per_cluster.items():
+            setattr(account.proposal, cluster, su)
+
+        session.commit()
+
+        su_string = ', '.join(f'{getattr(account.proposal, k)} on {k}' for k in app_settings.clusters)
+        LOG.info(f"Changed proposal for {account_name} with {su_string}")
+
+
 def get_sus(account: str) -> None:
     """Print proposal information for the given account
 

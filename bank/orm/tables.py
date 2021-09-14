@@ -13,10 +13,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 from bank.utils import ShellCmd
+from .enum import ProposalType
 from .mixins import CustomBase
 from ..exceptions import MissingProposalError
 from ..settings import app_settings
-from ..utils import ProposalType
 
 Base = declarative_base(cls=CustomBase)
 metadata = Base.metadata
