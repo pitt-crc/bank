@@ -1,7 +1,8 @@
 from datetime import date, timedelta
 from logging import getLogger
+from math import ceil
 
-from bank.orm import Account, Proposal, Session
+from bank.orm import Account, Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
 from bank.utils import ShellCmd
@@ -53,6 +54,37 @@ def insert(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:
 
     sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
     LOG.info(f"Inserted proposal with type {proposal_type.name} for {account_name} with {sus_as_str}")
+
+
+def investor(account_name, sus: int) -> None:
+    """Add a new investor proposal for the given account
+
+    Args:
+        account_name: The account name to add a proposal for
+        sus: The number of service units to add
+    """
+
+    # Investor accounts last 5 years
+    start_date = date.today()
+    end_date = start_date + timedelta(days=5 * 365)
+
+    # Service units should be a valid number
+    new_investor = Investor(
+        proposal_type=ProposalType.Investor,
+        start_date=start_date,
+        end_date=end_date,
+        service_units=sus,
+        current_sus=ceil(sus / 5),
+        withdrawn_sus=0,
+        rollover_sus=0
+    )
+
+    with Session() as session:
+        account = session.query(Account).filter(Account.account_name == account_name)
+        account.investments.append(new_investor)
+        session.commit()
+
+    LOG.info(f"Inserted investment for {account_name} with per year allocations of `{sus}`")
 
 
 def get_sus(account: str) -> None:
