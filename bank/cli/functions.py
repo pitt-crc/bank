@@ -42,40 +42,24 @@ def get_sus(account: str) -> None:
             print(f'Investment {inv.id}:', inv.row_to_csv(app_settings.clusters))
 
 
-def lock_with_notification(account: str) -> None:
-    """Lock the given user account
-
-    Args:
-        account: The name of the account to lock
-    """
-
-    LOG.info(f'Locking account `{account}`')
-
-    # Construct a shell command using the ``sacctmgr`` command line tool
-    clusters = ','.join(app_settings.clusters)
-    cmd = f'sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=0'
-    ShellCmd(cmd).raise_err()
-
-    with Session() as session:
-        account = session.query(Account).filter(account_name=account).first()
-        account.notify(app_settings.proposal_expires_notification)
-
-
-def release_hold(account: str) -> None:
+def set_account_lock(account: str, lock_state:bool, notify: bool) -> None:
     """Unlock the given user account
 
     Args:
         account: The name of the account  to unlock
     """
 
-    # Construct a shell command using the ``sacctmgr`` command line tool
+    lock_state_int = 0 if lock_state else -1
     clusters = ','.join(app_settings.clusters)
-    cmd = f'sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=-1'
+
+    # Construct a shell command using the ``sacctmgr`` command line tool
+    cmd = f'sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
     ShellCmd(cmd).raise_err()
 
-    with Session() as session:
-        account = session.query(Account).filter(account_name=account).first()
-        account.notify(app_settings.proposal_expires_notification)
+    if notify:
+        with Session() as session:
+            account = session.query(Account).filter(account_name=account).first()
+            account.notify(app_settings.proposal_expires_notification)
 
 
 def usage(account: str) -> None:

@@ -20,6 +20,29 @@ from .settings import app_settings
 LOG = getLogger('bank.utils')
 
 
+class RequireRoot:
+    """Function decorator for requiring root privileges"""
+
+    @staticmethod
+    def require_root_access() -> None:
+        """Raise an error if the current session does not have root permissions
+
+        Raises:
+            RuntimeError: If session is not root
+        """
+
+        if geteuid() != 0:
+            raise RuntimeError("This action must be run with sudo privileges")
+
+    def __new__(cls, func: callable) -> callable:
+        @wraps(func)
+        def wrapped(*args, **kwargs) -> Any:
+            cls.require_root_access()
+            return func(*args, **kwargs)
+
+        return wrapped
+
+
 class ShellCmd:
     """Executes commands using the underlying command line environment"""
 
@@ -47,29 +70,6 @@ class ShellCmd:
 
         if self.err:
             raise CmdError(self.err)
-
-
-class RequireRoot:
-    """Function decorator for requiring root privileges"""
-
-    @staticmethod
-    def require_root_access() -> None:
-        """Raise an error if the current session does not have root permissions
-
-        Raises:
-            RuntimeError: If session is not root
-        """
-
-        if geteuid() != 0:
-            raise RuntimeError("This action must be run with sudo privileges")
-
-    def __new__(cls, func: callable) -> callable:
-        @wraps(func)
-        def wrapped(*args, **kwargs) -> Any:
-            cls.require_root_access()
-            return func(*args, **kwargs)
-
-        return wrapped
 
 
 def check_service_units_valid(units):

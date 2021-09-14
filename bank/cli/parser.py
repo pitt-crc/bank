@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from functools import partial
 from pathlib import Path
 
 from bank.cli import functions
@@ -68,14 +69,6 @@ class CLIParser(ArgumentParser):
         # parser_withdraw.set_defaults(function='account.withdraw')
         # self._add_args_to_parser(parser_withdraw, account, sus)
 
-        parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function=functions.info)
-        self._add_args_to_parser(parser_info, account)
-
-        parser_usage = self.subparsers.add_parser('usage')
-        parser_usage.set_defaults(function=functions.usage)
-        self._add_args_to_parser(parser_usage, account)
-
         # parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
         # parser_check_sus_limit.set_defaults(function='account.check_sus_limit')
         # self._add_args_to_parser(parser_check_sus_limit, account)
@@ -87,24 +80,38 @@ class CLIParser(ArgumentParser):
         # parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
         # parser_check_proposal_violations.set_defaults(function=functions.check_proposal_violations)
 
+        # Subparsers for account allocation and usage info
+
+        parser_info = self.subparsers.add_parser('info')
+        parser_info.set_defaults(function=functions.info)
+        self._add_args_to_parser(parser_info, account)
+
+        parser_usage = self.subparsers.add_parser('usage')
+        parser_usage.set_defaults(function=functions.usage)
+        self._add_args_to_parser(parser_usage, account)
+
         parser_get_sus = self.subparsers.add_parser('get_sus')
         parser_get_sus.set_defaults(function=functions.get_sus)
         self._add_args_to_parser(parser_get_sus, account)
-
-        parser_release_hold = self.subparsers.add_parser('release_hold')
-        parser_release_hold.set_defaults(function=functions.release_hold)
-        self._add_args_to_parser(parser_release_hold, account)
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
         parser_reset_raw_usage.set_defaults(function='account.reset_raw_usage')
         self._add_args_to_parser(parser_reset_raw_usage, account)
 
+        # Subparsers for locking / unlocking user accounts
+
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
         parser_find_unlocked.set_defaults(function=functions.find_unlocked)
 
+        lock_acct = partial(functions.set_account_lock, lock_state=True, notify=True)
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        parser_lock_with_notification.set_defaults(function=functions.lock_with_notification)
+        parser_lock_with_notification.set_defaults(function=lock_acct)
         self._add_args_to_parser(parser_lock_with_notification, account)
+
+        unlock_acct = partial(functions.set_account_lock, lock_state=False, notify=False)
+        parser_release_hold = self.subparsers.add_parser('release_hold')
+        parser_release_hold.set_defaults(function=unlock_acct)
+        self._add_args_to_parser(parser_release_hold, account)
 
     @staticmethod
     def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict) -> None:
