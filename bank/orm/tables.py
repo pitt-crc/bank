@@ -12,7 +12,6 @@ from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from bank.utils import ShellCmd
 from .enum import ProposalType
 from .mixins import CustomBase
 from ..exceptions import MissingProposalError
@@ -42,20 +41,6 @@ class Account(Base):
 
         if self.proposal is None:
             raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-    @property
-    def email(self) -> str:
-        """The email associated with the given user account"""
-
-        cmd = ShellCmd(f'sacctmgr show account {self.account_name} -P format=description -n')
-        return f'{cmd.out}{app_settings.email_suffix}'
-
-    @property
-    def locked_state(self) -> bool:
-        """Return whether the account is locked"""
-
-        cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
-        return 'cpu=0' in ShellCmd(cmd).out
 
 
 class Proposal(Base, CustomBase):

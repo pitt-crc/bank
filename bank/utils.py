@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
@@ -69,6 +70,44 @@ class ShellCmd:
 
         if self.err:
             raise CmdError(self.err)
+
+
+class SlurmAccount:
+
+    def __init__(self, acount_name: str) -> None:
+        self.account_name = acount_name
+
+    def get_locked_state(self):
+        cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
+        return 'cpu=0' in ShellCmd(cmd).out
+
+    def set_locked_state(self, lock_state):
+        lock_state_int = 0 if lock_state else -1
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
+        ).raise_err()
+
+    def _raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the account usage on a given cluster in seconds"""
+
+        # Only the second and third line are necessary from the output table
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        header, data = cmd.out.split('\n')[1:3]
+        raw_usage_index = header.split('|').index("RawUsage")
+        usage = data.split('|')[raw_usage_index]
+
+        if in_hours:  # Convert from seconds to hours
+            usage = time(second=usage).hour
+
+        return usage
+
+    def raw_cluster_usage(self, in_hours=False):
+        return {c: self._raw_cluster_usage(c, in_hours=in_hours) for c in app_settings.clusters}
+
+    def reset_raw_usage(self):
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
 def check_service_units_valid(units):

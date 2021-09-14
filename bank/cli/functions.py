@@ -5,7 +5,7 @@ from math import ceil
 from bank.orm import Account, Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
-from bank.utils import ShellCmd
+from bank.utils import SlurmAccount
 
 LOG = getLogger('bank.cli')
 
@@ -147,17 +147,10 @@ def set_account_lock(account: str, lock_state: bool, notify: bool) -> None:
         account: The name of the account  to unlock
     """
 
-    lock_state_int = 0 if lock_state else -1
-    clusters = ','.join(app_settings.clusters)
-
-    # Construct a shell command using the ``sacctmgr`` command line tool
-    cmd = f'sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
-    ShellCmd(cmd).raise_err()
-
+    account = SlurmAccount(account)
+    account.set_locked_state(lock_state)
     if notify:
-        with Session() as session:
-            account = session.query(Account).filter(account_name=account).first()
-            account.notify(app_settings.proposal_expires_notification)
+        account.notify(app_settings.proposal_expires_notification)
 
 
 def usage(account: str) -> None:
@@ -198,5 +191,4 @@ def reset_raw_usage(account: str):
     """
 
     LOG.info(f'Resetting raw usage for account `{account}`')
-    clusters = ','.join(app_settings.clusters)
-    ShellCmd(f'sacctmgr -i modify account where account={account} cluster={clusters} set RawUsage=0')
+    SlurmAccount(account).reset_raw_usage()
