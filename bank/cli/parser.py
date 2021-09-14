@@ -33,14 +33,13 @@ class CLIParser(ArgumentParser):
         # which arguments) based on what is specified here.
         self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-        # Subparsers for adding and modifying service unit allocations
+        # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
         parser_insert.set_defaults(function=functions.insert)
         self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
-        parser_add = self.subparsers.add_parser('add',
-                                                help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
         parser_add.set_defaults(function=functions.add)
         self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
@@ -48,13 +47,22 @@ class CLIParser(ArgumentParser):
         parser_change.set_defaults(function=functions.modify)
         self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
-        parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        parser_renewal.set_defaults(function='account.renewal')
-        self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
+        # parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
+        # parser_check_proposal_end_date.set_defaults(function='account.check_proposal_end_date')
+        # self._add_args_to_parser(parser_check_proposal_end_date, account)
+
+        # parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
+        # parser_check_proposal_violations.set_defaults(function=functions.check_proposal_violations)
+
+        # Subparsers for adding and modifying investment accounts
 
         parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
         parser_investor.set_defaults(function=functions.investor)
         self._add_args_to_parser(parser_investor, account, sus)
+
+        parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
+        parser_renewal.set_defaults(function='account.renewal')
+        self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
 
         # parser_date_investment = self.subparsers.add_parser('date_investment')
         # parser_date_investment.set_defaults(function='account.date_investment')
@@ -67,13 +75,6 @@ class CLIParser(ArgumentParser):
         # parser_check_sus_limit = self.subparsers.add_parser('check_sus_limit')
         # parser_check_sus_limit.set_defaults(function='account.check_sus_limit')
         # self._add_args_to_parser(parser_check_sus_limit, account)
-
-        # parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
-        # parser_check_proposal_end_date.set_defaults(function='account.check_proposal_end_date')
-        # self._add_args_to_parser(parser_check_proposal_end_date, account)
-
-        # parser_check_proposal_violations = self.subparsers.add_parser('check_proposal_violations')
-        # parser_check_proposal_violations.set_defaults(function=functions.check_proposal_violations)
 
         # Subparsers for account allocation and usage info
 
