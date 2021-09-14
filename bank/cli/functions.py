@@ -95,15 +95,13 @@ def add(account_name, **sus_per_cluster: int) -> None:
         **sus_per_cluster: Service units to add on to each cluster
     """
 
-    # Update row in database
+    LOG.debug(f"Adding sus to {account_name}: {sus_per_cluster}")
     with Session() as session:
-        account = session.query(Account).filter_by(Account.account_name == account_name)
-        for cluster, su in sus_per_cluster.items():
-            setattr(account.proposal, cluster, getattr(account.proposal, cluster) + su)
-
+        proposal = session.query(Account).filter_by(Account.account_name == account_name).proposal
+        proposal.add_sus(**sus_per_cluster)
         session.commit()
 
-        su_string = ', '.join(f'{getattr(account.proposal, k)} on {k}' for k in app_settings.clusters)
+        su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
         LOG.info(f"Added SUs to proposal for {account_name}, new limits are {su_string}")
 
 
@@ -115,16 +113,14 @@ def change(account_name, **sus_per_cluster: int) -> None:
         **sus_per_cluster: New service unit allocation on to each cluster
     """
 
-    # Update row in database
+    LOG.debug(f"Replacing sus for {account_name}: {sus_per_cluster}")
     with Session() as session:
-        account = session.query(Account).filter_by(Account.account_name == account_name)
-        for cluster, su in sus_per_cluster.items():
-            setattr(account.proposal, cluster, su)
-
+        proposal = session.query(Account).filter_by(Account.account_name == account_name)
+        proposal.replace_sus(**sus_per_cluster)
         session.commit()
 
-        su_string = ', '.join(f'{getattr(account.proposal, k)} on {k}' for k in app_settings.clusters)
-        LOG.info(f"Changed proposal for {account_name} with {su_string}")
+        su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
+        LOG.info(f"Changed proposal for {account_name} to {su_string}")
 
 
 def get_sus(account: str) -> None:

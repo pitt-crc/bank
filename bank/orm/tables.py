@@ -82,6 +82,18 @@ class Proposal(Base, CustomBase):
 
         self._percent_notified = val
 
+    def add_sus(self, **sus_per_cluster: int) -> None:
+        """Add the service units to existing values for the given clusters"""
+
+        for cluster, su in sus_per_cluster.items():
+            setattr(self, cluster, getattr(self, cluster) + su)
+
+    def replace_sus(self, **sus_per_cluster: int) -> None:
+        """Replace the service units for the given clusters"""
+
+        for cluster, su in sus_per_cluster.items():
+            setattr(self, cluster, su)
+
 
 class ProposalArchive(Base, CustomBase):
     """Class representation of the ``proposal_archive`` table"""

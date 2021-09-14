@@ -43,17 +43,13 @@ class CLIParser(ArgumentParser):
         parser_investor.set_defaults(function='account.investor')
         self._add_args_to_parser(parser_investor, account, sus)
 
-        # parser_modify = self.subparsers.add_parser('modify', help='Change to new limits, update proposal date')
-        # parser_modify.set_defaults(function='account.modify')
-        # self._add_args_to_parser(parser_modify, account, smp, mpi, gpu, htc)
+        parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
+        parser_add.set_defaults(function='account.add')
+        self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
-        # parser_add = self.subparsers.add_parser('add', help='Add SUs on top of current values')
-        # parser_add.set_defaults(function='account.add')
-        # self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
-
-        # parser_change = self.subparsers.add_parser('change', help="Change to new limits, don't change proposal date")
-        # parser_change.set_defaults(function='account.change')
-        # self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
+        parser_change = self.subparsers.add_parser('change', help="Change to new limits, don't change proposal date")
+        parser_change.set_defaults(function='account.change')
+        self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
 
         # parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         # parser_renewal.set_defaults(function='account.renewal')
