@@ -1,8 +1,7 @@
+from bisect import bisect_right
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-
-import numpy as np
 
 from bank.orm import Account, Investor, Proposal, Session
 from bank.orm.enum import ProposalType
@@ -50,7 +49,7 @@ def usage(account: str) -> None:
         for cluster in app_settings.clusters:
             cluster_usage = slurm.raw_cluster_usage(cluster, in_hours=True)
             cluster_allocation = getattr(acc.proposal, cluster)
-            overall_usage = np.round(100 * cluster_usage / cluster_allocation, 2) or 'N/A'
+            overall_usage = round(100 * cluster_usage / cluster_allocation, 2) or 'N/A'
             usage_total += cluster_usage
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + cluster_allocation :^82}|\n"
@@ -272,5 +271,33 @@ def renewal(account_name, **sus) -> None:
     slurm_acct.set_locked_state(False)
 
 
-def withdraw(acount: str, sus: int) -> None:
-    raise NotImplementedError()
+def withdraw(account: str, sus: int) -> None:
+    with Session() as session:
+        account = session.query(Account).filter(Account.account_name == account).first()
+        available_investments = sum(inv.service_units - inv.withdrawn_sus for inv in account.investments)
+
+    if sus > available_investments:
+        print(f"Requested to withdraw {sus} but the account only has {available_investments} SUs to withdraw!")
+        return
+
+    # Go through investments, oldest first and start withdrawing
+    for idx, investment in enumerate(account.investments):
+        # If not SUs to withdraw, skip the proposal entirely
+        investment_remaining = investment.service_units - investment.withdrawn_sus
+        if investment_remaining == 0:
+            print(f"No service units can be withdrawn from investment {investment['id']}")
+            continue
+
+        # Determine what we can withdraw from current investment
+        to_withdraw = min(sus, investment_remaining)
+        investment.current_sus += to_withdraw
+        investment.withdrawn_sus += to_withdraw
+
+        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {account}"
+        print(msg)
+        LOG.info(msg)
+
+        # Determine if we are done processing investments
+        sus -= to_withdraw
+        if sus <= 0:
+            return
