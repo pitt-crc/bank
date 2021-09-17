@@ -1,4 +1,4 @@
-from bisect import bisect_right
+from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
@@ -116,17 +116,28 @@ def set_account_lock(account: str, lock_state: bool, notify: bool) -> None:
 
 
 def alert_account(account: str) -> None:
-    members = app_settings.notify_levels
-    exceeded = [usage > x.to_percentage() for x in members]
+    with Session() as session:
+        proposal = session.query(Proposal).filter_by(Proposal.account.name == account).first()
+        end_date = proposal.end_date
 
-    try:
-        index = exceeded.index(False)
-        result = 0 if index == 0 else members[index - 1]
+    slurm = SlurmAccount(account)
+    usage = sum(slurm.raw_cluster_usage(c) for c in app_settings.clusters())
+    usage_perc = usage / allocated
+    next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
-    except ValueError:
-        result = 100
+    days_until_expire = (end_date - date.today()).days
+    if days_until_expire in app_settings.warning_days:
+        account.notify(app_settings.three_month_proposal_expiry_notification)
 
-    return result
+    elif days_until_expire == 0:
+        set_account_lock(account, True, notify=False)
+        account.notify(app_settings.proposal_expires_notification)
+        LOG.info(
+            f"The account for {account} was locked because it reached the end date {end_date.strftime(app_settings.date_format)}")
+
+    elif (usage_perc >= next_notify) and (next_notify > proposal.percent_notified):
+        proposal.percent_notified = next_notify
+        account.notify(app_settings.notify_sus_limit_email_text)
 
 
 def insert(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:
