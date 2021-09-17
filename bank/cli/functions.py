@@ -106,6 +106,8 @@ def set_account_lock(account: str, lock_state: bool, notify: bool) -> None:
 
     Args:
         account: The name of the account  to unlock
+        lock_state: The account locked state as a boolean
+        notify: Whether to send an email notification to the account holder
     """
 
     account = SlurmAccount(account)
@@ -178,14 +180,13 @@ def add(account_name, **sus_per_cluster: int) -> None:
 
 
 def modify(account_name, **kwargs) -> None:
-    """Replace the currently allocated service units for an account with new values
+    """Update the properties of an account's primary proposal
 
     Args:
         account_name: The account name to add a proposal for
         **kwargs: New values to set in the proposal
     """
 
-    LOG.debug(f"Modifying proposal for {account_name}: {kwargs}")
     with Session() as session:
         proposal = session.query(Account).filter_by(Account.account_name == account_name)
         for cluster, su in kwargs.items():
@@ -228,8 +229,22 @@ def investor(account_name, sus: int) -> None:
     LOG.info(f"Inserted investment for {account_name} with per year allocations of `{sus}`")
 
 
-def investor_modify(inv_id: int, sus: int) -> None:
-    raise NotImplementedError()
+def investor_modify(inv_id: int, **kwargs) -> None:
+    """Update the properties of a given investment
+
+    Args:
+        inv_id: The id of the investment to change
+        **kwargs: New values to set in the investment
+    """
+
+    with Session() as session:
+        investment = session.query(Investor).filter_by(Investor.id == inv_id)
+        for key, value in kwargs.items():
+            setattr(investment, key, value)
+
+        session.commit()
+
+    LOG.info(f"Modified Investment Id {inv_id}: {kwargs}")
 
 
 def renewal(account_name, **sus) -> None:

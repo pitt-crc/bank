@@ -66,8 +66,7 @@ class CLIParser(ArgumentParser):
         parser_insert.set_defaults(function=functions.insert)
         self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
-        parser_add = self.subparsers.add_parser('add',
-                                                help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
         parser_add.set_defaults(function=functions.add)
         self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
