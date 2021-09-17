@@ -1,4 +1,9 @@
-"""The ``utils`` module provides general utilities for the parent application"""
+"""Interface for the underlying runtime environment.
+
+The ``system`` module provides general utilities for interfacing with the
+underlying runtime environment. It includes common administrative tasks in
+addition to wrappers around various command line utilities.
+"""
 
 from __future__ import annotations
 
@@ -35,6 +40,8 @@ class RequireRoot:
             raise RuntimeError("This action must be run with sudo privileges")
 
     def __new__(cls, func: callable) -> callable:
+        """Wrap the given function"""
+
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
             cls.require_root_access()
@@ -73,15 +80,34 @@ class ShellCmd:
 
 
 class SlurmAccount:
+    """Common administrative tasks relating to Slurm user accounts"""
 
-    def __init__(self, acount_name: str) -> None:
-        self.account_name = acount_name
+    def __init__(self, account_name: str) -> None:
+        """A Slurm user account
 
-    def get_locked_state(self):
+        Args:
+            account_name: The name of the user account
+        """
+
+        self.account_name = account_name
+
+    def get_locked_state(self) -> bool:
+        """Return whether the user account is locked
+
+        Returns:
+            The account lock state as a boolean
+        """
+
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    def set_locked_state(self, lock_state):
+    def set_locked_state(self, lock_state: bool) -> False:
+        """Lock or unlock the user account
+
+        Args:
+            lock_state: Whether to lock (``True``) or unlock (``False``) the user account
+        """
+
         lock_state_int = 0 if lock_state else -1
         clusters = ','.join(app_settings.clusters)
         ShellCmd(
@@ -89,7 +115,15 @@ class SlurmAccount:
         ).raise_err()
 
     def raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
-        """Return the account usage on a given cluster in seconds"""
+        """Return the account usage on a given cluster
+
+        Args:
+            cluster: The name of the cluster
+            in_hours: Return usage in units of hours (Defaults to seconds)
+
+        Returns:
+            The account's usage of the given cluster
+        """
 
         # Only the second and third line are necessary from the output table
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
@@ -102,56 +136,11 @@ class SlurmAccount:
 
         return usage
 
-    def reset_raw_usage(self):
+    def reset_raw_usage(self) -> None:
+        """Reset the current account usage"""
+
         clusters = ','.join(app_settings.clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
-
-
-def check_service_units_valid(units):
-    """Return a proper natural number as a ``Right`` instance
-    
-    Args:
-        units: Actual service units used as a parameter
-
-    Returns:
-        The passed value as an instance of ``Right``
-
-    Raises:
-        ValueError: If the input ``units`` is not a natural number
-    """
-
-    if units <= 0:
-        raise ValueError(f"SUs must be greater than or equal to zero, got `{units}`")
-
-
-def check_service_units_valid_clusters(sus, greater_than_ten_thousand=True):
-    for clus, val in sus.items():
-        try:
-            sus[clus] = int(val)
-
-        except ValueError:
-            raise ValueError(f"Given non-integer value `{val}` for cluster `{clus}`")
-
-    total_sus = sum(sus.values())
-    if greater_than_ten_thousand and total_sus < 10000:
-        raise ValueError(f"Total SUs should exceed 10000 SUs, got `{total_sus}`")
-
-    elif total_sus <= 0:
-        raise ValueError(f"Total SUs should be greater than zero, got `{total_sus}`")
-
-
-def find_next_notification(usage):
-    members = app_settings.notify_levels
-    exceeded = [usage > x.to_percentage() for x in members]
-
-    try:
-        index = exceeded.index(False)
-        result = 0 if index == 0 else members[index - 1]
-
-    except ValueError:
-        result = 100
-
-    return result
 
 
 def send_email(account, email_html: str) -> None:

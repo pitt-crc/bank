@@ -5,7 +5,7 @@ from math import ceil
 from bank.orm import Account, Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
-from bank.utils import SlurmAccount
+from bank.system import SlurmAccount
 
 LOG = getLogger('bank.cli')
 
@@ -82,7 +82,17 @@ def set_account_lock(account: str, lock_state: bool, notify: bool) -> None:
 
 
 def alert_account(account: str) -> None:
-    raise NotImplementedError()
+    members = app_settings.notify_levels
+    exceeded = [usage > x.to_percentage() for x in members]
+
+    try:
+        index = exceeded.index(False)
+        result = 0 if index == 0 else members[index - 1]
+
+    except ValueError:
+        result = 100
+
+    return result
 
 
 def insert(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:

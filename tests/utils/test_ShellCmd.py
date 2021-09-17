@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from bank.exceptions import CmdError
-from bank.utils import ShellCmd
+from bank.system import ShellCmd
 
 
 class InitExceptions(TestCase):

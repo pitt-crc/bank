@@ -18,7 +18,7 @@ from .enum import ProposalType
 from .mixins import CustomBase
 from ..exceptions import MissingProposalError
 from ..settings import app_settings
-from ..utils import SlurmAccount
+from ..system import SlurmAccount
 
 Base = declarative_base(cls=CustomBase)
 metadata = Base.metadata
@@ -89,7 +89,7 @@ class Account(Base):
                         need_to_rollover -= to_rollover
 
 
-class Proposal(CustomBase):
+class Proposal(Base):
     """Class representation of the ``proposal`` table"""
 
     __tablename__ = 'proposal'
@@ -105,16 +105,21 @@ class Proposal(CustomBase):
 
     @validates('percent_notified')
     def validate_percent_notified(self, key: str, value: int) -> int:
-        """Verify the given value is between 0 and 100
-
-        Raises:
-            ValueError: If the value is not valid
-        """
+        """Verify the given value is between 0 and 100"""
 
         if 0 <= value <= 100:
             return value
 
         raise ValueError('percent_notified value must be between 0 and 100')
+
+    @validates(*app_settings.clusters)
+    def validate_service_units(self, key: str, value: int) -> int:
+        """Verify the given value is a non-negative integer"""
+
+        if value < 0:
+            raise ValueError('Service units must be a non-negative integer')
+
+        return value
 
     def to_archive_object(self) -> ProposalArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""
@@ -123,7 +128,8 @@ class Proposal(CustomBase):
             id=self.id,
             account_id=self.account_id,
             start_date=self.start_date,
-            end_date=self.end_date
+            end_date=self.end_date,
+            proposal_type=self.proposal_type
         )
 
         slurm_acct = SlurmAccount(self.account)
@@ -134,7 +140,7 @@ class Proposal(CustomBase):
         return archive_obj
 
 
-class ProposalArchive(CustomBase):
+class ProposalArchive(Base):
     """Class representation of the ``proposal_archive`` table"""
 
     __tablename__ = 'proposal_archive'
@@ -143,11 +149,21 @@ class ProposalArchive(CustomBase):
     account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
+    proposal_type = Column(Enum(ProposalType))
 
     account = relationship('Account', back_populates='archived_proposals')
 
+    @validates(*app_settings.clusters, *(f'{c}_usage' for c in app_settings.clusters))
+    def validate_service_units(self, key: str, value: int) -> int:
+        """Verify the given value is a non-negative integer"""
 
-class Investor(CustomBase):
+        if value < 0:
+            raise ValueError('Service units must be a non-negative integer')
+
+        return value
+
+
+class Investor(Base):
     """Class representation of the ``investor`` table"""
 
     __tablename__ = 'investor'
@@ -156,7 +172,6 @@ class Investor(CustomBase):
     account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
-    proposal_type = Column(Integer)
     service_units = Column(Integer)
     current_sus = Column(Integer)
     withdrawn_sus = Column(Integer)
@@ -185,7 +200,7 @@ class Investor(CustomBase):
         )
 
 
-class InvestorArchive(CustomBase):
+class InvestorArchive(Base):
     """Class representation of the ``investor_archive`` table"""
 
     __tablename__ = 'investor_archive'
@@ -205,4 +220,4 @@ class InvestorArchive(CustomBase):
 for _cluster in app_settings.clusters:
     setattr(Proposal, _cluster, Column(Integer))
     setattr(ProposalArchive, _cluster, Column(Integer))
-    setattr(ProposalArchive, _cluster + '_usage', Column(Integer))
+    setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer))
