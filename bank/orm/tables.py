@@ -11,7 +11,8 @@ from logging import getLogger
 
 from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship, validates
 
 from .enum import ProposalType
 from .mixins import CustomBase
@@ -29,10 +30,13 @@ class Account(Base):
     """Class representation of the ``account`` table"""
 
     __tablename__ = 'account'
+
     id = Column(Integer, primary_key=True)
     account_name = Column(Text(length=60))
     proposal = relationship('Proposal', back_populates='account', uselist=False)
     investments = relationship('Investor', back_populates='account')
+    archived_proposals = relationship('ProposalArchive', back_populates='account')
+    archived_investments = relationship('InvestorArchive', back_populates='account')
 
     def require_proposal(self) -> None:
         """Raise an error if the account does not have a proposal
@@ -85,46 +89,39 @@ class Account(Base):
                         need_to_rollover -= to_rollover
 
 
-class Proposal(Base, CustomBase):
+class Proposal(CustomBase):
     """Class representation of the ``proposal`` table"""
 
     __tablename__ = 'proposal'
+
     id = Column(Integer, primary_key=True)
     account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
-    _percent_notified = Column('percent_notified', Integer)
+    percent_notified = Column(Integer)
     proposal_type = Column(Enum(ProposalType))
 
     account = relationship('Account', back_populates='proposal')
 
-    @property
-    def percent_notified(self) -> int:
-        return self._percent_notified
+    @validates('percent_notified')
+    def validate_percent_notified(self, key: str, value: int) -> int:
+        """Verify the given value is between 0 and 100
 
-    @percent_notified.setter
-    def percent_notified(self, val: int) -> None:
-        if (val < 0) or (val > 100):
-            raise ValueError('percent_notified value must be between 0 and 100')
+        Raises:
+            ValueError: If the value is not valid
+        """
 
-        self._percent_notified = val
+        if 0 <= value <= 100:
+            return value
 
-    def add_sus(self, **sus_per_cluster: int) -> None:
-        """Add the service units to existing values for the given clusters"""
-
-        for cluster, su in sus_per_cluster.items():
-            setattr(self, cluster, getattr(self, cluster) + su)
-
-    def replace_sus(self, **sus_per_cluster: int) -> None:
-        """Replace the service units for the given clusters"""
-
-        for cluster, su in sus_per_cluster.items():
-            setattr(self, cluster, su)
+        raise ValueError('percent_notified value must be between 0 and 100')
 
     def to_archive_object(self) -> ProposalArchive:
+        """Return data from the current row as an ``InvestorArchive`` instance"""
+
         archive_obj = ProposalArchive(
             id=self.id,
-            account=self.account,
+            account_id=self.account_id,
             start_date=self.start_date,
             end_date=self.end_date
         )
@@ -137,20 +134,24 @@ class Proposal(Base, CustomBase):
         return archive_obj
 
 
-class ProposalArchive(Base, CustomBase):
+class ProposalArchive(CustomBase):
     """Class representation of the ``proposal_archive`` table"""
 
     __tablename__ = 'proposal_archive'
+
     id = Column(Integer, primary_key=True)
-    account = Column(Text)
+    account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
 
+    account = relationship('Account', back_populates='archived_proposals')
 
-class Investor(Base):
+
+class Investor(CustomBase):
     """Class representation of the ``investor`` table"""
 
     __tablename__ = 'investor'
+
     id = Column(Integer, primary_key=True)
     account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
@@ -163,42 +164,45 @@ class Investor(Base):
 
     account = relationship('Account', back_populates='investments')
 
-    @property
+    @hybrid_property
     def expired(self) -> bool:
         """Return whether the investment is past its end_date or is fully withdrawn with no remaining service units."""
 
         return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus == self.service_units)
 
     def to_archive_object(self) -> InvestorArchive:
+        """Return data from the current row as an ``InvestorArchive`` instance"""
+
         return InvestorArchive(
-            service_units=self.service_units,
-            current_sus=self.current_sus,
+            id=self.id,
+            account_id=self.account_id,
             start_date=self.start_date,
             end_date=self.end_date,
             exhaustion_date=date.today(),
-            account=self.account_name,
-            proposal_id=current_proposal.id,
-            investor_id=self.id,
+            service_units=self.service_units,
+            current_sus=self.current_sus,
+            investor_id=self.id
         )
 
 
-class InvestorArchive(Base):
+class InvestorArchive(CustomBase):
     """Class representation of the ``investor_archive`` table"""
 
     __tablename__ = 'investor_archive'
+
     id = Column(Integer, primary_key=True)
-    account = Column(Text)
+    account_id = Column(Integer, ForeignKey('account.id'))
     start_date = Column(Date)
     end_date = Column(Date)
     exhaustion_date = Column(Date)
     service_units = Column(Integer)
     current_sus = Column(Integer)
-    proposal_id = Column(Integer)
-    investor_id = Column(Integer)
+
+    account = relationship('Account', back_populates='archived_investments')
 
 
 # Dynamically add columns for each of the managed clusters
-for cluster in app_settings.clusters:
-    setattr(Proposal, cluster, Column(Integer))
-    setattr(ProposalArchive, cluster, Column(Integer))
-    setattr(ProposalArchive, cluster + '_usage', Column(Integer))
+for _cluster in app_settings.clusters:
+    setattr(Proposal, _cluster, Column(Integer))
+    setattr(ProposalArchive, _cluster, Column(Integer))
+    setattr(ProposalArchive, _cluster + '_usage', Column(Integer))

@@ -125,7 +125,9 @@ def add(account_name, **sus_per_cluster: int) -> None:
     LOG.debug(f"Adding sus to {account_name}: {sus_per_cluster}")
     with Session() as session:
         proposal = session.query(Account).filter_by(Account.account_name == account_name).proposal
-        proposal.add_sus(**sus_per_cluster)
+        for cluster, su in sus_per_cluster.items():
+            setattr(proposal, cluster, getattr(proposal, cluster) + su)
+
         session.commit()
 
         su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
@@ -143,7 +145,9 @@ def modify(account_name, **kwargs) -> None:
     LOG.debug(f"Modifying proposal for {account_name}: {kwargs}")
     with Session() as session:
         proposal = session.query(Account).filter_by(Account.account_name == account_name)
-        proposal.replace_sus(**kwargs)
+        for cluster, su in kwargs.items():
+            setattr(proposal, cluster, su)
+
         session.commit()
 
         su_string = ', '.join(f'{getattr(proposal, k)} on {k}' for k in app_settings.clusters)
