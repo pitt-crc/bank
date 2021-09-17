@@ -38,7 +38,19 @@ class Account(Base):
     archived_proposals = relationship('ProposalArchive', back_populates='account')
     archived_investments = relationship('InvestorArchive', back_populates='account')
 
-    def require_proposal(self) -> None:
+    @hybrid_property
+    def allocation_total(self) -> int:
+        """The total number of allocated service units in the primary proposal across all cluster"""
+
+        return sum(getattr(self.proposal, c) for c in app_settings.clusters)
+
+    @hybrid_property
+    def investment_total(self) -> int:
+        """The total number of allocated service units across all investments"""
+
+        return sum(inv.sus for inv in self.investments)
+
+    def raise_missing_proposal(self) -> None:
         """Raise an error if the account does not have a proposal
 
         Raises:

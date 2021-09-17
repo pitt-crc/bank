@@ -21,7 +21,7 @@ def info(account: str) -> None:
 
     with Session() as session:
         account = session.query(Account).filter(Account.account_name == account).first()
-        account.require_proposal()
+        account.raise_missing_proposal()
 
         # Print all database entries associate with the account as an ascii table
         print(account.proposal.row_to_ascii_table())
@@ -30,58 +30,51 @@ def info(account: str) -> None:
 
 
 def usage(account: str) -> None:
-    """Print account usage as comma seperated values
+    """Print a summary of service units used by the given account
 
     Args:
         account: The name of the account  to print information for
     """
 
     # Get account information from the database
-    slurm = SlurmAccount(account)
     with Session() as session:
-        account_row = session.query(Account).filter(Account.account_name == account).first()
-        proposal = account_row.proposal
-        allocation_total = sum(getattr(account_row.proposal, c) for c in app_settings.clusters)
-        investment_total = sum(inv.sus for inv in account_row.investments)
+        acc = session.query(Account).filter(Account.account_name == account).first()
 
-    # Print the table header
-    print(f"|{'-' * 82}|")
-    print(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(app_settings.date_format) :^51}|")
+        # Print the table header
+        print(f"|{'-' * 82}|")
+        print(f"|{'Proposal End Date':^30}|{acc.proposal.end_date.strftime(app_settings.date_format) :^51}|")
 
-    # Print usage information for the primary proposal
-    usage_total = 0
-    for cluster in app_settings.clusters:
-        cluster_allocation = getattr(proposal, cluster)
-        cluster_usage = slurm.raw_cluster_usage(cluster, in_hours=True)
-        usage_total += cluster_usage
+        # Print usage information for the primary proposal
+        usage_total = 0
+        slurm = SlurmAccount(account)
+        for cluster in app_settings.clusters:
+            cluster_usage = slurm.raw_cluster_usage(cluster, in_hours=True)
+            cluster_allocation = getattr(acc.proposal, cluster)
+            overall_usage = np.round(100 * cluster_usage / cluster_allocation, 2) or 'N/A'
+            usage_total += cluster_usage
+            print(f"|{'-' * 82}|\n"
+                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + cluster_allocation :^82}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'Overall':^20}|{cluster_usage:^30d}|{overall_usage:^30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
 
-        overall_usage = 'N/A'
-        if cluster_allocation:
-            overall_usage = np.round(100 * cluster_usage / cluster_allocation, 2)
+        # Print usage information concerning investments
+        print(f"|{'Aggregate':^82}|")
+        print("|{'-' * 40:^40}|{'-' * 41:^41}|")
+        if acc.investment_total == 0:
+            print(f"|{'Aggregate Usage':^40}|{100 * usage_total / acc.allocation_total:^41.2f}|")
+            print(f"|{'-' * 82}|")
 
-        print(
-            f"|{'-' * 82}|\n"
-            f"|{'Cluster: ' + cluster + ', Available SUs: ' + cluster_allocation :^82}|\n"
-            f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-            f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
-            f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-            f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-            f"|{'Overall':^20}|{cluster_usage:^30d}|{overall_usage:^30}|\n"
-            f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-
-    print(f"|{'Aggregate':^82}|\n|{'-' * 40:^40}|{'-' * 41:^41}|")
-    if investment_total == 0:
-        print(f"|{'Aggregate Usage':^40}|{100 * usage_total / allocation_total:^41.2f}|")
-
-    else:
-        print(
-            f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
-            f"|{'Aggregate Usage (no investments)':^40}|{100 * usage_total / allocation_total:^41.2f}|\n"
-            f"|{'Aggregate Usage':^40}|{100 * usage_total / (allocation_total + investment_total):^41.2f}|\n"
-            f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
-            f"|{'^a Investment SUs can be used across any cluster':^82}|")
-
-    print(f"|{'-' * 82}|")
+        else:
+            print(f"|{'Investments Total':^40}|{str(acc.investment_total) + '^a':^41}|\n"
+                  f"|{'Aggregate Usage (no investments)':^40}|{100 * usage_total / acc.allocation_total:^41.2f}|\n"
+                  f"|{'Aggregate Usage':^40}|{100 * usage_total / (acc.allocation_total + acc.investment_total):^41.2f}|\n"
+                  f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
+                  f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
+                  f"|{'-' * 82}|")
 
 
 def reset_raw_usage(account: str):
