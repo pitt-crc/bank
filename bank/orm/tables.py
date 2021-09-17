@@ -117,7 +117,7 @@ class Proposal(Base):
         """Verify the given value is a non-negative integer"""
 
         if value < 0:
-            raise ValueError('Service units must be a non-negative integer')
+            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
 
         return value
 
@@ -158,7 +158,7 @@ class ProposalArchive(Base):
         """Verify the given value is a non-negative integer"""
 
         if value < 0:
-            raise ValueError('Service units must be a non-negative integer')
+            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
 
         return value
 
