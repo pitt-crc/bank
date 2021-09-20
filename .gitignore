@@ -20,7 +20,7 @@ dist
 docs/build
 
 # Project files
-logs/
+*.log
 crc_bank.db
 test.db
 *.json
