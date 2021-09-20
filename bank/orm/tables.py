@@ -7,11 +7,11 @@ API Reference
 from __future__ import annotations
 
 from datetime import date
+from itertools import chain
 from logging import getLogger
 
 from sqlalchemy import Column, Date, Enum, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
 
 from .base import CustomBase
@@ -85,7 +85,7 @@ class ProposalArchive(Base):
     end_date = Column(Date)
     proposal_type = Column(Enum(ProposalType))
 
-    @validates(*app_settings.clusters, *(f'{c}_usage' for c in app_settings.clusters))
+    @validates(*chain(app_settings.clusters, (f'{c}_usage' for c in app_settings.clusters)))
     def validate_service_units(self, key: str, value: int) -> int:
         """Verify the given value is a non-negative integer"""
 
