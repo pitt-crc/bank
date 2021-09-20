@@ -18,7 +18,7 @@ Values for each setting are accessible via attributes:
 
   >>> # The names of each cluster being administrated
   >>> print(Defaults.clusters)
-  ['smp', 'mpi', 'gpu', 'htc']
+  ('smp', 'mpi', 'gpu', 'htc')
 
 
 The ``Settings`` class is similar to the ``Defaults`` class, but
