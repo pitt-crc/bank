@@ -16,10 +16,10 @@ proposal_arch = dict(dest='--proposal_archive', type=Path, help='Path of the pro
 investor_arch = dict(dest='--investor_archive', type=Path, help='Path of the investor archive table in JSON format')
 allocated = dict(dest='--path', type=Path, help='Path of the exported file')
 overwrite = dict(dest='-y', action='store_true', help='Automatically overwrite table data')
-smp = dict(dest=('-s', '--smp'), type=int, help='The smp limit in CPU Hours', default=0)
-mpi = dict(dest=('-m', '--mpi'), type=int, help='The mpi limit in CPU Hours', default=0)
-gpu = dict(dest=('-g', '--gpu'), type=int, help='The gpu limit in CPU Hours', default=0)
-htc = dict(dest=('-c', '--htc'), type=int, help='The htc limit in CPU Hours', default=0)
+smp = dict(dest='--smp', type=int, help='The smp limit in CPU Hours', default=0)
+mpi = dict(dest='--mpi', type=int, help='The mpi limit in CPU Hours', default=0)
+gpu = dict(dest='--gpu', type=int, help='The gpu limit in CPU Hours', default=0)
+htc = dict(dest='--htc', type=int, help='The htc limit in CPU Hours', default=0)
 inv_id = dict(dest='--id', help='The investment proposal id')
 
 
@@ -34,65 +34,62 @@ class CLIParser(ArgumentParser):
 
         parser_info = self.subparsers.add_parser('info')
         self._add_args_to_parser(parser_info, account)
-        parser_info.set_defaults(function=lambda args: args.account.print_allocation_info())
+        parser_info.set_defaults(function=lambda acc, *args, **kwargs: acc.print_allocation_info(*args, **kwargs))
 
         parser_usage = self.subparsers.add_parser('usage')
-        parser_usage.set_defaults(function=functions.usage)
         self._add_args_to_parser(parser_usage, account)
+        parser_usage.set_defaults(function=lambda acc, *args, **kwargs: acc.print_usage_info(*args, **kwargs))
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
-        parser_reset_raw_usage.set_defaults(function='account.reset_raw_usage')
         self._add_args_to_parser(parser_reset_raw_usage, account)
+        parser_reset_raw_usage.set_defaults(function=lambda acc, *args, **kwargs: acc.reset_raw_usage(*args, **kwargs))
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=functions.find_unlocked)
+        parser_find_unlocked.set_defaults(function=dao.Bank.find_unlocked)
 
-        lock_acct = partial(functions.set_account_lock, lock_state=True, notify=True)
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        parser_lock_with_notification.set_defaults(function=lock_acct)
         self._add_args_to_parser(parser_lock_with_notification, account)
+        parser_lock_with_notification.set_defaults(function=lambda acc: acc.set_locked_state(True))
 
-        unlock_acct = partial(functions.set_account_lock, lock_state=False, notify=False)
         parser_release_hold = self.subparsers.add_parser('release_hold')
-        parser_release_hold.set_defaults(function=unlock_acct)
         self._add_args_to_parser(parser_release_hold, account)
+        parser_release_hold.set_defaults(function=lambda acc: acc.set_locked_state(False))
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
-        parser_check_proposal_end_date.set_defaults(function=functions.alert_account)
         self._add_args_to_parser(parser_check_proposal_end_date, account)
+        parser_check_proposal_end_date.set_defaults(function=lambda acc, *args, **kwargs: acc.send_pending_alerts(*args, **kwargs))
 
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        parser_insert.set_defaults(function=dao.Bank.create_proposal)
         self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
+        parser_insert.set_defaults(function=dao.Bank.create_proposal)
 
-        parser_add = self.subparsers.add_parser('add',
-                                                help='Add SUs to an existing user proposal on top of current values.')
-        parser_add.set_defaults(function=functions.add)
+        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
         self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
+        parser_add.set_defaults(function=lambda acc, *args, **kwargs: acc.add_sus(*args, **kwargs))
 
         parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        parser_change.set_defaults(function=functions.modify)
         self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
+        parser_change.set_defaults(function=lambda acc, *args, **kwargs: acc.modify_sus(*args, **kwargs))
 
         # Subparsers for adding and modifying investment accounts
 
         parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
-        parser_investor.set_defaults(function=dao.Bank.create_investment)
         self._add_args_to_parser(parser_investor, account, sus)
+        parser_investor.set_defaults(function=dao.Bank.create_investment)
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
-        parser_investor_modify.set_defaults(function=functions.investor_modify)
         self._add_args_to_parser(parser_investor, inv_id, sus)
+        parser_investor_modify.set_defaults(function=lambda acc, *args, **kwargs: acc.modify_investment(*args, **kwargs))
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        parser_renewal.set_defaults(function='account.renewal')
         self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
+        parser_renewal.set_defaults(function=lambda acc, *args, **kwargs: acc.renewal(*args, **kwargs))
 
         parser_withdraw = self.subparsers.add_parser('withdraw')
-        parser_withdraw.set_defaults(function=functions.withdraw)
         self._add_args_to_parser(parser_withdraw, account, sus)
+        parser_withdraw.set_defaults(function=lambda acc, *args, **kwargs: acc.withdraw(*args, **kwargs))
 
     @staticmethod
     def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict) -> None:

@@ -5,8 +5,8 @@ defined in the working environment.
 Usage Example
 -------------
 
-The ``Defaults`` class provides access to default values for application
-settings. Values for each setting are accessible via attributes:
+The ``Defaults`` class provides access to default application settings.
+Values for each setting are accessible via attributes:
 
 .. doctest:: python
 
@@ -29,23 +29,18 @@ most cases.
 .. doctest:: python
 
   >>> import os
-  >>> from bank.settings import EnvSettings
+  >>> from bank.settings import Settings
 
   >>> # Specify the date format as an environmental variable
   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
 
-  >>> # Environmental variables are cached each time a new Settings instance is created
-  >>> settings = EnvSettings()
+  >>> settings = Settings()
   >>> print(settings.date_format)
   %m-%d-%y
 
-Most of the time you will want to use the application settings as defined
-when the package was first instantiated. These are avaialbe via a prebuilt
-``Settings`` instance:
-
-.. doctest:: python
-
-   >>> from bank.settings import app_settings
+.. important::
+  Application settings are read from the working environment in realtime.
+  At no time are environmental variables cached from the working environment.
 
 API Reference
 -------------
@@ -60,125 +55,115 @@ from environ.environ import Env
 APP_PREFIX = 'BANK_'
 
 
-class EnvSettings:
+class Defaults:
+    """Default settings for the parent application"""
+
+    is_testing = False
+    date_format = "%m/%d/%y"
+
+    # Where and how to write log files to
+    _application_dir = Path(__file__).resolve().parent
+    log_path = _application_dir / 'crc_bank.log'
+    log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
+    log_level = 'INFO'
+
+    # Path to the application SQLite backend
+    db_path = f'sqlite:///{_application_dir / "crc_bank.db"}'
+    db_test_path = f'sqlite:///{_application_dir / "test.db"}'
+
+    # A list of cluster names to track usage on
+    clusters = ["smp", "mpi", "gpu", "htc"]
+
+    # The email suffix for your organization. We assume the ``Description``
+    # field of each account in ``sacctmgr`` contains the prefix.
+    email_suffix = "@pitt.edu"
+
+    # The email templates below accept the following formatting fields:
+    #   account: The account name
+    #   start: The start date of the proposal
+    #   expire: The end date of the proposal
+    #   usage: Tabular summary of the proposal's service unit usage
+    #   perc: Usage percentage threshold that triggered the message being sent
+    #   investment: Tabular summary of user's current usage on invested machines
+
+    # An email to send when you have exceeded a proposal threshold
+    notify_levels = (25, 50, 75, 90)
+    notify_sus_limit_email_text = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your account on H2P has
+    exceeded {perc}% usage. The one year allocation started on {start}. You can 
+    request a supplemental allocation at
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
+    Your usage is printed below:<br>
+    <pre>
+    {usage}
+    </pre>
+    Investment status (if applicable):<br>
+    <pre>
+    {investment}
+    </pre>
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
+
+    # An email to send when you are 90 days from the end of your proposal
+    three_month_proposal_expiry_notification_email = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your proposal for account
+    {account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
+    Once your proposal expires, you will still be able to login and retrieve your 
+    data, but you will be unable to run new compute jobs until you submit a new 
+    proposal or request a supplemental allocation.
+    To do so, please visit
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
+
+    # An email to send when the proposal has expired
+    proposal_expires_notification_email = """\
+    <html>
+    <head></head>
+    <body>
+    <p>
+    To Whom It May Concern,<br><br>
+    This email has been generated automatically because your proposal for account
+    {account} on H2P has expired. The one year allocation started on {start}. 
+    You will still be able to login and retrieve your data, but you will be unable
+    to run new compute  jobs until you submit a new proposal or request a 
+    supplemental allocation. To do so, please visit
+    https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+    Thanks,<br><br>
+    The CRC Proposal Bot
+    </p>
+    </body>
+    </html>
+    """
+
+
+class Settings:
     """Reflects application settings as set in the working environment"""
 
-    def __init__(self, use_defaults=False) -> None:
-        # Cache the current working environment
-        self._env = Env()
-        self.use_defaults = use_defaults
-
-        self.is_testing = False
-        self.date_format = "%m/%d/%y"
-
-        # Where and how to write log files to
-        _application_dir = Path(__file__).resolve().parent
-        self.log_path = _application_dir / 'crc_bank.log'
-        self.log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
-        self.log_level = 'INFO'
-
-        # Path to the application SQLite backend
-        self.db_path = f'sqlite:///{_application_dir / "crc_bank.db"}'
-
-        # A list of cluster names to track usage on
-        self.clusters = ["smp", "mpi", "gpu", "htc"]
-
-        # The email suffix for your organization. We assume the ``Description``
-        # field of each account in ``sacctmgr`` contains the prefix.
-        self.email_suffix = "@pitt.edu"
-
-        # The email templates below accept the following formatting fields:
-        #   account: The account name
-        #   start: The start date of the proposal
-        #   expire: The end date of the proposal
-        #   usage: Tabular summary of the proposal's service unit usage
-        #   perc: Usage percentage threshold that triggered the message being sent
-        #   investment: Tabular summary of user's current usage on invested machines
-
-        # An email to send when you have exceeded a proposal threshold
-        self.notify_levels = (25, 50, 75, 90)
-        self.notify_sus_limit_email_text = """\
-        <html>
-        <head></head>
-        <body>
-        <p>
-        To Whom It May Concern,<br><br>
-        This email has been generated automatically because your account on H2P has
-        exceeded {perc}% usage. The one year allocation started on {start}. You can 
-        request a supplemental allocation at
-        https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
-        Your usage is printed below:<br>
-        <pre>
-        {usage}
-        </pre>
-        Investment status (if applicable):<br>
-        <pre>
-        {investment}
-        </pre>
-        Thanks,<br><br>
-        The CRC Proposal Bot
-        </p>
-        </body>
-        </html>
-        """
-
-        # An email to send when you are 90 days from the end of your proposal
-        self.three_month_proposal_expiry_notification_email = """\
-        <html>
-        <head></head>
-        <body>
-        <p>
-        To Whom It May Concern,<br><br>
-        This email has been generated automatically because your proposal for account
-        {account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
-        Once your proposal expires, you will still be able to login and retrieve your 
-        data, but you will be unable to run new compute jobs until you submit a new 
-        proposal or request a supplemental allocation.
-        To do so, please visit
-        https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
-        Thanks,<br><br>
-        The CRC Proposal Bot
-        </p>
-        </body>
-        </html>
-        """
-
-        # An email to send when the proposal has expired
-        self.proposal_expires_notification_email = """\
-        <html>
-        <head></head>
-        <body>
-        <p>
-        To Whom It May Concern,<br><br>
-        This email has been generated automatically because your proposal for account
-        {account} on H2P has expired. The one year allocation started on {start}. 
-        You will still be able to login and retrieve your data, but you will be unable
-        to run new compute  jobs until you submit a new proposal or request a 
-        supplemental allocation. To do so, please visit
-        https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
-        Thanks,<br><br>
-        The CRC Proposal Bot
-        </p>
-        </body>
-        </html>
-        """
-
-    def __getattr__(self, item: str) -> Any:
-        """Automatically replace the value of accessed attributes with values defined in the working environment"""
-
-        # Since we are within the __getattr__ function, we use
-        # object.__getattribute__ to avoid a RecursionError
-        default = object.__getattribute__(self, item)
-        if object.__getattribute__(self, 'use_defaults'):
-            return default
-
-        # Return value from cached environment if available
-        # Otherwise use the default value
-        env = object.__getattribute__(self, '_env')
+    def __getattribute__(self, item: str) -> Any:
+        default = getattr(Defaults, item)
         env_key = APP_PREFIX + item.upper()
-        return env.get_value(env_key, cast=type(default), default=default)
+        return Env().get_value(env_key, cast=type(default), default=default)
 
 
-# Provided a prebuilt ``EnvSettings`` instance as a
+# Provided a prebuilt ``Settings`` instance as a
 # dedicated entry point to application settings
-app_settings = EnvSettings()
+app_settings = Settings()

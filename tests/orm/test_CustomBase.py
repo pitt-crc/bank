@@ -1,13 +1,30 @@
+import enum
 import json
 from datetime import datetime
 from unittest import TestCase
 
-import bank.cli.parser
-from bank.orm.mixins import ExportMixin
-from bank.settings import app_settings
-from .utils import DummyEnum, create_table_with_mixin
+from sqlalchemy import Column, Date, Enum, Integer, Text
 
-DummyTable = create_table_with_mixin(ExportMixin)
+from bank.orm.tables import Base
+from bank.settings import app_settings
+
+
+class DummyEnum(enum.Enum):
+    one = 1
+    two = 2
+    three = 3
+
+
+class DummyTable(Base):
+    """A dummy database table for testing purposes"""
+
+    __tablename__ = 'test_table'
+
+    id = Column(Integer, primary_key=True)
+    int_col = Column(Integer)
+    str_col = Column(Text)
+    date_col = Column(Date)
+    enum_col = Column(Enum(DummyEnum))
 
 
 class ExportingToJson(TestCase):
@@ -23,7 +40,7 @@ class ExportingToJson(TestCase):
 
         # Parse the returned date string and see if it matches the original datetime object
         recovered_date = datetime.strptime(self.row_as_json['date_col'], app_settings.date_format)
-        self.assertEqual(recovered_date.date(), bank.cli.parser.date())
+        self.assertEqual(recovered_date.date(), self.test_row.date_col.date())
 
     def test_enum_cast_to_str(self) -> None:
         """Test enum types are cast to strings"""

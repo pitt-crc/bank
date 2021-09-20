@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Optional
 from unittest import TestCase
 
-from bank.settings import APP_PREFIX, EnvSettings, app_settings
+from bank.settings import APP_PREFIX, Defaults, Settings, app_settings
 from tests._utils import CleanEnviron
 
 
@@ -13,7 +13,7 @@ class DefaultValues(TestCase):
     # noinspection PyMissingOrEmptyDocstring
     def runTest(self) -> None:
         with CleanEnviron():
-            for key, value in EnvSettings(use_defaults=True).__dict__.items():
+            for key, value in Defaults.__dict__.items():
 
                 # Ignore attributes that don't map to application settings
                 if key.startswith('_'):
@@ -44,7 +44,7 @@ class ReadsEnvironmentalVariables(TestCase):
 
         with CleanEnviron():
             os.environ[env_name] = env_val or str(attr_val)
-            recovered_value = getattr(EnvSettings(), attr_name)
+            recovered_value = getattr(Settings(), attr_name)
             self.assertEqual(attr_val, recovered_value)
 
     def test_pathobj_log_path(self) -> None:
@@ -52,6 +52,12 @@ class ReadsEnvironmentalVariables(TestCase):
 
         self.assert_setting_matches_environment(
             'log_path', Path('/this/is/a/path'), APP_PREFIX + 'LOG_PATH')
+
+    def test_boolean_is_testing(self) -> None:
+        """Test if the application testing state is correctly recovered as a boolean"""
+
+        self.assert_setting_matches_environment(
+            'is_testing', False, APP_PREFIX + 'IS_TESTING')
 
     def test_list_clusters(self) -> None:
         """Test if the available clusters are correctly recovered as a list"""
