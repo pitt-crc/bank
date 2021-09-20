@@ -1,5 +1,4 @@
-"""The ``orm`` module acts as an object oriented interface for the underlying
-application database.
+"""An object oriented interface for the underlying application database.
 
 .. sadisplay::
     :module: bank.orm

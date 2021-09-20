@@ -1,4 +1,6 @@
-"""Defines the primary data access objects for the parent application.
+"""The ``dao`` module acts as the primary data access layer for the parent
+application and defines the bulk of the account management logic used by
+the parent application's
 
 Usage Example
 -------------
@@ -6,7 +8,7 @@ Usage Example
 The ``Account`` class is used to administrate existing user accounts
 with established proposals. For example:
 
-.. code-block
+.. code-block:: python
 
   >>> from bank.dao import Account
   >>>
@@ -17,7 +19,7 @@ with established proposals. For example:
 The ``Bank`` class is used to create new accounts/proposals/investments and
 to handle bank wide tasks that aren't specific to a single user. For example:
 
-.. code-block
+.. code-block:: python
 
   >>> from bank.dao import Account
   >>>

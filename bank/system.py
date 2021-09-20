@@ -1,8 +1,24 @@
-"""Interface for the underlying system shell.
+"""The ``system`` module acts as an interface for the underlying system shell
+and provides general utilities for interacting with the runtime environment.
+It includes wrappers around various command line utilities (e.g., ``sacctmgr``)
+and running system services (e.g., ``smtp``).
 
-The ``system`` module provides general utilities for interfacing with the
-underlying runtime environment. It includes common administrative tasks in
-addition to wrappers around various command line utilities.
+Usage Example
+-------------
+
+.. doctest:: python
+
+   >>> from bank import system
+
+   >>> # Run a shell command
+   >>> cmd = system.ShellCmd("echo 'Hello World'")
+   >>> print(cmd.out)
+   Hello World
+
+   >>> # Require root permissions for a function
+   >>> @system.RequireRoot
+   >>> def foo():
+   >>>     print('This function requires root access')
 
 API Reference
 -------------
@@ -59,6 +75,9 @@ class ShellCmd:
     def __init__(self, cmd: str) -> None:
         """Execute the given command in the underlying shell
 
+        Output from the executed command to StdOut and StdError are written
+        to the ``out`` and ``err`` attributes respectively.
+
         Args:
             cmd: The command to be run in a new pipe
         """
@@ -87,10 +106,6 @@ class SlurmAccount:
 
     def __init__(self, account_name: str) -> None:
         """A Slurm user account
-
-        Provides python wrappers around common Slurm administrative tasks
-        typically performed using the ``sacctmgr`` and ``sshare`` command line
-        utilities.
 
         Args:
             account_name: The name of the user account

@@ -1,4 +1,5 @@
-"""Application settings as defined in the working environment.
+"""The ``settings`` module provides access to application settings as defined
+in the working environment.
 
 Usage Example
 -------------

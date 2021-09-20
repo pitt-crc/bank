@@ -1,4 +1,5 @@
-"""Command line interface for the parent application.
+"""The ``cli`` module defines provides a command line interface for
+the parent application.
 
 Usage Example
 -------------
@@ -9,7 +10,7 @@ defined in the ``dao`` module.
 
 To parse command line arguments from within a script:
 
-.. code-block::python
+.. code-block:: python
 
    >>> from bank.cli import CLIParser
    >>>
