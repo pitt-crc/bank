@@ -18,7 +18,7 @@ Values for each setting are accessible via attributes:
 
   >>> # The names of each cluster being administrated
   >>> print(Defaults.clusters)
-  ['smp', 'mpi', 'gpu', 'htc']
+  ('smp', 'mpi', 'gpu', 'htc')
 
 
 The ``Settings`` class is similar to the ``Defaults`` class, but
@@ -72,7 +72,7 @@ class Defaults:
     db_test_path = f'sqlite:///{_application_dir / "test.db"}'
 
     # A list of cluster names to track usage on
-    clusters = ["smp", "mpi", "gpu", "htc"]
+    clusters = ("smp", "mpi", "gpu", "htc") #change brackets to parenthesis
 
     # The email suffix for your organization. We assume the ``Description``
     # field of each account in ``sacctmgr`` contains the prefix.
