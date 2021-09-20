@@ -43,7 +43,7 @@ API Reference
 
 import enum
 import json
-from typing import Any, Collection, Dict, Optional, Tuple, Union
+from typing import Collection, Dict, Optional, Union
 
 from sqlalchemy.orm import declarative_mixin
 
@@ -51,44 +51,12 @@ from bank.settings import app_settings
 
 
 @declarative_mixin
-class DictAccessPatternMixin:
-    """Adds support for getting/setting row values via indexing by column name.
+class AutoReprMixin:
+    """Automatically generate human readable representations when casting tables to strings."""
 
-    By default, SQLAlchemy tables only support getting data via attributes.
-    This class adds support for dictionary-like data access.
-    """
-
-    def __getitem__(self, item: str) -> Any:
-        """Support dictionary like fetching of attribute values"""
-
-        if item not in self.__table__.columns:
-            raise KeyError(f'Table `{self.__tablename__}` has no column `{item}`')
-
-        return getattr(self, item)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        """Support dictionary like setting of attribute values"""
-
-        if key not in self.__table__.columns:
-            raise KeyError(f'Table `{self.__tablename__}` has no column `{key}`')
-
-        setattr(self, key, value)
-
-    def update(self, **items: Any) -> None:
-        """Update row values with the given values
-
-        Args:
-            **items: The column name and new value as keyword arguments
-        """
-
-        for key, val in items.items():
-            setattr(self, key, val)
-
-    def __iter__(self) -> Tuple[str, Any]:
-        """Iterate over pairs of column names and values for the current row"""
-
-        for column in self.__table__.columns:
-            yield column.name, getattr(self, column.name)
+    def __repr__(self) -> str:
+        attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
+        return f'{self.__class__.__name__}(' + ', '.join(attr_text) + ')'
 
 
 @declarative_mixin
@@ -138,5 +106,5 @@ class ExportMixin:
         return '\n'.join(lines)
 
 
-class CustomBase(DictAccessPatternMixin, ExportMixin):
+class CustomBase(ExportMixin, AutoReprMixin):
     """Custom SQLAlchemy base class that incorporates all available mixins."""
