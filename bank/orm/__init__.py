@@ -1,9 +1,9 @@
-"""An object oriented interface for the underlying application database.
+"""The ``orm`` module provides an object oriented interface for the underlying
+application database.
 
 .. sadisplay::
     :module: bank.orm
     :alt: My Schema
-
 """
 
 import sqlalchemy
