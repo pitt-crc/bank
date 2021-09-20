@@ -51,17 +51,8 @@ from bank.settings import app_settings
 
 
 @declarative_mixin
-class AutoReprMixin:
-    """Automatically generate human readable representations when casting tables to strings."""
-
-    def __repr__(self) -> str:
-        attr_text = (f'{col.name}={getattr(self, col.name)}' for col in self.__table__.columns)
-        return f'{self.__class__.__name__}(' + ', '.join(attr_text) + ')'
-
-
-@declarative_mixin
-class ExportMixin:
-    """Adds methods for exporting tables to different formats and data types."""
+class CustomBase:
+    """Custom SQLAlchemy base class that incorporates all available mixins."""
 
     def row_to_json(self, columns: Optional[Collection[str]] = None) -> Dict[str, Union[int, str]]:
         """Return the row object as a json compatible dictionary.
@@ -88,23 +79,9 @@ class ExportMixin:
 
         return return_dict
 
-    def row_to_csv(self, columns: Optional[Collection[str]] = None) -> str:
-        """Return the row object as a string of comma seperated values.
-
-        Args:
-            columns: Columns to include in the returned string (defaults to all columns)
-        """
-
-        columns = columns or (c.name for c in self.__table__.columns)
-        return ','.join(str(getattr(self, col)) for col in columns)
-
     def row_to_ascii_table(self) -> str:
         """Return a human readable representation of the entire table row"""
 
         json_str = json.dumps(self.row_to_json(), indent=2).strip('{\n}')
         lines = (str(self.__tablename__), '---------------', json_str, '')
         return '\n'.join(lines)
-
-
-class CustomBase(ExportMixin, AutoReprMixin):
-    """Custom SQLAlchemy base class that incorporates all available mixins."""

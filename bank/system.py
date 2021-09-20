@@ -85,6 +85,10 @@ class SlurmAccount:
     def __init__(self, account_name: str) -> None:
         """A Slurm user account
 
+        Provides python wrappers around common Slurm administrative tasks
+        typically performed using the ``sacctmgr`` and ``sshare`` command line
+        utilities.
+
         Args:
             account_name: The name of the user account
         """
@@ -114,7 +118,7 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
-    def raw_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+    def cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
         """Return the account usage on a given cluster
 
         Args:

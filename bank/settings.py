@@ -164,6 +164,8 @@ class EnvSettings:
         """
 
     def __getattr__(self, item: str) -> Any:
+        """Automatically replace the value of accessed attributes with values defined in the working environment"""
+
         # Since we are within the __getattr__ function, we use
         # object.__getattribute__ to avoid a RecursionError
         default = object.__getattribute__(self, item)

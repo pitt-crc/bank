@@ -2,9 +2,10 @@ from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 
-from bank.cli import functions
+from . import dao
 
 # Reusable definitions for command line arguments
+
 account = dict(dest='--account', type=str, help='The associated slurm account')
 prop_type = dict(dest='--type', type=str, help='The proposal type: proposal or class')
 date = dict(dest='--date', help='The proposal start date (e.g 12/01/19)')
@@ -32,8 +33,8 @@ class CLIParser(ArgumentParser):
         # Subparsers for account management and info
 
         parser_info = self.subparsers.add_parser('info')
-        parser_info.set_defaults(function=functions.info)
         self._add_args_to_parser(parser_info, account)
+        parser_info.set_defaults(function=lambda args: args.account.print_allocation_info())
 
         parser_usage = self.subparsers.add_parser('usage')
         parser_usage.set_defaults(function=functions.usage)
@@ -63,10 +64,11 @@ class CLIParser(ArgumentParser):
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        parser_insert.set_defaults(function=functions.insert)
+        parser_insert.set_defaults(function=dao.Bank.create_proposal)
         self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
 
-        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add',
+                                                help='Add SUs to an existing user proposal on top of current values.')
         parser_add.set_defaults(function=functions.add)
         self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
 
@@ -77,7 +79,7 @@ class CLIParser(ArgumentParser):
         # Subparsers for adding and modifying investment accounts
 
         parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
-        parser_investor.set_defaults(function=functions.investor)
+        parser_investor.set_defaults(function=dao.Bank.create_investment)
         self._add_args_to_parser(parser_investor, account, sus)
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
