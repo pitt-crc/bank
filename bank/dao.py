@@ -1,3 +1,33 @@
+"""Defines the primary data access objects for the parent application.
+
+Usage Example
+-------------
+
+The ``Account`` class is used to administrate existing user accounts
+with established proposals. For example:
+
+.. code-block
+
+  >>> from bank.dao import Account
+  >>>
+  >>> # Lock the user account from running any more jobs
+  >>> account = Account('account_name')
+  >>> account.set_locked_state(lock_state=True)
+
+The ``Bank`` class is used to create new accounts/proposals/investments and
+to handle bank wide tasks that aren't specific to a single user. For example:
+
+.. code-block
+
+  >>> from bank.dao import Account
+  >>>
+  >>> # List all unlocked accounts
+  >>> unlocked_accounts = Bank().find_unlocked()
+
+API Reference
+-------------
+"""
+
 from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger

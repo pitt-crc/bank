@@ -1,5 +1,4 @@
-"""The ``exceptions`` module defines custom exceptions raised by the
-parent application.
+"""Custom exceptions raised by the parent application.
 
 API Reference
 -------------

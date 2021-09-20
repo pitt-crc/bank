@@ -1,5 +1,31 @@
+"""Command line interface for the parent application.
+
+Usage Example
+-------------
+
+The ``CLIParser`` object is responsible for the parsing and evaluation of
+command line arguments. It is effectively a wrapper around the objects/methods
+defined in the ``dao`` module.
+
+To parse command line arguments from within a script:
+
+.. code-block::python
+
+   >>> from bank.cli import CLIParser
+   >>>
+   >>> parser = CLIParser()
+   >>>
+   >>> # Parse command line arguments but do not evaluate the result
+   >>> args = parser.parse_args()
+   >>>
+   >>> # Parse command line arguments and evaluate the corresponding function
+   >>> parser.execute()
+
+API Reference
+-------------
+"""
+
 from argparse import ArgumentParser
-from functools import partial
 from pathlib import Path
 
 from . import dao
@@ -45,7 +71,7 @@ class CLIParser(ArgumentParser):
         parser_reset_raw_usage.set_defaults(function=lambda acc, *args, **kwargs: acc.reset_raw_usage(*args, **kwargs))
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=dao.Bank.find_unlocked)
+        parser_find_unlocked.set_defaults(function=lambda: print('\n'.join(dao.Bank.find_unlocked())))
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         self._add_args_to_parser(parser_lock_with_notification, account)
@@ -81,7 +107,8 @@ class CLIParser(ArgumentParser):
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
         self._add_args_to_parser(parser_investor, inv_id, sus)
-        parser_investor_modify.set_defaults(function=lambda acc, *args, **kwargs: acc.modify_investment(*args, **kwargs))
+        parser_investor_modify.set_defaults(
+            function=lambda acc, *args, **kwargs: acc.modify_investment(*args, **kwargs))
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)

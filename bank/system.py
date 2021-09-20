@@ -1,8 +1,11 @@
-"""Interface for the underlying runtime environment.
+"""Interface for the underlying system shell.
 
 The ``system`` module provides general utilities for interfacing with the
 underlying runtime environment. It includes common administrative tasks in
 addition to wrappers around various command line utilities.
+
+API Reference
+-------------
 """
 
 from __future__ import annotations
