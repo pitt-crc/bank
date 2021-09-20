@@ -14,8 +14,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
 
+from .base import CustomBase
 from .enum import ProposalType
-from .mixins import CustomBase
 from ..settings import app_settings
 from ..system import SlurmAccount
 
@@ -109,7 +109,7 @@ class Investor(Base):
     withdrawn_sus = Column(Integer)
     rollover_sus = Column(Integer)
 
-    @hybrid_property
+    @property
     def expired(self) -> bool:
         """Return whether the investment is past its end_date or is fully withdrawn with no remaining service units."""
 

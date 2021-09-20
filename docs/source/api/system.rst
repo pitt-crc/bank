@@ -1,5 +1,5 @@
 bank.utils
 ==========
 
-.. automodule:: bank.utils
+.. automodule:: bank.system
    :members:
