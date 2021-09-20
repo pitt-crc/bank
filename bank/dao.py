@@ -351,7 +351,7 @@ class Bank:
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        proposal_type = ProposalType.from_string(prop_type)
+        proposal_type = ProposalType[prop_type]
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         new_proposal = Proposal(
