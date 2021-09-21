@@ -255,7 +255,7 @@ class Account(SlurmAccount):
             LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {self._proposal.end_date.strftime(app_settings.date_format)}")
 
-        elif (self._proposal.percent_notified<next_notify<=usage_perc):
+        elif self._proposal.percent_notified<next_notify<=usage_perc:
             with Session() as session:
                 self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
                 self._proposal.percent_notified = next_notify
