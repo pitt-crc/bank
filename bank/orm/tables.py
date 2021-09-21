@@ -1,4 +1,4 @@
-"""Object oriented definitions for the underlying database schema.
+"""Object oriented definitions for the underlying database schema
 
 API Reference
 -------------

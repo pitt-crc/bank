@@ -1,4 +1,4 @@
-"""Base classes for extending the default behavior of SQLAlchemy tables.
+"""Extends the default functionality of SQLAlchemy tables
 
 API Reference
 -------------

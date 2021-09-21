@@ -1,5 +1,7 @@
-"""The ``orm`` module provides an object oriented interface for the underlying
-application database.
+"""The ``orm`` module  provides a `sqlalchemy <https://www.sqlalchemy.org/>`_
+based object relational mapper for handling database interactions. It is
+also responsible for defining the schema used by the underlying application
+database.
 
 .. sadisplay::
     :module: bank.orm

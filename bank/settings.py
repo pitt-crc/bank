@@ -1,5 +1,6 @@
-"""The ``settings`` module provides access to application settings as defined
-in the working environment.
+"""The ``settings`` module defines default settings for the parent application.
+It also provides access to any settings that have been overwritten using
+environmental variables in the working environment.
 
 Usage Example
 -------------
@@ -9,11 +10,11 @@ Values for each setting are accessible via attributes. For example:
 
 .. doctest:: python
 
-  >>> from bank.settings import Defaults
-
-  >>> # The datetime format used when displaying or parsing dates
-  >>> print(Defaults.date_format)
-  %m/%d/%y
+   >>> from bank.settings import Defaults
+   >>>
+   >>> # The datetime format used when displaying or parsing dates
+   >>> print(Defaults.date_format)
+   %m/%d/%y
 
 The ``Settings`` class is similar to the ``Defaults`` class, but
 allows for default settings to be overwritten via environmental variables.
@@ -22,15 +23,15 @@ most cases.
 
 .. doctest:: python
 
-  >>> import os
-  >>> from bank.settings import Settings
-
-  >>> # Specify the date format as an environmental variable
-  >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
-
-  >>> settings = Settings()
-  >>> print(settings.date_format)
-  %m-%d-%y
+   >>> import os
+   >>> from bank.settings import Settings
+   >>>
+   >>> # Specify the date format as an environmental variable
+   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
+   >>>
+   >>> settings = Settings()
+   >>> print(settings.date_format)
+   %m-%d-%y
 
 API Reference
 -------------
@@ -159,6 +160,6 @@ class Settings:
         return env.get_value(env_key, cast=type(default), default=default)
 
 
-# Provided a prebuilt ``Settings`` instance as a
-# dedicated entry point to application settings
 app_settings = Settings()
+"""An instance of the ``Settings`` class that reflects application settings as 
+they were defined in the working environment at package instantiation"""

@@ -1,6 +1,5 @@
 """The ``dao`` module acts as the primary data access layer for the parent
-application and defines the bulk of the account management logic used by
-the parent application's
+application and defines the bulk of the account management logic.
 
 Usage Example
 -------------

@@ -1,7 +1,7 @@
 """The ``system`` module acts as an interface for the underlying system shell
 and provides general utilities for interacting with the runtime environment.
 It includes wrappers around various command line utilities (e.g., ``sacctmgr``)
-and running system services (e.g., ``smtp``).
+and system services (e.g., ``smtp``).
 
 Usage Example
 -------------
@@ -9,7 +9,7 @@ Usage Example
 .. doctest:: python
 
    >>> from bank import system
-
+   >>>
    >>> # Run a shell command
    >>> cmd = system.ShellCmd("echo 'Hello World'")
    >>> print(cmd.out)
@@ -48,7 +48,7 @@ class RequireRoot:
     """Function decorator for requiring root privileges"""
 
     @staticmethod
-    def require_root_access() -> None:
+    def _require_root_access() -> None:
         """Raise an error if the current session does not have root permissions
 
         Raises:
@@ -63,20 +63,20 @@ class RequireRoot:
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            cls.require_root_access()
+            cls._require_root_access()
             return func(*args, **kwargs)
 
         return wrapped
 
 
 class ShellCmd:
-    """Executes commands using the underlying command line environment"""
+    """Executes commands using the underlying shell environment"""
 
     def __init__(self, cmd: str) -> None:
         """Execute the given command in the underlying shell
 
-        Output from the executed command to StdOut and StdError are written
-        to the ``out`` and ``err`` attributes respectively.
+        Output to StdOut and StdError from the executed command are
+        written to the ``out`` and ``err`` attributes respectively.
 
         Args:
             cmd: The command to be run in a new pipe

@@ -1,14 +1,13 @@
-"""The ``cli`` module defines provides a command line interface for
-the parent application.
+"""The ``cli`` module defines the command line interface for the parent
+application. This module is effectively a command line accessible wrapper
+around existing functionality defined in the ``dao`` module.
 
 Usage Example
 -------------
 
-The ``CLIParser`` object is responsible for the parsing and evaluation of
-command line arguments. It is effectively a wrapper around the objects/methods
-defined in the ``dao`` module.
-
-To parse command line arguments from within a script:
+The ``CLIParser`` object is an extension of the ``ArgumentParser`` class from
+the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
+It is responsible for both the parsing and evaluation  of command line arguments:
 
 .. code-block:: python
 
