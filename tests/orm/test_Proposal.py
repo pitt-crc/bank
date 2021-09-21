@@ -46,7 +46,7 @@ class ToArchiveObject(TestCase):
     """Test the conversion of a proposal to an archive object"""
 
     def setUp(self) -> None:
-        """Create a proposal instance for testing"""
+        """Create a ``Proposal`` instance for testing"""
 
         self.proposal = Proposal(
             account_name='username',
@@ -62,13 +62,11 @@ class ToArchiveObject(TestCase):
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 
-        # We could do something clever here with sets and dictionaries
-        # Instead lets keep it simple and just check each column one at a time
         archive_obj = self.proposal.to_archive_object()
-        self.assertEqual(self.proposal.id, archive_obj.id)
-        self.assertEqual(self.proposal.account_name, archive_obj.account_name)
-        self.assertEqual(self.proposal.start_date, archive_obj.start_date)
-        self.assertEqual(self.proposal.end_date, archive_obj.end_date)
-        self.assertEqual(self.proposal.proposal_type, archive_obj.proposal_type)
+        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type')
+
+        for c in col_names:
+            self.assertEqual(getattr(self.proposal, c), getattr(archive_obj, c))
+
         for cluster in app_settings.clusters:
             self.assertEqual(getattr(self.proposal, cluster), getattr(archive_obj, cluster))

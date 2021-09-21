@@ -7,10 +7,10 @@ from bank.orm import Investor
 
 
 class ToArchiveObject(TestCase):
-    """Test the conversion of a proposal to an archive object"""
+    """Test the conversion of an investor to an archive object"""
 
     def setUp(self) -> None:
-        """Create a proposal instance for testing"""
+        """Create a ``Investor`` instance for testing"""
 
         self.investment = Investor(
             account_name='username',
@@ -26,12 +26,9 @@ class ToArchiveObject(TestCase):
         """Test the attributes of the returned object match the original investment"""
 
         archive_obj = self.investment.to_archive_object()
-        self.assertEqual(self.investment.id, archive_obj.id)
-        self.assertEqual(self.investment.account_name, archive_obj.account_name)
-        self.assertEqual(self.investment.start_date, archive_obj.start_date)
-        self.assertEqual(self.investment.end_date, archive_obj.end_date)
-        self.assertEqual(self.investment.service_units, archive_obj.service_units)
-        self.assertEqual(self.investment.current_sus, archive_obj.current_sus)
+        col_names = ('id', 'account_name', 'start_date', 'end_date', 'service_units', 'current_sus')
+        for c in col_names:
+            self.assertEqual(getattr(self.investment, c), getattr(archive_obj, c))
 
     def test_default_end_date_is_today(self) -> None:
         """Test that the default value for the ``end_date`` column is the current date"""
