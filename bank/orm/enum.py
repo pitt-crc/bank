@@ -4,9 +4,9 @@ from enum import Enum
 
 
 class ProposalType(Enum):
-    Proposal = 0
-    Class = 1
-    Investor = 2
+    PROPOSAL = 0
+    CLASS = 1
+    INVESTOR = 2
 
     @classmethod
     def from_string(cls, name: str) -> ProposalType:
