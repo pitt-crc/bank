@@ -11,7 +11,7 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 #from .enum import ProposalType
-from .tables import Investor_Type, InvestorArchive, Proposal_Type, ProposalArchive, metadata
+from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metadata
 from ..settings import app_settings
 
 engine = sqlalchemy.create_engine(app_settings.db_path)
