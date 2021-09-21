@@ -1,3 +1,5 @@
+"""Tests for functionality added to SqlAlchemy tables by the ``CustomBase`` class"""
+
 import enum
 import json
 from datetime import datetime
@@ -10,9 +12,11 @@ from bank.settings import app_settings
 
 
 class DummyEnum(enum.Enum):
-    one = 1
-    two = 2
-    three = 3
+    """A simple enumerated column"""
+
+    One = 1
+    Two = 2
+    Three = 3
 
 
 class DummyTable(Base):
@@ -27,11 +31,13 @@ class DummyTable(Base):
     enum_col = Column(Enum(DummyEnum))
 
 
-class ExportingToJson(TestCase):
+class RowToJson(TestCase):
     """Test the exporting of row data to json format"""
 
     @classmethod
     def setUpClass(cls) -> None:
+        """Create an instance of the ``DummyTable`` class to test against"""
+
         cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
         cls.row_as_json = cls.test_row.row_to_json()
 
@@ -57,3 +63,13 @@ class ExportingToJson(TestCase):
 
         for col in self.test_row.__table__.columns:
             self.assertIn(col.name, self.row_as_json)
+
+
+class RowToJson(TestCase):
+    """Test the exporting of row data to a string"""
+
+    def runTest(self) -> None:
+        """Test the returned string is not empty"""
+
+        test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
+        self.assertTrue(test_row.row_to_ascii_table())
