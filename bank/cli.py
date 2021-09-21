@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from functools import partial
+#from functools import partial
 from pathlib import Path
 
 from . import dao
