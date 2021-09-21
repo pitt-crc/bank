@@ -76,8 +76,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, su in kwargs.items():
-                setattr(self._proposal, cluster, su)
+            for cluster, service_unit in kwargs.items():
+                setattr(self._proposal, cluster, service_unit)
 
             session.commit()
 
