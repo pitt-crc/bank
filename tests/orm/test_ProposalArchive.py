@@ -15,3 +15,21 @@ class TestHasDynamicColumns(TestCase):
 
             except AttributeError:
                 self.fail(f'Table {ProposalArchive.__tablename__} has no column {col}')
+
+
+class ServiceUnitsValidation(TestCase):
+    """Tests for the validation of the service units"""
+
+    def test_negative_service_units(self) -> None:
+        """Test for a ``ValueError`` when the number of service units are negative"""
+
+        for cluster in app_settings.clusters:
+            with self.assertRaises(ValueError):
+                ProposalArchive(**{cluster: -1})
+
+    def test_positive_service_units(self) -> None:
+        """Test no error is raised when the number of service units are positive"""
+
+        for cluster in app_settings.clusters:
+            proposal = ProposalArchive(**{cluster: 10})
+            self.assertEqual(10, getattr(proposal, cluster))
