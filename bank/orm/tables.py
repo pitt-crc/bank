@@ -119,13 +119,12 @@ class Investor(Base):
 
         return InvestorArchive(
             id=self.id,
-            account_id=self.account_id,
+            account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
             exhaustion_date=date.today(),
             service_units=self.service_units,
-            current_sus=self.current_sus,
-            investor_id=self.id
+            current_sus=self.current_sus
         )
 
 

@@ -59,7 +59,7 @@ class ToArchiveObject(TestCase):
         for i, cluster in enumerate(app_settings.clusters):
             setattr(self.proposal, cluster, i)
 
-    def test_correct_column_values(self) -> None:
+    def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 
         # We could do something clever here with sets and dictionaries
