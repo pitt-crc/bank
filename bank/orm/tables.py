@@ -110,7 +110,7 @@ class Investor(Base):
 
     @property
     def expired(self) -> bool:
-        """Return whether the investment is past its end_date or is fully withdrawn with no remaining service units."""
+        """Return whether the investment is past its end date or is fully withdrawn with no remaining service units."""
 
         return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus == self.service_units)
 

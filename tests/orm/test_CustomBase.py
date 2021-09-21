@@ -65,7 +65,7 @@ class RowToJson(TestCase):
             self.assertIn(col.name, self.row_as_json)
 
 
-class RowToJson(TestCase):
+class RowToAscii(TestCase):
     """Test the exporting of row data to a string"""
 
     def runTest(self) -> None:

@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from bank.orm import ProposalArchive
 from bank.settings import app_settings
-from . import base_tests
+from tests.orm import base_tests
 
 
 class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
@@ -24,7 +24,7 @@ class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
                 self.fail(f'Table {self.db_table_class.__tablename__} has no column {column_name}')
 
 
-class ServiceUnitsValidation(TestCase, base_tests.HasDynamicColumns):
+class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = ProposalArchive

@@ -14,7 +14,7 @@ class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
     db_table_class = Proposal
 
 
-class ServiceUnitsValidation(TestCase, base_tests.HasDynamicColumns):
+class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = Proposal
