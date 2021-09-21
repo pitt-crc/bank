@@ -161,5 +161,5 @@ class Settings:
 
 
 app_settings = Settings()
-"""An instance of the ``Settings`` class that reflects application settings as 
+"""An instance of the ``Settings`` class that reflects application settings as
 they were defined in the working environment at package instantiation"""
