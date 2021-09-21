@@ -26,7 +26,7 @@ class Account(SlurmAccount):
             MissingProposalError: If the account does not exist
         """
 
-        super(Account, self).__init__(account_name)
+        super().__init__(account_name)
         self.account_name = account_name
 
         # Here we cache the current proposal and investment data to make method calls faster
@@ -168,7 +168,7 @@ class Account(SlurmAccount):
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
             total_usage = sum([current_investments[c] for c in app_settings.clusters])
-            total_proposal_sus = sum([getattr(self.proposal, c) for c in app_settings.clusters])
+            total_proposal_sus = sum([getattr(self._proposal, c) for c in app_settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
