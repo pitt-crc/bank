@@ -15,10 +15,6 @@ class SubparserNames(TestCase):
 class Usage(TestCase):
     """Tests for the ``usage`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "usage fails with no proposal" {
         run python crc_bank.py usage sam
         [ "$status" -eq 1 ]
@@ -62,10 +58,6 @@ class Usage(TestCase):
 class Withdraw(TestCase):
     """Tests for the ``withdraw`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "withdraw works" {
         # insert proposal should work
         run python crc_bank.py insert proposal sam --smp=10000
@@ -100,10 +92,6 @@ class Withdraw(TestCase):
 
 class Modify(TestCase):
     """Tests for the ``modify`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
 
     @test "modify updates SUs" {
         # insert proposal should work
@@ -154,10 +142,6 @@ class Modify(TestCase):
 class Insert(TestCase):
     """Tests for the ``insert`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "insert works" {
         # insert proposal should work
         run python crc_bank.py insert proposal sam --smp=10000
@@ -193,93 +177,8 @@ class Insert(TestCase):
     """
 
 
-class Roundtrips(TestCase):
-    """Tests for the ``roundtrips`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
-
-    @test "roundtrip proposal.json" {
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py insert proposal root --mpi=10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py insert proposal kjordan --gpu=10000
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # make a copy of the proposal.json and investor.json to compare with
-        run cp proposal.json proposal.json.init
-        [ "$status" -eq 0 ]
-
-        # import the copied proposal.json table
-        run python crc_bank.py import_proposal proposal.json.init -y
-        [ "$status" -eq 0 ]
-
-        # clean up old dumps
-        run rm proposal.json investor.json proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        run cmp -s proposal.json proposal.json.init
-        [ "$status" -eq 0 ]
-
-        # clean up database and JSON files
-        clean
-        run rm proposal.json.init
-    }
-
-    @test "roundtrip investor.json" {
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        run cp investor.json investor.json.init
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py import_investor investor.json.init -y
-        [ "$status" -eq 0 ]
-
-        run rm proposal.json investor.json proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        run cmp -s investor.json investor.json.init
-        [ "$status" -eq 0 ]
-
-        clean
-        run rm investor.json.init
-    }
-
-    """
-
-
 class Renewal(TestCase):
     """Tests for the ``renewal`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
 
     @test "renewal with rollover" {
         # Check raw_usage
@@ -455,10 +354,6 @@ class Renewal(TestCase):
 class Basic(TestCase):
     """Tests for the ``basic`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "run with no args, exit 1" {
         run python crc_bank.py
         [ "$status" -eq 1 ]
@@ -479,10 +374,6 @@ class Basic(TestCase):
 
 class Get_Sus(TestCase):
     """Tests for the ``get_sus`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
 
     @test "get_sus works" {
         # insert proposal should work
@@ -508,10 +399,6 @@ class Get_Sus(TestCase):
 
 class Investor(TestCase):
     """Tests for the ``investor`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
 
     @test "investor fails with no proposal" {
         # insert investment should not work
@@ -559,10 +446,6 @@ class Investor(TestCase):
 class Add(TestCase):
     """Tests for the ``add`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "add updates SUs" {
         # insert proposal should work
         run python crc_bank.py insert proposal sam --smp=10000
@@ -593,10 +476,6 @@ class Add(TestCase):
 class Info(TestCase):
     """Tests for the ``info`` subparser
 
-    #!/usr/bin/env bats
-
-    load functions
-
     @test "info fails with no proposal" {
         run python crc_bank.py info sam
         [ "$status" -eq 1 ]
@@ -620,10 +499,6 @@ class Info(TestCase):
 
 class Change(TestCase):
     """Tests for the ``change`` subparser
-
-    #!/usr/bin/env bats
-
-    load functions
 
     @test "change updates SUs" {
         # insert proposal should work
