@@ -5,18 +5,19 @@ from unittest import TestCase
 
 from bank.orm import Proposal
 from bank.settings import app_settings
+from tests.orm import base_tests
 
 
-class HasDynamicColumns(TestCase):
+class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
     """Test for dynamically added columns based on administered cluster names"""
 
-    def runTest(self) -> None:
-        for cluster in app_settings.clusters:
-            try:
-                getattr(Proposal, cluster)
+    db_table_class = Proposal
 
-            except AttributeError:
-                self.fail(f'Table {Proposal.__tablename__} has no column {cluster}')
+
+class ServiceUnitsValidation(TestCase, base_tests.HasDynamicColumns):
+    """Tests for the validation of the service units"""
+
+    db_table_class = Proposal
 
 
 class PercentNotifiedValidation(TestCase):
@@ -41,25 +42,7 @@ class PercentNotifiedValidation(TestCase):
         self.assertEqual(50, proposal.percent_notified)
 
 
-class ServiceUnitsValidation(TestCase):
-    """Tests for the validation of the service units"""
-
-    def test_negative_service_units(self) -> None:
-        """Test for a ``ValueError`` when the number of service units are negative"""
-
-        for cluster in app_settings.clusters:
-            with self.assertRaises(ValueError):
-                Proposal(**{cluster: -1})
-
-    def test_positive_service_units(self) -> None:
-        """Test no error is raised when the number of service units are positive"""
-
-        for cluster in app_settings.clusters:
-            proposal = Proposal(**{cluster: 10})
-            self.assertEqual(10, getattr(proposal, cluster))
-
-
-class TOArchiveObject(TestCase):
+class ToArchiveObject(TestCase):
     """Test the conversion of a proposal to an archive object"""
 
     def setUp(self) -> None:

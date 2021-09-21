@@ -1,35 +1,30 @@
-from itertools import chain
+"""Tests for the ``ProposalArchive`` class"""
+
 from unittest import TestCase
 
 from bank.orm import ProposalArchive
 from bank.settings import app_settings
+from . import base_tests
 
 
-class TestHasDynamicColumns(TestCase):
+class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
     """Test for dynamically added columns based on administered cluster names"""
 
-    def runTest(self) -> None:
-        for col in chain(app_settings.clusters, (f'{c}_usage' for c in app_settings.clusters)):
+    db_table_class = ProposalArchive
+
+    def test_has_usage_columns_for_each_cluster(self) -> None:
+        """Test the table has a usage column for each cluster in application settings"""
+
+        for col in app_settings.clusters:
+            column_name = col + '_usage'
             try:
-                getattr(ProposalArchive, col)
+                getattr(self.db_table_class, column_name)
 
             except AttributeError:
-                self.fail(f'Table {ProposalArchive.__tablename__} has no column {col}')
+                self.fail(f'Table {self.db_table_class.__tablename__} has no column {column_name}')
 
 
-class ServiceUnitsValidation(TestCase):
+class ServiceUnitsValidation(TestCase, base_tests.HasDynamicColumns):
     """Tests for the validation of the service units"""
 
-    def test_negative_service_units(self) -> None:
-        """Test for a ``ValueError`` when the number of service units are negative"""
-
-        for cluster in app_settings.clusters:
-            with self.assertRaises(ValueError):
-                ProposalArchive(**{cluster: -1})
-
-    def test_positive_service_units(self) -> None:
-        """Test no error is raised when the number of service units are positive"""
-
-        for cluster in app_settings.clusters:
-            proposal = ProposalArchive(**{cluster: 10})
-            self.assertEqual(10, getattr(proposal, cluster))
+    db_table_class = ProposalArchive
