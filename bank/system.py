@@ -17,8 +17,8 @@ Usage Example
 
    >>> # Require root permissions for a function
    >>> @system.RequireRoot
-   >>> def foo():
-   >>>     print('This function requires root access')
+   ... def foo():
+   ...     print('This function requires root access')
 
 API Reference
 -------------
