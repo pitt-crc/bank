@@ -14,4 +14,4 @@ class ProposalType(Enum):
             return cls(getattr(cls, name))
 
         except AttributeError:
-            raise from ValueError(f'Invalid proposal type: `{name}`.')
+            raise ValueError(f'Invalid proposal type: `{name}`.')
