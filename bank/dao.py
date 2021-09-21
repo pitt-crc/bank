@@ -26,7 +26,7 @@ class Account(SlurmAccount):
             MissingProposalError: If the account does not exist
         """
 
-        super(Account, self).__init__(account_name)
+        super().__init__(account_name)
         self.account_name = account_name
 
         # Here we cache the current proposal and investment data to make method calls faster
@@ -59,8 +59,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, s_u in kwargs.items():
-                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + s_u)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
 
             session.commit()
 
@@ -76,8 +76,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, su in kwargs.items():
-                setattr(self._proposal, cluster, su)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, service_units)
 
             session.commit()
 
@@ -167,8 +167,8 @@ class Account(SlurmAccount):
         #     check if there is any rollover
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
-            total_usage = sum([current_investments[c] for c in app_settings.clusters])
-            total_proposal_sus = sum([getattr(self.proposal, c) for c in app_settings.clusters])
+            total_usage = sum([current_usage[c] for c in app_settings.clusters])
+            total_proposal_sus = sum([getattr(self._proposal, c) for c in app_settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
@@ -255,7 +255,7 @@ class Account(SlurmAccount):
             LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {self._proposal.end_date.strftime(app_settings.date_format)}")
 
-        elif self._proposal.percent_notified<next_notify<=usage_perc:
+        elif self._proposal.percent_notified < next_notify <= usage_perc:
             with Session() as session:
                 self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
                 self._proposal.percent_notified = next_notify
