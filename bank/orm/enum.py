@@ -4,9 +4,9 @@ from enum import Enum
 
 
 class ProposalType(Enum):
-    proposal = 0
-    classes = 1
-    investor = 2
+    Proposal_Type = 0
+    Class_Type = 1
+    Investor_Type = 2
 
     @classmethod
     def from_string(cls, name: str) -> ProposalType:
@@ -14,4 +14,4 @@ class ProposalType(Enum):
             return cls(getattr(cls, name))
 
         except AttributeError:
-            raise ValueError(f'Invalid proposal type: `{name}`.')
+            raise from ValueError(f'Invalid proposal type: `{name}`.')
