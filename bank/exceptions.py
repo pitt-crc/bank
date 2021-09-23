@@ -16,3 +16,7 @@ class MissingProposalError(Exception):
 
 class TableOverwriteError(Exception):
     """Raised when database entries are about to be overwritten"""
+
+
+class NoSuchAccountError(Exception):
+    """Raised when a Slurm user account does not exist"""

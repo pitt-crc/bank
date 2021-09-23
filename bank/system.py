@@ -19,7 +19,7 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .exceptions import CmdError
+from .exceptions import CmdError, NoSuchAccountError
 from .settings import app_settings
 
 LOG = getLogger('bank.utils')
@@ -94,6 +94,8 @@ class SlurmAccount:
         """
 
         self.account_name = account_name
+        if not ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out:
+            raise NoSuchAccountError(f'No Slurm account for username {account_name}')
 
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked
