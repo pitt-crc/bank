@@ -100,7 +100,7 @@ class SlurmAccount:
             cmd.raise_err()
             slurm_is_installed = cmd.out.startswith('slurm')
 
-        except:
+        except (CmdError, FileNotFoundError, Exception):
             slurm_is_installed = False
 
         if not slurm_is_installed:
