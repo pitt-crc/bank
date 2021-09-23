@@ -47,23 +47,14 @@ LOG = getLogger('bank.utils')
 class RequireRoot:
     """Function decorator for requiring root privileges"""
 
-    @staticmethod
-    def _require_root_access() -> None:
-        """Raise an error if the current session does not have root permissions
-
-        Raises:
-            RuntimeError: If session is not root
-        """
-
-        if geteuid() != 0:
-            raise RuntimeError("This action must be run with sudo privileges")
-
     def __new__(cls, func: callable) -> callable:
         """Wrap the given function"""
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            cls._require_root_access()
+            if geteuid() != 0:
+                raise PermissionError("This action must be run with sudo privileges")
+
             return func(*args, **kwargs)
 
         return wrapped

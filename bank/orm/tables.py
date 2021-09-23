@@ -31,11 +31,11 @@ class Proposal(Base):
     __tablename__ = 'proposal'
 
     id = Column(Integer, primary_key=True)
-    account_name = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    percent_notified = Column(Integer)
-    proposal_type = Column(Enum(ProposalType))
+    account_name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    percent_notified = Column(Integer, nullable=False)
+    proposal_type = Column(Enum(ProposalType), nullable=False)
 
     @validates('percent_notified')
     def validate_percent_notified(self, key: str, value: int) -> int:
@@ -60,16 +60,23 @@ class Proposal(Base):
 
         archive_obj = ProposalArchive(
             id=self.id,
-            account_id=self.account_id,
+            account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
             proposal_type=self.proposal_type
         )
 
-        slurm_acct = SlurmAccount(self.account)
         for cluster in app_settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
-            setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+
+        try:
+            slurm_acct = SlurmAccount(self.account_name)
+            for cluster in app_settings.clusters:
+                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+
+        # If slurm isn't installed, leave the usage columns empty
+        except:
+            pass
 
         return archive_obj
 
@@ -80,10 +87,10 @@ class ProposalArchive(Base):
     __tablename__ = 'proposal_archive'
 
     id = Column(Integer, primary_key=True)
-    account_name = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    proposal_type = Column(Enum(ProposalType))
+    account_name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    proposal_type = Column(Enum(ProposalType), nullable=False)
 
     @validates(*chain(app_settings.clusters, (f'{c}_usage' for c in app_settings.clusters)))
     def validate_service_units(self, key: str, value: int) -> int:
@@ -101,17 +108,17 @@ class Investor(Base):
     __tablename__ = 'investor'
 
     id = Column(Integer, primary_key=True)
-    account_name = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    service_units = Column(Integer)
-    current_sus = Column(Integer)
-    withdrawn_sus = Column(Integer)
-    rollover_sus = Column(Integer)
+    account_name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    service_units = Column(Integer, nullable=False)
+    current_sus = Column(Integer, nullable=False)
+    withdrawn_sus = Column(Integer, nullable=False)
+    rollover_sus = Column(Integer, nullable=False)
 
     @property
     def expired(self) -> bool:
-        """Return whether the investment is past its end_date or is fully withdrawn with no remaining service units."""
+        """Return whether the investment is past its end date or is fully withdrawn with no remaining service units."""
 
         return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus == self.service_units)
 
@@ -120,13 +127,12 @@ class Investor(Base):
 
         return InvestorArchive(
             id=self.id,
-            account_id=self.account_id,
+            account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
             exhaustion_date=date.today(),
             service_units=self.service_units,
-            current_sus=self.current_sus,
-            investor_id=self.id
+            current_sus=self.current_sus
         )
 
 
@@ -136,16 +142,16 @@ class InvestorArchive(Base):
     __tablename__ = 'investor_archive'
 
     id = Column(Integer, primary_key=True)
-    account_name = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    exhaustion_date = Column(Date)
-    service_units = Column(Integer)
-    current_sus = Column(Integer)
+    account_name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    exhaustion_date = Column(Date, nullable=False)
+    service_units = Column(Integer, nullable=False)
+    current_sus = Column(Integer, nullable=False)
 
 
 # Dynamically add columns for each of the managed clusters
 for _cluster in app_settings.clusters:
-    setattr(Proposal, _cluster, Column(Integer))
-    setattr(ProposalArchive, _cluster, Column(Integer))
+    setattr(Proposal, _cluster, Column(Integer, nullable=False))
+    setattr(ProposalArchive, _cluster, Column(Integer, nullable=False))
     setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer))

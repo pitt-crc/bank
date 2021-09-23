@@ -6,8 +6,6 @@ from enum import Enum
 
 
 class ProposalType(Enum):
-    """The type of proposal assigned to an account"""
-
-    Proposal = 0
-    Class = 1
-    Investor = 2
+    PROPOSAL = 0
+    CLASS = 1
+    INVESTOR = 2

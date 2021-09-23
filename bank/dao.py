@@ -57,7 +57,7 @@ class Account(SlurmAccount):
             MissingProposalError: If the account does not exist
         """
 
-        super(Account, self).__init__(account_name)
+        super().__init__(account_name)
         self.account_name = account_name
 
         # Here we cache the current proposal and investment data to make method calls faster
@@ -90,8 +90,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, su in kwargs.items():
-                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + su)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
 
             session.commit()
 
@@ -107,8 +107,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, su in kwargs.items():
-                setattr(self._proposal, cluster, su)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, service_units)
 
             session.commit()
 
@@ -199,7 +199,7 @@ class Account(SlurmAccount):
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
             total_usage = sum([current_usage[c] for c in app_settings.clusters])
-            total_proposal_sus = sum([getattr(self.proposal, c) for c in app_settings.clusters])
+            total_proposal_sus = sum([getattr(self._proposal, c) for c in app_settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
@@ -244,7 +244,7 @@ class Account(SlurmAccount):
                 return
 
             # Go through investments, oldest first and start withdrawing
-            for idx, investment in enumerate(self._investments):
+            for investment in enumerate(self._investments):
                 # If no SUs available to withdraw, skip the proposal entirely
                 investment_remaining = investment.service_units - investment.withdrawn_sus
                 if investment_remaining <= 0:
@@ -286,7 +286,7 @@ class Account(SlurmAccount):
             LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {self._proposal.end_date.strftime(app_settings.date_format)}")
 
-        elif (usage_perc >= next_notify) and (next_notify > self._proposal.percent_notified):
+        elif self._proposal.percent_notified < next_notify <= usage_perc:
             with Session() as session:
                 self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
                 self._proposal.percent_notified = next_notify
