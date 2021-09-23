@@ -94,7 +94,20 @@ class SlurmAccount:
         """
 
         self.account_name = account_name
-        if not ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out:
+
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            slurm_is_installed = cmd.out.startswith('slurm')
+
+        except:
+            slurm_is_installed = False
+
+        if not slurm_is_installed:
+            raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
+
+        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
+        if not account_exists:
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
 
     def get_locked_state(self) -> bool:
