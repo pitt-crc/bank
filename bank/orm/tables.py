@@ -60,15 +60,23 @@ class Proposal(Base):
 
         archive_obj = ProposalArchive(
             id=self.id,
+            account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
             proposal_type=self.proposal_type
         )
 
-        slurm_acct = SlurmAccount(self.account_name)
         for cluster in app_settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
-            setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+
+        try:
+            slurm_acct = SlurmAccount(self.account_name)
+            for cluster in app_settings.clusters:
+                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+
+        # If slurm isn't installed, leave the usage columns empty
+        except:
+            pass
 
         return archive_obj
 
@@ -144,6 +152,6 @@ class InvestorArchive(Base):
 
 # Dynamically add columns for each of the managed clusters
 for _cluster in app_settings.clusters:
-    setattr(Proposal, _cluster, Column(Integer))
-    setattr(ProposalArchive, _cluster, Column(Integer))
+    setattr(Proposal, _cluster, Column(Integer, nullable=False))
+    setattr(ProposalArchive, _cluster, Column(Integer, nullable=False))
     setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer))
