@@ -16,6 +16,7 @@ from sqlalchemy.orm import validates
 
 from .base import CustomBase
 from .enum import ProposalType
+from ..exceptions import NoSuchAccountError
 from ..settings import app_settings
 from ..system import SlurmAccount
 
@@ -44,7 +45,7 @@ class Proposal(Base):
         if 0 <= value <= 100:
             return value
 
-        raise ValueError('percent_notified value must be between 0 and 100')
+        raise ValueError(f'Value for {key} must be between 0 and 100 (get {value})')
 
     @validates(*app_settings.clusters)
     def validate_service_units(self, key: str, value: int) -> int:
@@ -71,12 +72,14 @@ class Proposal(Base):
 
         try:
             slurm_acct = SlurmAccount(self.account_name)
-            for cluster in app_settings.clusters:
-                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
 
         # If slurm isn't installed, leave the usage columns empty
-        except:
+        except NoSuchAccountError:
             pass
+
+        else:
+            for cluster in app_settings.clusters:
+                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
 
         return archive_obj
 
