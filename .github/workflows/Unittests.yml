@@ -34,7 +34,7 @@ jobs:
   #          CRC_BANK_TEST: true
 
   python_tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: [ 3.7, 3.8 ]
