@@ -85,7 +85,7 @@ class Account(SlurmAccount):
         """Add service units for the given account / clusters
 
         Args:
-            **kwargs: Service units to add on to each cluster
+            **kwargs: Service units to add to the account for each cluster
         """
 
         with Session() as session:
