@@ -27,6 +27,7 @@ API Reference
 
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import List
 
 from . import dao
 
@@ -131,12 +132,15 @@ class CLIParser(ArgumentParser):
             arg_def = arg_def.copy()
             parser.add_argument(**arg_def)
 
-    def execute(self, *args, **kwargs) -> None:
+    def execute(self, args: List[str]) -> None:
         """Entry point for running the command line parser
 
         Parse command line arguments and evaluate the corresponding function
+
+        Args:
+            args: A list of command line arguments
         """
 
-        cli_kwargs = vars(self.parse_args(*args, **kwargs))  # Get parsed arguments as a dictionary
+        cli_kwargs = vars(self.parse_known_args(args)[0])  # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
         cli_kwargs.pop('function')(**cli_kwargs)
