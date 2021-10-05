@@ -1,25 +1,20 @@
-"""The ``settings`` module provides access to application settings. It
-includes definitions for default values in addition to application settings
-defined in the working environment.
+"""The ``settings`` module defines default settings for the parent application.
+It also provides access to any settings that have been overwritten using
+environmental variables in the working environment.
 
 Usage Example
 -------------
 
 The ``Defaults`` class provides access to default application settings.
-Values for each setting are accessible via attributes:
+Values for each setting are accessible via attributes. For example:
 
 .. doctest:: python
 
-  >>> from bank.settings import Defaults
-
-  >>> # The datetime format used when displaying or parsing dates
-  >>> print(Defaults.date_format)
-  %m/%d/%y
-
-  >>> # The names of each cluster being administrated
-  >>> print(Defaults.clusters)
-  ('smp', 'mpi', 'gpu', 'htc')
-
+   >>> from bank.settings import Defaults
+   >>>
+   >>> # The datetime format used when displaying or parsing dates
+   >>> print(Defaults.date_format)
+   %m/%d/%y
 
 The ``Settings`` class is similar to the ``Defaults`` class, but
 allows for default settings to be overwritten via environmental variables.
@@ -28,19 +23,15 @@ most cases.
 
 .. doctest:: python
 
-  >>> import os
-  >>> from bank.settings import Settings
-
-  >>> # Specify the date format as an environmental variable
-  >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
-
-  >>> settings = Settings()
-  >>> print(settings.date_format)
-  %m-%d-%y
-
-.. important::
-  Application settings are read from the working environment in realtime.
-  At no time are environmental variables cached from the working environment.
+   >>> import os
+   >>> from bank.settings import Settings
+   >>>
+   >>> # Specify the date format as an environmental variable
+   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
+   >>>
+   >>> settings = Settings()
+   >>> print(settings.date_format)
+   %m-%d-%y
 
 API Reference
 -------------
@@ -51,7 +42,7 @@ from typing import Any
 
 from environ.environ import Env
 
-# Prefix used to identify env variables as settings for this application
+# Prefix used to identify environmental variables as settings for this application
 APP_PREFIX = 'BANK_'
 
 
@@ -158,12 +149,17 @@ class Defaults:
 class Settings:
     """Reflects application settings as set in the working environment"""
 
+    def __init__(self) -> None:
+        """Application settings as defined in the parent environment."""
+        self._env = Env()
+
     def __getattribute__(self, item: str) -> Any:
         default = getattr(Defaults, item)
         env_key = APP_PREFIX + item.upper()
-        return Env().get_value(env_key, cast=type(default), default=default)
+        env = object.__getattribute__(self, '_env')
+        return env.get_value(env_key, cast=type(default), default=default)
 
 
-# Provided a prebuilt ``Settings`` instance as a
-# dedicated entry point to application settings
 app_settings = Settings()
+"""An instance of the ``Settings`` class that reflects application settings as
+they were defined in the working environment at package instantiation"""
