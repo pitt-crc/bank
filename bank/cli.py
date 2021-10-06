@@ -53,6 +53,13 @@ class CLIParser(ArgumentParser):
         super().__init__()
         self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
+        # For each command line subparser we:
+        # 1) Create a new subparser instance and give it a name  (e.g. 'info')
+        # 2) Define the arguments of the subparser. Where necessary, arguments for specifying the service units of each
+        #    cluster are added dynamically using the cluster names defined in the application settings.
+        # 3) Define the function to be evaluated by the subparser
+        #    (usually as a lambda wrapper around logic defined elsewhere in the banking system)
+
         # Subparsers for account management and info
 
         parser_info = self.subparsers.add_parser('info')

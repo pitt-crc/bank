@@ -1,16 +1,39 @@
 from unittest import TestCase
 
+from bank.cli import CLIParser
+from bank.settings import app_settings
 
-class SubparserNames(TestCase):
-    """Test the names of various subparsers can be parsed"""
 
-    test_names = [
-        'insert', 'modify', 'add', 'change', 'renewal', 'date',
-        'date_investment', 'investor', 'withdraw', 'info', 'usage',
-        'check_sus_limit', 'check_proposal_end_date', 'check_proposal_violations',
-        'get_sus', 'release_hold', 'reset_raw_usage', 'find_unlocked', 'lock_with_notification'
-    ]
+class DynamicallyAddedClusterArguments(TestCase):
+    """Test that selected subparsers have an argument for each cluster defined in the application settings"""
 
+    subparser_names = ['insert', 'add', 'modify', 'renewal']
+
+    def runTest(self) -> None:
+        subparsers = CLIParser().subparsers
+        clusters = set(app_settings.clusters)
+
+        for subparser_name in self.subparser_names:
+            parser = subparsers.choices[subparser_name]
+            args = {a.dest.lstrip('--') for a in parser._actions}
+            self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
+
+
+# Todo: Impliment tests fo:
+#  info
+#  usage
+#  reset_raw_usage
+#  find_unlocked
+#  lock_with_notification
+#  release_hold
+#  check_proposal_end_date
+#  insert
+#  add
+#  modify
+#  investor
+#  investor_modify
+#  renewal
+#  withdraw
 
 class Usage(TestCase):
     """Tests for the ``usage`` subparser"""
