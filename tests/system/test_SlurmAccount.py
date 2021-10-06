@@ -14,14 +14,14 @@ class AccountLocking(TestCase):
     def runTest(self) -> None:
         account = SlurmAccount(TEST_ACCOUNT)
 
-        account.set_locked_state(True)
-        self.assertTrue(account.get_locked_state())
-
         account.set_locked_state(False)
         self.assertFalse(account.get_locked_state())
 
         account.set_locked_state(True)
         self.assertTrue(account.get_locked_state())
+
+        account.set_locked_state(False)
+        self.assertFalse(account.get_locked_state())
 
 
 class AccountUsage(TestCase):
@@ -32,7 +32,7 @@ class AccountUsage(TestCase):
 
         self.usage = 1_000
         clusters = ','.join(app_settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={TEST_ACCOUNT} cluster={clusters} set RawUsage={usage}')
+        ShellCmd(f'sacctmgr -i modify account where account={TEST_ACCOUNT} cluster={clusters} set RawUsage={self.usage}')
 
     def test_get_usage(self) -> None:
         """Test the recovered account usage matches the value set in setup"""

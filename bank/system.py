@@ -36,7 +36,7 @@ class RequireRoot:
             if geteuid() != 0:
                 raise PermissionError("This action must be run with sudo privileges")
 
-            return func(*args, **kwargs)
+            return func(*args, **kwargs)  # pragma: no cover
 
         return wrapped
 
