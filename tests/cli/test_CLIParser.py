@@ -4,7 +4,7 @@ from unittest.mock import patch
 from bank import dao
 from bank.cli import CLIParser
 from bank.settings import app_settings
-from bank.system import SlurmAccount, ShellCmd
+from bank.system import SlurmAccount
 
 TEST_ACCOUNT = 'sam'
 
@@ -67,7 +67,6 @@ class ResetRawUsage(TestCase):
 
 
 # Todo: Implement tests for:
-#  find_unlocked
 #  lock_with_notification
 #  release_hold
 #  check_proposal_end_date
