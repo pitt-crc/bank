@@ -1,7 +1,11 @@
 from unittest import TestCase
+from unittest.mock import patch, call
 
+from bank import dao
 from bank.cli import CLIParser
 from bank.settings import app_settings
+
+TEST_ACCOUNT = 'sam'
 
 
 class DynamicallyAddedClusterArguments(TestCase):
@@ -19,8 +23,7 @@ class DynamicallyAddedClusterArguments(TestCase):
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
 
-# Todo: Impliment tests fo:
-#  info
+# Todo: Implement tests for:
 #  usage
 #  reset_raw_usage
 #  find_unlocked
@@ -34,6 +37,18 @@ class DynamicallyAddedClusterArguments(TestCase):
 #  investor_modify
 #  renewal
 #  withdraw
+
+class Info(TestCase):
+    """Tests for the ``info`` subparser"""
+
+    @patch('builtins.print')
+    def runTest(self, mocked_print) -> None:
+        """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
+
+        dao.Account(TEST_ACCOUNT).print_usage_info()
+        CLIParser().execute(['info', TEST_ACCOUNT])
+        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
+
 
 class Usage(TestCase):
     """Tests for the ``usage`` subparser"""
@@ -412,26 +427,6 @@ class Add(TestCase):
         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
         [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        """
-
-
-class Info(TestCase):
-    """Tests for the ``info`` subparser"""
-
-    def info_fails_with_no_proposal(self) -> None:
-        """
-        run python crc_bank.py info sam
-        [ "$status" -eq 1 ]
-        """
-
-    def info_works_with_proposal(self) -> None:
-        """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py info sam
-        [ "$status" -eq 0 ]
         """
 
 
