@@ -10,5 +10,6 @@ SubModules
 .. autosummary::
    :nosignatures:
 
+   bank.orm.base
    bank.orm.tables
-   bank.orm.mixins
+   bank.orm.enum

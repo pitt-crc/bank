@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from bank.exceptions import CmdError
-from bank.utils import ShellCmd
+from bank.system import ShellCmd
 
 
 class InitExceptions(TestCase):
@@ -36,7 +36,8 @@ class FileDescriptors(TestCase):
 class RaisingStdErr(TestCase):
     """Test the ``raise_err`` raises appropriate errors"""
 
-    def test_no_error_on_empty_stderr(self) -> None:
+    @staticmethod
+    def test_no_error_on_empty_stderr() -> None:
         """Test no error is raised for an empty STDERR output"""
 
         ShellCmd("echo 1").raise_err()

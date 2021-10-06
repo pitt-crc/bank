@@ -1,21 +1,45 @@
+"""Tests for functionality added to SqlAlchemy tables by the ``CustomBase`` class"""
+
+import enum
 import json
 from datetime import datetime
 from unittest import TestCase
 
-from bank.orm.mixins import ExportMixin
+from sqlalchemy import Column, Date, Enum, Integer, Text
+
+from bank.orm.tables import Base
 from bank.settings import app_settings
-from .utils import DummyEnum, create_table_with_mixin
-
-DummyTable = create_table_with_mixin(ExportMixin)
 
 
-class ExportingToJson(TestCase):
+class DummyEnum(enum.Enum):
+    """A simple enumerated column"""
+
+    One = 1
+    Two = 2
+    Three = 3
+
+
+class DummyTable(Base):
+    """A dummy database table for testing purposes"""
+
+    __tablename__ = 'test_table'
+
+    id = Column(Integer, primary_key=True)
+    int_col = Column(Integer)
+    str_col = Column(Text)
+    date_col = Column(Date)
+    enum_col = Column(Enum(DummyEnum))
+
+
+class RowToJson(TestCase):
     """Test the exporting of row data to json format"""
 
     @classmethod
     def setUpClass(cls) -> None:
+        """Create an instance of the ``DummyTable`` class to test against"""
+
         cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
-        cls.row_as_json = cls.test_row.to_json()
+        cls.row_as_json = cls.test_row.row_to_json()
 
     def test_date_format_matches_settings(self) -> None:
         """Test dates are converted to strings using the date format from application settings"""
@@ -39,3 +63,13 @@ class ExportingToJson(TestCase):
 
         for col in self.test_row.__table__.columns:
             self.assertIn(col.name, self.row_as_json)
+
+
+class RowToAscii(TestCase):
+    """Test the exporting of row data to a string"""
+
+    def runTest(self) -> None:
+        """Test the returned string is not empty"""
+
+        test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
+        self.assertTrue(test_row.row_to_ascii_table())
