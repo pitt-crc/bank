@@ -35,7 +35,7 @@ from .settings import app_settings
 # Reusable definitions for command line arguments
 account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
 prop_type = dict(dest='--type', type=str, help='The proposal type: proposal or class')
-date = dict(dest='--date', help='The proposal start date (e.g 12/01/19)')
+date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 proposal = dict(dest='--proposal', type=Path, help='Path of the proposal table in JSON format')
 investor = dict(dest='--investor', type=Path, help='Path of the investor table in JSON format')
@@ -80,8 +80,7 @@ class CLIParser(ArgumentParser):
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
         self._add_args_to_parser(parser_check_proposal_end_date, account)
-        parser_check_proposal_end_date.set_defaults(
-            function=lambda account, **kwargs: account.send_pending_alerts(**kwargs))
+        parser_check_proposal_end_date.set_defaults(function=lambda account, **kwargs: account.send_pending_alerts(**kwargs))
 
         # Subparsers for adding and modifying general service unit allocations
 
