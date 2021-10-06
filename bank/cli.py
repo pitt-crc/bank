@@ -30,9 +30,9 @@ from pathlib import Path
 from typing import List
 
 from . import dao
+from .settings import app_settings
 
 # Reusable definitions for command line arguments
-
 account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
 prop_type = dict(dest='--type', type=str, help='The proposal type: proposal or class')
 date = dict(dest='--date', help='The proposal start date (e.g 12/01/19)')
@@ -43,10 +43,6 @@ proposal_arch = dict(dest='--proposal_archive', type=Path, help='Path of the pro
 investor_arch = dict(dest='--investor_archive', type=Path, help='Path of the investor archive table in JSON format')
 allocated = dict(dest='--path', type=Path, help='Path of the exported file')
 overwrite = dict(dest='-y', action='store_true', help='Automatically overwrite table data')
-smp = dict(dest='--smp', type=int, help='The smp limit in CPU Hours', default=0)
-mpi = dict(dest='--mpi', type=int, help='The mpi limit in CPU Hours', default=0)
-gpu = dict(dest='--gpu', type=int, help='The gpu limit in CPU Hours', default=0)
-htc = dict(dest='--htc', type=int, help='The htc limit in CPU Hours', default=0)
 inv_id = dict(dest='--id', help='The investment proposal id')
 
 
@@ -84,20 +80,21 @@ class CLIParser(ArgumentParser):
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
         self._add_args_to_parser(parser_check_proposal_end_date, account)
-        parser_check_proposal_end_date.set_defaults(function=lambda account, **kwargs: account.send_pending_alerts(**kwargs))
+        parser_check_proposal_end_date.set_defaults(
+            function=lambda account, **kwargs: account.send_pending_alerts(**kwargs))
 
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        self._add_args_to_parser(parser_insert, prop_type, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_insert, prop_type, account, include_clusters=True)
         parser_insert.set_defaults(function=dao.Bank.create_proposal)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
-        self._add_args_to_parser(parser_add, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_add, account, include_clusters=True)
         parser_add.set_defaults(function=lambda account, **kwargs: account.add_sus(**kwargs))
 
         parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        self._add_args_to_parser(parser_change, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_change, account, include_clusters=True)
         parser_change.set_defaults(function=lambda account, **kwargs: account.modify_sus(**kwargs))
 
         # Subparsers for adding and modifying investment accounts
@@ -111,7 +108,7 @@ class CLIParser(ArgumentParser):
         parser_investor_modify.set_defaults(function=lambda account, **kwargs: account.modify_investment(**kwargs))
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        self._add_args_to_parser(parser_renewal, account, smp, mpi, gpu, htc)
+        self._add_args_to_parser(parser_renewal, account, include_clusters=True)
         parser_renewal.set_defaults(function=lambda account, **kwargs: account.renewal(**kwargs))
 
         parser_withdraw = self.subparsers.add_parser('withdraw')
@@ -119,7 +116,7 @@ class CLIParser(ArgumentParser):
         parser_withdraw.set_defaults(function=lambda account, **kwargs: account.withdraw(**kwargs))
 
     @staticmethod
-    def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict) -> None:
+    def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, include_clusters: bool = False) -> None:
         """Add argument definitions to the given command line subparser
 
         Args:
@@ -130,6 +127,10 @@ class CLIParser(ArgumentParser):
         for arg_def in arg_definitions:
             arg_def = arg_def.copy()
             parser.add_argument(**arg_def)
+
+        if include_clusters:
+            for cluster in app_settings.clusters:
+                parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
     def execute(self, args: List[str] = None) -> None:
         """Entry point for running the command line parser
