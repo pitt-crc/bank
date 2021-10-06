@@ -26,6 +26,7 @@ API Reference
 
 from __future__ import annotations
 
+from bs4 import BeautifulSoup
 from datetime import time
 from email.message import EmailMessage
 from functools import wraps
@@ -35,8 +36,6 @@ from shlex import split
 from smtplib import SMTP
 from subprocess import PIPE, Popen
 from typing import Any
-
-from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
 from .settings import app_settings
@@ -157,23 +156,29 @@ class SlurmAccount:
 
 
 class EmailTemplate:
+    """A formattable email template"""
+
     def __init__(self, msg: str):
-        """Args:
+        """
+
+        Args:
             msg: message in email
         """
-        self.msg = msg
+
+        self._msg = msg
 
     def format(self, account, proposal) -> EmailTemplate:
-        """Formats email
+        """Format the email template and return a new instance
 
         Args:
             account: the account to send an email to
             proposal: the email proposal for account
 
         Returns:
-            copy of format email message
+            A new ``EmailTemplate`` instance with a formatted message
         """
-        format_message = self.msg.format(
+
+        format_message = self._msg.format(
             account=self.account_name,
             start=proposal.start_date.strftime(app_settings.date_format),
             expire=proposal.end_date.strftime(app_settings.date_format),
@@ -182,26 +187,29 @@ class EmailTemplate:
             investment=self.get_investment_status())
 
         return EmailTemplate(format_message)
-        # return self.__class__(format_message)
 
-# def send_email(account, email_html: str) -> None:
-#     """Send an email to a user account
-#
-#     Args:
-#         account: The account to send an email to
-#         email_html: The content of the email
-#     """
-#
-#     # Extract the text from the email
-#     soup = BeautifulSoup(email_html, "html.parser")
-#     email_text = soup.get_text()
-#
-#     msg = EmailMessage()
-#     msg.set_content(email_text)
-#     msg.add_alternative(email_html, subtype="html")
-#     msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
-#     msg["From"] = "noreply@pitt.edu"
-#     msg["To"] = account.get_email_address()
-#
-#     with SMTP("localhost") as s:
-#         s.send_message(msg)
+    def send_to(self, to: str, subject: str, ffrom: str = None) -> None:
+        """Send the email template to the given address
+
+        Args:
+            to: The email address to send the message to
+            subject: The subject line of the email
+            ffrom: The address of the message sender
+        """
+
+        # Extract the text from the email
+        soup = BeautifulSoup(self._msg, "html.parser")
+        email_text = soup.get_text()
+
+        msg = EmailMessage()
+        msg.set_content(email_text)
+        msg.add_alternative(self._msg, subtype="html")
+        msg["Subject"] = subject  # f"Your allocation on H2P for account: {account.account_name}"
+        msg["From"] = ffrom or app_settings.from_address
+        msg["To"] = to
+
+        with SMTP("localhost") as s:
+            s.send_message(msg)
+
+    def __str__(self) -> str:
+        return self._msg
