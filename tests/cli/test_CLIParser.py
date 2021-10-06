@@ -66,9 +66,32 @@ class ResetRawUsage(TestCase):
             self.assertEqual(0, self.slurm_account.get_cluster_usage(cluster))
 
 
+# Todo: test that a notification is sent when notify=True
+class LockWithNotification(TestCase):
+    """Tests for the ``lock_with_notification`` subparser"""
+
+    def test_account_is_locked(self) -> None:
+        """Test that an unlocked account becomes locked"""
+
+        account = dao.Account(TEST_ACCOUNT)
+        account.set_locked_state(False)
+        CLIParser().execute(['lock_with_notification', TEST_ACCOUNT, 'notify=False'])
+        self.assertTrue(account.get_locked_state())
+
+
+class ReleaseHold(TestCase):
+    """Tests for the ``release_hold`` subparser"""
+
+    def test_account_is_unlocked(self) -> None:
+        """Test that a locked account becomes unlocked"""
+
+        account = dao.Account(TEST_ACCOUNT)
+        account.set_locked_state(True)
+        CLIParser().execute(['release_hold', TEST_ACCOUNT])
+        self.assertFalse(account.get_locked_state())
+
+
 # Todo: Implement tests for:
-#  lock_with_notification
-#  release_hold
 #  check_proposal_end_date
 #  insert
 #  add

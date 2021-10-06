@@ -37,6 +37,7 @@ _prop_type = dict(dest='--type', type=str, help='The proposal type: proposal or 
 _date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', help='The investment proposal id')
+_notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
 
 
 class CLIParser(ArgumentParser):
@@ -71,7 +72,7 @@ class CLIParser(ArgumentParser):
         parser_find_unlocked.set_defaults(function=lambda: print('\n'.join(dao.Bank.find_unlocked())))
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        self._add_args_to_parser(parser_lock_with_notification, _account)
+        self._add_args_to_parser(parser_lock_with_notification, _account, _notify)
         parser_lock_with_notification.set_defaults(function=lambda account: account.set_locked_state(True))
 
         parser_release_hold = self.subparsers.add_parser('release_hold')
