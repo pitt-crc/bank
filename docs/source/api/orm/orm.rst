@@ -12,3 +12,4 @@ SubModules
 
    bank.orm.base
    bank.orm.tables
+   bank.orm.enum

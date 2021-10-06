@@ -1,4 +1,4 @@
-"""Object oriented interface for tables in the application database.
+"""Object oriented definitions for the underlying database schema
 
 API Reference
 -------------

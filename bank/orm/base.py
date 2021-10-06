@@ -1,4 +1,4 @@
-"""Base classes for extending the default behavior of SQLAlchemy tables.
+"""Extends the default functionality of SQLAlchemy tables
 
 API Reference
 -------------
@@ -15,10 +15,10 @@ from bank.settings import app_settings
 
 @declarative_mixin
 class CustomBase:
-    """Custom SQLAlchemy base class that incorporates all available mixins."""
+    """Custom SQLAlchemy base class that adds methods for exporting data to different file formats and data types."""
 
     def row_to_json(self, columns: Optional[Collection[str]] = None) -> Dict[str, Union[int, str]]:
-        """Return the row object as a json compatible dictionary.
+        """Return the row object as a json compatible dictionary
 
         Args:
             columns: Columns to include in the returned dictionary (defaults to all columns)

@@ -92,5 +92,5 @@ You will probably want to check the limits once a day. The checks which are comp
    api/dao.rst
    api/orm/orm.rst
    api/settings.rst
-   api/exceptions.rst
    api/system.rst
+   api/exceptions.rst
