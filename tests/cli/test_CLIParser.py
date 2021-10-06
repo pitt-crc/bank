@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import patch, call
+from unittest.mock import patch
 
 from bank import dao
 from bank.cli import CLIParser
@@ -24,7 +24,6 @@ class DynamicallyAddedClusterArguments(TestCase):
 
 
 # Todo: Implement tests for:
-#  usage
 #  reset_raw_usage
 #  find_unlocked
 #  lock_with_notification
@@ -43,48 +42,24 @@ class Info(TestCase):
 
     @patch('builtins.print')
     def runTest(self, mocked_print) -> None:
-        """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
+        """Test the output from the subparser to stdout matches matches the ``print_allocation_info`` function"""
 
-        dao.Account(TEST_ACCOUNT).print_usage_info()
+        dao.Account(TEST_ACCOUNT).print_allocation_info()
         CLIParser().execute(['info', TEST_ACCOUNT])
         self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
 
+# Todo: These test can be extended to include an account with and without investments
 class Usage(TestCase):
     """Tests for the ``usage`` subparser"""
 
-    def test_usage_fails_with_no_proposal(self) -> None:
-        """
-        run python crc_bank.py usage sam
-        [ "$status" -eq 1 ]
-        """
+    @patch('builtins.print')
+    def runTest(self, mocked_print) -> None:
+        """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
 
-    def test_usage_works(self) -> None:
-        """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py usage sam
-        [ "$status" -eq 0 ]
-        [ $(echo $output | grep -c "Aggregate") -gt 0 ]
-        [ $(echo $output | grep -c "Investment") -eq 0 ]
-       """
-
-    def test_usage_with_investment_works(self) -> None:
-        """
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # insert investment should work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 0 ]
-
-        run python crc_bank.py usage sam
-        [ "$status" -eq 0 ]
-        [ $(echo $output | grep -c "Aggregate") -gt 0 ]
-        [ $(echo $output | grep -c "Investment") -gt 0 ]
-        """
+        dao.Account(TEST_ACCOUNT).print_usage_info()
+        CLIParser().execute(['usage', TEST_ACCOUNT])
+        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
 
 class Withdraw(TestCase):
