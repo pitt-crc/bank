@@ -134,7 +134,7 @@ class Account(SlurmAccount):
         usage_total = 0
         allocation_total = 0
         for cluster in app_settings.clusters:
-            usage = self.cluster_usage(cluster, in_hours=True)
+            usage = self.get_cluster_usage(cluster, in_hours=True)
             allocation = self.cluster_allocation(cluster)
             percentage = round(100 * usage / allocation, 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
@@ -271,7 +271,7 @@ class Account(SlurmAccount):
         """Send any pending usage alerts to the account"""
 
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = sum(self.cluster_usage(c) for c in app_settings.clusters())
+        usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
         allocated = sum(self.cluster_allocation(c) for c in app_settings.clusters())
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]

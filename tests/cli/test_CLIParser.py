@@ -4,6 +4,7 @@ from unittest.mock import patch
 from bank import dao
 from bank.cli import CLIParser
 from bank.settings import app_settings
+from bank.system import SlurmAccount, ShellCmd
 
 TEST_ACCOUNT = 'sam'
 
@@ -22,20 +23,6 @@ class DynamicallyAddedClusterArguments(TestCase):
             args = {a.dest.lstrip('--') for a in parser._actions}
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
-
-# Todo: Implement tests for:
-#  reset_raw_usage
-#  find_unlocked
-#  lock_with_notification
-#  release_hold
-#  check_proposal_end_date
-#  insert
-#  add
-#  modify
-#  investor
-#  investor_modify
-#  renewal
-#  withdraw
 
 class Info(TestCase):
     """Tests for the ``info`` subparser"""
@@ -61,6 +48,36 @@ class Usage(TestCase):
         CLIParser().execute(['usage', TEST_ACCOUNT])
         self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
+
+class ResetRawUsage(TestCase):
+    """Tests for the ``reset_raw_usage`` subparser"""
+
+    def setUp(self) -> None:
+        """Assign a non zero amount of service units to the test user account"""
+
+        self.slurm_account = SlurmAccount(TEST_ACCOUNT)
+        self.slurm_account.set_raw_usage(10_000, *app_settings.clusters)
+
+    def test_usage_is_reset(self) -> None:
+        """Test the subparser successfully sets the raw account usage to zero"""
+
+        CLIParser().execute(['reset_raw_usage', TEST_ACCOUNT])
+        for cluster in app_settings.clusters:
+            self.assertEqual(0, self.slurm_account.get_cluster_usage(cluster))
+
+
+# Todo: Implement tests for:
+#  find_unlocked
+#  lock_with_notification
+#  release_hold
+#  check_proposal_end_date
+#  insert
+#  add
+#  modify
+#  investor
+#  investor_modify
+#  renewal
+#  withdraw
 
 class Withdraw(TestCase):
     """Tests for the ``withdraw`` subparser"""

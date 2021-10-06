@@ -127,8 +127,8 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
-    def cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
-        """Return the account usage on a given cluster
+    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the raw account usage on a given cluster
 
         Args:
             cluster: The name of the cluster
@@ -149,11 +149,20 @@ class SlurmAccount:
 
         return usage
 
-    def reset_raw_usage(self) -> None:
-        """Reset the current account usage"""
+    def set_raw_usage(self, usage: int, *cluster: str) -> None:
+        """Set the raw account usage on a given cluster
 
-        clusters = ','.join(app_settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
+        Args:
+            *cluster: The name of the cluster
+            usage: The usage value to set in units of seconds"""
+
+        clus = ','.join(cluster)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clus} set RawUsage={usage}')
+
+    def reset_raw_usage(self) -> None:
+        """Reset the raw account usage on all clusters to zero"""
+
+        self.set_raw_usage(0, *app_settings.clusters)
 
 
 def send_email(account, email_html: str) -> None:
