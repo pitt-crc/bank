@@ -123,31 +123,22 @@ class Insert(TestCase):
             self.assertEqual(self.number_sus, account.get_cluster_allocation(cluster))
 
 
+# Todo: extend tests to ensure only the correct cluster allocation has been modified
 class Add(TestCase):
     """Tests for the ``add`` subparser"""
 
-    def test_withdraw_works(self) -> None:
-        """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
+    def test_sus_are_updated(self) -> None:
+        """Test the allocated service units are incremented by a given amount"""
 
-        # add proposal should work
-        run python crc_bank.py add sam --mpi=10000
-        [ "$status" -eq 0 ]
+        account = dao.Account(TEST_ACCOUNT)
+        test_cluster_name = app_settings.clusters[0]
+        original_sus = account.get_cluster_allocation(test_cluster_name)
 
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
+        sus_to_add = 100
+        CLIParser().execute(['add', TEST_ACCOUNT, f'--{test_cluster_name}={sus_to_add}'])
 
-        # proposal should have 1 entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        """
+        new_sus = account.get_cluster_allocation(test_cluster_name)
+        self.assertEqual(new_sus, original_sus + sus_to_add)
 
 
 class Modify(TestCase):
