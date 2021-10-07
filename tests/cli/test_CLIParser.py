@@ -113,20 +113,123 @@ class Insert(TestCase):
     def test_proposal_is_created_for_cluster(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
-        self.assertEqual(self.number_sus, dao.Account(TEST_ACCOUNT).cluster_allocation(self.first_cluster))
+        self.assertEqual(self.number_sus, dao.Account(TEST_ACCOUNT).get_cluster_allocation(self.first_cluster))
 
     def test_default_number_sus_is_zero(self) -> None:
         """Test the number of service units is zero for unspecified clsuters"""
 
         account = dao.Account(TEST_ACCOUNT)
         for cluster in self.other_clusters:
-            self.assertEqual(self.number_sus, account.cluster_allocation(cluster))
+            self.assertEqual(self.number_sus, account.get_cluster_allocation(cluster))
 
 
-class Withdraw(TestCase):
-    """Tests for the ``withdraw`` subparser"""
+class Add(TestCase):
+    """Tests for the ``add`` subparser"""
 
     def test_withdraw_works(self) -> None:
+        """
+        # insert proposal should work
+        run python crc_bank.py insert proposal sam --smp=10000
+        [ "$status" -eq 0 ]
+
+        # add proposal should work
+        run python crc_bank.py add sam --mpi=10000
+        [ "$status" -eq 0 ]
+
+        # dump the tables to JSON should work
+        run python crc_bank.py dump proposal.json investor.json \
+            proposal_archive.json investor_archive.json
+        [ "$status" -eq 0 ]
+
+        # proposal should have 1 entry with 10000 SUs
+        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
+        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
+        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
+        """
+
+
+class Modify(TestCase):
+    """Tests for the ``modify`` subparser"""
+
+    def change_updates_SUs(self) -> None:
+        """"# insert proposal should work
+        run python crc_bank.py insert proposal sam --smp=10000
+        [ "$status" -eq 0 ]
+
+        # modify the proposal date to 7 days prior
+        run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
+
+        # modify proposal should work
+        run python crc_bank.py change sam --mpi=10000
+        [ "$status" -eq 0 ]
+
+        # dump the tables to JSON should work
+        run python crc_bank.py dump proposal.json investor.json \
+            proposal_archive.json investor_archive.json
+        [ "$status" -eq 0 ]
+
+        # proposal should have 1 mpi entry with 10000 SUs
+        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
+        [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
+        [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
+        """
+
+    def test_modify_updates_SUs(self) -> None:
+        """
+         # insert proposal should work
+         run python crc_bank.py insert proposal sam --smp=10000
+         [ "$status" -eq 0 ]
+
+         # modify the proposal date to 7 days prior
+         run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
+
+         # dump the tables to JSON should work
+         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
+         [ "$status" -eq 0 ]
+
+         # proposal should have 1 mpi entry with 10000 SUs
+         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
+         [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
+         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
+         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
+         [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
+         [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
+
+         # modify proposal should work
+         run python crc_bank.py modify sam --mpi=10000
+         [ "$status" -eq 0 ]
+
+         # dump the tables to JSON should work
+         run rm proposal.json investor.json proposal_archive.json investor_archive.json
+         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
+         [ "$status" -eq 0 ]
+
+         # proposal should have 1 mpi entry with 10000 SUs
+         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
+         [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
+         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
+         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
+         [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
+         [ $(grep -c "\"start_date\": \"$(date +%F)\"" proposal.json) -eq 1 ]
+         """
+
+
+class Investor(TestCase):
+    """Tests for the ``investor`` subparser"""
+
+    def investor_fails_with_no_proposal(self) -> None:
+        """
+        # insert investment should not work
+        run python crc_bank.py investor sam 10000
+        [ "$status" -eq 1 ]
+        """
+
+    def investor_works(self) -> None:
         """
         # insert proposal should work
         run python crc_bank.py insert proposal sam --smp=10000
@@ -136,65 +239,25 @@ class Withdraw(TestCase):
         run python crc_bank.py investor sam 10000
         [ "$status" -eq 0 ]
 
-        # withdraw from investment
-        run python crc_bank.py withdraw sam 8000
-        [ "$status" -eq 0 ]
-
         # dump the tables to JSON should work
         run python crc_bank.py dump proposal.json investor.json \
             proposal_archive.json investor_archive.json
         [ "$status" -eq 0 ]
 
-        # investor table should have rollover SUs
+        # proposal table should have 1 entry with 10000 SUs
+        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
+        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
+        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
+        [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
+
+        # investor table should not have rollover SUs
         [ $(grep -c '"count": 1' investor.json) -eq 1 ]
         [ $(grep -c '"service_units": 10000' investor.json) -eq 1 ]
+        [ $(grep -c '"current_sus": 2000' investor.json) -eq 1 ]
+        [ $(grep -c '"withdrawn_sus": 2000' investor.json) -eq 1 ]
         [ $(grep -c '"rollover_sus": 0' investor.json) -eq 1 ]
-        [ $(grep -c '"current_sus": 10000' investor.json) -eq 1 ]
-        [ $(grep -c '"withdrawn_sus": 10000' investor.json) -eq 1 ]
         """
-
-
-class Modify(TestCase):
-    """Tests for the ``modify`` subparser"""
-
-    def test_modify_updates_SUs(self) -> None:
-        """
-         # insert proposal should work
-         run python crc_bank.py insert proposal sam --smp=10000
-         [ "$status" -eq 0 ]
- 
-         # modify the proposal date to 7 days prior
-         run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
- 
-         # dump the tables to JSON should work
-         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
-         [ "$status" -eq 0 ]
- 
-         # proposal should have 1 mpi entry with 10000 SUs
-         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-         [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
-         [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
- 
-         # modify proposal should work
-         run python crc_bank.py modify sam --mpi=10000
-         [ "$status" -eq 0 ]
- 
-         # dump the tables to JSON should work
-         run rm proposal.json investor.json proposal_archive.json investor_archive.json
-         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
-         [ "$status" -eq 0 ]
- 
-         # proposal should have 1 mpi entry with 10000 SUs
-         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-         [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-         [ $(grep -c "\"start_date\": \"$(date +%F)\"" proposal.json) -eq 1 ]
-         """
 
 
 class Renewal(TestCase):
@@ -364,17 +427,10 @@ class Renewal(TestCase):
         """
 
 
-class Investor(TestCase):
-    """Tests for the ``investor`` subparser"""
+class Withdraw(TestCase):
+    """Tests for the ``withdraw`` subparser"""
 
-    def investor_fails_with_no_proposal(self) -> None:
-        """
-        # insert investment should not work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 1 ]
-        """
-
-    def investor_works(self) -> None:
+    def test_withdraw_works(self) -> None:
         """
         # insert proposal should work
         run python crc_bank.py insert proposal sam --smp=10000
@@ -384,79 +440,19 @@ class Investor(TestCase):
         run python crc_bank.py investor sam 10000
         [ "$status" -eq 0 ]
 
+        # withdraw from investment
+        run python crc_bank.py withdraw sam 8000
+        [ "$status" -eq 0 ]
+
         # dump the tables to JSON should work
         run python crc_bank.py dump proposal.json investor.json \
             proposal_archive.json investor_archive.json
         [ "$status" -eq 0 ]
 
-        # proposal table should have 1 entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
-
-        # investor table should not have rollover SUs
+        # investor table should have rollover SUs
         [ $(grep -c '"count": 1' investor.json) -eq 1 ]
         [ $(grep -c '"service_units": 10000' investor.json) -eq 1 ]
-        [ $(grep -c '"current_sus": 2000' investor.json) -eq 1 ]
-        [ $(grep -c '"withdrawn_sus": 2000' investor.json) -eq 1 ]
         [ $(grep -c '"rollover_sus": 0' investor.json) -eq 1 ]
-        """
-
-
-class Add(TestCase):
-    """Tests for the ``add`` subparser"""
-
-    def add_updates_sus(self) -> None:
-        """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # add proposal should work
-        run python crc_bank.py add sam --mpi=10000
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # proposal should have 1 entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        """
-
-
-class Change(TestCase):
-    """Tests for the ``change`` subparser"""
-
-    def change_updates_SUs(self) -> None:
-        """"# insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # modify the proposal date to 7 days prior
-        run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
-
-        # modify proposal should work
-        run python crc_bank.py change sam --mpi=10000
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # proposal should have 1 mpi entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
+        [ $(grep -c '"current_sus": 10000' investor.json) -eq 1 ]
+        [ $(grep -c '"withdrawn_sus": 10000' investor.json) -eq 1 ]
         """

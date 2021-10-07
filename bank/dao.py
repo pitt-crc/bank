@@ -60,7 +60,7 @@ class Account(SlurmAccount):
         super().__init__(account_name)
         self.account_name = account_name
 
-        # Here we cache the current proposal and investment data to make method calls faster
+        # We cache the current proposal and investment data to make method calls faster
         # Note that changes to cached values will not propagate into the database
         with Session() as session:
             self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
@@ -68,52 +68,6 @@ class Account(SlurmAccount):
 
         if self._proposal is None:
             raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-    def cluster_allocation(self, cluster: str) -> int:
-        """Return the number of service units allocated to the user on the given cluster
-
-        Returns:
-            The cluster allocation in units of seconds
-        """
-
-        if cluster not in app_settings.clusters:
-            raise ValueError(f'Cluster name `{cluster}` is not defined in application settings.')
-
-        return getattr(self._proposal, cluster)
-
-    def add_sus(self, **kwargs: int) -> None:
-        """Add service units for the given account / clusters
-
-        Args:
-            **kwargs: Service units to add to the account for each cluster
-        """
-
-        with Session() as session:
-            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, service_units in kwargs.items():
-                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
-
-            session.commit()
-
-        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
-        LOG.info(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
-
-    def modify_sus(self, **kwargs) -> None:
-        """Update the properties of an account's primary proposal
-
-        Args:
-            **kwargs: New values to set in the proposal
-        """
-
-        with Session() as session:
-            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, service_units in kwargs.items():
-                setattr(self._proposal, cluster, service_units)
-
-            session.commit()
-
-        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
-        LOG.info(f"Changed proposal for {self.account_name} to {su_string}")
 
     def print_allocation_info(self) -> None:
         """Print proposal information for the account"""
@@ -135,7 +89,7 @@ class Account(SlurmAccount):
         allocation_total = 0
         for cluster in app_settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
-            allocation = self.cluster_allocation(cluster)
+            allocation = self.get_cluster_allocation(cluster)
             percentage = round(100 * usage / allocation, 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + allocation :^82}|\n"
@@ -165,6 +119,75 @@ class Account(SlurmAccount):
                   f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
+
+    def get_cluster_allocation(self, cluster: str) -> int:
+        """Return the number of service units allocated to the user on the given cluster
+
+        Returns:
+            The cluster allocation in units of seconds
+        """
+
+        if cluster not in app_settings.clusters:
+            raise ValueError(f'Cluster name `{cluster}` is not defined in application settings.')
+
+        return getattr(self._proposal, cluster)
+
+    def set_cluster_allocation(self, **kwargs) -> None:
+        """Update the properties of an account's primary proposal
+
+        Args:
+            **kwargs: New values to set in the proposal
+        """
+
+        with Session() as session:
+            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, service_units)
+
+            session.commit()
+
+        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
+        LOG.info(f"Changed proposal for {self.account_name} to {su_string}")
+
+    def add_allocation_sus(self, **kwargs: int) -> None:
+        """Add service units for the given account / clusters
+
+        Args:
+            **kwargs: Service units to add to the account for each cluster
+        """
+
+        with Session() as session:
+            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
+
+            session.commit()
+
+        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
+        LOG.info(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
+
+    def modify_investment(self, inv_id: int, **kwargs) -> None:
+        """Update the properties of a given investment
+
+        Args:
+            inv_id: The id of the investment to change
+            **kwargs: New values to set in the investment
+        """
+
+        with Session() as session:
+            investment = session.query(Investor).filter_by(
+                Investor.id == inv_id and Investor.account_name == self.account_name
+            ).first()
+
+            if investment is None:
+                raise ValueError(f'Account {self.account_name} has no investment with id {inv_id}')
+
+            for key, value in kwargs.items():
+                setattr(investment, key, value)
+
+            session.commit()
+
+        LOG.info(f"Modified Investment Id {inv_id}: {kwargs}")
 
     def renewal(self, **sus) -> None:
         with Session() as session:
@@ -272,7 +295,7 @@ class Account(SlurmAccount):
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
-        allocated = sum(self.cluster_allocation(c) for c in app_settings.clusters())
+        allocated = sum(self.get_cluster_allocation(c) for c in app_settings.clusters())
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
@@ -293,29 +316,6 @@ class Account(SlurmAccount):
                 session.commit()
 
             self.notify(app_settings.notify_sus_limit_email_text)
-
-    def modify_investment(self, inv_id: int, **kwargs) -> None:
-        """Update the properties of a given investment
-
-        Args:
-            inv_id: The id of the investment to change
-            **kwargs: New values to set in the investment
-        """
-
-        with Session() as session:
-            investment = session.query(Investor).filter_by(
-                Investor.id == inv_id and Investor.account_name == self.account_name
-            ).first()
-
-            if investment is None:
-                raise ValueError(f'Account {self.account_name} has no investment with id {inv_id}')
-
-            for key, value in kwargs.items():
-                setattr(investment, key, value)
-
-            session.commit()
-
-        LOG.info(f"Modified Investment Id {inv_id}: {kwargs}")
 
     def notify(self, email_template):
         raise NotImplementedError

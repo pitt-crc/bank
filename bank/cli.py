@@ -91,11 +91,11 @@ class CLIParser(ArgumentParser):
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
-        parser_add.set_defaults(function=lambda account, **kwargs: account.add_sus(**kwargs))
+        parser_add.set_defaults(function=lambda account, **kwargs: account.add_allocation_sus(**kwargs))
 
         parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
         self._add_args_to_parser(parser_change, _account, _date, include_clusters=True)
-        parser_change.set_defaults(function=lambda account, **kwargs: account.modify_sus(**kwargs))
+        parser_change.set_defaults(function=lambda account, **kwargs: account.set_cluster_allocation(**kwargs))
 
         # Subparsers for adding and modifying investment accounts
 
