@@ -9,6 +9,16 @@ from bank.system import SlurmAccount
 TEST_ACCOUNT = 'sam'
 
 
+# Todo: Implement tests for:
+#  check_proposal_end_date
+#  add
+#  modify
+#  investor
+#  investor_modify
+#  renewal
+#  withdraw
+
+
 class DynamicallyAddedClusterArguments(TestCase):
     """Test that selected subparsers have an argument for each cluster defined in the application settings"""
 
@@ -28,7 +38,7 @@ class Info(TestCase):
     """Tests for the ``info`` subparser"""
 
     @patch('builtins.print')
-    def runTest(self, mocked_print) -> None:
+    def test_info_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_allocation_info`` function"""
 
         dao.Account(TEST_ACCOUNT).print_allocation_info()
@@ -41,7 +51,7 @@ class Usage(TestCase):
     """Tests for the ``usage`` subparser"""
 
     @patch('builtins.print')
-    def runTest(self, mocked_print) -> None:
+    def test_usage_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
 
         dao.Account(TEST_ACCOUNT).print_usage_info()
@@ -91,15 +101,27 @@ class ReleaseHold(TestCase):
         self.assertFalse(account.get_locked_state())
 
 
-# Todo: Implement tests for:
-#  check_proposal_end_date
-#  insert
-#  add
-#  modify
-#  investor
-#  investor_modify
-#  renewal
-#  withdraw
+# Todo: Test what happens if we insert and a proposal already exists
+class Insert(TestCase):
+    """Tests for the ``insert`` subparser"""
+
+    def setUpClass(cls) -> None:
+        cls.first_cluster, *cls.other_clusters = app_settings.clusters
+        cls.number_sus = 10_000
+        CLIParser().execute(['insert', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
+
+    def test_proposal_is_created_for_cluster(self) -> None:
+        """Test that a proposal has been created for the user account and cluster"""
+
+        self.assertEqual(self.number_sus, dao.Account(TEST_ACCOUNT).cluster_allocation(self.first_cluster))
+
+    def test_default_number_sus_is_zero(self) -> None:
+        """Test the number of service units is zero for unspecified clsuters"""
+
+        account = dao.Account(TEST_ACCOUNT)
+        for cluster in self.other_clusters:
+            self.assertEqual(self.number_sus, account.cluster_allocation(cluster))
+
 
 class Withdraw(TestCase):
     """Tests for the ``withdraw`` subparser"""
@@ -173,40 +195,6 @@ class Modify(TestCase):
          [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
          [ $(grep -c "\"start_date\": \"$(date +%F)\"" proposal.json) -eq 1 ]
          """
-
-
-class Insert(TestCase):
-    """Tests for the ``insert`` subparser"""
-
-    def insert_works(self) -> None:
-        """    
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # info should work and print something
-        run python crc_bank.py info sam
-        [ "$status" -eq 0 ]
-        [ "$output" != "" ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # proposal should have 1 smp entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
-        [ $(grep -c "\"start_date\": \"$(date +%F)\"" proposal.json) -eq 1 ]
-
-        # all other tables should be empty
-        [ $(grep -c '{}' proposal_archive.json) -eq 1 ]
-        [ $(grep -c '{}' investor.json) -eq 1 ]
-        [ $(grep -c '{}' investor_archive.json) -eq 1 ]
-        """
 
 
 class Renewal(TestCase):
