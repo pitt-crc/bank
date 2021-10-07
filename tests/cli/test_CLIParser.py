@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from bank import dao
+from bank import dao, orm
 from bank.cli import CLIParser
 from bank.settings import app_settings
 from bank.system import SlurmAccount
@@ -11,9 +11,7 @@ TEST_ACCOUNT = 'sam'
 
 # Todo: Implement tests for:
 #  check_proposal_end_date
-#  add
 #  modify
-#  investor
 #  investor_modify
 #  renewal
 #  withdraw
@@ -213,42 +211,24 @@ class Modify(TestCase):
 class Investor(TestCase):
     """Tests for the ``investor`` subparser"""
 
-    def investor_fails_with_no_proposal(self) -> None:
-        """
-        # insert investment should not work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 1 ]
-        """
+    def setUpClass(cls) -> None:
+        """Delete any existing investments"""
 
-    def investor_works(self) -> None:
-        """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
+        with orm.Session() as session:
+            session.query(orm.Investor).filter_by(orm.Investor.account_name == TEST_ACCOUNT).delete()
+            session.commit()
 
-        # insert investment should work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 0 ]
+    def test_investment_is_created(self) -> None:
+        """Test an investment is created with the correct number of sus"""
 
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
+        num_sus = 15_000
+        CLIParser().execute(['investor', TEST_ACCOUNT, num_sus])
 
-        # proposal table should have 1 entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
+        account = dao.Account(TEST_ACCOUNT)
+        self.assertEqual(1, len(account.get_investment_ids()))
 
-        # investor table should not have rollover SUs
-        [ $(grep -c '"count": 1' investor.json) -eq 1 ]
-        [ $(grep -c '"service_units": 10000' investor.json) -eq 1 ]
-        [ $(grep -c '"current_sus": 2000' investor.json) -eq 1 ]
-        [ $(grep -c '"withdrawn_sus": 2000' investor.json) -eq 1 ]
-        [ $(grep -c '"rollover_sus": 0' investor.json) -eq 1 ]
-        """
+        inv_id = account.get_investment_ids()[0]
+        self.assertEqual(num_sus, account.get_investment_sus(inv_id))
 
 
 class Renewal(TestCase):

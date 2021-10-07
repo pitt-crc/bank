@@ -105,7 +105,7 @@ class CLIParser(ArgumentParser):
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
         self._add_args_to_parser(parser_investor, _inv_id, _sus, _date)
-        parser_investor_modify.set_defaults(function=lambda account, **kwargs: account.modify_investment(**kwargs))
+        parser_investor_modify.set_defaults(function=lambda account, **kwargs: account.set_investment_sus(**kwargs))
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         self._add_args_to_parser(parser_renewal, _account, include_clusters=True)

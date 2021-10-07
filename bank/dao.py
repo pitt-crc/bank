@@ -33,7 +33,7 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from bank.exceptions import MissingProposalError
 from bank.orm import Investor, Proposal, Session
@@ -64,7 +64,7 @@ class Account(SlurmAccount):
         # Note that changes to cached values will not propagate into the database
         with Session() as session:
             self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
+            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
 
         if self._proposal is None:
             raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
@@ -166,7 +166,10 @@ class Account(SlurmAccount):
         su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
         LOG.info(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
 
-    def modify_investment(self, inv_id: int, **kwargs) -> None:
+    def get_investment_sus(self, inv_id) -> int:
+        return self._investments.filter_by(Investor.id == inv_id).first().sus
+
+    def set_investment_sus(self, inv_id: int, **kwargs) -> None:
         """Update the properties of a given investment
 
         Args:
@@ -186,6 +189,7 @@ class Account(SlurmAccount):
                 setattr(investment, key, value)
 
             session.commit()
+            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
 
         LOG.info(f"Modified Investment Id {inv_id}: {kwargs}")
 
