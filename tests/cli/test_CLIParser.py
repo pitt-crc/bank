@@ -104,21 +104,20 @@ class Insert(TestCase):
     """Tests for the ``insert`` subparser"""
 
     def setUpClass(cls) -> None:
-        cls.first_cluster, *cls.other_clusters = app_settings.clusters
+        cls.first_cluster, *_ = app_settings.clusters
         cls.number_sus = 10_000
         CLIParser().execute(['insert', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
 
     def test_proposal_is_created_for_cluster(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
-        self.assertEqual(self.number_sus, dao.Account(TEST_ACCOUNT).get_cluster_allocation(self.first_cluster))
+        # Test service units have been allocated to the cluster specified to the CLI parser
+        allocations = dao.Account(TEST_ACCOUNT).get_cluster_allocation()
+        self.assertEqual(self.number_sus, allocations.pop(self.first_cluster))
 
-    def test_default_number_sus_is_zero(self) -> None:
-        """Test the number of service units is zero for unspecified clsuters"""
-
-        account = dao.Account(TEST_ACCOUNT)
-        for cluster in self.other_clusters:
-            self.assertEqual(self.number_sus, account.get_cluster_allocation(cluster))
+        # Test all other clusters have zero service units
+        for cluster, sus in allocations.items():
+            self.assertEqual(0, sus, f'Cluster {cluster} should have zero service units. Got {sus}.')
 
 
 # Todo: extend tests to ensure only the correct cluster allocation has been modified
