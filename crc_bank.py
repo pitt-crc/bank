@@ -357,14 +357,18 @@ elif args["check_sus_limit"]:
         )
 
     total_sus += sum_investor_archive_sus
+    percent_usage = 100.0 * used_sus / total_sus
+
+    # Lock the account if necessary
+    if percent_usage >= utils.PercentNotified.Hundred and args["<account>"] != "root":
+        utils.lock_account(args["<account>"])
+        utils.log_action(f"The account for {args['<account>']} was locked due to SUs limit")
 
     notification_percent = utils.PercentNotified(proposal_row["percent_notified"])
     if notification_percent == utils.PercentNotified.Hundred:
         exit(
-            f"{datetime.now()}: Skipping account {args['<account>']} because it should have already been notified and locked"
+            f"{datetime.now()}: Skipping notification for account {args['<account>']} because it should have already been notified"
         )
-
-    percent_usage = 100.0 * used_sus / total_sus
 
     # Update percent_notified in the table and notify account owner if necessary
     updated_notification_percent = utils.find_next_notification(percent_usage)
@@ -376,15 +380,6 @@ elif args["check_sus_limit"]:
         utils.log_action(
             f"Updated proposal percent_notified to {updated_notification_percent} for {args['<account>']}"
         )
-
-    # Lock the account if necessary
-    if updated_notification_percent == utils.PercentNotified.Hundred:
-        if args["<account>"] != "root":
-            utils.lock_account(args["<account>"])
-
-            utils.log_action(
-                f"The account for {args['<account>']} was locked due to SUs limit"
-            )
 
 elif args["check_proposal_end_date"]:
     # Account must exist in database
