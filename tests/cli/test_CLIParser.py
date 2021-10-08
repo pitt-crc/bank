@@ -168,7 +168,7 @@ class Modify(TestCase):
         """
 
     def test_modify_updates_SUs(self) -> None:
-        """Test the modify command updates sus on the given cluster"""
+        """Test the command updates sus on the given cluster"""
 
         account = dao.Account(TEST_ACCOUNT)
         test_cluster = app_settings.clusters[0]
@@ -200,6 +200,20 @@ class Investor(TestCase):
 
         inv_sus = next(iter(account.get_investment_sus().values()))
         self.assertEqual(num_sus, inv_sus)
+
+
+class InvestorModify(TestCase):
+    """Tests for the ``investor_modify`` subparser"""
+
+    def test_modify_updates_SUs(self) -> None:
+        """Test the command updates sus on the given investment"""
+
+        account = dao.Account(TEST_ACCOUNT)
+        inv_id, original_sus = next(iter(account.get_investment_sus().items()))
+
+        new_sus = original_sus + 10
+        CLIParser().execute(['investor_modify', inv_id, new_sus])
+        self.assertEqual(new_sus, next(iter(account.get_investment_sus().values())))
 
 
 class Renewal(TestCase):
