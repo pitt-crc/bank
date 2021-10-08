@@ -11,7 +11,6 @@ TEST_ACCOUNT = 'sam'
 
 # Todo: Implement tests for:
 #  check_proposal_end_date
-#  modify
 #  investor_modify
 #  renewal
 #  withdraw
@@ -120,7 +119,6 @@ class Insert(TestCase):
             self.assertEqual(0, sus, f'Cluster {cluster} should have zero service units. Got {sus}.')
 
 
-# Todo: extend tests to ensure only the correct cluster allocation has been modified
 class Add(TestCase):
     """Tests for the ``add`` subparser"""
 
@@ -128,14 +126,16 @@ class Add(TestCase):
         """Test the allocated service units are incremented by a given amount"""
 
         account = dao.Account(TEST_ACCOUNT)
-        test_cluster_name = app_settings.clusters[0]
-        original_sus = account.get_cluster_allocation(test_cluster_name)
+        test_cluster_name, *other_clusters = app_settings.clusters
+        original_sus = account.get_cluster_allocation()
 
         sus_to_add = 100
         CLIParser().execute(['add', TEST_ACCOUNT, f'--{test_cluster_name}={sus_to_add}'])
+        new_sus = account.get_cluster_allocation()
 
-        new_sus = account.get_cluster_allocation(test_cluster_name)
-        self.assertEqual(new_sus, original_sus + sus_to_add)
+        self.assertEqual(new_sus[test_cluster_name], original_sus[test_cluster_name] + sus_to_add)
+        for cluster in other_clusters:
+            self.assertEqual(new_sus[cluster], original_sus[cluster])
 
 
 class Modify(TestCase):
@@ -168,43 +168,15 @@ class Modify(TestCase):
         """
 
     def test_modify_updates_SUs(self) -> None:
-        """
-         # insert proposal should work
-         run python crc_bank.py insert proposal sam --smp=10000
-         [ "$status" -eq 0 ]
+        """Test the modify command updates sus on the given cluster"""
 
-         # modify the proposal date to 7 days prior
-         run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
+        account = dao.Account(TEST_ACCOUNT)
+        test_cluster = app_settings.clusters[0]
+        account.set_cluster_allocation(**{test_cluster: 0})
 
-         # dump the tables to JSON should work
-         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
-         [ "$status" -eq 0 ]
-
-         # proposal should have 1 mpi entry with 10000 SUs
-         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-         [ $(grep -c '"smp": 10000' proposal.json) -eq 1 ]
-         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"mpi": 0' proposal.json) -eq 1 ]
-         [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
-
-         # modify proposal should work
-         run python crc_bank.py modify sam --mpi=10000
-         [ "$status" -eq 0 ]
-
-         # dump the tables to JSON should work
-         run rm proposal.json investor.json proposal_archive.json investor_archive.json
-         run python crc_bank.py dump proposal.json investor.json proposal_archive.json investor_archive.json
-         [ "$status" -eq 0 ]
-
-         # proposal should have 1 mpi entry with 10000 SUs
-         [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-         [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-         [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-         [ $(grep -c "\"start_date\": \"$(date +%F)\"" proposal.json) -eq 1 ]
-         """
+        new_sus = 1_000
+        CLIParser().execute(['modify', TEST_ACCOUNT, f'--{test_cluster}={new_sus}'])
+        self.assertEqual(new_sus, account.get_cluster_allocation()[test_cluster])
 
 
 class Investor(TestCase):
@@ -224,10 +196,10 @@ class Investor(TestCase):
         CLIParser().execute(['investor', TEST_ACCOUNT, num_sus])
 
         account = dao.Account(TEST_ACCOUNT)
-        self.assertEqual(1, len(account.get_investment_ids()))
+        self.assertEqual(1, len(account.get_investment_sus()))
 
-        inv_id = account.get_investment_ids()[0]
-        self.assertEqual(num_sus, account.get_investment_sus(inv_id))
+        inv_sus = next(iter(account.get_investment_sus().values()))
+        self.assertEqual(num_sus, inv_sus)
 
 
 class Renewal(TestCase):
