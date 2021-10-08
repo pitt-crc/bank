@@ -121,19 +121,19 @@ class Account(SlurmAccount):
                   f"|{'-' * 82}|")
 
     def get_cluster_allocation(self) -> Dict[str, int]:
-        """Return the number of service units allocated to the user on the given cluster
+        """Return the number of service units allocated to the user on each cluster
 
         Returns:
-            The cluster allocation in units of seconds
+            Dictionary of cluster names and allocated service units
         """
 
         return {c: getattr(self._proposal, c) for c in app_settings.clusters}
 
     def set_cluster_allocation(self, **kwargs) -> None:
-        """Update the properties of an account's primary proposal
+        """Replace the number of service units allocated to a given cluster
 
         Args:
-            **kwargs: New values to set in the proposal
+            **kwargs: New service unit values for each cluster
         """
 
         with Session() as session:
@@ -149,27 +149,29 @@ class Account(SlurmAccount):
         LOG.info(f"Changed proposal for {self.account_name} to {self.get_cluster_allocation()}")
 
     def add_allocation_sus(self, **kwargs: int) -> None:
-        """Add service units for the given account / clusters
+        """Add service units to the account's current allocation
 
         Args:
             **kwargs: Service units to add to the account for each cluster
         """
 
         current_sus = self.get_cluster_allocation()
-        for key in current_sus:
-            current_sus[key] += kwargs.get(key, 0)
+        for key in kwargs:
+            kwargs[key] += current_sus.get(key, 0)
 
         self.set_cluster_allocation(**current_sus)
         LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {current_sus}")
 
     def get_investment_sus(self) -> Dict[str, int]:
+        """Return a dictionary with the number of service units for each investment tied to the account"""
+
         return {str(inv.id): inv.sus for inv in self._investments}
 
     def set_investment_sus(self, **kwargs: int) -> None:
-        """Update the properties of a given investment
+        """Replace the number of service units allocated to a given investment
 
         Args:
-            **kwargs: New values to set in the investment
+            **kwargs: New service unit values to set in each investment
         """
 
         investment_ids = {str(inv.id) for inv in self._investments}
