@@ -360,7 +360,7 @@ elif args["check_sus_limit"]:
     percent_usage = 100.0 * used_sus / total_sus
 
     # Lock the account if necessary
-    if percent_usage >= utils.PercentNotified.Hundred and args["<account>"] != "root":
+    if percent_usage >= utils.PercentNotified.Hundred.to_percentage() and args["<account>"] != "root":
         utils.lock_account(args["<account>"])
         utils.log_action(f"The account for {args['<account>']} was locked due to SUs limit")
 
