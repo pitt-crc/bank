@@ -1,3 +1,34 @@
+"""The ``dao`` module acts as the primary data access layer for the parent
+application and defines the bulk of the account management logic.
+
+Usage Example
+-------------
+
+The ``Account`` class is used to administrate existing user accounts
+with established proposals. For example:
+
+.. code-block:: python
+
+  >>> from bank.dao import Account
+  >>>
+  >>> # Lock the user account from running any more jobs
+  >>> account = Account('account_name')
+  >>> account.set_locked_state(lock_state=True)
+
+The ``Bank`` class is used to create new accounts/proposals/investments and
+to handle bank wide tasks that aren't specific to a single user. For example:
+
+.. code-block:: python
+
+  >>> from bank.dao import Account
+  >>>
+  >>> # List all unlocked accounts
+  >>> unlocked_accounts = Bank().find_unlocked()
+
+API Reference
+-------------
+"""
+
 from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
@@ -54,13 +85,13 @@ class Account(SlurmAccount):
         """Add service units for the given account / clusters
 
         Args:
-            **kwargs: Service units to add on to each cluster
+            **kwargs: Service units to add to the account for each cluster
         """
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, s_u in kwargs.items():
-                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + s_u)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
 
             session.commit()
 
@@ -76,8 +107,8 @@ class Account(SlurmAccount):
 
         with Session() as session:
             self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, service_unit in kwargs.items():
-                setattr(self._proposal, cluster, service_unit)
+            for cluster, service_units in kwargs.items():
+                setattr(self._proposal, cluster, service_units)
 
             session.commit()
 
@@ -167,7 +198,7 @@ class Account(SlurmAccount):
         #     check if there is any rollover
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
-            total_usage = sum([current_investments[c] for c in app_settings.clusters])
+            total_usage = sum([current_usage[c] for c in app_settings.clusters])
             total_proposal_sus = sum([getattr(self._proposal, c) for c in app_settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
@@ -255,7 +286,7 @@ class Account(SlurmAccount):
             LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {self._proposal.end_date.strftime(app_settings.date_format)}")
 
-        elif self._proposal.percent_notified<next_notify<=usage_perc:
+        elif self._proposal.percent_notified < next_notify <= usage_perc:
             with Session() as session:
                 self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
                 self._proposal.percent_notified = next_notify
@@ -319,7 +350,7 @@ class Bank:
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        proposal_type = ProposalType.from_string(prop_type)
+        proposal_type = ProposalType[prop_type]
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         new_proposal = Proposal(
