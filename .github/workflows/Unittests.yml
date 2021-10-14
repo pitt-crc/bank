@@ -34,14 +34,22 @@ jobs:
   #          CRC_BANK_TEST: true
 
   python_tests:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted]
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        include:
+          - python-version: 3.7
+            module_name: python/anaconda3.7-2019.03
+
+          - python-version: 3.8
+            module_name: python/anaconda3.8-2020.11
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
+
+      - name: Load Python Module
+        run: module load ${{ matrix.module_name }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
