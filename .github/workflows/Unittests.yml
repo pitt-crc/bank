@@ -57,7 +57,7 @@ jobs:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
   codacy-coverage-reporter:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted]
     name: Report code coverage
     needs: python_tests
     steps:
