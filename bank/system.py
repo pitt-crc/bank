@@ -26,7 +26,6 @@ API Reference
 
 from __future__ import annotations
 
-from bs4 import BeautifulSoup
 from datetime import time
 from email.message import EmailMessage
 from functools import wraps
@@ -34,8 +33,11 @@ from logging import getLogger
 from os import geteuid
 from shlex import split
 from smtplib import SMTP
+from string import Formatter
 from subprocess import PIPE, Popen
 from typing import Any
+
+from bs4 import BeautifulSoup
 
 from .exceptions import CmdError
 from .settings import app_settings
@@ -155,38 +157,31 @@ class SlurmAccount:
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
-class EmailTemplate:
+class EmailTemplate(Formatter):
     """A formattable email template"""
 
-    def __init__(self, msg: str):
-        """
-
-        Args:
-            msg: message in email
-        """
-
+    def __init__(self, msg):
         self._msg = msg
 
-    def format(self, account, proposal) -> EmailTemplate:
-        """Format the email template and return a new instance
+    @property
+    def msg(self):
+        return self._msg
 
-        Args:
-            account: the account to send an email to
-            proposal: the email proposal for account
+    @property
+    def fields(self):
+        return tuple(field_name for _, field_name, *_ in self.parse(self.msg))
 
-        Returns:
-            A new ``EmailTemplate`` instance with a formatted message
-        """
+    def format(self, **kwargs):
+        keys = set(kwargs.keys())
+        incorrect_keys = keys - set(self.fields)
+        if incorrect_keys:
+            raise ValueError(f'{incorrect_keys}')
 
-        format_message = self._msg.format(
-            account=self.account_name,
-            start=proposal.start_date.strftime(app_settings.date_format),
-            expire=proposal.end_date.strftime(app_settings.date_format),
-            usage=self.usage_string(),
-            perc=PercentNotified(proposal.percent_notified).to_percentage(),
-            investment=self.get_investment_status())
+        return EmailTemplate(self._msg.format(**kwargs))
 
-        return EmailTemplate(format_message)
+    def _assert_missing_fields(self):
+        if self.fields:
+            raise RuntimeError('Message has unformatted fields: {fields}')
 
     def send_to(self, to: str, subject: str, ffrom: str = None) -> None:
         """Send the email template to the given address
@@ -196,6 +191,8 @@ class EmailTemplate:
             subject: The subject line of the email
             ffrom: The address of the message sender
         """
+
+        self._assert_missing_fields()
 
         # Extract the text from the email
         soup = BeautifulSoup(self._msg, "html.parser")
