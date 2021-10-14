@@ -73,11 +73,11 @@ The table below lists the available settings and their default value.
 Default file paths are typically relative to the installation directory of the application (``[INSTALLDIR]``).
 
 .. list-table::
-   :widths: 25 25 50
    :header-rows: 1
-   *  - Environmental Variable
-      - Default Value
-      - Description
+
+   * - Environmental Variable
+     - Default Value
+     - Description
 
    * - BANK_DATE_FORMAT
      - ``%m/%d/%y``
@@ -96,7 +96,7 @@ Default file paths are typically relative to the installation directory of the a
      - The minimum severity level required for an entry to be written to the log.
 
    * - BANK_DB_PATH
-     - ``f'sqlite:///[INSTALLDIR]/crc_bank.db``
+     - ``sqlite:///[INSTALLDIR]/crc_bank.db``
      - Path to the backend application database.
 
    * - BANK_CLUSTERS
@@ -115,14 +115,14 @@ Default file paths are typically relative to the installation directory of the a
 
    * - BANK_NOTIFY_SUS_LIMIT_EMAIL_TEXT
      -
-     - Email message used to notify account holders about service unit usage and limits
+     - Email message used to notify account holders about service unit usage and limits.
 
    * - BANK_THREE_MONTH_PROPOSAL_EXPIRY_NOTIFICATION_EMAIL
      -
-     - Email message to send when an account is 90 days from the end of its proposal
+     - Email message to send when an account is 90 days from the end of its proposal.
 
 
    * - BANK_PROPOSAL_EXPIRES_NOTIFICATION_EMAIL
      -
-     - An email to send when an account's proposal has expired
+     - An email to send when an account's proposal has expired.
 
