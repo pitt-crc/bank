@@ -39,17 +39,19 @@ jobs:
       matrix:
         include:
           - python-version: 3.7
-            module_name: python/anaconda3.7-2019.03
+            modules: "gcc/8.2.0 python/anaconda3.7-2019.03"
 
           - python-version: 3.8
-            module_name: python/anaconda3.8-2020.11
+            modules: "gcc/8.2.0 python/anaconda3.8-2020.11"
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
 
       - name: Load Python Module
-        run: module load ${{ matrix.module_name }}
+        run: |
+          module purge
+          module load ${{ matrix.modules }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
