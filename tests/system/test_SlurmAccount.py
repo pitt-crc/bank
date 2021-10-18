@@ -26,11 +26,12 @@ class AccountUsage(TestCase):
     """Test the getting and setting of account usage values"""
 
     def setUp(self) -> None:
-        """Set the raw suage for the testing account to the given value"""
+        """Set the raw usage for the testing account to the given value"""
 
         self.usage = 1_000
         clusters = ','.join(app_settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={app_settings.test_account} cluster={clusters} set RawUsage={self.usage}')
+        cmd = ShellCmd(f'sacctmgr -i modify account where account={app_settings.test_account} cluster={clusters} set RawUsage={self.usage}')
+        cmd.raise_err()
 
     def test_get_usage(self) -> None:
         """Test the recovered account usage matches the value set in setup"""
