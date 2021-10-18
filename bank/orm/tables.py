@@ -157,6 +157,6 @@ class InvestorArchive(Base):
 
 # Dynamically add columns for each of the managed clusters
 for _cluster in app_settings.clusters:
-    setattr(Proposal, _cluster, Column(Integer, nullable=False))
+    setattr(Proposal, _cluster, Column(Integer, default=0))
     setattr(ProposalArchive, _cluster, Column(Integer, nullable=False))
-    setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer))
+    setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer, nullable=False))
