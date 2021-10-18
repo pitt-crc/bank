@@ -30,16 +30,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Load Python Module
+      - name: Load Modules
         run: |
           module purge
           module load ${{ matrix.modules }}
           module list
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Install package dependencies
         run: |
