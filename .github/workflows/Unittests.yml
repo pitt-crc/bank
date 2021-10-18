@@ -32,6 +32,7 @@ jobs:
 
       - name: Load Modules
         run: |
+          pwd
           module purge
           module load ${{ matrix.modules }}
           module list
