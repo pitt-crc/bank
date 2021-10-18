@@ -26,7 +26,6 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
@@ -38,7 +37,7 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .exceptions import CmdError
+from .exceptions import CmdError, NoSuchAccountError
 from .settings import app_settings
 
 LOG = getLogger('bank.utils')
@@ -47,15 +46,21 @@ LOG = getLogger('bank.utils')
 class RequireRoot:
     """Function decorator for requiring root privileges"""
 
+    @staticmethod
+    def is_root() -> bool:
+        """Return if the current user is root"""
+
+        return geteuid() == 0
+
     def __new__(cls, func: callable) -> callable:
         """Wrap the given function"""
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            if geteuid() != 0:
+            if not cls.is_root():
                 raise PermissionError("This action must be run with sudo privileges")
 
-            return func(*args, **kwargs)
+            return func(*args, **kwargs)  # pragma: no cover
 
         return wrapped
 
@@ -104,6 +109,21 @@ class SlurmAccount:
 
         self.account_name = account_name
 
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            slurm_is_installed = cmd.out.startswith('slurm')
+
+        except (CmdError, FileNotFoundError, Exception):
+            slurm_is_installed = False
+
+        if not slurm_is_installed:
+            raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
+
+        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
+        if not account_exists:
+            raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked
 
@@ -142,10 +162,10 @@ class SlurmAccount:
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
         header, data = cmd.out.split('\n')[1:3]
         raw_usage_index = header.split('|').index("RawUsage")
-        usage = data.split('|')[raw_usage_index]
+        usage = int(data.split('|')[raw_usage_index])
 
         if in_hours:  # Convert from seconds to hours
-            usage = time(second=usage).hour
+            usage //= 60
 
         return usage
 
