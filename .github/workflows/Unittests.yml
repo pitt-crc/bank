@@ -33,6 +33,7 @@ jobs:
       - name: Load Modules
         run: |
           pwd
+          echo $HOME
           module purge
           module load ${{ matrix.modules }}
           module list
