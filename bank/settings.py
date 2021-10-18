@@ -49,7 +49,7 @@ APP_PREFIX = 'BANK_'
 class Defaults:
     """Default settings for the parent application"""
 
-    test_accout = 'sam'
+    test_account = 'sam'
     date_format = "%m/%d/%y"
 
     # Where and how to write log files to
