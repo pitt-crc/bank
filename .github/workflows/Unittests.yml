@@ -1,6 +1,5 @@
 name: Run Tests
 
-# Controls when the workflow will run
 on:
   push:
   pull_request:
@@ -27,8 +26,13 @@ jobs:
 
       - name: Setup Python Environment
         run: |
+          # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
+
+          # The conda environemnt needs to be created on the test server ahead of time
           conda activate bank_test_${{ matrix.python-version }}
+
+          # Install package requirements in addition to any packages required for running tests
           pip install -r requirements.txt
           pip install coverage
 
