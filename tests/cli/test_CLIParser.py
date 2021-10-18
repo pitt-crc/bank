@@ -3,17 +3,23 @@ from unittest.mock import patch
 
 from bank import dao, orm
 from bank.cli import CLIParser
+from bank.dao import Account, Bank
+from bank.exceptions import MissingProposalError
 from bank.settings import app_settings
-from bank.system import SlurmAccount
 
 TEST_ACCOUNT = 'sam'
-
 
 # Todo: Implement tests for:
 #  check_proposal_end_date
 #  investor_modify
 #  renewal
 #  withdraw
+
+try:
+    Account(app_settings.test_account)
+
+except MissingProposalError:
+    Bank().create_proposal(app_settings.test_account, 'proposal')
 
 
 class DynamicallyAddedClusterArguments(TestCase):
@@ -89,7 +95,6 @@ class Insert(TestCase):
     def setUpClass(cls) -> None:
         cls.first_cluster, *_ = app_settings.clusters
         cls.number_sus = 10_000
-        print(['insert', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
         CLIParser().execute(['insert', 'proposal', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
 
     def test_proposal_is_created_for_cluster(self) -> None:
