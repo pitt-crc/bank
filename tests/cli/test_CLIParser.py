@@ -102,6 +102,7 @@ class ReleaseHold(TestCase):
 class Insert(TestCase):
     """Tests for the ``insert`` subparser"""
 
+    @classmethod
     def setUpClass(cls) -> None:
         cls.first_cluster, *_ = app_settings.clusters
         cls.number_sus = 10_000
@@ -182,6 +183,7 @@ class Modify(TestCase):
 class Investor(TestCase):
     """Tests for the ``investor`` subparser"""
 
+    @classmethod
     def setUpClass(cls) -> None:
         """Delete any existing investments"""
 
