@@ -14,12 +14,7 @@ jobs:
     runs-on: [self-hosted]
     strategy:
       matrix:
-        include:
-          - python-version: 3.7
-            modules: "gcc/8.2.0 python/anaconda3.7-2019.03"
-
-          - python-version: 3.8
-            modules: "gcc/8.2.0 python/anaconda3.8-2020.11"
+        python-version: [3.7, 3.8]
 
     # Set default shell options for all run steps
     defaults:
@@ -30,13 +25,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Load Modules
+      - name: Setup Python Environment
         run: |
-          pwd
-          echo $HOME
           module purge
-          module load ${{ matrix.modules }}
-          module list
+          conda activate bank_test_${{ matrix.python-version }}
+          pip install -r requirements.txt
 
       - name: Install package dependencies
         run: |
