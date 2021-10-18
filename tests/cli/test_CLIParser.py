@@ -19,7 +19,7 @@ try:
     Account(app_settings.test_account)
 
 except MissingProposalError:
-    Bank().create_proposal(app_settings.test_account, 'proposal')
+    Bank().create_proposal(app_settings.test_account, 'PROPOSAL')
 
 
 class DynamicallyAddedClusterArguments(TestCase):
