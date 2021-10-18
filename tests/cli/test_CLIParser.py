@@ -56,23 +56,6 @@ class Usage(TestCase):
         self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
 
-class ResetRawUsage(TestCase):
-    """Tests for the ``reset_raw_usage`` subparser"""
-
-    def setUp(self) -> None:
-        """Assign a non zero amount of service units to the test user account"""
-
-        self.slurm_account = SlurmAccount(TEST_ACCOUNT)
-        self.slurm_account.set_raw_usage(10_000, *app_settings.clusters)
-
-    def test_usage_is_reset(self) -> None:
-        """Test the subparser successfully sets the raw account usage to zero"""
-
-        CLIParser().execute(['reset_raw_usage', TEST_ACCOUNT])
-        for cluster in app_settings.clusters:
-            self.assertEqual(0, self.slurm_account.get_cluster_usage(cluster))
-
-
 # Todo: test that a notification is sent when notify=True
 class LockWithNotification(TestCase):
     """Tests for the ``lock_with_notification`` subparser"""
@@ -106,7 +89,8 @@ class Insert(TestCase):
     def setUpClass(cls) -> None:
         cls.first_cluster, *_ = app_settings.clusters
         cls.number_sus = 10_000
-        CLIParser().execute(['insert', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
+        print(['insert', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
+        CLIParser().execute(['insert', 'proposal', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
 
     def test_proposal_is_created_for_cluster(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
