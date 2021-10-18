@@ -353,7 +353,7 @@ class Bank:
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         new_proposal = Proposal(
-            proposal_type=proposal_type.value,
+            proposal_type=proposal_type,
             percent_notified=0,
             start_date=start_date,
             end_date=start_date + proposal_duration,
