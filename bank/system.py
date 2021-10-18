@@ -51,7 +51,7 @@ class RequireRoot:
     def is_root() -> bool:
         """Return if the current user is root"""
 
-        return geteuid() != 0
+        return geteuid() == 0
 
     def __new__(cls, func: callable) -> callable:
         """Wrap the given function"""
