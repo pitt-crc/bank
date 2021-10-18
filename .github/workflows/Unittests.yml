@@ -21,6 +21,11 @@ jobs:
           - python-version: 3.8
             modules: "gcc/8.2.0 python/anaconda3.8-2020.11"
 
+    # Set default shell options for all run steps
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
@@ -29,6 +34,7 @@ jobs:
         run: |
           module purge
           module load ${{ matrix.modules }}
+          module list
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
