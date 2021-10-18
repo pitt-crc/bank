@@ -3,7 +3,7 @@
 from unittest import TestCase, skipIf
 
 from bank.settings import app_settings
-from bank.system import ShellCmd, SlurmAccount, RequireRoot
+from bank.system import SlurmAccount, RequireRoot
 
 
 @skipIf(not RequireRoot.is_root(), 'Cannot test account locking without root permissions')

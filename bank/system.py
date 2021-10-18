@@ -26,7 +26,6 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
@@ -166,7 +165,7 @@ class SlurmAccount:
         usage = int(data.split('|')[raw_usage_index])
 
         if in_hours:  # Convert from seconds to hours
-            usage = time(second=usage).hour
+            usage //= 60
 
         return usage
 
