@@ -58,7 +58,7 @@ class RequireRoot:
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            if cls.is_root():
+            if not cls.is_root():
                 raise PermissionError("This action must be run with sudo privileges")
 
             return func(*args, **kwargs)  # pragma: no cover
