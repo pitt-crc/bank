@@ -157,7 +157,7 @@ class SlurmAccount:
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
         header, data = cmd.out.split('\n')[1:3]
         raw_usage_index = header.split('|').index("RawUsage")
-        usage = data.split('|')[raw_usage_index]
+        usage = int(data.split('|')[raw_usage_index])
 
         if in_hours:  # Convert from seconds to hours
             usage = time(second=usage).hour
