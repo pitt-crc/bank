@@ -31,8 +31,8 @@ class AccountUsage(TestCase):
 
         account = SlurmAccount(app_settings.test_account)
         cluster = app_settings.clusters[0]
-        usage_seconds = account.cluster_usage(cluster)
-        usage_hours = account.cluster_usage(cluster, in_hours=True)
+        usage_seconds = account.get_cluster_usage(cluster)
+        usage_hours = account.get_cluster_usage(cluster, in_hours=True)
 
         self.assertGreater(usage_seconds, 0)
         self.assertEqual(int(usage_seconds // 60), usage_hours)
