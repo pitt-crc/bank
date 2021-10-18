@@ -1,11 +1,12 @@
 """Tests for the ``SlurmAccount`` class"""
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from bank.settings import app_settings
-from bank.system import ShellCmd, SlurmAccount
+from bank.system import ShellCmd, SlurmAccount, RequireRoot
 
 
+@skipIf(not RequireRoot.is_root(), 'Cannot test account locking without root permissions')
 class AccountLocking(TestCase):
     """Test the locking and unlocking of an account"""
 
