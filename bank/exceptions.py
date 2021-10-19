@@ -9,6 +9,7 @@ Summary of Exceptions
    bank.exceptions.CmdError
    bank.exceptions.MissingProposalError
    bank.exceptions.TableOverwriteError
+   bank.exceptions.NoSuchAccountError
 """
 
 
@@ -21,4 +22,8 @@ class MissingProposalError(Exception):
 
 
 class TableOverwriteError(Exception):
-    """Raised when database entries are about to be overwritten."""
+    """Raised when database entries are about to be overwritten"""
+
+
+class NoSuchAccountError(Exception):
+    """Raised when a Slurm user account does not exist"""
