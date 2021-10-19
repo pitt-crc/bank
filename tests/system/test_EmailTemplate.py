@@ -43,15 +43,42 @@ class FieldIdentification(TestCase):
 
 
 class MessageSending(TestCase):
-    def test_alternative_message_available(self) -> None:
-        pass
-
-    def test_subject_is_set(self) -> None:
-        pass
-
-    def test_address_fields(self) -> None:
-        pass
+    """Tests for sending emails via an SMTP server"""
 
     @patch('smtplib.SMTP')
-    def test_message_is_sent(self, mock_smtp) -> None:
-        pass
+    def setUp(self, mock_smtp) -> None:
+        self.template = EmailTemplate('This_is_a_test')
+        self.from_address = 'fake_sender@fake_domain.com'
+        self.to_address = 'fake_recipient@fake_domain.com'
+        self.subject = 'Subject line'
+        self.mock_smtp = mock_smtp
+        self.sent = self.template.send_to(
+            self.to_address, self.subject, self.from_address, smtp=mock_smtp)
+
+    def test_message_matches_template(self) -> None:
+        """Test the email message matches the template"""
+
+        self.assertEqual(self.template.msg, self.sent.get_content())
+
+    def test_email_fields_are_set(self) -> None:
+        """Test the address/subject fields have been set in the sent email"""
+
+        self.assertEqual(self.to_address, self.sent['To'])
+        self.assertEqual(self.from_address, self.sent['From'])
+        self.assertEqual(self.subject, self.sent['Subject'])
+
+    def test_message_is_sent(self) -> None:
+        """Test the smtp server is given the email message to send"""
+
+        self.assertEqual(
+            self.mock_smtp.return_value.sendmail.mock_calls,
+            [call(self.template.msg)]
+        )
+
+
+class StringRepresentation(TestCase):
+    """Tests for the casting of email templates into strings"""
+
+    def runTest(self) -> None:
+        template = EmailTemplate('This_is_a_test')
+        self.assertEqual(template.msg, str(template))

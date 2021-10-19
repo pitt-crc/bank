@@ -201,7 +201,7 @@ class EmailTemplate(Formatter):
 
     def send_to(
             self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
-    ) -> None:
+    ) -> EmailMessage:
         """Send the email template to the given address
 
         Args:
@@ -209,6 +209,9 @@ class EmailTemplate(Formatter):
             subject: The subject line of the email
             ffrom: The address of the message sender
             smtp: optionally use an existing SMTP server instance
+
+        Returns:
+            A copy of the sent email
         """
 
         self._assert_missing_fields()
@@ -225,7 +228,9 @@ class EmailTemplate(Formatter):
         msg["To"] = to
 
         with smtp or SMTP("localhost") as s:
-            return s.send_message(msg)
+            s.send_message(msg)
+
+        return msg
 
     def __str__(self) -> str:
         return self._msg
