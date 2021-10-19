@@ -26,14 +26,17 @@ API Reference
 
 from __future__ import annotations
 
+from typing import cast, Optional
+from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
 from os import geteuid
 from shlex import split
 from smtplib import SMTP
+from string import Formatter
 from subprocess import PIPE, Popen
-from typing import Any
+from typing import Any, Tuple
 
 from bs4 import BeautifulSoup
 
@@ -176,24 +179,80 @@ class SlurmAccount:
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
-def send_email(account, email_html: str) -> None:
-    """Send an email to a user account
+class EmailTemplate(Formatter):
+    """A formattable email template"""
 
-    Args:
-        account: The account to send an email to
-        email_html: The content of the email
-    """
+    def __init__(self, msg: str) -> None:
+        self._msg = msg
 
-    # Extract the text from the email
-    soup = BeautifulSoup(email_html, "html.parser")
-    email_text = soup.get_text()
+    @property
+    def msg(self) -> str:
+        return self._msg
 
-    msg = EmailMessage()
-    msg.set_content(email_text)
-    msg.add_alternative(email_html, subtype="html")
-    msg["Subject"] = f"Your allocation on H2P for account: {account.account_name}"
-    msg["From"] = "noreply@pitt.edu"
-    msg["To"] = account.get_email_address()
+    @property
+    def fields(self) -> Tuple[str]:
+        """Return the available (unformatted) fields in the email template
 
-    with SMTP("localhost") as s:
-        s.send_message(msg)
+        Returns:
+            A tuple of unique field names
+        """
+
+        return tuple(cast(str, field_name) for _, field_name, *_ in self.parse(self.msg) if field_name is not None)
+
+    def format(self, **kwargs) -> EmailTemplate:
+        """Format the email template
+
+        See the ``fields`` attribute for available arguments.
+
+        Args:
+            kwargs: Values used to format each field in the template
+        """
+
+        keys = set(kwargs.keys())
+        incorrect_keys = keys - set(self.fields)
+        if incorrect_keys:
+            raise ValueError(f'Keys not found in email template: {incorrect_keys}')
+
+        return EmailTemplate(self._msg.format(**kwargs))
+
+    def _assert_missing_fields(self) -> None:
+        """Raise an error if the template message has any unformatted fields"""
+
+        if self.fields:
+            raise RuntimeError(f'Message has unformatted fields: {self.fields}')
+
+    def send_to(
+            self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
+    ) -> EmailMessage:
+        """Send the email template to the given address
+
+        Args:
+            to: The email address to send the message to
+            subject: The subject line of the email
+            ffrom: The address of the message sender
+            smtp: optionally use an existing SMTP server instance
+
+        Returns:
+            A copy of the sent email
+        """
+
+        self._assert_missing_fields()
+
+        # Extract the text from the email
+        soup = BeautifulSoup(self._msg, "html.parser")
+        email_text = soup.get_text()
+
+        msg = EmailMessage()
+        msg.set_content(email_text)
+        msg.add_alternative(self._msg, subtype="html")
+        msg["Subject"] = subject  # f"Your allocation on H2P for account: {account.account_name}"
+        msg["From"] = ffrom or app_settings.from_address
+        msg["To"] = to
+
+        with smtp or SMTP("localhost") as s:
+            s.send_message(msg)
+
+        return msg
+
+    def __str__(self) -> str:
+        return self._msg

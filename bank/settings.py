@@ -63,11 +63,12 @@ class Defaults:
     db_test_path = f'sqlite:///{_application_dir / "test.db"}'
 
     # A list of cluster names to track usage on
-    clusters = ("smp", "mpi", "gpu", "htc")  # change brackets to parenthesis
+    clusters = ("smp", "mpi", "gpu", "htc")
 
     # The email suffix for your organization. We assume the ``Description``
     # field of each account in ``sacctmgr`` contains the prefix.
     email_suffix = "@pitt.edu"
+    from_address = "noreply@pitt.edu"
 
     # The email templates below accept the following formatting fields:
     #   account: The account name
