@@ -1,4 +1,6 @@
 from unittest import TestCase
+from unittest.mock import patch, call
+
 from bank.system import EmailTemplate
 
 
@@ -24,18 +26,32 @@ class Formatting(TestCase):
         with self.assertRaises(ValueError):
             EmailTemplate('Value: {x}').format(y=1)
 
+
+class FieldIdentification(TestCase):
+    """Tests for the identification of fields"""
+
     def test_all_fields_found(self) -> None:
         """Test the template instance is aware of all fields"""
 
         self.assertEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
 
+    def test_empty_return_for_no_fields(self) -> None:
+        """Test the return is empty when there are no fields"""
+
+        fields = EmailTemplate('there are no fields here').fields
+        self.assertEqual(0, len(fields), f'Found fields: {fields}')
+
 
 class MessageSending(TestCase):
-    def test_alternative_test_available(self) -> None:
+    def test_alternative_message_available(self) -> None:
         pass
 
     def test_subject_is_set(self) -> None:
         pass
 
     def test_address_fields(self) -> None:
+        pass
+
+    @patch('smtplib.SMTP')
+    def test_message_is_sent(self, mock_smtp) -> None:
         pass

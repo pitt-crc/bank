@@ -175,7 +175,7 @@ class EmailTemplate(Formatter):
             A tuple of unique field names
         """
 
-        return tuple(cast(str, field_name) for _, field_name, *_ in self.parse(self.msg))
+        return tuple(cast(str, field_name) for _, field_name, *_ in self.parse(self.msg) if field_name is not None)
 
     def format(self, **kwargs) -> EmailTemplate:
         """Format the email template
@@ -197,7 +197,7 @@ class EmailTemplate(Formatter):
         """Raise an error if the template message has any unformatted fields"""
 
         if self.fields:
-            raise RuntimeError('Message has unformatted fields: {fields}')
+            raise RuntimeError(f'Message has unformatted fields: {self.fields}')
 
     def send_to(
             self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
@@ -225,7 +225,7 @@ class EmailTemplate(Formatter):
         msg["To"] = to
 
         with smtp or SMTP("localhost") as s:
-            s.send_message(msg)
+            return s.send_message(msg)
 
     def __str__(self) -> str:
         return self._msg
