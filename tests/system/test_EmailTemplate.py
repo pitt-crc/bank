@@ -58,7 +58,9 @@ class MessageSending(TestCase):
     def test_message_matches_template(self) -> None:
         """Test the email message matches the template"""
 
-        self.assertEqual(self.template.msg, self.sent.get_content())
+        # The rstrip removes a newline character that is added automatically in the sent message
+        sent_message = self.sent.get_body().get_content().rstrip()
+        self.assertEqual(self.template.msg, sent_message)
 
     def test_email_fields_are_set(self) -> None:
         """Test the address/subject fields have been set in the sent email"""
@@ -70,9 +72,10 @@ class MessageSending(TestCase):
     def test_message_is_sent(self) -> None:
         """Test the smtp server is given the email message to send"""
 
+        # Note that one of expected calls is ``call()`` from the __enter__ context manager
         self.assertEqual(
-            self.mock_smtp.return_value.sendmail.mock_calls,
-            [call(self.template.msg)]
+            self.mock_smtp.__enter__.mock_calls,
+            [call(), call().send_message(self.sent)]
         )
 
 
