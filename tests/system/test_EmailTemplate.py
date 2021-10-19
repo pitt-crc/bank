@@ -3,6 +3,7 @@ from bank.system import EmailTemplate
 
 
 class Formatting(TestCase):
+    """Tests for the formatting of the email template"""
 
     def test_returns_copy(self) -> None:
         """Test formatting a message returns a copy"""
@@ -23,10 +24,10 @@ class Formatting(TestCase):
         with self.assertRaises(ValueError):
             EmailTemplate('Value: {x}').format(y=1)
 
-
-class FieldIdentification(TestCase):
     def test_all_fields_found(self) -> None:
-        pass
+        """Test the template instance is aware of all fields"""
+
+        self.assertEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
 
 
 class MessageSending(TestCase):
