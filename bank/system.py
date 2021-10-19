@@ -174,6 +174,7 @@ class EmailTemplate(Formatter):
         Returns:
             A tuple of unique field names
         """
+
         return tuple(cast(str, field_name) for _, field_name, *_ in self.parse(self.msg))
 
     def format(self, **kwargs) -> EmailTemplate:

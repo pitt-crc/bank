@@ -1,16 +1,27 @@
 from unittest import TestCase
+from bank.system import EmailTemplate
 
 
 class Formatting(TestCase):
 
     def test_returns_copy(self) -> None:
-        pass
+        """Test formatting a message returns a copy"""
+
+        original = EmailTemplate('Value: {x}')
+        new = original.format(x=1)
+        self.assertNotEqual(id(original), id(new))
 
     def test_message_is_formatted(self) -> None:
-        pass
+        """Test the email message is formatted after the function call"""
+
+        formatted_template = EmailTemplate('Value: {x}').format(x=1)
+        self.assertEqual('Value: 1', formatted_template.msg)
 
     def test_error_for_incorrect_keys(self) -> None:
-        pass
+        """Test a ``ValueError`` is raised for kwarg names that don't match fields"""
+
+        with self.assertRaises(ValueError):
+            EmailTemplate('Value: {x}').format(y=1)
 
 
 class FieldIdentification(TestCase):
@@ -19,7 +30,7 @@ class FieldIdentification(TestCase):
 
 
 class MessageSending(TestCase):
-    def test_alternative_test_availible(self) -> None:
+    def test_alternative_test_available(self) -> None:
         pass
 
     def test_subject_is_set(self) -> None:
