@@ -25,7 +25,7 @@ API Reference
 """
 
 from __future__ import annotations
-from typing import cast
+from typing import cast, Optional
 from datetime import time
 from email.message import EmailMessage
 from functools import wraps
@@ -179,7 +179,7 @@ class EmailTemplate(Formatter):
     def format(self, **kwargs) -> EmailTemplate:
         """Format the email template
 
-        See the ``fields`` atribute for availible arguments.
+        See the ``fields`` attribute for available arguments.
 
         Args:
             kwargs: Values used to format each field in the template
@@ -188,7 +188,7 @@ class EmailTemplate(Formatter):
         keys = set(kwargs.keys())
         incorrect_keys = keys - set(self.fields)
         if incorrect_keys:
-            raise ValueError(f'{incorrect_keys}')
+            raise ValueError(f'Keys not found in email template: {incorrect_keys}')
 
         return EmailTemplate(self._msg.format(**kwargs))
 
@@ -198,13 +198,16 @@ class EmailTemplate(Formatter):
         if self.fields:
             raise RuntimeError('Message has unformatted fields: {fields}')
 
-    def send_to(self, to: str, subject: str, ffrom: str = app_settings.from_address) -> None:
+    def send_to(
+            self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
+    ) -> None:
         """Send the email template to the given address
 
         Args:
             to: The email address to send the message to
             subject: The subject line of the email
             ffrom: The address of the message sender
+            smtp: optionally use an existing SMTP server instance
         """
 
         self._assert_missing_fields()
@@ -220,7 +223,7 @@ class EmailTemplate(Formatter):
         msg["From"] = ffrom or app_settings.from_address
         msg["To"] = to
 
-        with SMTP("localhost") as s:
+        with smtp or SMTP("localhost") as s:
             s.send_message(msg)
 
     def __str__(self) -> str:
