@@ -6,7 +6,7 @@ from bank.settings import app_settings
 from bank.system import SlurmAccount, RequireRoot
 
 
-@skipIf(not RequireRoot.check_user_is_root(), 'Cannot test account locking without root permissions')
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
 class AccountLocking(TestCase):
     """Test the locking and unlocking of an account"""
 

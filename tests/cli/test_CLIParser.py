@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import patch
 
 from bank import dao, orm
@@ -6,6 +6,7 @@ from bank.cli import CLIParser
 from bank.dao import Account, Bank
 from bank.exceptions import MissingProposalError
 from bank.settings import app_settings
+from bank.system import RequireRoot
 
 TEST_ACCOUNT = 'sam'
 
@@ -78,6 +79,7 @@ class LockWithNotification(TestCase):
 class ReleaseHold(TestCase):
     """Tests for the ``release_hold`` subparser"""
 
+    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_unlocked(self) -> None:
         """Test that a locked account becomes unlocked"""
 
