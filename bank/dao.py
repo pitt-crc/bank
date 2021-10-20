@@ -102,7 +102,7 @@ class Account(SlurmAccount):
             allocation = getattr(self._proposal, cluster)
             percentage = self._calculate_percentage(usage, allocation, 'N/A')
             print(f"|{'-' * 82}|\n"
-                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + allocation :^82}|\n"
+                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
