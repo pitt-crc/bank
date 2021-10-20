@@ -79,13 +79,13 @@ class Account(SlurmAccount):
             print(inv.row_to_ascii_table())
 
     @staticmethod
-    def _calculate_percentage(usage: Numeric, total: Numeric, default: Any = 0) -> Any:
-        """Calculate the percentage ``100 * usage / total`` and return ``default`` if the answer isinfinity"""
+    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
+        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer isinfinity"""
 
         if total > 0:
             return 100 * usage / total
 
-        return default
+        return 0
 
     def print_usage_info(self) -> None:
         """Print a summary of service units used by the given account"""
@@ -100,14 +100,14 @@ class Account(SlurmAccount):
         for cluster in app_settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
             allocation = getattr(self._proposal, cluster)
-            percentage = self._calculate_percentage(usage, allocation, 'N/A')
+            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30.2f}|\n"
+                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
 
             usage_total += usage
