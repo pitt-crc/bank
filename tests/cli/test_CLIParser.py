@@ -67,6 +67,7 @@ class Usage(TestCase):
 class LockWithNotification(TestCase):
     """Tests for the ``lock_with_notification`` subparser"""
 
+    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_locked(self) -> None:
         """Test that an unlocked account becomes locked"""
 
