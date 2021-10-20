@@ -103,19 +103,28 @@ class Account(SlurmAccount):
             usage_total += usage
             allocation_total += allocation
 
+        # Calculate usage percentages while being careful not to divide by zero
+        usage_percentage = 0
+        if allocation_total:
+            usage_percentage = 100 * usage_total / allocation_total
+
+        investment_total = sum(inv.sus for inv in self._investments)
+        investment_percentage = 0
+        if allocation_total + investment_total:
+            investment_percentage = 100 * usage_total / (allocation_total + investment_total)
+
         # Print usage information concerning investments
         print(f"|{'Aggregate':^82}|")
         print("|{'-' * 40:^40}|{'-' * 41:^41}|")
 
-        investment_total = sum(inv.sus for inv in self._investments)
         if investment_total == 0:
-            print(f"|{'Aggregate Usage':^40}|{100 * usage_total / allocation_total:^41.2f}|")
+            print(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
             print(f"|{'-' * 82}|")
 
         else:
             print(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
-                  f"|{'Aggregate Usage (no investments)':^40}|{100 * usage_total / allocation_total:^41.2f}|\n"
-                  f"|{'Aggregate Usage':^40}|{100 * usage_total / (allocation_total + investment_total):^41.2f}|\n"
+                  f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n"
+                  f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n"
                   f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
