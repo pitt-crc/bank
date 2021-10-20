@@ -33,7 +33,7 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any, Union
 
 from bank.exceptions import MissingProposalError
 from bank.orm import Investor, Proposal, Session
@@ -41,6 +41,7 @@ from bank.orm.enum import ProposalType
 from bank.settings import app_settings
 from bank.system import SlurmAccount
 
+Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
@@ -77,6 +78,15 @@ class Account(SlurmAccount):
         for inv in self._investments:
             print(inv.row_to_ascii_table())
 
+    @staticmethod
+    def _calculate_percentage(usage: Numeric, total: Numeric, default: Any = 0) -> Any:
+        """Calculate the percentage ``100 * usage / total`` and return ``default`` if the answer isinfinity"""
+
+        if total > 0:
+            return 100 * usage / total
+
+        return default
+
     def print_usage_info(self) -> None:
         """Print a summary of service units used by the given account"""
 
@@ -90,28 +100,24 @@ class Account(SlurmAccount):
         for cluster in app_settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
             allocation = getattr(self._proposal, cluster)
-            percentage = round(100 * usage / allocation, 2) or 'N/A'
+            percentage = self._calculate_percentage(usage, allocation, 'N/A')
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + allocation :^82}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|\n"
+                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30.2f}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
 
             usage_total += usage
             allocation_total += allocation
 
         # Calculate usage percentages while being careful not to divide by zero
-        usage_percentage = 0
-        if allocation_total:
-            usage_percentage = 100 * usage_total / allocation_total
+        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
 
         investment_total = sum(inv.sus for inv in self._investments)
-        investment_percentage = 0
-        if allocation_total + investment_total:
-            investment_percentage = 100 * usage_total / (allocation_total + investment_total)
+        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
         print(f"|{'Aggregate':^82}|")
