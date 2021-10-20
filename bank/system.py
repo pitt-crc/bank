@@ -47,7 +47,7 @@ class RequireRoot:
     """Function decorator for requiring root privileges"""
 
     @staticmethod
-    def is_root() -> bool:
+    def check_user_is_root() -> bool:
         """Return if the current user is root"""
 
         return geteuid() == 0
@@ -57,7 +57,7 @@ class RequireRoot:
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            if not cls.is_root():
+            if not cls.check_user_is_root():
                 raise PermissionError("This action must be run with sudo privileges")
 
             return func(*args, **kwargs)  # pragma: no cover
@@ -108,21 +108,24 @@ class SlurmAccount:
         """
 
         self.account_name = account_name
-
-        try:
-            cmd = ShellCmd('sacctmgr -V')
-            cmd.raise_err()
-            slurm_is_installed = cmd.out.startswith('slurm')
-
-        except (CmdError, FileNotFoundError, Exception):
-            slurm_is_installed = False
-
-        if not slurm_is_installed:
+        if not self.check_slurm_installed():
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
         if not account_exists:
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
+    @staticmethod
+    def check_slurm_installed() -> bool:
+        """Return whether sacctmgr is installed on the host machine"""
+
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            return cmd.out.startswith('slurm')
+
+        except (CmdError, FileNotFoundError, Exception):
+            return False
 
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked

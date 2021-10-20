@@ -6,7 +6,7 @@ from bank.settings import app_settings
 from bank.system import SlurmAccount, RequireRoot
 
 
-@skipIf(not RequireRoot.is_root(), 'Cannot test account locking without root permissions')
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot test account locking without root permissions')
 class AccountLocking(TestCase):
     """Test the locking and unlocking of an account"""
 
@@ -26,6 +26,7 @@ class AccountLocking(TestCase):
 class AccountUsage(TestCase):
     """Test the getting and setting of account usage values"""
 
+    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_get_usage_hours(self) -> None:
         """Test the recovered account usage matches the value set in setup"""
 
