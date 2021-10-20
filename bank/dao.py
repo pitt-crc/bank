@@ -396,7 +396,6 @@ class Bank:
         end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
         new_investor = Investor(
             account_name=account,
-            proposal_type=ProposalType['INVESTOR'],
             start_date=start_date,
             end_date=end_date,
             service_units=sus,
