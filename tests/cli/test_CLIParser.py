@@ -180,7 +180,7 @@ class Investor(TestCase):
         """Delete any existing investments"""
 
         with orm.Session() as session:
-            session.query(orm.Investor).filter_by(orm.Investor.account_name == TEST_ACCOUNT).delete()
+            session.query(orm.Investor).filterby(orm.Investor.account_name == TEST_ACCOUNT).delete()
             session.commit()
 
     def test_investment_is_created(self) -> None:
