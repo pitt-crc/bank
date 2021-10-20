@@ -355,20 +355,20 @@ class Bank:
         return tuple(p.account_name for p in proposals)
 
     @staticmethod
-    def create_proposal(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:
+    def create_proposal(account: str, ptype: str, **sus_per_cluster: int) -> None:
         """Create a new proposal for the given account
 
         Args:
-            account_name: The account name to add a proposal for
-            prop_type: The type of proposal
+            account: The account name to add a proposal for
+            ptype: The type of proposal
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        proposal_type = ProposalType[prop_type]
+        proposal_type = ProposalType[ptype]
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         new_proposal = Proposal(
-            account_name=account_name,
+            account_name=account,
             proposal_type=proposal_type,
             percent_notified=0,
             start_date=start_date,
@@ -381,20 +381,21 @@ class Bank:
             session.commit()
 
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
-        LOG.info(f"Inserted proposal with type {proposal_type.name} for {account_name} with {sus_as_str}")
+        LOG.info(f"Inserted proposal with type {proposal_type.name} for {account} with {sus_as_str}")
 
     @staticmethod
-    def create_investment(account_name, sus: int) -> None:
+    def create_investment(account, sus: int) -> None:
         """Add a new investor proposal for the given account
 
         Args:
-            account_name: The account name to add a proposal for
+            account: The account name to add a proposal for
             sus: The number of service units to add
         """
 
         start_date = date.today()
         end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
         new_investor = Investor(
+            account_name=account,
             proposal_type=ProposalType.Investor,
             start_date=start_date,
             end_date=end_date,
@@ -408,4 +409,4 @@ class Bank:
             session.add(new_investor)
             session.commit()
 
-        LOG.info(f"Inserted investment for {account_name} with per year allocations of `{sus}`")
+        LOG.info(f"Inserted investment for {account} with per year allocations of `{sus}`")

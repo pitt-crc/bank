@@ -33,7 +33,7 @@ from .settings import app_settings
 
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
-_prop_type = dict(dest='--type', type=str, help='The proposal type: proposal or class')
+_ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
 _date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', help='The investment proposal id')
@@ -86,7 +86,7 @@ class CLIParser(ArgumentParser):
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        self._add_args_to_parser(parser_insert, _prop_type, _account, include_clusters=True)
+        self._add_args_to_parser(parser_insert, _ptype, _account, include_clusters=True)
         parser_insert.set_defaults(function=dao.Bank.create_proposal)
 
         parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
