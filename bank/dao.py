@@ -152,7 +152,7 @@ class Account(SlurmAccount):
         """
 
         with Session() as session:
-            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
+            self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
             for cluster, service_units in kwargs.items():
                 if cluster not in app_settings.clusters:
                     raise ValueError(f'Cluster {cluster} is not defined in application settings.')
@@ -348,7 +348,7 @@ class Bank:
 
         # Query database for accounts that are unlocked and expired
         with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter_by(
+            proposals: List[Proposal] = session.query(Proposal).filter(
                 (Proposal.end_date < date.today()) and (not Proposal.account.locked_state)
             ).all()
 
