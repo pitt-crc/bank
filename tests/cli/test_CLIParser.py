@@ -187,7 +187,7 @@ class Investor(TestCase):
         """Test an investment is created with the correct number of sus"""
 
         num_sus = 15_000
-        CLIParser().execute(['investor', TEST_ACCOUNT, num_sus])
+        CLIParser().execute(['investor', TEST_ACCOUNT, str(num_sus)])
 
         account = dao.Account(TEST_ACCOUNT)
         self.assertEqual(1, len(account.get_investment_sus()))
