@@ -33,7 +33,7 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Union
 
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
@@ -175,21 +175,20 @@ class InvestorData:
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
             return tuple(inv.to_dict() for inv in investments)
 
-    def set_investment_sus(self, **kwargs: int) -> None:
+    def overwrite_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment
 
         Args:
             **kwargs: New service unit values to set in each investment
         """
 
-        investment_ids = {str(inv.id) for inv in self._investments}
+        investment_ids = {str(inv['id']) for inv in self.get_investment_info()}
         invalid_ids = set(kwargs) - investment_ids
         if invalid_ids:
             raise ValueError(f'Account {self.account_name} has no investment with ids {invalid_ids}')
 
         with Session() as session:
-            self._investments = session.query(Investor).all()
-            for inv in self._investments:
+            for inv in session.query(Investor).all():
                 inv.sus = kwargs.get(str(inv.id), 0)
 
             session.commit()
