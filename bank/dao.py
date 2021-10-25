@@ -35,7 +35,7 @@ from logging import getLogger
 from math import ceil
 from typing import List, Tuple, Dict, Any, Union
 
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
@@ -61,20 +61,60 @@ class Account(SlurmAccount):
         super().__init__(account_name)
         self.account_name = account_name
 
-        # We cache the current proposal and investment data to make method calls faster
-        # Note that changes to cached values will not propagate into the database
-        with Session() as session:
-            self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
+    def get_proposal_info(self) -> dict:
+        """Information about the primary account proposal"""
 
-        if self._proposal is None:
-            raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
+            return proposal.to_dict()
+
+    def get_investment_info(self) -> Tuple[dict, ...]:
+        """Tuple with information for each investment associated with the account"""
+
+        with Session() as session:
+            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
+            return tuple(inv.to_dict() for inv in investments)
+
+    def create_proposal(self, ptype: str = 'PROPOSAL', **sus_per_cluster: int) -> None:
+        """Create a new proposal for the given account
+
+        Args:
+            ptype: The type of proposal
+            **sus_per_cluster: Service units to add on to each cluster
+        """
+
+        proposal_type = ProposalType[ptype.upper()]
+        proposal_duration = timedelta(days=365)
+        start_date = date.today()
+
+        with Session() as session:
+            # Make sure proposal does not already exist
+            if session.query(Proposal).filter(Proposal.account_name == self.account_name).first():
+                raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
+
+            new_proposal = Proposal(
+                account_name=self.account_name,
+                proposal_type=proposal_type,
+                percent_notified=0,
+                start_date=start_date,
+                end_date=start_date + proposal_duration,
+                **sus_per_cluster
+            )
+
+            session.add(new_proposal)
+            session.commit()
+
+        sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
+        LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
     def print_allocation_info(self) -> None:
         """Print proposal information for the account"""
 
         # Print all database entries associate with the account as an ascii table
-        print(self._proposal.row_to_ascii_table())
+        print(self.get_proposal_info.row_to_ascii_table())
         for inv in self._investments:
             print(inv.row_to_ascii_table())
 
@@ -92,14 +132,15 @@ class Account(SlurmAccount):
 
         # Print the table header
         print(f"|{'-' * 82}|")
-        print(f"|{'Proposal End Date':^30}|{self._proposal.end_date.strftime(app_settings.date_format) :^51}|")
+        print(
+            f"|{'Proposal End Date':^30}|{self.get_proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
 
         # Print usage information for the primary proposal
         usage_total = 0
         allocation_total = 0
         for cluster in app_settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
-            allocation = getattr(self._proposal, cluster)
+            allocation = getattr(self.get_proposal_info, cluster)
             percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
@@ -116,7 +157,7 @@ class Account(SlurmAccount):
         # Calculate usage percentages while being careful not to divide by zero
         usage_percentage = self._calculate_percentage(usage_total, allocation_total)
 
-        investment_total = sum(inv.sus for inv in self._investments)
+        investment_total = sum(inv['sus'] for inv in self.get_investment_info)
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
@@ -142,7 +183,7 @@ class Account(SlurmAccount):
             Dictionary of cluster names and allocated service units
         """
 
-        return {c: getattr(self._proposal, c) for c in app_settings.clusters}
+        return {c: getattr(self.get_proposal_info, c) for c in app_settings.clusters}
 
     def set_cluster_allocation(self, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
@@ -152,12 +193,12 @@ class Account(SlurmAccount):
         """
 
         with Session() as session:
-            self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
             for cluster, service_units in kwargs.items():
                 if cluster not in app_settings.clusters:
                     raise ValueError(f'Cluster {cluster} is not defined in application settings.')
 
-                setattr(self._proposal, cluster, service_units)
+                setattr(self.get_proposal_info, cluster, service_units)
 
             session.commit()
 
@@ -205,21 +246,21 @@ class Account(SlurmAccount):
 
     def renewal(self, **sus) -> None:
         with Session() as session:
-            self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
             self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
 
             # Move the old account proposal to the archive table
-            session.add(self._proposal.to_archive_object())
-            self._proposal.proposal.delete()
+            session.add(self.get_proposal_info.to_archive_object())
+            self.get_proposal_info.proposal.delete()
 
             # Move any expired investments to the archive table
-            for investment in self._investments.investments:
+            for investment in self._investments.get_investment_info:
                 if investment.expired:
                     session.add(investment.to_archive_obj())
                     investment.delete()
 
             # Add new proposal and rollover investment service units
-            self._proposal = Proposal(**sus)
+            self.proposal = Proposal(**sus)
             self._rollover_investments()
             session.commit()
 
@@ -236,7 +277,7 @@ class Account(SlurmAccount):
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
             total_usage = sum([current_usage[c] for c in app_settings.clusters])
-            total_proposal_sus = sum([getattr(self._proposal, c) for c in app_settings.clusters])
+            total_proposal_sus = sum([getattr(self.get_proposal_info, c) for c in app_settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
@@ -313,7 +354,7 @@ class Account(SlurmAccount):
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
-        days_until_expire = (self._proposal.end_date - date.today()).days
+        days_until_expire = (self.get_proposal_info.end_date - date.today()).days
         if days_until_expire in app_settings.warning_days:
             self.notify(app_settings.three_month_proposal_expiry_notification)
 
@@ -321,12 +362,12 @@ class Account(SlurmAccount):
             self.set_locked_state(True)
             self.notify(app_settings.proposal_expires_notification)
             LOG.info(
-                f"The account for {self.account_name} was locked because it reached the end date {self._proposal.end_date.strftime(app_settings.date_format)}")
+                f"The account for {self.account_name} was locked because it reached the end date {self.get_proposal_info.end_date.strftime(app_settings.date_format)}")
 
-        elif self._proposal.percent_notified < next_notify <= usage_perc:
+        elif self.get_proposal_info.percent_notified < next_notify <= usage_perc:
             with Session() as session:
-                self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-                self._proposal.percent_notified = next_notify
+                self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+                self.get_proposal_info.percent_notified = next_notify
                 session.commit()
 
             self.notify(app_settings.notify_sus_limit_email_text)
@@ -353,35 +394,6 @@ class Bank:
             ).all()
 
         return tuple(p.account_name for p in proposals)
-
-    @staticmethod
-    def create_proposal(account: str, ptype: str, **sus_per_cluster: int) -> None:
-        """Create a new proposal for the given account
-
-        Args:
-            account: The account name to add a proposal for
-            ptype: The type of proposal
-            **sus_per_cluster: Service units to add on to each cluster
-        """
-
-        proposal_type = ProposalType[ptype.upper()]
-        proposal_duration = timedelta(days=365)
-        start_date = date.today()
-        new_proposal = Proposal(
-            account_name=account,
-            proposal_type=proposal_type,
-            percent_notified=0,
-            start_date=start_date,
-            end_date=start_date + proposal_duration,
-            **sus_per_cluster
-        )
-
-        with Session() as session:
-            session.add(new_proposal)
-            session.commit()
-
-        sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
-        LOG.info(f"Inserted proposal with type {proposal_type.name} for {account} with {sus_as_str}")
 
     @staticmethod
     def create_investment(account, sus: int) -> None:

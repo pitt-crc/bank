@@ -17,6 +17,11 @@ from bank.settings import app_settings
 class CustomBase:
     """Custom SQLAlchemy base class that adds methods for exporting data to different file formats and data types."""
 
+    def to_dict(self) -> dict:
+        """Return row data as a dictionary"""
+
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+
     def row_to_json(self, columns: Optional[Collection[str]] = None) -> Dict[str, Union[int, str]]:
         """Return the row object as a json compatible dictionary
 
