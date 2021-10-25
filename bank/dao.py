@@ -45,38 +45,17 @@ Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
-class Account(SlurmAccount):
-    """Administration for existing bank accounts"""
+class ProposalData:
+    """Data access for proposal information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
         """An existing account in the bank
 
         Args:
             account_name: The name of the account
-
-        Raises:
-            MissingProposalError: If the account does not exist
         """
 
-        super().__init__(account_name)
         self.account_name = account_name
-
-    def get_proposal_info(self) -> dict:
-        """Information about the primary account proposal"""
-
-        with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            if proposal is None:
-                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-            return proposal.to_dict()
-
-    def get_investment_info(self) -> Tuple[dict, ...]:
-        """Tuple with information for each investment associated with the account"""
-
-        with Session() as session:
-            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-            return tuple(inv.to_dict() for inv in investments)
 
     def create_proposal(self, ptype: str = 'PROPOSAL', **sus_per_cluster: int) -> None:
         """Create a new proposal for the given account
@@ -110,6 +89,16 @@ class Account(SlurmAccount):
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
         LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
+    def get_proposal_info(self) -> dict:
+        """Information about the primary account proposal"""
+
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
+            return proposal.to_dict()
+
     def add_allocation_sus(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
 
@@ -141,74 +130,50 @@ class Account(SlurmAccount):
 
         LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
 
-    def print_allocation_info(self) -> None:
-        """Print proposal information for the account"""
+
+class InvestorData:
+    """Data access for investment information associated with a given account"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        self.account_name = account_name
+
+    def create_investment(self, sus: int) -> None:
+        """Add a new investor proposal for the given account
+
+        Args:
+            sus: The number of service units to add
+        """
+
+        start_date = date.today()
+        end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
+        new_investor = Investor(
+            account_name=self.account_name,
+            start_date=start_date,
+            end_date=end_date,
+            service_units=sus,
+            current_sus=ceil(sus / 5),
+            withdrawn_sus=0,
+            rollover_sus=0
+        )
 
         with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            session.add(new_investor)
+            session.commit()
+
+        LOG.info(f"Inserted investment for {self.account_name} with per year allocations of `{sus}`")
+
+    def get_investment_info(self) -> Tuple[dict, ...]:
+        """Tuple with information for each investment associated with the account"""
+
+        with Session() as session:
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-
-            print(proposal.row_to_ascii_table())
-            for inv in investments:
-                print(inv.row_to_ascii_table())
-
-    @staticmethod
-    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
-        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer isinfinity"""
-
-        if total > 0:
-            return 100 * usage / total
-
-        return 0
-
-    def print_usage_info(self) -> None:
-        """Print a summary of service units used by the given account"""
-
-        proposal_info = self.get_proposal_info()
-        investment_info = self.get_investment_info()
-
-        # Print the table header
-        print(f"|{'-' * 82}|")
-        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
-
-        # Print usage information for the primary proposal
-        usage_total = 0
-        allocation_total = 0
-        for cluster in app_settings.clusters:
-            usage = self.get_cluster_usage(cluster, in_hours=True)
-            allocation = proposal_info[cluster]
-            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
-            print(f"|{'-' * 82}|\n"
-                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-
-            usage_total += usage
-            allocation_total += allocation
-
-        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv['sus'] for inv in investment_info)
-        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
-
-        # Print usage information concerning investments
-        print(f"|{'Aggregate':^82}|")
-        print("|{'-' * 40:^40}|{'-' * 41:^41}|")
-
-        if investment_total == 0:
-            print(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
-            print(f"|{'-' * 82}|")
-
-        else:
-            print(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
-                  f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n"
-                  f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n"
-                  f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
-                  f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
-                  f"|{'-' * 82}|")
+            return tuple(inv.to_dict() for inv in investments)
 
     def set_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment
@@ -332,6 +297,89 @@ class Account(SlurmAccount):
 
             session.commit()
 
+
+class Account(SlurmAccount, ProposalData, InvestorData):
+    """Administration for existing bank accounts"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        super().__init__(account_name)
+        self.account_name = account_name
+
+    @staticmethod
+    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
+        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer isinfinity"""
+
+        if total > 0:
+            return 100 * usage / total
+
+        return 0
+
+    def print_allocation_info(self) -> None:
+        """Print proposal information for the account"""
+
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
+
+            print(proposal.row_to_ascii_table())
+            for inv in investments:
+                print(inv.row_to_ascii_table())
+
+    def print_usage_info(self) -> None:
+        """Print a summary of service units used by the given account"""
+
+        proposal_info = self.get_proposal_info()
+        investment_info = self.get_investment_info()
+
+        # Print the table header
+        print(f"|{'-' * 82}|")
+        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
+
+        # Print usage information for the primary proposal
+        usage_total = 0
+        allocation_total = 0
+        for cluster in app_settings.clusters:
+            usage = self.get_cluster_usage(cluster, in_hours=True)
+            allocation = proposal_info[cluster]
+            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
+            print(f"|{'-' * 82}|\n"
+                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|\n"
+                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+
+            usage_total += usage
+            allocation_total += allocation
+
+        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
+        investment_total = sum(inv['sus'] for inv in investment_info)
+        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+
+        # Print usage information concerning investments
+        print(f"|{'Aggregate':^82}|")
+        print("|{'-' * 40:^40}|{'-' * 41:^41}|")
+
+        if investment_total == 0:
+            print(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
+            print(f"|{'-' * 82}|")
+
+        else:
+            print(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
+                  f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n"
+                  f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n"
+                  f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
+                  f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
+                  f"|{'-' * 82}|")
+
     def send_pending_alerts(self) -> None:
         """Send any pending usage alerts to the account"""
 
@@ -359,13 +407,6 @@ class Account(SlurmAccount):
 
             self.notify(app_settings.notify_sus_limit_email_text)
 
-    def notify(self, email_template):
-        raise NotImplementedError
-
-
-class Bank:
-    """Handles the creation of new accounts in the banking system"""
-
     @staticmethod
     def find_unlocked() -> Tuple[str]:
         """Return the names for all unexpired proposals with unlocked accounts
@@ -381,30 +422,3 @@ class Bank:
             ).all()
 
         return tuple(p.account_name for p in proposals)
-
-    @staticmethod
-    def create_investment(account, sus: int) -> None:
-        """Add a new investor proposal for the given account
-
-        Args:
-            account: The account name to add a proposal for
-            sus: The number of service units to add
-        """
-
-        start_date = date.today()
-        end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
-        new_investor = Investor(
-            account_name=account,
-            start_date=start_date,
-            end_date=end_date,
-            service_units=sus,
-            current_sus=ceil(sus / 5),
-            withdrawn_sus=0,
-            rollover_sus=0
-        )
-
-        with Session() as session:
-            session.add(new_investor)
-            session.commit()
-
-        LOG.info(f"Inserted investment for {account} with per year allocations of `{sus}`")
