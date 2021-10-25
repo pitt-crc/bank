@@ -33,7 +33,7 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any, Union
 
 from bank.exceptions import MissingProposalError
 from bank.orm import Investor, Proposal, Session
@@ -41,6 +41,7 @@ from bank.orm.enum import ProposalType
 from bank.settings import app_settings
 from bank.system import SlurmAccount
 
+Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
@@ -60,60 +61,14 @@ class Account(SlurmAccount):
         super().__init__(account_name)
         self.account_name = account_name
 
-        # Here we cache the current proposal and investment data to make method calls faster
+        # We cache the current proposal and investment data to make method calls faster
         # Note that changes to cached values will not propagate into the database
         with Session() as session:
             self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
+            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
 
         if self._proposal is None:
             raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-    def cluster_allocation(self, cluster: str) -> int:
-        """Return the number of service units allocated to the user on the given cluster
-
-        Returns:
-            The cluster allocation in units of seconds
-        """
-
-        if cluster not in app_settings.clusters:
-            raise ValueError(f'Cluster name `{cluster}` is not defined in application settings.')
-
-        return getattr(self._proposal, cluster)
-
-    def add_sus(self, **kwargs: int) -> None:
-        """Add service units for the given account / clusters
-
-        Args:
-            **kwargs: Service units to add to the account for each cluster
-        """
-
-        with Session() as session:
-            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, service_units in kwargs.items():
-                setattr(self._proposal, cluster, getattr(self._proposal, cluster) + service_units)
-
-            session.commit()
-
-        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
-        LOG.info(f"Added SUs to proposal for {self.account_name}, new limits are {su_string}")
-
-    def modify_sus(self, **kwargs) -> None:
-        """Update the properties of an account's primary proposal
-
-        Args:
-            **kwargs: New values to set in the proposal
-        """
-
-        with Session() as session:
-            self._proposal = session.query(Proposal).filter_by(Proposal.account_name == self.account_name).first()
-            for cluster, service_units in kwargs.items():
-                setattr(self._proposal, cluster, service_units)
-
-            session.commit()
-
-        su_string = ', '.join(f'{getattr(self._proposal, k)} on {k}' for k in app_settings.clusters)
-        LOG.info(f"Changed proposal for {self.account_name} to {su_string}")
 
     def print_allocation_info(self) -> None:
         """Print proposal information for the account"""
@@ -122,6 +77,15 @@ class Account(SlurmAccount):
         print(self._proposal.row_to_ascii_table())
         for inv in self._investments:
             print(inv.row_to_ascii_table())
+
+    @staticmethod
+    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
+        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer isinfinity"""
+
+        if total > 0:
+            return 100 * usage / total
+
+        return 0
 
     def print_usage_info(self) -> None:
         """Print a summary of service units used by the given account"""
@@ -134,11 +98,11 @@ class Account(SlurmAccount):
         usage_total = 0
         allocation_total = 0
         for cluster in app_settings.clusters:
-            usage = self.cluster_usage(cluster, in_hours=True)
-            allocation = self.cluster_allocation(cluster)
-            percentage = round(100 * usage / allocation, 2) or 'N/A'
+            usage = self.get_cluster_usage(cluster, in_hours=True)
+            allocation = getattr(self._proposal, cluster)
+            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
-                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + allocation :^82}|\n"
+                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
                   f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
                   f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
@@ -149,22 +113,95 @@ class Account(SlurmAccount):
             usage_total += usage
             allocation_total += allocation
 
+        # Calculate usage percentages while being careful not to divide by zero
+        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
+
+        investment_total = sum(inv.sus for inv in self._investments)
+        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+
         # Print usage information concerning investments
         print(f"|{'Aggregate':^82}|")
         print("|{'-' * 40:^40}|{'-' * 41:^41}|")
 
-        investment_total = sum(inv.sus for inv in self._investments)
         if investment_total == 0:
-            print(f"|{'Aggregate Usage':^40}|{100 * usage_total / allocation_total:^41.2f}|")
+            print(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
             print(f"|{'-' * 82}|")
 
         else:
             print(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
-                  f"|{'Aggregate Usage (no investments)':^40}|{100 * usage_total / allocation_total:^41.2f}|\n"
-                  f"|{'Aggregate Usage':^40}|{100 * usage_total / (allocation_total + investment_total):^41.2f}|\n"
+                  f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n"
+                  f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n"
                   f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
+
+    def get_cluster_allocation(self) -> Dict[str, int]:
+        """Return the number of service units allocated to the user on each cluster
+
+        Returns:
+            Dictionary of cluster names and allocated service units
+        """
+
+        return {c: getattr(self._proposal, c) for c in app_settings.clusters}
+
+    def set_cluster_allocation(self, **kwargs) -> None:
+        """Replace the number of service units allocated to a given cluster
+
+        Args:
+            **kwargs: New service unit values for each cluster
+        """
+
+        with Session() as session:
+            self._proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            for cluster, service_units in kwargs.items():
+                if cluster not in app_settings.clusters:
+                    raise ValueError(f'Cluster {cluster} is not defined in application settings.')
+
+                setattr(self._proposal, cluster, service_units)
+
+            session.commit()
+
+        LOG.info(f"Changed proposal for {self.account_name} to {self.get_cluster_allocation()}")
+
+    def add_allocation_sus(self, **kwargs: int) -> None:
+        """Add service units to the account's current allocation
+
+        Args:
+            **kwargs: Service units to add to the account for each cluster
+        """
+
+        current_sus = self.get_cluster_allocation()
+        for key in kwargs:
+            kwargs[key] += current_sus.get(key, 0)
+
+        self.set_cluster_allocation(**current_sus)
+        LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {current_sus}")
+
+    def get_investment_sus(self) -> Dict[str, int]:
+        """Return a dictionary with the number of service units for each investment tied to the account"""
+
+        return {str(inv.id): inv.sus for inv in self._investments}
+
+    def set_investment_sus(self, **kwargs: int) -> None:
+        """Replace the number of service units allocated to a given investment
+
+        Args:
+            **kwargs: New service unit values to set in each investment
+        """
+
+        investment_ids = {str(inv.id) for inv in self._investments}
+        invalid_ids = set(kwargs) - investment_ids
+        if invalid_ids:
+            raise ValueError(f'Account {self.account_name} has no investment with ids {invalid_ids}')
+
+        with Session() as session:
+            self._investments = session.query(Investor).all()
+            for inv in self._investments:
+                inv.sus = kwargs.get(str(inv.id), 0)
+
+            session.commit()
+
+        LOG.info(f"Modified Investments for account{self.account_name}: {kwargs}")
 
     def renewal(self, **sus) -> None:
         with Session() as session:
@@ -271,8 +308,8 @@ class Account(SlurmAccount):
         """Send any pending usage alerts to the account"""
 
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = sum(self.cluster_usage(c) for c in app_settings.clusters())
-        allocated = sum(self.cluster_allocation(c) for c in app_settings.clusters())
+        usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
+        allocated = sum(self.get_cluster_allocation().values())
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
@@ -294,29 +331,6 @@ class Account(SlurmAccount):
 
             self.notify(app_settings.notify_sus_limit_email_text)
 
-    def modify_investment(self, inv_id: int, **kwargs) -> None:
-        """Update the properties of a given investment
-
-        Args:
-            inv_id: The id of the investment to change
-            **kwargs: New values to set in the investment
-        """
-
-        with Session() as session:
-            investment = session.query(Investor).filter_by(
-                Investor.id == inv_id and Investor.account_name == self.account_name
-            ).first()
-
-            if investment is None:
-                raise ValueError(f'Account {self.account_name} has no investment with id {inv_id}')
-
-            for key, value in kwargs.items():
-                setattr(investment, key, value)
-
-            session.commit()
-
-        LOG.info(f"Modified Investment Id {inv_id}: {kwargs}")
-
     def notify(self, email_template):
         raise NotImplementedError
 
@@ -334,27 +348,28 @@ class Bank:
 
         # Query database for accounts that are unlocked and expired
         with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter_by(
+            proposals: List[Proposal] = session.query(Proposal).filter(
                 (Proposal.end_date < date.today()) and (not Proposal.account.locked_state)
             ).all()
 
         return tuple(p.account_name for p in proposals)
 
     @staticmethod
-    def create_proposal(account_name: str, prop_type: str, **sus_per_cluster: int) -> None:
+    def create_proposal(account: str, ptype: str, **sus_per_cluster: int) -> None:
         """Create a new proposal for the given account
 
         Args:
-            account_name: The account name to add a proposal for
-            prop_type: The type of proposal
+            account: The account name to add a proposal for
+            ptype: The type of proposal
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        proposal_type = ProposalType[prop_type]
+        proposal_type = ProposalType[ptype.upper()]
         proposal_duration = timedelta(days=365)
         start_date = date.today()
         new_proposal = Proposal(
-            proposal_type=proposal_type.value,
+            account_name=account,
+            proposal_type=proposal_type,
             percent_notified=0,
             start_date=start_date,
             end_date=start_date + proposal_duration,
@@ -366,21 +381,21 @@ class Bank:
             session.commit()
 
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
-        LOG.info(f"Inserted proposal with type {proposal_type.name} for {account_name} with {sus_as_str}")
+        LOG.info(f"Inserted proposal with type {proposal_type.name} for {account} with {sus_as_str}")
 
     @staticmethod
-    def create_investment(account_name, sus: int) -> None:
+    def create_investment(account, sus: int) -> None:
         """Add a new investor proposal for the given account
 
         Args:
-            account_name: The account name to add a proposal for
+            account: The account name to add a proposal for
             sus: The number of service units to add
         """
 
         start_date = date.today()
         end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
         new_investor = Investor(
-            proposal_type=ProposalType.Investor,
+            account_name=account,
             start_date=start_date,
             end_date=end_date,
             service_units=sus,
@@ -393,4 +408,4 @@ class Bank:
             session.add(new_investor)
             session.commit()
 
-        LOG.info(f"Inserted investment for {account_name} with per year allocations of `{sus}`")
+        LOG.info(f"Inserted investment for {account} with per year allocations of `{sus}`")

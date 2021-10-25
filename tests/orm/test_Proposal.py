@@ -1,10 +1,11 @@
 """Tests for the ``Proposal`` class"""
 
 from datetime import date, timedelta
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from bank.orm import Proposal
 from bank.settings import app_settings
+from bank.system import SlurmAccount
 from tests.orm import base_tests
 
 
@@ -59,6 +60,7 @@ class ToArchiveObject(TestCase):
         for i, cluster in enumerate(app_settings.clusters):
             setattr(self.proposal, cluster, i)
 
+    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 

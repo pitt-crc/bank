@@ -50,7 +50,7 @@ class RequireRoot:
     """Function decorator for requiring root privileges"""
 
     @staticmethod
-    def is_root() -> bool:
+    def check_user_is_root() -> bool:
         """Return if the current user is root"""
 
         return geteuid() == 0
@@ -60,7 +60,7 @@ class RequireRoot:
 
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            if not cls.is_root():
+            if not cls.check_user_is_root():
                 raise PermissionError("This action must be run with sudo privileges")
 
             return func(*args, **kwargs)  # pragma: no cover
@@ -111,21 +111,24 @@ class SlurmAccount:
         """
 
         self.account_name = account_name
-
-        try:
-            cmd = ShellCmd('sacctmgr -V')
-            cmd.raise_err()
-            slurm_is_installed = cmd.out.startswith('slurm')
-
-        except (CmdError, FileNotFoundError, Exception):
-            slurm_is_installed = False
-
-        if not slurm_is_installed:
+        if not self.check_slurm_installed():
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
         if not account_exists:
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
+    @staticmethod
+    def check_slurm_installed() -> bool:
+        """Return whether sacctmgr is installed on the host machine"""
+
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            return cmd.out.startswith('slurm')
+
+        except (CmdError, FileNotFoundError, Exception):
+            return False
 
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked
@@ -150,8 +153,8 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
-    def cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
-        """Return the account usage on a given cluster
+    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the raw account usage on a given cluster
 
         Args:
             cluster: The name of the cluster
@@ -172,11 +175,20 @@ class SlurmAccount:
 
         return usage
 
-    def reset_raw_usage(self) -> None:
-        """Reset the current account usage"""
+    def set_raw_usage(self, usage: int, *cluster: str) -> None:
+        """Set the raw account usage on a given cluster
 
-        clusters = ','.join(app_settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
+        Args:
+            *cluster: The name of the cluster
+            usage: The usage value to set in units of seconds"""
+
+        clus = ','.join(cluster)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clus} set RawUsage={usage}')
+
+    def reset_raw_usage(self) -> None:
+        """Reset the raw account usage on all clusters to zero"""
+
+        self.set_raw_usage(0, *app_settings.clusters)
 
 
 class EmailTemplate(Formatter):

@@ -18,4 +18,4 @@ from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metada
 from ..settings import app_settings
 
 engine = sqlalchemy.create_engine(app_settings.db_path)
-Session = sessionmaker(bind=engine, future=True)
+Session = sessionmaker(bind=engine, future=True, expire_on_commit=False)
