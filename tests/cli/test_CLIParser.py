@@ -1,4 +1,4 @@
-from unittest import TestCase, skipIf
+from unittest import TestCase, skipIf, skip
 from unittest.mock import patch
 
 from bank import dao, orm
@@ -54,6 +54,7 @@ class Info(TestCase):
 class Usage(TestCase):
     """Tests for the ``usage`` subparser"""
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     @patch('builtins.print')
     def test_usage_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
@@ -100,6 +101,7 @@ class Insert(TestCase):
         cls.number_sus = 10_000
         CLIParser().execute(['insert', 'proposal', TEST_ACCOUNT, f'--{cls.first_cluster}={cls.number_sus}'])
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_proposal_is_created_for_cluster(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
@@ -115,6 +117,7 @@ class Insert(TestCase):
 class Add(TestCase):
     """Tests for the ``add`` subparser"""
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_sus_are_updated(self) -> None:
         """Test the allocated service units are incremented by a given amount"""
 
@@ -160,6 +163,7 @@ class Modify(TestCase):
         [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
         """
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_modify_updates_SUs(self) -> None:
         """Test the command updates sus on the given cluster"""
 
@@ -183,6 +187,7 @@ class Investor(TestCase):
             session.query(orm.Investor).filter(orm.Investor.account_name == TEST_ACCOUNT).delete()
             session.commit()
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_investment_is_created(self) -> None:
         """Test an investment is created with the correct number of sus"""
 
@@ -199,6 +204,7 @@ class Investor(TestCase):
 class InvestorModify(TestCase):
     """Tests for the ``investor_modify`` subparser"""
 
+    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_modify_updates_SUs(self) -> None:
         """Test the command updates sus on the given investment"""
 
