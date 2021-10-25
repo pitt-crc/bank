@@ -144,10 +144,13 @@ class Account(SlurmAccount):
     def print_allocation_info(self) -> None:
         """Print proposal information for the account"""
 
-        # Print all database entries associate with the account as an ascii table
-        print(self.get_proposal_info.row_to_ascii_table())
-        for inv in self._investments:
-            print(inv.row_to_ascii_table())
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
+
+            print(proposal.row_to_ascii_table())
+            for inv in investments:
+                print(inv.row_to_ascii_table())
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
@@ -161,17 +164,19 @@ class Account(SlurmAccount):
     def print_usage_info(self) -> None:
         """Print a summary of service units used by the given account"""
 
+        proposal_info = self.get_proposal_info()
+        investment_info = self.get_investment_info()
+
         # Print the table header
         print(f"|{'-' * 82}|")
-        print(
-            f"|{'Proposal End Date':^30}|{self.get_proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
+        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
 
         # Print usage information for the primary proposal
         usage_total = 0
         allocation_total = 0
         for cluster in app_settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
-            allocation = getattr(self.get_proposal_info, cluster)
+            allocation = proposal_info[cluster]
             percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
@@ -185,10 +190,8 @@ class Account(SlurmAccount):
             usage_total += usage
             allocation_total += allocation
 
-        # Calculate usage percentages while being careful not to divide by zero
         usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-
-        investment_total = sum(inv['sus'] for inv in self.get_investment_info)
+        investment_total = sum(inv['sus'] for inv in investment_info)
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
@@ -206,11 +209,6 @@ class Account(SlurmAccount):
                   f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
-
-    def get_investment_sus(self) -> Dict[str, int]:
-        """Return a dictionary with the number of service units for each investment tied to the account"""
-
-        return {str(inv.id): inv.sus for inv in self._investments}
 
     def set_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment

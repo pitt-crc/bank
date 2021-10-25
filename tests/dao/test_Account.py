@@ -1,4 +1,5 @@
 from unittest import TestCase
+from unittest.mock import patch
 
 from bank.dao import Account
 from bank.exceptions import MissingProposalError, ProposalExistsError
@@ -103,3 +104,21 @@ class SetClusterAllocation(GenericSetup, TestCase):
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined in application settings.'):
             self.account.overwrite_allocation_sus(**{fake_cluster_name: 1000})
+
+
+class PrintAllocationInfo(GenericSetup, TestCase):
+
+    @patch('builtins.print')
+    def test_printed_text_is_not_empty(self, mocked_print) -> None:
+        Account(app_settings.test_account).print_usage_info()
+        printed_text = '\n'.join(c.args[0] for c in mocked_print.mock_calls)
+        self.assertTrue(printed_text)
+
+
+class PrintUsageInfo(GenericSetup, TestCase):
+
+    @patch('builtins.print')
+    def test_printed_text_is_not_empty(self, mocked_print) -> None:
+        Account(app_settings.test_account).print_usage_info()
+        printed_text = '\n'.join(c.args[0] for c in mocked_print.mock_calls)
+        self.assertTrue(printed_text)
