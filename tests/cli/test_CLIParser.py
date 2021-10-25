@@ -169,7 +169,7 @@ class Modify(TestCase):
 
         account = dao.Account(TEST_ACCOUNT)
         test_cluster = app_settings.clusters[0]
-        account.set_cluster_allocation(**{test_cluster: 0})
+        account.overwrite_allocation_sus(**{test_cluster: 0})
 
         new_sus = 1_000
         CLIParser().execute(['modify', TEST_ACCOUNT, f'--{test_cluster}={new_sus}'])

@@ -119,10 +119,10 @@ class Account(SlurmAccount):
 
         proposal_info = self.get_proposal_info()
         new_allocation = {cluster: proposal_info.get(cluster, 0) + new_sus for cluster, new_sus in kwargs.items()}
-        self.set_cluster_allocation(**new_allocation)
+        self.overwrite_allocation_sus(**new_allocation)
         LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {new_allocation}")
 
-    def set_cluster_allocation(self, **kwargs) -> None:
+    def overwrite_allocation_sus(self, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
