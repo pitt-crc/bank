@@ -20,7 +20,7 @@ class CreateProposal(TestCase):
         self.account = ProposalData(app_settings.test_account)
 
     def test_proposal_is_created(self) -> None:
-        """Test a proposal is created fter the function call"""
+        """Test a proposal is created after the function call"""
 
         # Avoid false positives by checking the proposal doesn't already exist
         with self.assertRaises(MissingProposalError):
@@ -38,7 +38,7 @@ class CreateProposal(TestCase):
             self.assertEqual(0, proposal_info[cluster])
 
     def test_non_default_sus_are_set(self) -> None:
-        """Tests proposal are defined the number of sus specified by kwargs"""
+        """Tests proposal are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{c: 1000 for c in app_settings.clusters})
         proposal_info = self.account.get_proposal_info()
