@@ -110,6 +110,37 @@ class Account(SlurmAccount):
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
         LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
+    def add_allocation_sus(self, **kwargs: int) -> None:
+        """Add service units to the account's current allocation
+
+        Args:
+            **kwargs: Service units to add to the account for each cluster
+        """
+
+        proposal_info = self.get_proposal_info()
+        new_allocation = {cluster: proposal_info.get(cluster, 0) + new_sus for cluster, new_sus in kwargs.items()}
+        self.set_cluster_allocation(**new_allocation)
+        LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {new_allocation}")
+
+    def set_cluster_allocation(self, **kwargs) -> None:
+        """Replace the number of service units allocated to a given cluster
+
+        Args:
+            **kwargs: New service unit values for each cluster
+        """
+
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            for cluster, service_units in kwargs.items():
+                if cluster not in app_settings.clusters:
+                    raise ValueError(f'Cluster {cluster} is not defined in application settings.')
+
+                setattr(proposal, cluster, service_units)
+
+            session.commit()
+
+        LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
+
     def print_allocation_info(self) -> None:
         """Print proposal information for the account"""
 
@@ -175,48 +206,6 @@ class Account(SlurmAccount):
                   f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
-
-    def get_cluster_allocation(self) -> Dict[str, int]:
-        """Return the number of service units allocated to the user on each cluster
-
-        Returns:
-            Dictionary of cluster names and allocated service units
-        """
-
-        return {c: getattr(self.get_proposal_info, c) for c in app_settings.clusters}
-
-    def set_cluster_allocation(self, **kwargs) -> None:
-        """Replace the number of service units allocated to a given cluster
-
-        Args:
-            **kwargs: New service unit values for each cluster
-        """
-
-        with Session() as session:
-            self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            for cluster, service_units in kwargs.items():
-                if cluster not in app_settings.clusters:
-                    raise ValueError(f'Cluster {cluster} is not defined in application settings.')
-
-                setattr(self.get_proposal_info, cluster, service_units)
-
-            session.commit()
-
-        LOG.info(f"Changed proposal for {self.account_name} to {self.get_cluster_allocation()}")
-
-    def add_allocation_sus(self, **kwargs: int) -> None:
-        """Add service units to the account's current allocation
-
-        Args:
-            **kwargs: Service units to add to the account for each cluster
-        """
-
-        current_sus = self.get_cluster_allocation()
-        for key in kwargs:
-            kwargs[key] += current_sus.get(key, 0)
-
-        self.set_cluster_allocation(**current_sus)
-        LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {current_sus}")
 
     def get_investment_sus(self) -> Dict[str, int]:
         """Return a dictionary with the number of service units for each investment tied to the account"""
