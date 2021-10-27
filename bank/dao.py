@@ -66,6 +66,7 @@ class ProposalData:
         """
 
         proposal_type = ProposalType[ptype.upper()]
+
         proposal_duration = timedelta(days=365)
         start_date = date.today()
 

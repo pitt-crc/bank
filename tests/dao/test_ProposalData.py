@@ -3,11 +3,12 @@ from unittest import TestCase
 from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
+from bank.orm.enum import ProposalType
 from bank.settings import app_settings
 from tests.dao.utils import ProposalSetup
 
 
-# Todo: Test setting of proposal type (and error on bad value)
+# Todo: Test setting of proposal type
 class CreateProposal(TestCase):
     """Tests for the creation of proposals via the ``create_proposal`` method"""
 
@@ -85,7 +86,7 @@ class AddAllocationSus(ProposalSetup, TestCase):
         """Test an error is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.create_proposal(**{app_settings.test_cluster: -1})
+            self.account.add_allocation_sus(**{app_settings.test_cluster: -1})
 
 
 class SetClusterAllocation(ProposalSetup, TestCase):

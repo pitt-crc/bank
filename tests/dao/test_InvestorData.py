@@ -4,15 +4,16 @@ from bank.dao import InvestorData
 from bank.exceptions import MissingProposalError
 from bank.orm import Session, Proposal, Investor
 from bank.settings import app_settings
-from tests.dao.utils import InvestorSetup
+from tests.dao.utils import InvestorSetup, ProposalSetup
 
 
-class CreateInvestment(TestCase):
+class CreateInvestment(ProposalSetup, TestCase):
     """Tests for the creation of a new investment via the ``create_investment`` function"""
 
     def setUp(self) -> None:
         """Delete any investments that may already exist for the test account"""
 
+        super().setUp()
         with Session() as session:
             session.query(Investor).filter(Investor.account_name == app_settings.test_account).delete()
             session.commit()
