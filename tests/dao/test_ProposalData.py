@@ -4,7 +4,7 @@ from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
 from bank.settings import app_settings
-from tests.dao.utils import GenericSetup
+from tests.dao.utils import ProposalSetup
 
 
 class CreateProposal(TestCase):
@@ -53,17 +53,25 @@ class CreateProposal(TestCase):
         with self.assertRaises(ProposalExistsError):
             self.account.create_proposal()
 
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when assigning negative service units"""
 
-class AddAllocationSus(GenericSetup, TestCase):
+        cluster_name = app_settings.clusters[0]
+        with self.assertRaises(ValueError):
+            self.account.create_proposal(**{cluster_name: -1})
+
+
+class AddAllocationSus(ProposalSetup, TestCase):
     """Tests for the addition of sus via the ``add_allocation_sus`` method"""
 
     def test_sus_are_added(self) -> None:
         """Test sus from kwargs are set in the proposal"""
 
         cluster_name = app_settings.clusters[0]
+        original_sus = self.account.get_proposal_info()[cluster_name]
         self.account.add_allocation_sus(**{cluster_name: 1000})
-        recovered_sus = self.account.get_proposal_info()[cluster_name]
-        self.assertEqual(1000, recovered_sus)
+        new_sus = self.account.get_proposal_info()[cluster_name]
+        self.assertEqual(original_sus + 1000, new_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -73,10 +81,10 @@ class AddAllocationSus(GenericSetup, TestCase):
             self.account.add_allocation_sus(**{fake_cluster_name: 1000})
 
 
-class SetClusterAllocation(GenericSetup, TestCase):
+class SetClusterAllocation(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
 
-    def test_sus_are_added(self) -> None:
+    def test_sus_are_modified(self) -> None:
         """Test sus from kwargs are set in the proposal"""
 
         cluster_name = app_settings.clusters[0]
@@ -90,3 +98,10 @@ class SetClusterAllocation(GenericSetup, TestCase):
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined in application settings.'):
             self.account.overwrite_allocation_sus(**{fake_cluster_name: 1000})
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when assigning negative service units"""
+
+        cluster_name = app_settings.clusters[0]
+        with self.assertRaises(ValueError):
+            self.account.overwrite_allocation_sus(**{cluster_name: -1})
