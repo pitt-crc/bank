@@ -64,9 +64,20 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
     def test_sus_are_overwritten(self) -> None:
         """Test that service unit values are updated after method call"""
 
-        new_sus = 12345
         inv_id = self.account.get_investment_info()[0]['id']
+        for new_sus in (0, 12345):
+            self.account.overwrite_investment_sus(**{str(inv_id): new_sus})
+            recovered_sus = self.account.get_investment_info()[0]['service_units']
+            self.assertEqual(new_sus, recovered_sus)
 
-        self.account.overwrite_investment_sus(**{str(inv_id): new_sus})
-        recovered_sus = self.account.get_investment_info()[0]['service_units']
-        self.assertEqual(new_sus, recovered_sus)
+    def test_error_on_invalid_ids(self) -> None:
+        """Test an error is raised for invalid investment IDs"""
+
+        with self.assertRaises(ValueError):
+            self.account.overwrite_investment_sus(fake_investment_id=12)
+
+    def test_error_on_negative_sus(self) -> None:
+        """Tests an error is raised for negative service units"""
+        inv_id = str(self.account.get_investment_info()[0]['id'])
+        with self.assertRaises(ValueError):
+            self.account.overwrite_investment_sus(**{inv_id: -12})

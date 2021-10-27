@@ -8,7 +8,6 @@ from bank.settings import app_settings
 from tests.dao.utils import ProposalSetup
 
 
-# Todo: Test setting of proposal type
 class CreateProposal(TestCase):
     """Tests for the creation of proposals via the ``create_proposal`` method"""
 
@@ -60,6 +59,20 @@ class CreateProposal(TestCase):
 
         with self.assertRaises(ValueError):
             self.account.create_proposal(**{app_settings.test_cluster: -1})
+
+    def test_error_on_invalid_proposal_type(self) -> None:
+        """Test an error is raised for invalid proposal types"""
+
+        with self.assertRaises(KeyError):
+            self.account.create_proposal(ptype='fake_proposal_type')
+
+    def test_proposal_type_not_case_sensitive(self) -> None:
+        """Test an error is raised for invalid proposal types"""
+
+        ptype_lower = 'proposal'
+        expected_type = ProposalType[ptype_lower.upper()]
+        self.account.create_proposal(ptype=ptype_lower)
+        self.assertEqual(expected_type, self.account.get_proposal_info()['proposal_type'])
 
 
 class AddAllocationSus(ProposalSetup, TestCase):
