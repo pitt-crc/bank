@@ -146,6 +146,10 @@ class Defaults:
     </html>
     """
 
+    @property
+    def test_cluster(self) -> str:
+        return self.clusters[0]
+
 
 class Settings:
     """Reflects application settings as set in the working environment"""

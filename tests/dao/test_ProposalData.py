@@ -57,9 +57,8 @@ class CreateProposal(TestCase):
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
-        cluster_name = app_settings.clusters[0]
         with self.assertRaises(ValueError):
-            self.account.create_proposal(**{cluster_name: -1})
+            self.account.create_proposal(**{app_settings.test_cluster: -1})
 
 
 class AddAllocationSus(ProposalSetup, TestCase):
@@ -68,7 +67,7 @@ class AddAllocationSus(ProposalSetup, TestCase):
     def test_sus_are_added(self) -> None:
         """Test SUs from kwargs are set in the proposal"""
 
-        cluster_name = app_settings.clusters[0]
+        cluster_name = app_settings.test_cluster
         for sus_to_add in (0, 1000):
             original_sus = self.account.get_proposal_info()[cluster_name]
             self.account.add_allocation_sus(**{cluster_name: sus_to_add})
@@ -85,9 +84,8 @@ class AddAllocationSus(ProposalSetup, TestCase):
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
-        cluster_name = app_settings.clusters[0]
         with self.assertRaises(ValueError):
-            self.account.create_proposal(**{cluster_name: -1})
+            self.account.create_proposal(**{app_settings.test_cluster: -1})
 
 
 class SetClusterAllocation(ProposalSetup, TestCase):
@@ -96,9 +94,8 @@ class SetClusterAllocation(ProposalSetup, TestCase):
     def test_sus_are_modified(self) -> None:
         """Test sus from kwargs are set in the proposal"""
 
-        cluster_name = app_settings.clusters[0]
-        self.account.overwrite_allocation_sus(**{cluster_name: 1000})
-        recovered_sus = self.account.get_proposal_info()[cluster_name]
+        self.account.overwrite_allocation_sus(**{app_settings.test_cluster: 1000})
+        recovered_sus = self.account.get_proposal_info()[app_settings.test_cluster]
         self.assertEqual(1000, recovered_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
@@ -111,6 +108,5 @@ class SetClusterAllocation(ProposalSetup, TestCase):
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
-        cluster_name = app_settings.clusters[0]
         with self.assertRaises(ValueError):
-            self.account.overwrite_allocation_sus(**{cluster_name: -1})
+            self.account.overwrite_allocation_sus(**{app_settings.test_cluster: -1})
