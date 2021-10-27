@@ -127,3 +127,18 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             self.assertEqual(0, withdrawn)
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
+
+
+class Withdraw(TestCase):
+
+    def test_error_on_nonpositive_argument(self) -> None:
+        ...
+
+    def test_withdrawl_on_single_investment(self) -> None:
+        ...
+
+    def test_withdrawl_on_multiple_investments(self) -> None:
+        ...
+
+    def test_error_for_missing_investments(self) -> None:
+        ...  # Double check if an error is the desired behavior
