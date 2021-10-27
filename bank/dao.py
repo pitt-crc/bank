@@ -32,8 +32,9 @@ API Reference
 from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
-from math import ceil
 from typing import List, Tuple, Union
+
+from math import ceil
 
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
@@ -274,43 +275,61 @@ class InvestorData:
                         inv.withdrawn_sus += to_withdraw
                         need_to_rollover -= to_rollover
 
+    @staticmethod
+    def _withdraw_from_investment(investment: Investor, sus: int) -> int:
+        """Process the withdrawal for a single investment
+
+        The returned number of service units may be less than the requested
+        withdrawal if there are insufficient service units in the account balance.
+        The ``investment`` argument is mutated to reflect the withdrawal, but no
+         commits are made to the database by this method.
+
+        Args:
+            investment: The investment to withdraw from
+            sus: The requested number of service units to withdraw
+
+        Returns:
+            The number of service units that were actually withdrawn
+        """
+
+        maximum_withdrawal = investment.service_units - investment.withdrawn_sus
+        to_withdraw = min(sus, maximum_withdrawal)
+        investment.current_sus += to_withdraw
+        investment.withdrawn_sus += to_withdraw
+        return to_withdraw
+
     def withdraw(self, sus: int) -> None:
-        """Withdraw service units from future investments and allocate to the current proposal
+        """Withdraw service units from future investments
 
         Args:
             sus: The number of service units to withdraw
         """
 
         with Session() as session:
-            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
-            available_investments = sum(inv.service_units - inv.withdrawn_sus for inv in self._investments)
+            investments = session.query(Investor) \
+                .filter(Investor.account_name == self.account_name) \
+                .order_by(Investor.start_date) \
+                .all()
 
-            if sus > available_investments:
-                print(f"Requested to withdraw {sus} but the account only has {available_investments} SUs to withdraw!")
-                return
+            # Make sure there are enough service units in the account to withdraw
+            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
+            if sus > available_sus:
+                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Go through investments, oldest first and start withdrawing
-            for investment in enumerate(self._investments):
-                # If no SUs available to withdraw, skip the proposal entirely
-                investment_remaining = investment.service_units - investment.withdrawn_sus
-                if investment_remaining <= 0:
-                    print(f"No service units can be withdrawn from investment {investment['id']}")
-                    continue
-
-                # Determine what we can withdraw from current investment
-                to_withdraw = min(sus, investment_remaining)
-                investment.current_sus += to_withdraw
-                investment.withdrawn_sus += to_withdraw
-                sus -= to_withdraw
-
-                msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
+            investment: Investor
+            for investment in enumerate(investments):
+                withdrawn = self._withdraw_from_investment(investment, sus)
+                msg = f"Withdrew {withdrawn} service units from investment {investment.id} for account {self.account_name}"
                 LOG.info(msg)
                 print(msg)
 
                 # Determine if we are done processing investments
+                sus -= withdrawn
                 if sus <= 0:
                     break
 
+            LOG.debug('Committing withdrawals to database')
             session.commit()
 
 

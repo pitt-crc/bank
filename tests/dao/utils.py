@@ -27,9 +27,11 @@ class ProposalSetup(GenericSetup):
 class InvestorSetup(ProposalSetup):
     """Reusable setup mixin for configuring a unittest class"""
 
+    num_inv_sus = 10_000
+
     def setUp(self) -> None:
         """Delete any proposals that may already exist for the test account"""
 
         super().setUp()
         self.account = InvestorData(app_settings.test_account)
-        self.account.create_investment(10_000)
+        self.account.create_investment(self.num_inv_sus)

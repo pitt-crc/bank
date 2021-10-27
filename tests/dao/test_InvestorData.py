@@ -1,3 +1,4 @@
+from copy import copy
 from unittest import TestCase
 
 from bank.dao import InvestorData
@@ -81,3 +82,48 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
         inv_id = str(self.account.get_investment_info()[0]['id'])
         with self.assertRaises(ValueError):
             self.account.overwrite_investment_sus(**{inv_id: -12})
+
+
+class WithdrawFromInvestment(InvestorSetup, TestCase):
+    """Tests for the withdrawal of service units from a single investment"""
+
+    def test_investment_is_withdrawn(self) -> None:
+        """Test the specified number of service units are withdrawn from the investment"""
+
+        with Session() as session:
+            investment = session.query(Investor).filter(Investor.account_name == app_settings.test_account).first()
+            original_inv = copy(investment)
+
+            sus_to_withdraw = 10
+            withdrawn = InvestorData._withdraw_from_investment(investment, sus_to_withdraw)
+            self.assertEqual(sus_to_withdraw, withdrawn)
+
+            self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
+            self.assertEqual(original_inv.withdrawn_sus + sus_to_withdraw, investment.withdrawn_sus)
+            self.assertEqual(original_inv.service_units, investment.service_units)
+
+    def test_investment_with_existing_withdrawal(self) -> None:
+        """Test the number of withdrawn service units does not exceed available balance"""
+
+        with Session() as session:
+            investment = session.query(Investor).filter(Investor.account_name == app_settings.test_account).first()
+            service_units = investment.service_units
+            half_service_units = service_units / 2
+
+            first_withdraw = InvestorData._withdraw_from_investment(investment, half_service_units)
+            second_withdraw = InvestorData._withdraw_from_investment(investment, service_units)
+            self.assertEqual(half_service_units, first_withdraw)
+            self.assertEqual(half_service_units, second_withdraw)
+
+    def test_return_zero_if_overdrawn(self) -> None:
+        """Test the number of withdrawn service units is zero if the account is already overdrawn"""
+
+        with Session() as session:
+            investment = session.query(Investor).filter(Investor.account_name == app_settings.test_account).first()
+            investment.withdrawn_sus = investment.service_units
+            original_inv = copy(investment)
+
+            withdrawn = InvestorData._withdraw_from_investment(investment, 1)
+            self.assertEqual(0, withdrawn)
+            self.assertEqual(original_inv.current_sus, investment.current_sus)
+            self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
