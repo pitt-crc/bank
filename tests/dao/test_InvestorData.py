@@ -2,18 +2,17 @@ from unittest import TestCase
 
 from bank.dao import InvestorData
 from bank.exceptions import MissingProposalError
-from bank.orm import Session, Investor, Proposal
+from bank.orm import Session, Proposal, Investor
 from bank.settings import app_settings
-from tests.dao.utils import GenericSetup
+from tests.dao.utils import InvestorSetup
 
 
-class CreateInvestment(GenericSetup, TestCase):
+class CreateInvestment(TestCase):
     """Tests for the creation of a new investment via the ``create_investment`` function"""
 
     def setUp(self) -> None:
         """Delete any investments that may already exist for the test account"""
 
-        super(CreateInvestment, self).setUp()
         with Session() as session:
             session.query(Investor).filter(Investor.account_name == app_settings.test_account).delete()
             session.commit()
@@ -50,3 +49,17 @@ class CreateInvestment(GenericSetup, TestCase):
 
         with self.assertRaises(MissingProposalError):
             self.account.create_investment(1000)
+
+
+class OverwriteInvestmentSus(InvestorSetup, TestCase):
+    """Test the modification of investment service units"""
+
+    def test_sus_are_overwritten(self) -> None:
+        """Test that service unit values are updated after method call"""
+
+        new_sus = 12345
+        inv_id = self.account.get_investment_info()[0]['id']
+
+        self.account.overwrite_investment_sus(**{str(inv_id): new_sus})
+        recovered_sus = self.account.get_investment_info()[0]['service_units']
+        self.assertEqual(new_sus, recovered_sus)

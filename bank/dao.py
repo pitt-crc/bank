@@ -197,8 +197,9 @@ class InvestorData:
             raise ValueError(f'Account {self.account_name} has no investment with ids {invalid_ids}')
 
         with Session() as session:
-            for inv in session.query(Investor).all():
-                inv.sus = kwargs.get(str(inv.id), 0)
+            for inv_id, sus in kwargs.items():
+                inv = session.query(Investor).filter(Investor.id == inv_id).first()
+                inv.service_units = kwargs.get(str(inv.id), 0)
 
             session.commit()
 
