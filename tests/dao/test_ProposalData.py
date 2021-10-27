@@ -7,6 +7,7 @@ from bank.settings import app_settings
 from tests.dao.utils import ProposalSetup
 
 
+# Todo: Test setting of proposal type (and error on bad value)
 class CreateProposal(TestCase):
     """Tests for the creation of proposals via the ``create_proposal`` method"""
 
@@ -65,13 +66,14 @@ class AddAllocationSus(ProposalSetup, TestCase):
     """Tests for the addition of sus via the ``add_allocation_sus`` method"""
 
     def test_sus_are_added(self) -> None:
-        """Test sus from kwargs are set in the proposal"""
+        """Test SUs from kwargs are set in the proposal"""
 
         cluster_name = app_settings.clusters[0]
-        original_sus = self.account.get_proposal_info()[cluster_name]
-        self.account.add_allocation_sus(**{cluster_name: 1000})
-        new_sus = self.account.get_proposal_info()[cluster_name]
-        self.assertEqual(original_sus + 1000, new_sus)
+        for sus_to_add in (0, 1000):
+            original_sus = self.account.get_proposal_info()[cluster_name]
+            self.account.add_allocation_sus(**{cluster_name: sus_to_add})
+            new_sus = self.account.get_proposal_info()[cluster_name]
+            self.assertEqual(original_sus + sus_to_add, new_sus, f'SUs not added (tried to add {sus_to_add})')
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -79,6 +81,13 @@ class AddAllocationSus(ProposalSetup, TestCase):
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined in application settings.'):
             self.account.add_allocation_sus(**{fake_cluster_name: 1000})
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when assigning negative service units"""
+
+        cluster_name = app_settings.clusters[0]
+        with self.assertRaises(ValueError):
+            self.account.create_proposal(**{cluster_name: -1})
 
 
 class SetClusterAllocation(ProposalSetup, TestCase):

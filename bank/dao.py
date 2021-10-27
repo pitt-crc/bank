@@ -107,7 +107,13 @@ class ProposalData:
         """
 
         proposal_info = self.get_proposal_info()
-        new_allocation = {cluster: proposal_info.get(cluster, 0) + new_sus for cluster, new_sus in kwargs.items()}
+        new_allocation = dict()
+        for cluster, sus_to_add in kwargs.items():
+            if sus_to_add < 0:
+                raise ValueError(f'Cannot add negative service units (received {sus_to_add} for {cluster})')
+
+            new_allocation[cluster] = proposal_info.get(cluster, 0) + sus_to_add
+
         self.overwrite_allocation_sus(**new_allocation)
         LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {new_allocation}")
 

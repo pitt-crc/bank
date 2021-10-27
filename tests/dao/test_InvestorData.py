@@ -37,7 +37,7 @@ class CreateInvestment(TestCase):
         new_investment = self.account.get_investment_info()[0]
         self.assertEqual(test_sus, new_investment['service_units'])
 
-    def test_raises_on_missing_proposal(self) -> None:
+    def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised"""
 
         with Session() as session:
@@ -49,6 +49,12 @@ class CreateInvestment(TestCase):
 
         with self.assertRaises(MissingProposalError):
             self.account.create_investment(1000)
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when creating an investment with negative sus"""
+
+        with self.assertRaises(ValueError):
+            self.account.create_investment(sus=-1)
 
 
 class OverwriteInvestmentSus(InvestorSetup, TestCase):
