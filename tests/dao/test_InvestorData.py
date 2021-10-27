@@ -1,16 +1,19 @@
 from unittest import TestCase
 
 from bank.dao import InvestorData
-from bank.orm import Session, Investor
+from bank.exceptions import MissingProposalError
+from bank.orm import Session, Investor, Proposal
 from bank.settings import app_settings
+from tests.dao.utils import GenericSetup
 
 
-class CreateInvestment(TestCase):
+class CreateInvestment(GenericSetup, TestCase):
     """Tests for the creation of a new investment via the ``create_investment`` function"""
 
     def setUp(self) -> None:
         """Delete any investments that may already exist for the test account"""
 
+        super(CreateInvestment, self).setUp()
         with Session() as session:
             session.query(Investor).filter(Investor.account_name == app_settings.test_account).delete()
             session.commit()
@@ -34,3 +37,16 @@ class CreateInvestment(TestCase):
         self.account.create_investment(sus=test_sus)
         new_investment = self.account.get_investment_info()[0]
         self.assertEqual(test_sus, new_investment['service_units'])
+
+    def test_raises_on_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` exception is raised"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            self.account._raise_if_missing_proposal()
+
+        with self.assertRaises(MissingProposalError):
+            self.account.create_investment(1000)

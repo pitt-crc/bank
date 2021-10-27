@@ -143,6 +143,14 @@ class InvestorData:
 
         self.account_name = account_name
 
+    def _raise_if_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` exception if the account does not have a primary proposal"""
+
+        with Session() as session:
+            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
     def create_investment(self, sus: int) -> None:
         """Add a new investor proposal for the given account
 
@@ -150,6 +158,7 @@ class InvestorData:
             sus: The number of service units to add
         """
 
+        self._raise_if_missing_proposal()
         start_date = date.today()
         end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
         new_investor = Investor(
