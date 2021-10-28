@@ -5,7 +5,7 @@ from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
-from tests.dao.utils import ProposalSetup
+from tests._utils import ProposalSetup
 
 
 class CreateProposal(TestCase):
