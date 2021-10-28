@@ -4,7 +4,7 @@ from typing import Any, Optional
 from unittest import TestCase
 
 from bank.settings import APP_PREFIX, Defaults, Settings, app_settings
-from tests._utils import CleanEnviron
+from tests.testing_utils import CleanEnviron
 
 
 class DefaultValues(TestCase):

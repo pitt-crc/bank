@@ -8,6 +8,8 @@ from bank.settings import app_settings
 
 
 class GenericSetup:
+    """Base class used to delete database entries before running tests"""
+
     def setUp(self) -> None:
         """Delete any proposals and investments that may already exist for the test account"""
 
@@ -18,10 +20,10 @@ class GenericSetup:
 
 
 class ProposalSetup(GenericSetup):
-    """Reusable setup mixin for configuring a unittest class"""
+    """Reusable setup mixin for configuring tests against user proposals"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
+        """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
         self.account = ProposalData(app_settings.test_account)
@@ -29,12 +31,12 @@ class ProposalSetup(GenericSetup):
 
 
 class InvestorSetup(ProposalSetup):
-    """Reusable setup mixin for configuring a unittest class"""
+    """Reusable setup mixin for configuring tests against user investments"""
 
     num_inv_sus = 10_000
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
+        """Ensure there exists a user proposal and investment for the test user account"""
 
         super().setUp()
         self.account = InvestorData(app_settings.test_account)
