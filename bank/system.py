@@ -26,8 +26,6 @@ API Reference
 
 from __future__ import annotations
 
-from typing import cast, Optional
-from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
@@ -36,7 +34,7 @@ from shlex import split
 from smtplib import SMTP
 from string import Formatter
 from subprocess import PIPE, Popen
-from typing import Any, Tuple
+from typing import Any, Tuple, cast, Optional
 
 from bs4 import BeautifulSoup
 
@@ -175,20 +173,13 @@ class SlurmAccount:
 
         return usage
 
-    def set_raw_usage(self, usage: int, *cluster: str) -> None:
-        """Set the raw account usage on a given cluster
-
-        Args:
-            *cluster: The name of the cluster
-            usage: The usage value to set in units of seconds"""
-
-        clus = ','.join(cluster)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clus} set RawUsage={usage}')
-
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 
-        self.set_raw_usage(0, *app_settings.clusters)
+        # At the time of writing, the sacctmgr utility does not support setting
+        # RawUsage to any value other than zero
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
 class EmailTemplate(Formatter):
