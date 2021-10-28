@@ -36,8 +36,8 @@ class Info(TestCase):
     def test_info_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_allocation_info`` function"""
 
-        dao.Account(app_settings.test_accout).print_allocation_info()
-        CLIParser().execute(['info', app_settings.test_accout])
+        dao.Account(app_settings.test_account).print_allocation_info()
+        CLIParser().execute(['info', app_settings.test_account])
         self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
 
@@ -50,8 +50,8 @@ class Usage(TestCase):
     def test_usage_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
 
-        dao.Account(app_settings.test_accout).print_usage_info()
-        CLIParser().execute(['usage', app_settings.test_accout])
+        dao.Account(app_settings.test_account).print_usage_info()
+        CLIParser().execute(['usage', app_settings.test_account])
         self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
 
 
@@ -63,9 +63,9 @@ class LockWithNotification(TestCase):
     def test_account_is_locked(self) -> None:
         """Test that an unlocked account becomes locked"""
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         account.set_locked_state(False)
-        CLIParser().execute(['lock_with_notification', app_settings.test_accout, 'notify=False'])
+        CLIParser().execute(['lock_with_notification', app_settings.test_account, 'notify=False'])
         self.assertTrue(account.get_locked_state())
 
 
@@ -76,9 +76,9 @@ class ReleaseHold(TestCase):
     def test_account_is_unlocked(self) -> None:
         """Test that a locked account becomes unlocked"""
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         account.set_locked_state(True)
-        CLIParser().execute(['release_hold', app_settings.test_accout])
+        CLIParser().execute(['release_hold', app_settings.test_account])
         self.assertFalse(account.get_locked_state())
 
 
@@ -90,14 +90,14 @@ class Insert(TestCase):
     def setUpClass(cls) -> None:
         cls.first_cluster, *_ = app_settings.clusters
         cls.number_sus = 10_000
-        CLIParser().execute(['insert', 'proposal', app_settings.test_accout, f'--{cls.first_cluster}={cls.number_sus}'])
+        CLIParser().execute(['insert', app_settings.test_account, 'proposal', f'--{cls.first_cluster}={cls.number_sus}'])
 
     @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_proposal_is_created_for_cluster(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
         # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(app_settings.test_accout).get_cluster_allocation()
+        allocations = dao.Account(app_settings.test_account).get_cluster_allocation()
         self.assertEqual(self.number_sus, allocations.pop(self.first_cluster))
 
         # Test all other clusters have zero service units
@@ -112,12 +112,12 @@ class Add(TestCase):
     def test_sus_are_updated(self) -> None:
         """Test the allocated service units are incremented by a given amount"""
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         test_cluster_name, *other_clusters = app_settings.clusters
         original_sus = account.get_cluster_allocation()
 
         sus_to_add = 100
-        CLIParser().execute(['add', app_settings.test_accout, f'--{test_cluster_name}={sus_to_add}'])
+        CLIParser().execute(['add', app_settings.test_account, f'--{test_cluster_name}={sus_to_add}'])
         new_sus = account.get_cluster_allocation()
 
         self.assertEqual(new_sus[test_cluster_name], original_sus[test_cluster_name] + sus_to_add)
@@ -158,12 +158,12 @@ class Modify(TestCase):
     def test_modify_updates_SUs(self) -> None:
         """Test the command updates sus on the given cluster"""
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         test_cluster = app_settings.clusters[0]
         account.overwrite_allocation_sus(**{test_cluster: 0})
 
         new_sus = 1_000
-        CLIParser().execute(['modify', app_settings.test_accout, f'--{test_cluster}={new_sus}'])
+        CLIParser().execute(['modify', app_settings.test_account, f'--{test_cluster}={new_sus}'])
         self.assertEqual(new_sus, account.get_cluster_allocation()[test_cluster])
 
 
@@ -175,7 +175,7 @@ class Investor(TestCase):
         """Delete any existing investments"""
 
         with orm.Session() as session:
-            session.query(orm.Investor).filter(orm.Investor.account_name == app_settings.test_accout).delete()
+            session.query(orm.Investor).filter(orm.Investor.account_name == app_settings.test_account).delete()
             session.commit()
 
     @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
@@ -183,9 +183,9 @@ class Investor(TestCase):
         """Test an investment is created with the correct number of sus"""
 
         num_sus = 15_000
-        CLIParser().execute(['investor', app_settings.test_accout, str(num_sus)])
+        CLIParser().execute(['investor', app_settings.test_account, str(num_sus)])
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         self.assertEqual(1, len(account.get_investment_sus()))
 
         inv_sus = next(iter(account.get_investment_sus().values()))
@@ -199,7 +199,7 @@ class InvestorModify(TestCase):
     def test_modify_updates_SUs(self) -> None:
         """Test the command updates sus on the given investment"""
 
-        account = dao.Account(app_settings.test_accout)
+        account = dao.Account(app_settings.test_account)
         inv_id, original_sus = next(iter(account.get_investment_sus().items()))
 
         new_sus = original_sus + 10
