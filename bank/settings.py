@@ -50,6 +50,7 @@ class Defaults:
     """Default settings for the parent application"""
 
     test_account = 'sam'
+    test_cluster = 'smp'
     date_format = "%m/%d/%y"
 
     # Where and how to write log files to

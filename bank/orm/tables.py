@@ -121,6 +121,15 @@ class Investor(Base):
     withdrawn_sus = Column(Integer, nullable=False)
     rollover_sus = Column(Integer, nullable=False)
 
+    @validates('service_units')
+    def validate_service_units(self, key: str, value: int) -> int:
+        """Verify the given value is a non-negative integer"""
+
+        if value < 0:
+            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
+
+        return value
+
     @property
     def expired(self) -> bool:
         """Return whether the investment is past its end date or is fully withdrawn with no remaining service units."""
