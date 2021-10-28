@@ -358,6 +358,9 @@ class Account(SlurmAccount, ProposalData, InvestorData):
             proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
 
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
             print(proposal.row_to_ascii_table())
             for inv in investments:
                 print(inv.row_to_ascii_table())
