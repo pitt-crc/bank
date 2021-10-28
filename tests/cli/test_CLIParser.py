@@ -28,7 +28,7 @@ class DynamicallyAddedClusterArguments(TestCase):
             args = {a.dest.lstrip('--') for a in parser._actions}
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
-
+@skip('This is an example test used to outline future work')
 class Info(TestCase):
     """Tests for the ``info`` subparser"""
 
@@ -83,6 +83,7 @@ class ReleaseHold(TestCase):
 
 
 # Todo: Test what happens if we insert and a proposal already exists
+@skip('This is an example test used to outline future work')
 class Insert(TestCase):
     """Tests for the ``insert`` subparser"""
 

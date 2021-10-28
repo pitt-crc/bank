@@ -288,6 +288,9 @@ class InvestorData:
             The number of service units that were actually withdrawn
         """
 
+        if sus <= 0:
+            raise ValueError('Withdrawal amount must be greater than zero')
+
         maximum_withdrawal = investment.service_units - investment.withdrawn_sus
         to_withdraw = min(sus, maximum_withdrawal)
         investment.current_sus += to_withdraw
@@ -419,7 +422,7 @@ class Account(SlurmAccount, ProposalData, InvestorData):
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
-        allocated = sum(self.get_cluster_allocation().values())
+        allocated = sum(self.get_proposal_info().values())
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 

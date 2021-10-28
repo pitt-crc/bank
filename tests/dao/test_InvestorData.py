@@ -1,5 +1,5 @@
 from copy import copy
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from bank.dao import InvestorData
 from bank.exceptions import MissingProposalError
@@ -128,6 +128,16 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
 
+    def test_error_on_nonpositive_argument(self) -> None:
+        """Test an error is raised for non-positive arguments"""
+
+        with Session() as session:
+            investment = session.query(Investor).filter(Investor.account_name == app_settings.test_account).first()
+
+        for sus in (0, -1):
+            with self.assertRaises(ValueError):
+                InvestorData._withdraw_from_investment(investment, sus)
+
 
 class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` method"""
@@ -135,15 +145,15 @@ class Withdraw(InvestorSetup, TestCase):
     def test_error_on_nonpositive_argument(self) -> None:
         """Test an error is raised for non-positive arguments"""
 
-        with self.assertRaises(ValueError):
-            self.account.withdraw(0)
+        for sus in (0, -1):
+            with self.assertRaises(ValueError):
+                self.account.withdraw(sus)
 
-        with self.assertRaises(ValueError):
-            self.account.withdraw(1)
-
+    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_single_investment(self) -> None:
         ...
 
+    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_multiple_investments(self) -> None:
         ...
 
