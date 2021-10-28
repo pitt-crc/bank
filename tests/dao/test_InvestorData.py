@@ -129,16 +129,30 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
 
 
-class Withdraw(TestCase):
+class Withdraw(InvestorSetup, TestCase):
+    """Tests for the ``withdraw`` method"""
 
     def test_error_on_nonpositive_argument(self) -> None:
+        """Test an error is raised for non-positive arguments"""
+
+        with self.assertRaises(ValueError):
+            self.account.withdraw(0)
+
+        with self.assertRaises(ValueError):
+            self.account.withdraw(1)
+
+    def test_withdrawal_on_single_investment(self) -> None:
         ...
 
-    def test_withdrawl_on_single_investment(self) -> None:
-        ...
-
-    def test_withdrawl_on_multiple_investments(self) -> None:
+    def test_withdrawal_on_multiple_investments(self) -> None:
         ...
 
     def test_error_for_missing_investments(self) -> None:
-        ...  # Double check if an error is the desired behavior
+        """Test the function fails silently if there are no investments"""
+
+        with Session() as session:
+            session.query(Investor).filter(Investor.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(ValueError):
+            self.account.withdraw(10)
