@@ -314,7 +314,7 @@ class InvestorData:
 
             # Go through investments, oldest first and start withdrawing
             investment: Investor
-            for investment in enumerate(investments):
+            for investment in investments:
                 withdrawn = self._withdraw_from_investment(investment, sus)
                 msg = f"Withdrew {withdrawn} service units from investment {investment.id} for account {self.account_name}"
                 LOG.info(msg)
