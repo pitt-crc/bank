@@ -448,8 +448,5 @@ class Account(SlurmAccount, ProposalData, InvestorData):
 
         # Query database for accounts that are unlocked and expired
         with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter(
-                (Proposal.end_date < date.today()) and (not Proposal.account.locked_state)
-            ).all()
-
-        return tuple(p.account_name for p in proposals)
+            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
+            return tuple(p.account_name for p in proposals if not Account(p.account_name).get_locked_state())
