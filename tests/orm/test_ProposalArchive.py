@@ -1,5 +1,3 @@
-"""Tests for the ``ProposalArchive`` class"""
-
 from unittest import TestCase
 
 from bank.orm import ProposalArchive

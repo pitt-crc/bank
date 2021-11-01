@@ -135,17 +135,8 @@ class ProposalData:
         LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
 
 
-class InvestorData:
+class InvestorData(SlurmAccount):
     """Data access for investment information associated with a given account"""
-
-    def __init__(self, account_name: str) -> None:
-        """An existing account in the bank
-
-        Args:
-            account_name: The name of the account
-        """
-
-        self.account_name = account_name
 
     def _raise_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception if the account does not have a primary proposal"""
@@ -332,18 +323,8 @@ class InvestorData:
             session.commit()
 
 
-class Account(SlurmAccount, ProposalData, InvestorData):
+class Account(ProposalData, InvestorData):
     """Administration for existing bank accounts"""
-
-    def __init__(self, account_name: str) -> None:
-        """An existing account in the bank
-
-        Args:
-            account_name: The name of the account
-        """
-
-        super().__init__(account_name)
-        self.account_name = account_name
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:

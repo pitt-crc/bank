@@ -1,5 +1,3 @@
-"""Tests for the ``Proposal`` class"""
-
 from datetime import date, timedelta
 from unittest import TestCase, skipIf
 
@@ -43,8 +41,9 @@ class PercentNotifiedValidation(TestCase):
         self.assertEqual(50, proposal.percent_notified)
 
 
+@skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 class ToArchiveObject(TestCase):
-    """Test the conversion of a proposal to an archive object"""
+    """Test the casting of a ``Proposal`` object to a ``ProposalArchive`` object"""
 
     def setUp(self) -> None:
         """Create a ``Proposal`` instance for testing"""
@@ -57,18 +56,21 @@ class ToArchiveObject(TestCase):
             proposal_type=1
         )
 
-        for i, cluster in enumerate(app_settings.clusters):
-            setattr(self.proposal, cluster, i)
+        self.archive_obj = self.proposal.to_archive_object()
 
-    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 
-        archive_obj = self.proposal.to_archive_object()
-        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type')
-
+        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type', app_settings.test_cluster)
         for c in col_names:
-            self.assertEqual(getattr(self.proposal, c), getattr(archive_obj, c))
+            self.assertEqual(getattr(self.proposal, c), getattr(self.archive_obj, c))
 
-        for cluster in app_settings.clusters:
-            self.assertEqual(getattr(self.proposal, cluster), getattr(archive_obj, cluster))
+    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
+    def test_account_usage_matches_slurm_output(self) -> None:
+        """Test the account usage agrees with the output of the slurm utility"""
+
+        slurm_account = SlurmAccount(app_settings.test_user)
+        self.assertEqual(
+            slurm_account.get_cluster_usage(app_settings.test_cluster),
+            getattr(self.archive_obj, f'{app_settings.test_cluster}_usage')
+        )

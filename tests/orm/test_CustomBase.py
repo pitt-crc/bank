@@ -1,34 +1,9 @@
-"""Tests for functionality added to SqlAlchemy tables by the ``CustomBase`` class"""
-
-import enum
 import json
 from datetime import datetime
 from unittest import TestCase
 
-from sqlalchemy import Column, Date, Enum, Integer, Text
-
-from bank.orm.tables import Base
 from bank.settings import app_settings
-
-
-class DummyEnum(enum.Enum):
-    """A simple enumerated column"""
-
-    One = 1
-    Two = 2
-    Three = 3
-
-
-class DummyTable(Base):
-    """A dummy database table for testing purposes"""
-
-    __tablename__ = 'test_table'
-
-    id = Column(Integer, primary_key=True)
-    int_col = Column(Integer)
-    str_col = Column(Text)
-    date_col = Column(Date)
-    enum_col = Column(Enum(DummyEnum))
+from tests.testing_utils import DummyEnum, DummyTable
 
 
 class RowToJson(TestCase):
@@ -68,8 +43,11 @@ class RowToJson(TestCase):
 class RowToAscii(TestCase):
     """Test the exporting of row data to a string"""
 
-    def runTest(self) -> None:
+    def test_has_json_content(self) -> None:
         """Test the returned string is not empty"""
 
         test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
-        self.assertTrue(test_row.row_to_ascii_table())
+        json_str = json.dumps(test_row.row_to_json()).strip('{}').replace(' ', '').replace('\n', '')
+        ascii_str = test_row.row_to_ascii_table().replace(' ', '').replace('\n', '')
+        self.assertIn(json_str, ascii_str)
+

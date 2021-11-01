@@ -1,9 +1,12 @@
 """Generic utilities used by the test suite"""
-
+import enum
 import os
+
+from sqlalchemy import Column, Integer, Text, Date, Enum
 
 from bank.dao import ProposalData, InvestorData
 from bank.orm import Session, Proposal, Investor
+from bank.orm.tables import Base
 from bank.settings import app_settings
 
 
@@ -53,3 +56,23 @@ class CleanEnviron:
     def __exit__(self, *args, **kwargs) -> None:
         os.environ.clear()
         os.environ.update(self._environ)
+
+
+class DummyEnum(enum.Enum):
+    """A simple enumerated database column"""
+
+    One = 1
+    Two = 2
+    Three = 3
+
+
+class DummyTable(Base):
+    """A dummy database table for testing purposes"""
+
+    __tablename__ = 'test_table'
+
+    id = Column(Integer, primary_key=True)
+    int_col = Column(Integer)
+    str_col = Column(Text)
+    date_col = Column(Date)
+    enum_col = Column(Enum(DummyEnum))

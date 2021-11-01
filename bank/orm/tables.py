@@ -70,18 +70,9 @@ class Proposal(Base):
         for cluster in app_settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
 
-        try:
-            slurm_acct = SlurmAccount(self.account_name)
-            for cluster in app_settings.clusters:
-                setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
-
-        # If slurm isn't installed, leave the usage columns empty
-        except NoSuchAccountError:
-            pass
-
-        else:
-            for cluster in app_settings.clusters:
-                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+        slurm_acct = SlurmAccount(self.account_name)
+        for cluster in app_settings.clusters:
+            setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
 
         return archive_obj
 

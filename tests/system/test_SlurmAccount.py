@@ -17,6 +17,7 @@ class InitExceptions(TestCase):
 
 
 @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+@skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 class AccountLocking(TestCase):
     """Test the locking and unlocking of an account"""
 
