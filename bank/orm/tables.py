@@ -16,7 +16,6 @@ from sqlalchemy.orm import validates
 
 from .base import CustomBase
 from .enum import ProposalType
-from ..exceptions import NoSuchAccountError
 from ..settings import app_settings
 from ..system import SlurmAccount
 
@@ -67,11 +66,9 @@ class Proposal(Base):
             proposal_type=self.proposal_type
         )
 
-        for cluster in app_settings.clusters:
-            setattr(archive_obj, cluster, getattr(self, cluster))
-
         slurm_acct = SlurmAccount(self.account_name)
         for cluster in app_settings.clusters:
+            setattr(archive_obj, cluster, getattr(self, cluster))
             setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
 
         return archive_obj

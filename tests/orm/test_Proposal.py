@@ -17,6 +17,7 @@ class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = Proposal
+    columns_to_test = app_settings.clusters
 
 
 class PercentNotifiedValidation(TestCase):
@@ -49,12 +50,15 @@ class ToArchiveObject(TestCase):
         """Create a ``Proposal`` instance for testing"""
 
         self.proposal = Proposal(
-            account_name='username',
+            account_name=app_settings.test_account,
             start_date=date.today(),
             end_date=date.today() + timedelta(days=1),
             percent_notified=10,
             proposal_type=1
         )
+
+        for cluster in app_settings.clusters:
+            setattr(self.proposal, cluster, 10)
 
         self.archive_obj = self.proposal.to_archive_object()
 
@@ -65,11 +69,10 @@ class ToArchiveObject(TestCase):
         for c in col_names:
             self.assertEqual(getattr(self.proposal, c), getattr(self.archive_obj, c))
 
-    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_account_usage_matches_slurm_output(self) -> None:
         """Test the account usage agrees with the output of the slurm utility"""
 
-        slurm_account = SlurmAccount(app_settings.test_user)
+        slurm_account = SlurmAccount(app_settings.test_account)
         self.assertEqual(
             slurm_account.get_cluster_usage(app_settings.test_cluster),
             getattr(self.archive_obj, f'{app_settings.test_cluster}_usage')

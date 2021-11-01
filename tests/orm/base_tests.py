@@ -1,6 +1,6 @@
 """Generic tests that can be reused for multiple data base tables"""
 
-from typing import Type
+from typing import Type, Tuple
 
 from bank.orm.base import CustomBase
 from bank.settings import app_settings
@@ -26,7 +26,7 @@ class ServiceUnitsValidation:
     """Tests for the validation of the service units"""
 
     db_table_class: Type[CustomBase] = None
-    columns_to_test = app_settings.clusters
+    columns_to_test: Tuple[str] = None
 
     def test_negative_service_units(self) -> None:
         """Test for a ``ValueError`` when the number of service units are negative"""
