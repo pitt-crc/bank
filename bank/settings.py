@@ -39,6 +39,7 @@ API Reference
 
 from pathlib import Path
 from typing import Any
+from bank.system import EmailTemplate
 
 from environ.environ import Env
 
@@ -107,7 +108,7 @@ class Defaults:
     """
 
     # An email to send when you are 90 days from the end of your proposal
-    three_month_proposal_expiry_notification_email = """\
+    three_month_proposal_expiry_notification_email = EmailTemplate( """\ 
     <html>
     <head></head>
     <body>
@@ -125,10 +126,10 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
     # An email to send when the proposal has expired
-    proposal_expires_notification_email = """\
+    proposal_expires_notification_email = EmailTemplate("""\
     <html>
     <head></head>
     <body>
@@ -145,7 +146,7 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
 
 class Settings:
