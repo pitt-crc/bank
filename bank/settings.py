@@ -166,5 +166,3 @@ class Settings:
 app_settings = Settings()
 """An instance of the ``Settings`` class that reflects application settings as
 they were defined in the working environment at package instantiation"""
-#formatted=app_settings.proposal_expires_notification.format(app_settings.account_name, app_settings.start_date)
-#formatted.send_to(app_settings.account_name, f"The account for {app_settings.account_name} was locked because it reached the end date {app_settings.get_proposal_info.end_date.strftime(app_settings.date_format)}", app_settings.from_address)
