@@ -449,7 +449,7 @@ class Account(SlurmAccount, ProposalData, InvestorData):
                 self.get_proposal_info.percent_notified = next_notify
                 session.commit()
 
-            formatted=app_settings.notify_sus_limit_email_text.format(self.usage_perc, self.start_date)
+            formatted=app_settings.notify_sus_limit_email_text.format(self.usage_perc, self.start_date, self.usage, self.investment_info)
             formatted.send_to(self, self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold", app_settings.from_address)
             return
 
