@@ -59,10 +59,11 @@ class MessageSending(TestCase):
         """Test the email message matches the template"""
 
         # The rstrip removes a newline character that is added automatically in the sent message
+        # noinspection PyUnresolvedReferences
         sent_message = self.sent.get_body().get_content().rstrip()
         self.assertEqual(self.template.msg, sent_message)
 
-    def test_email_fields_are_set(self) -> None:
+    def test_address_fields_are_set(self) -> None:
         """Test the address/subject fields have been set in the sent email"""
 
         self.assertEqual(self.to_address, self.sent['To'])
@@ -77,6 +78,14 @@ class MessageSending(TestCase):
             self.mock_smtp.__enter__.mock_calls,
             [call(), call().send_message(self.sent)]
         )
+
+    @patch('smtplib.SMTP')
+    def test_error_on_incomplete_message(self, mock_smtp) -> None:
+        """Test a ``RuntimeError`` is raised when sending an incomplete email message"""
+
+        with self.assertRaises(RuntimeError):
+            EmailTemplate('{x}').send_to(
+                self.to_address, self.subject, self.from_address, smtp=mock_smtp)
 
 
 class StringRepresentation(TestCase):
