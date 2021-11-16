@@ -33,7 +33,6 @@ from .settings import app_settings
 
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
-_account_str = dict(dest='--account', type=str, help='The associated slurm account')
 _ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
 _date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
@@ -50,27 +49,25 @@ class CLIParser(ArgumentParser):
 
         # For each command line subparser we:
         # 1) Create a new subparser instance and give it a name  (e.g. 'info')
-        # 2) Define the arguments of the subparser. Where necessary, arguments for specifying the service units of each
-        #    cluster are added dynamically using the cluster names defined in the application settings.
-        # 3) Define the function to be evaluated by the subparser
-        #    (usually as a lambda wrapper around logic defined elsewhere in the banking system)
+        # 2) Define subparser arguments - add args for the service units of each cluster using ``include_clusters=True``
+        # 3) Define the function to be evaluated by the subparser or indicate the name of a dao method to evaluate
 
         # Subparsers for account management and info
 
         parser_info = self.subparsers.add_parser('info')
         self._add_args_to_parser(parser_info, _account)
-        parser_info.set_defaults(function=lambda account, **kwargs: account.print_allocation_info(**kwargs))
+        parser_info.set_defaults(use_dao_method='print_allocation_info')
 
         parser_usage = self.subparsers.add_parser('usage')
         self._add_args_to_parser(parser_usage, _account)
-        parser_usage.set_defaults(function=lambda account, *args, **kwargs: account.print_usage_info(*args, **kwargs))
+        parser_usage.set_defaults(use_dao_method='print_usage_info')
 
         parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
         self._add_args_to_parser(parser_reset_raw_usage, _account)
-        parser_reset_raw_usage.set_defaults(function=lambda account, **kwargs: account.reset_raw_usage(**kwargs))
+        parser_reset_raw_usage.set_defaults(use_dao_method='reset_raw_usage')
 
         parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=lambda: print('\n'.join(dao.Bank.find_unlocked())))
+        parser_find_unlocked.set_defaults(function=lambda: print('\n'.join(dao.Account.find_unlocked())))
 
         parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
         self._add_args_to_parser(parser_lock_with_notification, _account, _notify)
@@ -82,39 +79,40 @@ class CLIParser(ArgumentParser):
 
         parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
         self._add_args_to_parser(parser_check_proposal_end_date, _account)
-        parser_check_proposal_end_date.set_defaults(function=lambda account, **kwargs: account.send_pending_alerts(**kwargs))
+        parser_check_proposal_end_date.set_defaults(use_dao_method='send_pending_alerts')
 
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        self._add_args_to_parser(parser_insert, _ptype, _account_str, include_clusters=True)
-        parser_insert.set_defaults(function=dao.Bank.create_proposal)
+        self._add_args_to_parser(parser_insert, _account, _ptype, include_clusters=True)
+        parser_insert.set_defaults(use_dao_method='create_proposal')
 
-        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add',
+                                                help='Add SUs to an existing user proposal on top of current values.')
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
-        parser_add.set_defaults(function=lambda account, **kwargs: account.add_allocation_sus(**kwargs))
+        parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
         parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
         self._add_args_to_parser(parser_change, _account, _date, include_clusters=True)
-        parser_change.set_defaults(function=lambda account, **kwargs: account.set_cluster_allocation(**kwargs))
+        parser_change.set_defaults(use_dao_method='overwrite_allocation_sus')
 
         # Subparsers for adding and modifying investment accounts
 
         parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
         self._add_args_to_parser(parser_investor, _account, _sus)
-        parser_investor.set_defaults(function=dao.Bank.create_investment)
+        parser_investor.set_defaults(use_dao_method='create_investment')
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
         self._add_args_to_parser(parser_investor_modify, _inv_id, _sus, _date)
-        parser_investor_modify.set_defaults(function=lambda account, **kwargs: account.set_investment_sus(**kwargs))
+        parser_investor_modify.set_defaults(use_dao_method='overwrite_investment_sus')
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
         self._add_args_to_parser(parser_renewal, _account, include_clusters=True)
-        parser_renewal.set_defaults(function=lambda account, **kwargs: account.renewal(**kwargs))
+        parser_renewal.set_defaults(use_dao_method='renewal')
 
         parser_withdraw = self.subparsers.add_parser('withdraw')
         self._add_args_to_parser(parser_withdraw, _account, _sus)
-        parser_withdraw.set_defaults(function=lambda account, **kwargs: account.withdraw(**kwargs))
+        parser_withdraw.set_defaults(use_dao_method='withdraw')
 
     @staticmethod
     def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, include_clusters: bool = False) -> None:
@@ -144,4 +142,11 @@ class CLIParser(ArgumentParser):
 
         cli_kwargs = vars(self.parse_known_args(args)[0])  # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
-        cli_kwargs.pop('function')(**cli_kwargs)
+
+        # If the ``use_dao_method`` value is set, then evalute a method of the ``account`` argument
+        use_dao_method = cli_kwargs.pop('use_dao_method', None)
+        if use_dao_method is not None:
+            getattr(cli_kwargs.pop('account'), use_dao_method)(**cli_kwargs)
+
+        else:
+            cli_kwargs.pop('function')(**cli_kwargs)
