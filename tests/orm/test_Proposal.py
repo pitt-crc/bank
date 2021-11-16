@@ -61,7 +61,6 @@ class ToArchiveObject(TestCase):
 
         self.archive_obj = self.proposal.to_archive_object()
 
-    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 

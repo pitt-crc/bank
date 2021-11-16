@@ -44,7 +44,6 @@ class AccountLocking(TestCase):
 class AccountUsage(TestCase):
     """Test the getting and setting of account usage values"""
 
-    @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
     def test_get_usage_hours(self) -> None:
         """Test the recovered account usage matches the value set in setup"""
 

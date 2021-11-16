@@ -179,16 +179,6 @@ class SlurmAccount:
 
         return usage
 
-    def set_raw_usage(self, usage: int, *cluster: str) -> None:
-        """Set the raw account usage on a given cluster
-
-        Args:
-            *cluster: The name of the cluster
-            usage: The usage value to set in units of seconds"""
-
-        clus = ','.join(cluster)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clus} set RawUsage={usage}')
-
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 

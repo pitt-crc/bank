@@ -87,8 +87,7 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_insert, _account, _ptype, include_clusters=True)
         parser_insert.set_defaults(use_dao_method='create_proposal')
 
-        parser_add = self.subparsers.add_parser('add',
-                                                help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
         parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
