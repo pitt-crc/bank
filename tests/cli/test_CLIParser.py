@@ -35,11 +35,16 @@ class Info(TestCase):
 
     @patch('builtins.print')
     def test_info_is_printed(self, mocked_print) -> None:
-        """Test the output from the subparser to stdout matches matches the ``print_allocation_info`` function"""
+        """Test the output from the subparser to stdout matches matches output from the DAO layer"""
 
-        dao.Account(TEST_ACCOUNT).print_allocation_info()
-        CLIParser().execute(['info', TEST_ACCOUNT])
-        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
+        # Record output to stdout by the DAO
+        dao.Account(app_settings.test_account).print_allocation_info()
+        expected_prints = copy(mocked_print.mock_calls)
+
+        # Record stdout from CLI and compare against previous result
+        CLIParser().execute(['info', app_settings.test_account])
+        cli_prints = mocked_print.mock_calls[len(expected_prints):]
+        self.assertEqual(expected_prints, cli_prints)
 
 
 # Todo: These test can be extended to include an account with and without investments
