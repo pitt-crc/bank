@@ -83,7 +83,7 @@ class Defaults:
 
     # An email to send when you have exceeded a proposal threshold
     notify_levels = (25, 50, 75, 90)
-    notify_sus_limit_email_text = """\
+    notify_sus_limit_email_text = EmailTemplate("""\
     <html>
     <head></head>
     <body>
@@ -106,10 +106,10 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
     # An email to send when you are 90 days from the end of your proposal
-    three_month_proposal_expiry_notification_email = """\ 
+    three_month_proposal_expiry_notification_email = EmailTemplate("""\ 
     <html>
     <head></head>
     <body>
@@ -127,10 +127,10 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
     # An email to send when the proposal has expired
-    proposal_expires_notification_email = """\
+    proposal_expires_notification_email = EmailTemplate("""\
     <html>
     <head></head>
     <body>
@@ -147,7 +147,7 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
 
 class Settings:

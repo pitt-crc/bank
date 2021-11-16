@@ -35,7 +35,7 @@ from math import ceil
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
-from bank.settings import app_settings
+from bank.system import app_settings
 from bank.system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -95,7 +95,7 @@ class ProposalData:
             if proposal is None:
                 raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
 
-            return proposal.to_dict()
+            return proposal.row_to_dict()
 
     def add_allocation_sus(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
@@ -135,7 +135,7 @@ class ProposalData:
         LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
 
 
-class InvestorData:
+class InvestorData(SlurmAccount):
     """Data access for investment information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
@@ -186,7 +186,7 @@ class InvestorData:
 
         with Session() as session:
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-            return tuple(inv.to_dict() for inv in investments)
+            return tuple(inv.row_to_dict() for inv in investments)
 
     def overwrite_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment
@@ -332,7 +332,7 @@ class InvestorData:
             session.commit()
 
 
-class Account(SlurmAccount, ProposalData, InvestorData):
+class Account(ProposalData, InvestorData):
     """Administration for existing bank accounts"""
 
     def __init__(self, account_name: str) -> None:
