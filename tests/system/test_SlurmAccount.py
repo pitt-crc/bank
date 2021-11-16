@@ -1,4 +1,5 @@
 from unittest import TestCase, skipIf
+from unittest.mock import patch
 
 from bank.exceptions import NoSuchAccountError
 from bank.settings import app_settings
@@ -13,6 +14,11 @@ class InitExceptions(TestCase):
         """Test a ``NoSuchAccountError`` error is raised if the specified user account does not exist"""
 
         with self.assertRaises(NoSuchAccountError):
+            SlurmAccount('fake_account_name_123')
+
+    def test_error_if_slurm_not_installed(self) -> None:
+        """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
+        with patch.object(SlurmAccount, 'check_slurm_installed', return_value=False), self.assertRaises(SystemError):
             SlurmAccount('fake_account_name_123')
 
 
