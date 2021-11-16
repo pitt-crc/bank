@@ -4,8 +4,10 @@ from unittest.mock import patch
 
 from bank import dao, orm
 from bank.cli import CLIParser
+from bank.exceptions import MissingProposalError
 from bank.settings import app_settings
 from bank.system import RequireRoot
+from tests.testing_utils import InvestorSetup
 
 
 # Todo: Implement tests for:
@@ -30,7 +32,7 @@ class DynamicallyAddedClusterArguments(TestCase):
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
 
-class Info(TestCase):
+class Info(InvestorSetup, TestCase):
     """Tests for the ``info`` subparser"""
 
     @patch('builtins.print')
@@ -46,9 +48,14 @@ class Info(TestCase):
         cli_prints = mocked_print.mock_calls[len(expected_prints):]
         self.assertEqual(expected_prints, cli_prints)
 
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if the account does not exist"""
 
-# Todo: These test can be extended to include an account with and without investments
-class Usage(TestCase):
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['info', 'fake_account'])
+
+
+class Usage(InvestorSetup, TestCase):
     """Tests for the ``usage`` subparser"""
 
     @patch('builtins.print')
@@ -56,8 +63,17 @@ class Usage(TestCase):
         """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
 
         dao.Account(app_settings.test_account).print_usage_info()
+        expected_prints = copy(mocked_print.mock_calls)
+
         CLIParser().execute(['usage', app_settings.test_account])
-        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
+        cli_prints = mocked_print.mock_calls[len(expected_prints):]
+        self.assertEqual(expected_prints, cli_prints)
+
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['usage', 'fake_account'])
 
 
 # Todo: test that a notification is sent when notify=True

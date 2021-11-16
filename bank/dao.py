@@ -379,7 +379,7 @@ class Account(ProposalData, InvestorData):
             allocation_total += allocation
 
         usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv['sus'] for inv in investment_info)
+        investment_total = sum(inv['service_units'] for inv in investment_info)
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
