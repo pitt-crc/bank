@@ -17,7 +17,6 @@ class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = Proposal
-    columns_to_test = app_settings.clusters
 
 
 class PercentNotifiedValidation(TestCase):
