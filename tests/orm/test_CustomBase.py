@@ -6,6 +6,23 @@ from bank.settings import app_settings
 from tests.testing_utils import DummyEnum, DummyTable
 
 
+class RowToDict(TestCase):
+    """Test the exporting of row data to a dictionary"""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        """Create an instance of the ``DummyTable`` class to test against"""
+
+        cls.test_row = DummyTable(str_col='a', int_col=1, date_col=datetime.now(), enum_col=DummyEnum(1))
+        cls.row_as_dict = cls.test_row.row_to_dict()
+
+    def test_entries_match_row_data(self) -> None:
+        """Test all columns are present in the returned dictionary"""
+
+        for col, value in self.row_as_dict.items():
+            self.assertEqual(getattr(self.test_row, col), value)
+
+
 class RowToJson(TestCase):
     """Test the exporting of row data to json format"""
 
@@ -50,4 +67,3 @@ class RowToAscii(TestCase):
         json_str = json.dumps(test_row.row_to_json()).strip('{}').replace(' ', '').replace('\n', '')
         ascii_str = test_row.row_to_ascii_table().replace(' ', '').replace('\n', '')
         self.assertIn(json_str, ascii_str)
-

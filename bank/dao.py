@@ -95,7 +95,7 @@ class ProposalData:
             if proposal is None:
                 raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
 
-            return proposal.to_dict()
+            return proposal.row_to_dict()
 
     def add_allocation_sus(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
@@ -177,7 +177,7 @@ class InvestorData(SlurmAccount):
 
         with Session() as session:
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-            return tuple(inv.to_dict() for inv in investments)
+            return tuple(inv.row_to_dict() for inv in investments)
 
     def overwrite_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment
