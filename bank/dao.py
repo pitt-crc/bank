@@ -29,7 +29,7 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union
 
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
