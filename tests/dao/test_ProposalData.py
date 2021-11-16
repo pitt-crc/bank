@@ -28,7 +28,7 @@ class CreateProposal(TestCase):
             self.account.get_proposal_info()
 
         self.account.create_proposal()
-        self.assertTrue(self.account.get_proposal_info)
+        self.assertTrue(self.account.get_proposal_info())
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""

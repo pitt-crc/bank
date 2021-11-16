@@ -4,7 +4,8 @@ from unittest.mock import patch
 
 from bank import dao, orm
 from bank.cli import CLIParser
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, ProposalExistsError
+from bank.orm import Session, Proposal
 from bank.settings import app_settings
 from bank.system import RequireRoot
 from tests.testing_utils import InvestorSetup, ProtectLockState
@@ -102,26 +103,48 @@ class ReleaseHold(ProtectLockState, TestCase):
         self.assertFalse(account.get_locked_state())
 
 
-# Todo: Test what happens if we insert and a proposal already exists
 class Insert(TestCase):
     """Tests for the ``insert`` subparser"""
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.first_cluster, *_ = app_settings.clusters
-        cls.number_sus = 10_000
-        CLIParser().execute(['insert', 'proposal', app_settings.test_account, f'--{cls.first_cluster}={cls.number_sus}'])
+    def setUp(self) -> None:
+        """Delete any proposals that may already exist for the test account"""
 
-    def test_proposal_is_created_for_cluster(self) -> None:
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+    def test_proposal_is_created(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
+        number_of_sus = 5000
+        CLIParser().execute(['insert', 'proposal', app_settings.test_account, f'--{app_settings.test_cluster}={number_of_sus}'])
+
         # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(app_settings.test_account).get_cluster_allocation()
-        self.assertEqual(self.number_sus, allocations.pop(self.first_cluster))
+        allocations = dao.Account(app_settings.test_account).get_proposal_info()
+        self.assertEqual(number_of_sus, allocations.pop(app_settings.test_cluster))
 
         # Test all other clusters have zero service units
         for cluster, sus in allocations.items():
             self.assertEqual(0, sus, f'Cluster {cluster} should have zero service units. Got {sus}.')
+
+    def test_error_if_already_exists(self) -> None:
+        """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
+
+        dao.Account(app_settings.test_account).create_proposal(**{app_settings.test_cluster: 1000})
+        with self.assertRaises(ProposalExistsError):
+            CLIParser().execute(['insert', 'proposal', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when assigning negative service units"""
+
+        with self.assertRaises(ValueError):
+            CLIParser().execute(['insert', 'proposal', app_settings.test_account, f'--{app_settings.test_cluster}=-1'])
+
+    def test_error_on_invalid_proposal_type(self) -> None:
+        """Test an error is raised for invalid proposal types"""
+
+        with self.assertRaises(ValueError):
+            CLIParser().execute(['insert', 'invalidValue', app_settings.test_account])
 
 
 class Add(TestCase):
