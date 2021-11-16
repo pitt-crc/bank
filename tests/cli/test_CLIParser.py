@@ -7,7 +7,7 @@ from bank.cli import CLIParser
 from bank.exceptions import MissingProposalError
 from bank.settings import app_settings
 from bank.system import RequireRoot
-from tests.testing_utils import InvestorSetup
+from tests.testing_utils import InvestorSetup, ProtectLockState
 
 
 # Todo: Implement tests for:
@@ -76,11 +76,10 @@ class Usage(InvestorSetup, TestCase):
             CLIParser().execute(['usage', 'fake_account'])
 
 
-# Todo: test that a notification is sent when notify=True
-class LockWithNotification(TestCase):
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class LockWithNotification(ProtectLockState, TestCase):
     """Tests for the ``lock_with_notification`` subparser"""
 
-    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_locked(self) -> None:
         """Test that an unlocked account becomes locked"""
 
@@ -90,10 +89,10 @@ class LockWithNotification(TestCase):
         self.assertTrue(account.get_locked_state())
 
 
-class ReleaseHold(TestCase):
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class ReleaseHold(ProtectLockState, TestCase):
     """Tests for the ``release_hold`` subparser"""
 
-    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_unlocked(self) -> None:
         """Test that a locked account becomes unlocked"""
 

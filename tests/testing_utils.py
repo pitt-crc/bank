@@ -4,6 +4,7 @@ import os
 
 from sqlalchemy import Column, Integer, Text, Date, Enum
 
+from bank import dao
 from bank.dao import ProposalData, InvestorData
 from bank.orm import Session, Proposal, Investor
 from bank.orm.tables import Base
@@ -56,6 +57,20 @@ class CleanEnviron:
     def __exit__(self, *args, **kwargs) -> None:
         os.environ.clear()
         os.environ.update(self._environ)
+
+
+class ProtectLockState:
+    """Restores the test account's lock state after tests are done running"""
+
+    def setUp(self) -> None:
+        """Record the initial lock state of the test account"""
+
+        self.initial_state = dao.Account(app_settings.test_account).get_locked_state()
+
+    def tearDown(self) -> None:
+        """Restore the initial lock state of the test account"""
+
+        dao.Account(app_settings.test_account).set_locked_state(self.initial_state)
 
 
 class DummyEnum(enum.Enum):
