@@ -39,6 +39,7 @@ API Reference
 
 from pathlib import Path
 from typing import Any
+from bank.system import EmailTemplate
 
 
 from environ.environ import Env

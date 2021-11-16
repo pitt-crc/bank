@@ -95,7 +95,7 @@ class ProposalData:
             if proposal is None:
                 raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
 
-            return proposal.row_to_dict()
+            return proposal.to_dict()
 
     def add_allocation_sus(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
@@ -135,8 +135,17 @@ class ProposalData:
         LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
 
 
-class InvestorData(SlurmAccount):
+class InvestorData:
     """Data access for investment information associated with a given account"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        self.account_name = account_name
 
     def _raise_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception if the account does not have a primary proposal"""
@@ -177,7 +186,7 @@ class InvestorData(SlurmAccount):
 
         with Session() as session:
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-            return tuple(inv.row_to_dict() for inv in investments)
+            return tuple(inv.to_dict() for inv in investments)
 
     def overwrite_investment_sus(self, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given investment
@@ -323,8 +332,18 @@ class InvestorData(SlurmAccount):
             session.commit()
 
 
-class Account(ProposalData, InvestorData):
+class Account(SlurmAccount, ProposalData, InvestorData):
     """Administration for existing bank accounts"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        super().__init__(account_name)
+        self.account_name = account_name
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
@@ -409,11 +428,13 @@ class Account(ProposalData, InvestorData):
 
         days_until_expire = (self.get_proposal_info.end_date - date.today()).days
         if days_until_expire in app_settings.warning_days:
-           self.notify(app_settings.three_month_proposal_expiry_notification)
+            formatted=app_settings.three_month_proposal_expiry_notification.format(self.account_name, self.expire, self.start_date)
+            formatted.send_to(self, self.account_name, f"Your Three Month Proposal Expiry Notification for account: {self.account_name}", app_settings.from_address)
 
         elif days_until_expire == 0:
             self.set_locked_state(True)
-            self.notify(app_settings.proposal_expires_notification)
+            formatted=app_settings.proposal_expires_notification.format(self.account_name, self.start_date)
+            formatted.send_to(self, self.account_name, f"The account for {self.account_name} was locked because it reached the end date {self.get_proposal_info.end_date.strftime(app_settings.date_format)}", app_settings.from_address)
 
             LOG.info(
                 f"The account for {self.account_name} was locked because it reached the end date {self.get_proposal_info.end_date.strftime(app_settings.date_format)}")
@@ -424,7 +445,8 @@ class Account(ProposalData, InvestorData):
                 self.get_proposal_info.percent_notified = next_notify
                 session.commit()
 
-            self.notify(app_settings.notify_sus_limit_email_text)
+            formatted=app_settings.notify_sus_limit_email_text.format(self.usage_perc, self.start_date, self.usage, self.investment_info)
+            formatted.send_to(self, self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold", app_settings.from_address)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:
