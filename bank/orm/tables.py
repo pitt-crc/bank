@@ -7,16 +7,14 @@ API Reference
 from __future__ import annotations
 
 from datetime import date
-from itertools import chain
 from logging import getLogger
 
 from sqlalchemy import Column, Date, Enum, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates
 
-from .base import CustomBase
+from .base import CustomBase, Validators
 from .enum import ProposalType
-from ..exceptions import NoSuchAccountError
 from ..settings import app_settings
 from ..system import SlurmAccount
 
@@ -38,23 +36,8 @@ class Proposal(Base):
     percent_notified = Column(Integer, nullable=False)
     proposal_type = Column(Enum(ProposalType), nullable=False)
 
-    @validates('percent_notified')
-    def validate_percent_notified(self, key: str, value: int) -> int:
-        """Verify the given value is between 0 and 100"""
-
-        if 0 <= value <= 100:
-            return value
-
-        raise ValueError(f'Value for {key} must be between 0 and 100 (get {value})')
-
-    @validates(*app_settings.clusters)
-    def validate_service_units(self, key: str, value: int) -> int:
-        """Verify the given value is a non-negative integer"""
-
-        if value < 0:
-            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
-
-        return value
+    _validate_service_units = validates(*app_settings.clusters)(Validators.validate_service_units)
+    _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
 
     def to_archive_object(self) -> ProposalArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""
@@ -67,21 +50,10 @@ class Proposal(Base):
             proposal_type=self.proposal_type
         )
 
+        slurm_acct = SlurmAccount(self.account_name)
         for cluster in app_settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
-
-        try:
-            slurm_acct = SlurmAccount(self.account_name)
-            for cluster in app_settings.clusters:
-                setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
-
-        # If slurm isn't installed, leave the usage columns empty
-        except NoSuchAccountError:
-            pass
-
-        else:
-            for cluster in app_settings.clusters:
-                setattr(archive_obj, f'{cluster}_usage', slurm_acct.cluster_usage(cluster))
+            setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
 
         return archive_obj
 
@@ -97,14 +69,9 @@ class ProposalArchive(Base):
     end_date = Column(Date, nullable=False)
     proposal_type = Column(Enum(ProposalType), nullable=False)
 
-    @validates(*chain(app_settings.clusters, (f'{c}_usage' for c in app_settings.clusters)))
-    def validate_service_units(self, key: str, value: int) -> int:
-        """Verify the given value is a non-negative integer"""
-
-        if value < 0:
-            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
-
-        return value
+    _validate_service_units = validates(*app_settings.clusters, *(f'{c}_usage' for c in app_settings.clusters))(
+        Validators.validate_service_units
+    )
 
 
 class Investor(Base):
@@ -121,14 +88,7 @@ class Investor(Base):
     withdrawn_sus = Column(Integer, nullable=False)
     rollover_sus = Column(Integer, nullable=False)
 
-    @validates('service_units')
-    def validate_service_units(self, key: str, value: int) -> int:
-        """Verify the given value is a non-negative integer"""
-
-        if value < 0:
-            raise ValueError(f'Invalid value for column {key} - Service units must be a non-negative integer.')
-
-        return value
+    _validate_service_units = validates('service_units')(Validators.validate_service_units)
 
     @property
     def expired(self) -> bool:
@@ -162,6 +122,8 @@ class InvestorArchive(Base):
     exhaustion_date = Column(Date, nullable=False)
     service_units = Column(Integer, nullable=False)
     current_sus = Column(Integer, nullable=False)
+
+    _validate_service_units = validates('service_units')(Validators.validate_service_units)
 
 
 # Dynamically add columns for each of the managed clusters

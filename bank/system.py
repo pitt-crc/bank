@@ -1,5 +1,5 @@
-"""The ``system`` module acts as an interface for the underlying system shell
-and provides general utilities for interacting with the runtime environment.
+"""The ``system`` module acts as an interface for the underlying runtime
+environment and provides general utilities for interacting with the parent system.
 It includes wrappers around various command line utilities (e.g., ``sacctmgr``)
 and system services (e.g., ``smtp``).
 
@@ -26,8 +26,6 @@ API Reference
 
 from __future__ import annotations
 
-from typing import cast, Optional
-from datetime import time
 from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
@@ -36,7 +34,7 @@ from shlex import split
 from smtplib import SMTP
 from string import Formatter
 from subprocess import PIPE, Popen
-from typing import Any, Tuple
+from typing import Any, Tuple, cast, Optional
 
 from bs4 import BeautifulSoup
 
@@ -108,6 +106,10 @@ class SlurmAccount:
 
         Args:
             account_name: The name of the user account
+
+        Raises:
+            SystemError: When the ``sacctmgr`` utility is not installed
+            NoSuchAccountError: If the given account name does not exist
         """
 
         self.account_name = account_name
@@ -120,13 +122,15 @@ class SlurmAccount:
 
     @staticmethod
     def check_slurm_installed() -> bool:
-        """Return whether sacctmgr is installed on the host machine"""
+        """Return whether ``sacctmgr`` is installed on the host machine"""
 
         try:
             cmd = ShellCmd('sacctmgr -V')
             cmd.raise_err()
             return cmd.out.startswith('slurm')
 
+        # We catch all exceptions, but explicitly list the
+        # common cases for reference by curious developers
         except (CmdError, FileNotFoundError, Exception):
             return False
 
@@ -175,35 +179,39 @@ class SlurmAccount:
 
         return usage
 
-    def set_raw_usage(self, usage: int, *cluster: str) -> None:
-        """Set the raw account usage on a given cluster
-
-        Args:
-            *cluster: The name of the cluster
-            usage: The usage value to set in units of seconds"""
-
-        clus = ','.join(cluster)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clus} set RawUsage={usage}')
-
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 
-        self.set_raw_usage(0, *app_settings.clusters)
+        # At the time of writing, the sacctmgr utility does not support setting
+        # RawUsage to any value other than zero
+        clusters = ','.join(app_settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
 class EmailTemplate(Formatter):
     """A formattable email template"""
 
     def __init__(self, msg: str) -> None:
+        """A formattable email template
+
+        Email messages passed at innit should follow the standard python formatting syntax.
+        The message can be in plain text or in HTML format.
+
+        Args:
+            msg: A partially unformatted email template
+        """
+
         self._msg = msg
 
     @property
     def msg(self) -> str:
+        """"The text content of the email template"""
+
         return self._msg
 
     @property
     def fields(self) -> Tuple[str]:
-        """Return the available (unformatted) fields in the email template
+        """Return any unformatted fields in the email template
 
         Returns:
             A tuple of unique field names
@@ -257,7 +265,7 @@ class EmailTemplate(Formatter):
         msg = EmailMessage()
         msg.set_content(email_text)
         msg.add_alternative(self._msg, subtype="html")
-        msg["Subject"] = subject  # f"Your allocation on H2P for account: {account.account_name}"
+        msg["Subject"] = subject
         msg["From"] = ffrom or app_settings.from_address
         msg["To"] = to
 

@@ -4,6 +4,14 @@ from datetime import date, timedelta
 from unittest import TestCase
 
 from bank.orm import Investor
+from tests.orm import base_tests
+
+
+class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
+    """Tests for the validation of the service units"""
+
+    db_table_class = Investor
+    columns_to_test = ('service_units',)
 
 
 class ToArchiveObject(TestCase):

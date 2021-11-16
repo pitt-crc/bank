@@ -1,4 +1,4 @@
-"""Definitions of enumerated data types used in the database"""
+"""Definitions of enumerated data types used to represent database columns"""
 
 from __future__ import annotations
 

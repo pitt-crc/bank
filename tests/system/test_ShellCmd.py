@@ -5,10 +5,10 @@ from bank.system import ShellCmd
 
 
 class InitExceptions(TestCase):
-    """Test appropriate errors are raised during instantiation"""
+    """Tests related to exceptions raised during instantiation"""
 
     def test_empty_init_arg(self) -> None:
-        """Test for ValueError when ``cmd`` is an empty string"""
+        """Test for ``ValueError when`` ``cmd`` is an empty string"""
 
         with self.assertRaises(ValueError):
             ShellCmd('')
@@ -42,7 +42,7 @@ class RaisingStdErr(TestCase):
 
         ShellCmd("echo 1").raise_err()
 
-    def test_no_error_on_stderr_output(self) -> None:
+    def test_error_on_stderr_output(self) -> None:
         """Test a ``CmdError`` is raised for STDERR output"""
 
         with self.assertRaises(CmdError) as cm:
