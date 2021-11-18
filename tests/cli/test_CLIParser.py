@@ -1,4 +1,5 @@
 from copy import copy
+from datetime import timedelta
 from unittest import TestCase, skipIf
 from unittest.mock import patch
 
@@ -179,45 +180,39 @@ class Add(ProposalSetup, TestCase):
             CLIParser().execute(['add', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
 
 
-class Modify(TestCase):
+class Modify(ProposalSetup, TestCase):
     """Tests for the ``modify`` subparser"""
 
-    def change_updates_SUs(self) -> None:
-        """"# insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # modify the proposal date to 7 days prior
-        run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
-
-        # modify proposal should work
-        run python crc_bank.py change sam --mpi=10000
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # proposal should have 1 mpi entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
-        """
-
-    def test_modify_updates_SUs(self) -> None:
-        """Test the command updates sus on the given cluster"""
+    def test_date_is_updated(self) -> None:
+        """Test the command updates the date on the proposal"""
 
         account = dao.Account(app_settings.test_account)
-        test_cluster = app_settings.clusters[0]
-        account.set_cluster_allocation(**{test_cluster: 0})
+        old_date = account.get_proposal_info()['start_date']
+        new_date = (old_date - timedelta(days=1)).strftime(app_settings.date_format)
+
+        CLIParser().execute(['modify', app_settings.test_account, f'--date={new_date}'])
+        self.assertEqual(new_date, account.get_proposal_info()['start_date'])
+
+    def test_service_units_are_updated(self) -> None:
+        """Test the command updates sus on the given cluster"""
+
+        # Set the existing allocation to zero
+        account = dao.Account(app_settings.test_account)
+        account.overwrite_allocation_sus(**{app_settings.test_cluster: 0})
 
         new_sus = 1_000
-        CLIParser().execute(['modify', app_settings.test_account, f'--{test_cluster}={new_sus}'])
-        self.assertEqual(new_sus, account.get_cluster_allocation()[test_cluster])
+        CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}={new_sus}'])
+        self.assertEqual(new_sus, account.get_proposal_info()[app_settings.test_cluster])
+
+    def test_error_on_missing_account(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
 
 
 class Investor(TestCase):

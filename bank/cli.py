@@ -91,9 +91,9 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
         parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
-        parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        self._add_args_to_parser(parser_change, _account, _date, include_clusters=True)
-        parser_change.set_defaults(use_dao_method='overwrite_allocation_sus')
+        parser_modify = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
+        self._add_args_to_parser(parser_modify, _account, _date, include_clusters=True)
+        parser_modify.set_defaults(use_dao_method='overwrite_allocation_sus')
 
         # Subparsers for adding and modifying investment accounts
 
