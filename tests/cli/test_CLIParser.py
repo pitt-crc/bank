@@ -3,7 +3,7 @@ from datetime import timedelta
 from unittest import TestCase, skipIf
 from unittest.mock import patch
 
-from bank import dao, orm
+from bank import dao
 from bank.cli import CLIParser
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
@@ -50,7 +50,7 @@ class Info(InvestorSetup, TestCase):
         cli_prints = mocked_print.mock_calls[len(expected_prints):]
         self.assertEqual(expected_prints, cli_prints)
 
-    def test_error_on_missing_account(self) -> None:
+    def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if the account does not exist"""
 
         with self.assertRaises(MissingProposalError):
@@ -71,7 +71,7 @@ class Usage(InvestorSetup, TestCase):
         cli_prints = mocked_print.mock_calls[len(expected_prints):]
         self.assertEqual(expected_prints, cli_prints)
 
-    def test_error_on_missing_account(self) -> None:
+    def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if the account does not exist"""
 
         with self.assertRaises(MissingProposalError):
@@ -169,7 +169,7 @@ class Add(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             CLIParser().execute(['add', app_settings.test_account, '--fake_cluster=1000'])
 
-    def test_error_on_missing_account(self) -> None:
+    def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when passed an account with a missing proposal"""
 
         with Session() as session:
@@ -204,7 +204,7 @@ class Modify(ProposalSetup, TestCase):
         CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}={new_sus}'])
         self.assertEqual(new_sus, account.get_proposal_info()[app_settings.test_cluster])
 
-    def test_error_on_missing_account(self) -> None:
+    def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when passed an account with a missing proposal"""
 
         with Session() as session:
@@ -215,16 +215,8 @@ class Modify(ProposalSetup, TestCase):
             CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
 
 
-class Investor(TestCase):
+class Investor(ProposalSetup, TestCase):
     """Tests for the ``investor`` subparser"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        """Delete any existing investments"""
-
-        with orm.Session() as session:
-            session.query(orm.Investor).filter(orm.Investor.account_name == app_settings.test_account).delete()
-            session.commit()
 
     def test_investment_is_created(self) -> None:
         """Test an investment is created with the correct number of sus"""
@@ -232,11 +224,19 @@ class Investor(TestCase):
         num_sus = 15_000
         CLIParser().execute(['investor', app_settings.test_account, str(num_sus)])
 
-        account = dao.Account(app_settings.test_account)
-        self.assertEqual(1, len(account.get_investment_sus()))
+        investments = dao.Account(app_settings.test_account).get_investment_info()
+        self.assertEqual(1, len(investments))
+        self.assertEqual(num_sus, investments[0]['service_units'])
 
-        inv_sus = next(iter(account.get_investment_sus().values()))
-        self.assertEqual(num_sus, inv_sus)
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['investor', app_settings.test_account, '1000'])
 
 
 class InvestorModify(TestCase):
