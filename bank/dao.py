@@ -35,7 +35,7 @@ from math import ceil
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
-from bank.settings import Defaults, app_settings
+from bank.settings import app_settings
 from bank.system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -401,38 +401,34 @@ class Account(ProposalData, InvestorData):
     def send_pending_alerts(self) -> None:
         """Send any pending usage alerts to the account"""
 
+        proposal = self.get_proposal_info()
+
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
-        allocated = sum(self.get_proposal_info().values())
+        allocated = sum(proposal[c] for c in app_settings.clusters)
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
-        days_until_expire = (self.get_proposal_info.end_date - date.today()).days
+        days_until_expire = (proposal['end_date'] - date.today()).days
         if days_until_expire in app_settings.warning_days:
-            formatted=app_settings.three_month_proposal_expiry_notification.format(self.account_name, self.expire, self.start_date)
-            formatted.send_to(self, self.account_name, f"Your Three Month Proposal Expiry Notification for account: {self.account_name}", app_settings.from_address)
-            return
-           
-           # self.notify(app_settings.three_month_proposal_expiry_notification)
+            formatted = app_settings.expiration_warning.format(account_name=self.account_name, **proposal)
+            formatted.send_to(self.account_name, f'Your Three Month Proposal Expiry Notification for account: {self.account_name}')
 
         elif days_until_expire == 0:
             self.set_locked_state(True)
-            formatted=app_settings.proposal_expires_notification.format(self.account_name, self.start_date)
-            formatted.send_to(self, self.account_name, f"The account for {self.account_name} was locked because it reached the end date {self.get_proposal_info.end_date.strftime(app_settings.date_format)}", app_settings.from_address)
-            return
+            end_date = proposal['end_date'].strftime(app_settings.date_format)
+            formatted = app_settings.expired_proposal_notice.format(self.account_name, **proposal)
+            formatted.send_to(self.account_name, f'The account for {self.account_name} was locked because it reached the end date {end_date}')
+            LOG.info(f"The account for {self.account_name} was locked because it reached the end date {end_date}")
 
-            LOG.info(
-                f"The account for {self.account_name} was locked because it reached the end date {self.get_proposal_info.end_date.strftime(app_settings.date_format)}")
-
-        elif self.get_proposal_info.percent_notified < next_notify <= usage_perc:
+        elif proposal['percent_notified'] < next_notify <= usage_perc:
             with Session() as session:
-                self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-                self.get_proposal_info.percent_notified = next_notify
+                db_entry = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+                db_entry.percent_notified = next_notify
                 session.commit()
 
-            formatted=app_settings.notify_sus_limit_email_text.format(self.usage_perc, self.start_date, self.usage, self.investment_info)
-            formatted.send_to(self, self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold", app_settings.from_address)
-            return
+            formatted = app_settings.usage_warning.format(perc=usage_perc)
+            formatted.send_to(self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold")
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:

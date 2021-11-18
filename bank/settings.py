@@ -83,7 +83,7 @@ class Defaults:
 
     # An email to send when you have exceeded a proposal threshold
     notify_levels = (25, 50, 75, 90)
-    notify_sus_limit_email_text = """\
+    usage_warning = """\
     <html>
     <head></head>
     <body>
@@ -109,14 +109,15 @@ class Defaults:
     """
 
     # An email to send when you are 90 days from the end of your proposal
-    three_month_proposal_expiry_notification_email = EmailTemplate("""\ 
+    expiration_warning = EmailTemplate("""\ 
     <html>
     <head></head>
     <body>
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
+    {account_name} on H2P will expire in 90 days on {end_date}. 
+    The one year allocation started on {start_date}. 
     Once your proposal expires, you will still be able to login and retrieve your 
     data, but you will be unable to run new compute jobs until you submit a new 
     proposal or request a supplemental allocation.
@@ -130,7 +131,7 @@ class Defaults:
     """)
 
     # An email to send when the proposal has expired
-    proposal_expires_notification_email = EmailTemplate("""\
+    expired_proposal_notice = EmailTemplate("""\
     <html>
     <head></head>
     <body>
