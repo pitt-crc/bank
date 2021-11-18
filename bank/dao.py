@@ -36,7 +36,7 @@ from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
-from bank.system import SlurmAccount
+from bank.system import SlurmAccount, EmailTemplate
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
@@ -411,15 +411,15 @@ class Account(ProposalData, InvestorData):
 
         days_until_expire = (proposal['end_date'] - date.today()).days
         if days_until_expire in app_settings.warning_days:
-            formatted = app_settings.expiration_warning.format(account_name=self.account_name, **proposal)
-            formatted.send_to(self.account_name, f'Your Three Month Proposal Expiry Notification for account: {self.account_name}')
+            email = EmailTemplate(app_settings.expiration_warning)
+            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
+            formatted.send_to(self.account_name, f'Your Proposal Expiry Reminder for Account: {self.account_name}')
 
         elif days_until_expire == 0:
             self.set_locked_state(True)
-            end_date = proposal['end_date'].strftime(app_settings.date_format)
-            formatted = app_settings.expired_proposal_notice.format(self.account_name, **proposal)
+            email = EmailTemplate(app_settings.expired_proposal_notice)
+            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
             formatted.send_to(self.account_name, f'The account for {self.account_name} was locked because it reached the end date {end_date}')
-            LOG.info(f"The account for {self.account_name} was locked because it reached the end date {end_date}")
 
         elif proposal['percent_notified'] < next_notify <= usage_perc:
             with Session() as session:
@@ -427,7 +427,8 @@ class Account(ProposalData, InvestorData):
                 db_entry.percent_notified = next_notify
                 session.commit()
 
-            formatted = app_settings.usage_warning.format(perc=usage_perc)
+            email = EmailTemplate(app_settings.usage_warning.format(perc=usage_perc))
+            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
             formatted.send_to(self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold")
 
     @staticmethod

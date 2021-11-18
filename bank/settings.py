@@ -42,8 +42,6 @@ from typing import Any
 
 from environ.environ import Env
 
-from bank.system import EmailTemplate
-
 # Prefix used to identify environmental variables as settings for this application
 APP_PREFIX = 'BANK_'
 
@@ -83,7 +81,7 @@ class Defaults:
 
     # An email to send when you have exceeded a proposal threshold
     notify_levels = (25, 50, 75, 90)
-    usage_warning = """\
+    usage_warning = """
     <html>
     <head></head>
     <body>
@@ -109,7 +107,7 @@ class Defaults:
     """
 
     # An email to send when you are 90 days from the end of your proposal
-    expiration_warning = EmailTemplate("""\ 
+    expiration_warning = """
     <html>
     <head></head>
     <body>
@@ -128,10 +126,10 @@ class Defaults:
     </p>
     </body>
     </html>
-    """)
+    """
 
     # An email to send when the proposal has expired
-    expired_proposal_notice = EmailTemplate("""\
+    expired_proposal_notice = """
     <html>
     <head></head>
     <body>
@@ -148,7 +146,7 @@ class Defaults:
     </p>
     </body>
     </html>
-    """)
+    """
 
 
 class Settings:
