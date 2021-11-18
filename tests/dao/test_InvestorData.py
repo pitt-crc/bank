@@ -149,13 +149,11 @@ class Withdraw(InvestorSetup, TestCase):
             with self.assertRaises(ValueError):
                 self.account.withdraw(sus)
 
-    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_single_investment(self) -> None:
-        ...
+        raise NotImplementedError()
 
-    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_multiple_investments(self) -> None:
-        ...
+        raise NotImplementedError()
 
     def test_error_for_missing_investments(self) -> None:
         """Test the function fails silently if there are no investments"""

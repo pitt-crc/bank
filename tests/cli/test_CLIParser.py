@@ -288,6 +288,8 @@ class InvestorModify(InvestorSetup, TestCase):
         self.assertEqual(new_date, account.get_proposal_info()['start_date'])
 
 
+# The contents of this class represent the bash source code
+# of the original test suite as a template for future work
 class Renewal(TestCase):
     """Tests for the ``renewal`` subparser"""
 
@@ -455,32 +457,30 @@ class Renewal(TestCase):
         """
 
 
-class Withdraw(TestCase):
+class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` subparser"""
 
-    def test_withdraw_works(self) -> None:
+    def test_account_is_withdraw(self) -> None:
         """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # insert investment should work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 0 ]
-
         # withdraw from investment
         run python crc_bank.py withdraw sam 8000
         [ "$status" -eq 0 ]
 
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
         # investor table should have rollover SUs
-        [ $(grep -c '"count": 1' investor.json) -eq 1 ]
         [ $(grep -c '"service_units": 10000' investor.json) -eq 1 ]
         [ $(grep -c '"rollover_sus": 0' investor.json) -eq 1 ]
         [ $(grep -c '"current_sus": 10000' investor.json) -eq 1 ]
         [ $(grep -c '"withdrawn_sus": 10000' investor.json) -eq 1 ]
         """
+
+        raise NotImplementedError()
+
+    def test_error_on_missing_investment(self) -> None:
+        """Test an error is raised when passed an invalid investment id"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Investor.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['withdraw', app_settings.test_account, '10_000'])
