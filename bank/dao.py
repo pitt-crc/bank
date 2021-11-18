@@ -89,7 +89,14 @@ class ProposalData:
         LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
     def get_proposal_info(self) -> dict:
-        """Information about the primary account proposal"""
+        """Information about the primary account proposal
+
+        Returns:
+            Properties of the account's proposal as a dictionary
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
 
         with Session() as session:
             proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
@@ -103,6 +110,9 @@ class ProposalData:
 
         Args:
             **kwargs: Service units to add to the account for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
         """
 
         proposal_info = self.get_proposal_info()
@@ -121,10 +131,16 @@ class ProposalData:
 
         Args:
             **kwargs: New service unit values for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
         """
 
         with Session() as session:
             proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
             for cluster, service_units in kwargs.items():
                 if cluster not in app_settings.clusters:
                     raise ValueError(f'Cluster {cluster} is not defined in application settings.')
@@ -149,7 +165,6 @@ class InvestorData(SlurmAccount):
 
     def create_investment(self, sus: int) -> None:
         """Add a new investor proposal for the given account
-
 
         Args:
             sus: The number of service units to add

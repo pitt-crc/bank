@@ -143,5 +143,5 @@ class SetClusterAllocation(ProposalSetup, TestCase):
             session.commit()
 
         with self.assertRaises(MissingProposalError):
-            self.account.overwrite_allocation_sus(**{app_settings.test_cluster: -1})
+            self.account.overwrite_allocation_sus(**{app_settings.test_cluster: 1})
 
