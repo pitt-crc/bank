@@ -5,18 +5,11 @@ from unittest.mock import patch
 
 from bank import dao
 from bank.cli import CLIParser
-from bank.exceptions import MissingProposalError, ProposalExistsError
+from bank.exceptions import MissingProposalError, ProposalExistsError, CmdError
 from bank.orm import Session, Proposal
 from bank.settings import app_settings
 from bank.system import RequireRoot
 from tests.testing_utils import InvestorSetup, ProtectLockState, ProposalSetup
-
-
-# Todo: Implement tests for:
-#  check_proposal_end_date
-#  investor_modify
-#  renewal
-#  withdraw
 
 
 class DynamicallyAddedClusterArguments(TestCase):
@@ -72,7 +65,7 @@ class Usage(InvestorSetup, TestCase):
         self.assertEqual(expected_prints, cli_prints)
 
     def test_error_on_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised if the account does not exist"""
+        """Test a ``MissingProposalError`` error is raised if the account does not have a proposal"""
 
         with self.assertRaises(MissingProposalError):
             CLIParser().execute(['usage', 'fake_account'])
@@ -90,6 +83,12 @@ class LockWithNotification(ProtectLockState, TestCase):
         CLIParser().execute(['lock_with_notification', app_settings.test_account, 'notify=False'])
         self.assertTrue(account.get_locked_state())
 
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['lock_with_notification', 'fake_account'])
+
 
 @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
 class ReleaseHold(ProtectLockState, TestCase):
@@ -102,6 +101,12 @@ class ReleaseHold(ProtectLockState, TestCase):
         account.set_locked_state(True)
         CLIParser().execute(['release_hold', app_settings.test_account])
         self.assertFalse(account.get_locked_state())
+
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['release_hold', 'fake_account'])
 
 
 class Insert(TestCase):

@@ -142,7 +142,7 @@ class CLIParser(ArgumentParser):
         cli_kwargs = vars(self.parse_known_args(args)[0])  # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
 
-        # If the ``use_dao_method`` value is set, then evalute a method of the ``account`` argument
+        # If the ``use_dao_method`` value is set, then evaluate a method of the ``account`` argument
         use_dao_method = cli_kwargs.pop('use_dao_method', None)
         if use_dao_method is not None:
             getattr(cli_kwargs.pop('account'), use_dao_method)(**cli_kwargs)
