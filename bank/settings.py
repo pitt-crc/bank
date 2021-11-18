@@ -39,10 +39,10 @@ API Reference
 
 from pathlib import Path
 from typing import Any
-from bank.system import EmailTemplate
-
 
 from environ.environ import Env
+
+from bank.system import EmailTemplate
 
 # Prefix used to identify environmental variables as settings for this application
 APP_PREFIX = 'BANK_'
@@ -83,7 +83,7 @@ class Defaults:
 
     # An email to send when you have exceeded a proposal threshold
     notify_levels = (25, 50, 75, 90)
-    notify_sus_limit_email_text = EmailTemplate("""\
+    notify_sus_limit_email_text = """\
     <html>
     <head></head>
     <body>
@@ -106,7 +106,7 @@ class Defaults:
     </p>
     </body>
     </html>
-    """)
+    """
 
     # An email to send when you are 90 days from the end of your proposal
     three_month_proposal_expiry_notification_email = EmailTemplate("""\ 

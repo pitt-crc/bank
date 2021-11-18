@@ -40,7 +40,6 @@ from bs4 import BeautifulSoup
 
 from .exceptions import CmdError, NoSuchAccountError
 from .settings import app_settings
-from bank.settings import app_settings
 
 LOG = getLogger('bank.utils')
 
