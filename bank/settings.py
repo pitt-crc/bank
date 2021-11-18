@@ -73,22 +73,22 @@ class Defaults:
 
     # The email templates below accept the following formatting fields:
     #   account: The account name
-    #   start: The start date of the proposal
-    #   expire: The end date of the proposal
+    #   start_date: The start date of the proposal
+    #   end_date: The end date of the proposal
     #   usage: Tabular summary of the proposal's service unit usage
     #   perc: Usage percentage threshold that triggered the message being sent
     #   investment: Tabular summary of user's current usage on invested machines
 
     # An email to send when you have exceeded a proposal threshold
     notify_levels = (25, 50, 75, 90)
-    notify_sus_limit_email_text = """\
+    usage_warning = """
     <html>
     <head></head>
     <body>
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your account on H2P has
-    exceeded {perc}% usage. The one year allocation started on {start}. You can 
+    exceeded {perc}% usage. The one year allocation started on {start_date}. You can 
     request a supplemental allocation at
     https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
     Your usage is printed below:<br>
@@ -107,14 +107,15 @@ class Defaults:
     """
 
     # An email to send when you are 90 days from the end of your proposal
-    three_month_proposal_expiry_notification_email = """\
+    expiration_warning = """
     <html>
     <head></head>
     <body>
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account} on H2P will expire in 90 days on {expire}. The one year allocation started on {start}. 
+    {account_name} on H2P will expire in 90 days on {end_date}. 
+    The one year allocation started on {start_date}. 
     Once your proposal expires, you will still be able to login and retrieve your 
     data, but you will be unable to run new compute jobs until you submit a new 
     proposal or request a supplemental allocation.
@@ -128,14 +129,14 @@ class Defaults:
     """
 
     # An email to send when the proposal has expired
-    proposal_expires_notification_email = """\
+    expired_proposal_notice = """
     <html>
     <head></head>
     <body>
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account} on H2P has expired. The one year allocation started on {start}. 
+    {account} on H2P has expired. The one year allocation started on {start_date}. 
     You will still be able to login and retrieve your data, but you will be unable
     to run new compute  jobs until you submit a new proposal or request a 
     supplemental allocation. To do so, please visit
