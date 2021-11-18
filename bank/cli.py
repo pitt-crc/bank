@@ -102,7 +102,7 @@ class CLIParser(ArgumentParser):
         parser_investor.set_defaults(use_dao_method='create_investment')
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
-        self._add_args_to_parser(parser_investor_modify, _inv_id, _sus, _date)
+        self._add_args_to_parser(parser_investor_modify, _account, _inv_id, _sus, _date)
         parser_investor_modify.set_defaults(use_dao_method='overwrite_investment_sus')
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')

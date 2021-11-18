@@ -224,14 +224,14 @@ class Investor(ProposalSetup, TestCase):
 class InvestorModify(InvestorSetup, TestCase):
     """Tests for the ``investor_modify`` subparser"""
 
-    def test_modify_updates_SUs(self) -> None:
+    def test_updates_SUs(self) -> None:
         """Test the command updates sus on the given investment"""
 
         account = dao.Account(app_settings.test_account)
         old_inv = account.get_investment_info()[0]
 
         new_sus = old_inv['service_units'] + 10
-        CLIParser().execute(['investor_modify', str(old_inv['id']), str(new_sus)])
+        CLIParser().execute(['investor_modify', app_settings.test_account, str(old_inv['id']), str(new_sus)])
 
         new_inv = account.get_investment_info()[0]
         self.assertEqual(new_sus, new_inv['service_units'])
@@ -246,13 +246,13 @@ class InvestorModify(InvestorSetup, TestCase):
         account = dao.Account(app_settings.test_account)
         inv = account.get_investment_info()[0]
         with self.assertRaises(MissingProposalError):
-            CLIParser().execute(['investor_modify', str(inv['id']), '10_000'])
+            CLIParser().execute(['investor_modify', app_settings.test_account, str(inv['id']), '10_000'])
 
     def test_error_on_missing_investment(self) -> None:
         """Test an error is raised when passed an invalid investment id"""
 
         with self.assertRaises(MissingProposalError):
-            CLIParser().execute(['investor_modify', '123', '10_000'])
+            CLIParser().execute(['investor_modify', app_settings.test_account, '123', '10_000'])
 
     def test_date_is_updated(self) -> None:
         """Test the command updates the date on the investment"""
@@ -261,7 +261,7 @@ class InvestorModify(InvestorSetup, TestCase):
         inv = account.get_investment_info()[0]
         new_date = (inv['start_date'] - timedelta(days=1)).strftime(app_settings.date_format)
 
-        CLIParser().execute(['investor_modify', str(inv['id']), f'--date={new_date}'])
+        CLIParser().execute(['investor_modify', app_settings.test_account, str(inv['id']), f'--date={new_date}'])
         self.assertEqual(new_date, account.get_proposal_info()['start_date'])
 
 
