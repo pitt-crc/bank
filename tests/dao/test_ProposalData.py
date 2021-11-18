@@ -101,6 +101,16 @@ class AddAllocationSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.add_allocation_sus(**{app_settings.test_cluster: -1})
 
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when account has no proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            self.account.add_allocation_sus(**{app_settings.test_cluster: -1})
+
 
 class SetClusterAllocation(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
@@ -124,3 +134,14 @@ class SetClusterAllocation(ProposalSetup, TestCase):
 
         with self.assertRaises(ValueError):
             self.account.overwrite_allocation_sus(**{app_settings.test_cluster: -1})
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when account has no proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            self.account.overwrite_allocation_sus(**{app_settings.test_cluster: -1})
+

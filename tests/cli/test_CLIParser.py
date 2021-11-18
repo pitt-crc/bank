@@ -8,7 +8,7 @@ from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
 from bank.settings import app_settings
 from bank.system import RequireRoot
-from tests.testing_utils import InvestorSetup, ProtectLockState
+from tests.testing_utils import InvestorSetup, ProtectLockState, ProposalSetup
 
 
 # Todo: Implement tests for:
@@ -147,23 +147,36 @@ class Insert(TestCase):
             CLIParser().execute(['insert', 'invalidValue', app_settings.test_account])
 
 
-class Add(TestCase):
+class Add(ProposalSetup, TestCase):
     """Tests for the ``add`` subparser"""
 
     def test_sus_are_updated(self) -> None:
         """Test the allocated service units are incremented by a given amount"""
 
         account = dao.Account(app_settings.test_account)
-        test_cluster_name, *other_clusters = app_settings.clusters
-        original_sus = account.get_cluster_allocation()
+        original_sus = account.get_proposal_info()[app_settings.test_cluster]
 
         sus_to_add = 100
-        CLIParser().execute(['add', app_settings.test_account, f'--{test_cluster_name}={sus_to_add}'])
-        new_sus = account.get_cluster_allocation()
+        CLIParser().execute(['add', app_settings.test_account, f'--{app_settings.test_cluster}={sus_to_add}'])
+        new_sus = account.get_proposal_info()[app_settings.test_cluster]
 
-        self.assertEqual(new_sus[test_cluster_name], original_sus[test_cluster_name] + sus_to_add)
-        for cluster in other_clusters:
-            self.assertEqual(new_sus[cluster], original_sus[cluster])
+        self.assertEqual(original_sus + sus_to_add, new_sus)
+
+    def test_error_on_invalid_cluster(self) -> None:
+        """Test an error is raised when passed an invalid cluster name"""
+
+        with self.assertRaises(ValueError):
+            CLIParser().execute(['add', app_settings.test_account, '--fake_cluster=1000'])
+
+    def test_error_on_missing_account(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['add', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
 
 
 class Modify(TestCase):
