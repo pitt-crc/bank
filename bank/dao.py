@@ -27,8 +27,9 @@ API Reference
 
 from bisect import bisect_left
 from datetime import date, timedelta
+from email.message import EmailMessage
 from logging import getLogger
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 from math import ceil
 
@@ -398,8 +399,12 @@ class Account(ProposalData, InvestorData):
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def send_pending_alerts(self) -> None:
-        """Send any pending usage alerts to the account"""
+    def send_pending_alerts(self) -> Optional[EmailMessage]:
+        """Send any pending usage alerts to the account
+
+        Returns:
+            If an alert is sent, returns a copy of the email alert
+        """
 
         proposal = self.get_proposal_info()
 
@@ -409,17 +414,16 @@ class Account(ProposalData, InvestorData):
         usage_perc = int(usage / allocated * 100)
         next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
 
+        email = None
+        end_date = proposal['end_date'].strftime(app_settings.date_format)
         days_until_expire = (proposal['end_date'] - date.today()).days
         if days_until_expire in app_settings.warning_days:
             email = EmailTemplate(app_settings.expiration_warning)
-            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
-            formatted.send_to(self.account_name, f'Your Proposal Expiry Reminder for Account: {self.account_name}')
+            subject = f'Your proposal expiry reminder for account: {self.account_name}'
 
         elif days_until_expire == 0:
-            self.set_locked_state(True)
             email = EmailTemplate(app_settings.expired_proposal_notice)
-            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
-            formatted.send_to(self.account_name, f'The account for {self.account_name} was locked because it reached the end date {end_date}')
+            subject = f'The account for {self.account_name} was locked because it reached the end date {end_date}'
 
         elif proposal['percent_notified'] < next_notify <= usage_perc:
             with Session() as session:
@@ -428,8 +432,16 @@ class Account(ProposalData, InvestorData):
                 session.commit()
 
             email = EmailTemplate(app_settings.usage_warning.format(perc=usage_perc))
-            formatted = email.format(account_name=self.account_name, **proposal, perc=usage_perc)
-            formatted.send_to(self.account_name, f"Your account {self.account_name} has exceeded a proposal threshold")
+            subject = f"Your account {self.account_name} has exceeded a proposal threshold"
+
+        if email:
+            formatted = email.format(
+                account=self.account_name,
+                start_date=proposal['start_date'].strftime(app_settings.date_format),
+                end_date=end_date,
+                perc=usage_perc
+            )
+            return formatted.send_to(f'{self.account_name}{app_settings.email_suffix}', subject=subject)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:
