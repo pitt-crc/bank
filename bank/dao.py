@@ -63,7 +63,7 @@ class ProposalData:
             **sus_per_cluster: Service units to add on to each cluster
         """
 
-        proposal_type = ProposalType[ptype.upper()]
+        proposal_type = ProposalType.get(ptype.upper())
 
         proposal_duration = timedelta(days=365)
         start_date = date.today()

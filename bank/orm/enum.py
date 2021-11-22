@@ -9,3 +9,11 @@ class ProposalType(Enum):
     PROPOSAL = 0
     CLASS = 1
     INVESTOR = 2
+
+    @classmethod
+    def get(cls, name):
+        try:
+            return cls[name]
+
+        except KeyError:
+            cls._missing_(name)
