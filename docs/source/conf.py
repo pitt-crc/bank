@@ -29,13 +29,9 @@ extensions = [
     'sphinx_autodoc_typehints',
     'sphinx_rtd_theme',
     'sphinxarg.ext',
-    'sphinxcontrib.sadisp',
+    'sphinxcontrib.sqlalchemyviz',
     'sphinx.ext.githubpages'
 ]
-
-# Configuration options for sphinxcontrib.sadisp
-graphviz = 'dot -Tpng'.split()
-sadisplay_default_render = 'graphviz'
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -2,13 +2,6 @@
 based object relational mapper for handling database interactions. It is
 also responsible for defining the schema used by the underlying application
 database.
-
-Database Schema
----------------
-
-.. sadisplay::
-    :module: bank.orm
-    :alt: My Schema
 """
 
 import sqlalchemy
