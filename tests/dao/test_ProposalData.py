@@ -63,7 +63,7 @@ class CreateProposal(TestCase):
     def test_error_on_invalid_proposal_type(self) -> None:
         """Test an error is raised for invalid proposal types"""
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             self.account.create_proposal(ptype='fake_proposal_type')
 
     def test_proposal_type_not_case_sensitive(self) -> None:
