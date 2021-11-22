@@ -34,9 +34,8 @@ from .settings import app_settings
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
 _ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
-_date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
-_inv_id = dict(dest='--id', help='The investment proposal id')
+_inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 _notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
 
 
@@ -91,9 +90,9 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
         parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
-        parser_change = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        self._add_args_to_parser(parser_change, _account, _date, include_clusters=True)
-        parser_change.set_defaults(use_dao_method='overwrite_allocation_sus')
+        parser_modify = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
+        self._add_args_to_parser(parser_modify, _account, include_clusters=True)
+        parser_modify.set_defaults(use_dao_method='overwrite_allocation_sus')
 
         # Subparsers for adding and modifying investment accounts
 
@@ -102,7 +101,7 @@ class CLIParser(ArgumentParser):
         parser_investor.set_defaults(use_dao_method='create_investment')
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
-        self._add_args_to_parser(parser_investor_modify, _inv_id, _sus, _date)
+        self._add_args_to_parser(parser_investor_modify, _account, _inv_id, _sus)
         parser_investor_modify.set_defaults(use_dao_method='overwrite_investment_sus')
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
@@ -130,6 +129,17 @@ class CLIParser(ArgumentParser):
             for cluster in app_settings.clusters:
                 parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
+    def error(self, message):
+        """Print a usage message to stderr raise the message as an exception.
+
+        Raises:
+            RuntimeError: Error that encapsulates the given message.
+        """
+
+        import sys
+        self.print_usage(sys.stderr)
+        raise RuntimeError(message)
+
     def execute(self, args: List[str] = None) -> None:
         """Entry point for running the command line parser
 
@@ -139,10 +149,10 @@ class CLIParser(ArgumentParser):
             args: A list of command line arguments
         """
 
-        cli_kwargs = vars(self.parse_known_args(args)[0])  # Get parsed arguments as a dictionary
+        cli_kwargs = vars(self.parse_args(args))  # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
 
-        # If the ``use_dao_method`` value is set, then evalute a method of the ``account`` argument
+        # If the ``use_dao_method`` value is set, then evaluate a method of the ``account`` argument
         use_dao_method = cli_kwargs.pop('use_dao_method', None)
         if use_dao_method is not None:
             getattr(cli_kwargs.pop('account'), use_dao_method)(**cli_kwargs)

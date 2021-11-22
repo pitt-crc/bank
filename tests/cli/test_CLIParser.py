@@ -1,17 +1,14 @@
+from copy import copy
 from unittest import TestCase, skipIf, skip
 from unittest.mock import patch
 
-from bank import dao, orm
+from bank import dao
 from bank.cli import CLIParser
+from bank.exceptions import MissingProposalError, ProposalExistsError, CmdError, MissingInvestmentError
+from bank.orm import Session, Proposal
 from bank.settings import app_settings
 from bank.system import RequireRoot
-
-
-# Todo: Implement tests for:
-#  check_proposal_end_date
-#  investor_modify
-#  renewal
-#  withdraw
+from tests.testing_utils import InvestorSetup, ProtectLockState, ProposalSetup, GenericSetup
 
 
 class DynamicallyAddedClusterArguments(TestCase):
@@ -28,38 +25,55 @@ class DynamicallyAddedClusterArguments(TestCase):
             args = {a.dest.lstrip('--') for a in parser._actions}
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
-@skip('This is an example test used to outline future work')
-class Info(TestCase):
+
+class Info(InvestorSetup, TestCase):
     """Tests for the ``info`` subparser"""
 
     @patch('builtins.print')
     def test_info_is_printed(self, mocked_print) -> None:
-        """Test the output from the subparser to stdout matches matches the ``print_allocation_info`` function"""
+        """Test the output from the subparser to stdout matches matches output from the DAO layer"""
 
+        # Record output to stdout by the DAO
         dao.Account(app_settings.test_account).print_allocation_info()
+        expected_prints = copy(mocked_print.mock_calls)
+
+        # Record stdout from CLI and compare against previous result
         CLIParser().execute(['info', app_settings.test_account])
-        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
+        cli_prints = mocked_print.mock_calls[len(expected_prints):]
+        self.assertEqual(expected_prints, cli_prints)
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['info', 'fake_account'])
 
 
-# Todo: These test can be extended to include an account with and without investments
-class Usage(TestCase):
+class Usage(InvestorSetup, TestCase):
     """Tests for the ``usage`` subparser"""
 
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     @patch('builtins.print')
     def test_usage_is_printed(self, mocked_print) -> None:
         """Test the output from the subparser to stdout matches matches the ``print_usage_info`` function"""
 
         dao.Account(app_settings.test_account).print_usage_info()
+        expected_prints = copy(mocked_print.mock_calls)
+
         CLIParser().execute(['usage', app_settings.test_account])
-        self.assertEqual(mocked_print.mock_calls[0], mocked_print.mock_calls[1])
+        cli_prints = mocked_print.mock_calls[len(expected_prints):]
+        self.assertEqual(expected_prints, cli_prints)
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if the account does not have a proposal"""
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['usage', 'fake_account'])
 
 
-# Todo: test that a notification is sent when notify=True
-class LockWithNotification(TestCase):
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class LockWithNotification(ProtectLockState, TestCase):
     """Tests for the ``lock_with_notification`` subparser"""
 
-    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_locked(self) -> None:
         """Test that an unlocked account becomes locked"""
 
@@ -68,11 +82,17 @@ class LockWithNotification(TestCase):
         CLIParser().execute(['lock_with_notification', app_settings.test_account, 'notify=False'])
         self.assertTrue(account.get_locked_state())
 
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
 
-class ReleaseHold(TestCase):
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['lock_with_notification', 'fake_account'])
+
+
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class ReleaseHold(ProtectLockState, TestCase):
     """Tests for the ``release_hold`` subparser"""
 
-    @skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
     def test_account_is_unlocked(self) -> None:
         """Test that a locked account becomes unlocked"""
 
@@ -81,134 +101,141 @@ class ReleaseHold(TestCase):
         CLIParser().execute(['release_hold', app_settings.test_account])
         self.assertFalse(account.get_locked_state())
 
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
 
-# Todo: Test what happens if we insert and a proposal already exists
-@skip('This is an example test used to outline future work')
-class Insert(TestCase):
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['release_hold', 'fake_account'])
+
+
+class Insert(GenericSetup, TestCase):
     """Tests for the ``insert`` subparser"""
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.first_cluster, *_ = app_settings.clusters
-        cls.number_sus = 10_000
-        CLIParser().execute(['insert', app_settings.test_account, 'proposal', f'--{cls.first_cluster}={cls.number_sus}'])
-
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
-    def test_proposal_is_created_for_cluster(self) -> None:
+    def test_proposal_is_created(self) -> None:
         """Test that a proposal has been created for the user account and cluster"""
 
+        number_of_sus = 5000
+        CLIParser().execute(['insert', app_settings.test_account, 'proposal', f'--{app_settings.test_cluster}={number_of_sus}'])
+
         # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(app_settings.test_account).get_cluster_allocation()
-        self.assertEqual(self.number_sus, allocations.pop(self.first_cluster))
+        allocations = dao.Account(app_settings.test_account).get_proposal_info()
+        self.assertEqual(number_of_sus, allocations.pop(app_settings.test_cluster))
 
-        # Test all other clusters have zero service units
-        for cluster, sus in allocations.items():
-            self.assertEqual(0, sus, f'Cluster {cluster} should have zero service units. Got {sus}.')
+    def test_error_if_already_exists(self) -> None:
+        """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
+
+        dao.Account(app_settings.test_account).create_proposal(**{app_settings.test_cluster: 1000})
+        with self.assertRaises(ProposalExistsError):
+            CLIParser().execute(['insert', app_settings.test_account, 'proposal', f'--{app_settings.test_cluster}=1000'])
 
 
-class Add(TestCase):
+class Add(ProposalSetup, TestCase):
     """Tests for the ``add`` subparser"""
 
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
     def test_sus_are_updated(self) -> None:
         """Test the allocated service units are incremented by a given amount"""
 
         account = dao.Account(app_settings.test_account)
-        test_cluster_name, *other_clusters = app_settings.clusters
-        original_sus = account.get_cluster_allocation()
+        original_sus = account.get_proposal_info()[app_settings.test_cluster]
 
         sus_to_add = 100
-        CLIParser().execute(['add', app_settings.test_account, f'--{test_cluster_name}={sus_to_add}'])
-        new_sus = account.get_cluster_allocation()
+        CLIParser().execute(['add', app_settings.test_account, f'--{app_settings.test_cluster}={sus_to_add}'])
+        new_sus = account.get_proposal_info()[app_settings.test_cluster]
 
-        self.assertEqual(new_sus[test_cluster_name], original_sus[test_cluster_name] + sus_to_add)
-        for cluster in other_clusters:
-            self.assertEqual(new_sus[cluster], original_sus[cluster])
+        self.assertEqual(original_sus + sus_to_add, new_sus)
 
+    def test_error_on_invalid_cluster(self) -> None:
+        """Test an error is raised when passed an invalid cluster name"""
 
-class Modify(TestCase):
-    """Tests for the ``modify`` subparser"""
+        with self.assertRaises(RuntimeError):
+            CLIParser().execute(['add', app_settings.test_account, '--fake_cluster=1000'])
 
-    def change_updates_SUs(self) -> None:
-        """"# insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
 
-        # modify the proposal date to 7 days prior
-        run python crc_bank.py date sam $(date -d "-7 days" +%m/%d/%y)
-
-        # modify proposal should work
-        run python crc_bank.py change sam --mpi=10000
-        [ "$status" -eq 0 ]
-
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
-        # proposal should have 1 mpi entry with 10000 SUs
-        [ $(grep -c '"count": 1' proposal.json) -eq 1 ]
-        [ $(grep -c '"smp": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"gpu": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"htc": 0' proposal.json) -eq 1 ]
-        [ $(grep -c '"mpi": 10000' proposal.json) -eq 1 ]
-        [ $(grep -c "\"start_date\": \"$(date -d '-7 days' +%F)\"" proposal.json) -eq 1 ]
-        """
-
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
-    def test_modify_updates_SUs(self) -> None:
-        """Test the command updates sus on the given cluster"""
-
-        account = dao.Account(app_settings.test_account)
-        test_cluster = app_settings.clusters[0]
-        account.overwrite_allocation_sus(**{test_cluster: 0})
-
-        new_sus = 1_000
-        CLIParser().execute(['modify', app_settings.test_account, f'--{test_cluster}={new_sus}'])
-        self.assertEqual(new_sus, account.get_cluster_allocation()[test_cluster])
-
-
-class Investor(TestCase):
-    """Tests for the ``investor`` subparser"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        """Delete any existing investments"""
-
-        with orm.Session() as session:
-            session.query(orm.Investor).filter(orm.Investor.account_name == app_settings.test_account).delete()
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
             session.commit()
 
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['add', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
+
+
+class Modify(ProposalSetup, TestCase):
+    """Tests for the ``modify`` subparser"""
+
+    def test_service_units_are_updated(self) -> None:
+        """Test the command updates sus on the given cluster"""
+
+        # Set the existing allocation to zero
+        account = dao.Account(app_settings.test_account)
+        account.overwrite_allocation_sus(**{app_settings.test_cluster: 0})
+
+        new_sus = 1_000
+        CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}={new_sus}'])
+        self.assertEqual(new_sus, account.get_proposal_info()[app_settings.test_cluster])
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['modify', app_settings.test_account, f'--{app_settings.test_cluster}=1000'])
+
+
+class Investor(ProposalSetup, TestCase):
+    """Tests for the ``investor`` subparser"""
+
     def test_investment_is_created(self) -> None:
         """Test an investment is created with the correct number of sus"""
 
         num_sus = 15_000
         CLIParser().execute(['investor', app_settings.test_account, str(num_sus)])
 
-        account = dao.Account(app_settings.test_account)
-        self.assertEqual(1, len(account.get_investment_sus()))
+        investments = dao.Account(app_settings.test_account).get_investment_info()
+        self.assertEqual(1, len(investments))
+        self.assertEqual(num_sus, investments[0]['service_units'])
 
-        inv_sus = next(iter(account.get_investment_sus().values()))
-        self.assertEqual(num_sus, inv_sus)
+    def test_error_on_missing_proposal(self) -> None:
+        """Test an error is raised when passed an account with a missing proposal"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['investor', app_settings.test_account, '1000'])
 
 
-class InvestorModify(TestCase):
+class InvestorModify(InvestorSetup, TestCase):
     """Tests for the ``investor_modify`` subparser"""
 
-    @skip("See https://github.com/pitt-crc/bank/pull/92 for discussion on this test")
-    def test_modify_updates_SUs(self) -> None:
+    def test_updates_SUs(self) -> None:
         """Test the command updates sus on the given investment"""
 
         account = dao.Account(app_settings.test_account)
-        inv_id, original_sus = next(iter(account.get_investment_sus().items()))
+        old_inv = account.get_investment_info()[0]
 
-        new_sus = original_sus + 10
-        CLIParser().execute(['investor_modify', inv_id, new_sus])
-        self.assertEqual(new_sus, next(iter(account.get_investment_sus().values())))
+        new_sus = old_inv['service_units'] + 10
+        CLIParser().execute(['investor_modify', app_settings.test_account, str(self.inv_id), str(new_sus)])
+
+        new_inv = account.get_investment_info()[0]
+        self.assertEqual(new_sus, new_inv['service_units'])
+
+    def test_error_on_missing_investment(self) -> None:
+        """Test an error is raised when passed an invalid investment id"""
+
+        with self.assertRaises(MissingInvestmentError):
+            CLIParser().execute(['investor_modify', app_settings.test_account, '123', '10_000'])
 
 
-class Renewal(TestCase):
+# The contents of this class represent the bash source code
+# of the original test suite as a template for future work
+@skip('Renewal logic has not been ported yet')
+class Renewal(InvestorSetup, TestCase):
     """Tests for the ``renewal`` subparser"""
 
     def renewal_with_rollover(self) -> None:
@@ -375,32 +402,31 @@ class Renewal(TestCase):
         """
 
 
-class Withdraw(TestCase):
+@skip('Withdrawal logic has not been ported yet')
+class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` subparser"""
 
-    def test_withdraw_works(self) -> None:
+    def test_account_is_withdraw(self) -> None:
         """
-        # insert proposal should work
-        run python crc_bank.py insert proposal sam --smp=10000
-        [ "$status" -eq 0 ]
-
-        # insert investment should work
-        run python crc_bank.py investor sam 10000
-        [ "$status" -eq 0 ]
-
         # withdraw from investment
         run python crc_bank.py withdraw sam 8000
         [ "$status" -eq 0 ]
 
-        # dump the tables to JSON should work
-        run python crc_bank.py dump proposal.json investor.json \
-            proposal_archive.json investor_archive.json
-        [ "$status" -eq 0 ]
-
         # investor table should have rollover SUs
-        [ $(grep -c '"count": 1' investor.json) -eq 1 ]
         [ $(grep -c '"service_units": 10000' investor.json) -eq 1 ]
         [ $(grep -c '"rollover_sus": 0' investor.json) -eq 1 ]
         [ $(grep -c '"current_sus": 10000' investor.json) -eq 1 ]
         [ $(grep -c '"withdrawn_sus": 10000' investor.json) -eq 1 ]
         """
+
+        raise NotImplementedError()
+
+    def test_error_on_missing_investment(self) -> None:
+        """Test an error is raised when passed an invalid investment id"""
+
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
+            session.commit()
+
+        with self.assertRaises(MissingProposalError):
+            CLIParser().execute(['withdraw', app_settings.test_account, '10_000'])

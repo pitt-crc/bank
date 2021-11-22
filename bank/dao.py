@@ -33,7 +33,7 @@ from typing import List, Tuple, Union, Optional
 
 from math import ceil
 
-from bank.exceptions import MissingProposalError, ProposalExistsError
+from bank.exceptions import MissingProposalError, ProposalExistsError, MissingInvestmentError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
@@ -89,7 +89,14 @@ class ProposalData:
         LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
     def get_proposal_info(self) -> dict:
-        """Information about the primary account proposal"""
+        """Information about the primary account proposal
+
+        Returns:
+            Properties of the account's proposal as a dictionary
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
 
         with Session() as session:
             proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
@@ -103,6 +110,9 @@ class ProposalData:
 
         Args:
             **kwargs: Service units to add to the account for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
         """
 
         proposal_info = self.get_proposal_info()
@@ -121,10 +131,16 @@ class ProposalData:
 
         Args:
             **kwargs: New service unit values for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
         """
 
         with Session() as session:
             proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            if proposal is None:
+                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+
             for cluster, service_units in kwargs.items():
                 if cluster not in app_settings.clusters:
                     raise ValueError(f'Cluster {cluster} is not defined in application settings.')
@@ -180,26 +196,23 @@ class InvestorData(SlurmAccount):
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
             return tuple(inv.row_to_dict() for inv in investments)
 
-    def overwrite_investment_sus(self, **kwargs: int) -> None:
+    def overwrite_investment_sus(self, id: int, sus: int) -> None:
         """Replace the number of service units allocated to a given investment
 
         Args:
-            **kwargs: New service unit values to set in each investment
+            id: The id of the investment to change
+            sus: New service units to set in the investment
         """
 
-        investment_ids = {str(inv['id']) for inv in self.get_investment_info()}
-        invalid_ids = set(kwargs) - investment_ids
-        if invalid_ids:
-            raise ValueError(f'Account {self.account_name} has no investment with ids {invalid_ids}')
+        if id not in (inv['id'] for inv in self.get_investment_info()):
+            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
 
         with Session() as session:
-            for inv_id, sus in kwargs.items():
-                inv = session.query(Investor).filter(Investor.id == inv_id).first()
-                inv.service_units = kwargs.get(str(inv.id), 0)
-
+            inv = session.query(Investor).filter(Investor.id == id).first()
+            inv.service_units = sus
             session.commit()
 
-        LOG.info(f"Modified Investments for account{self.account_name}: {kwargs}")
+        LOG.info(f"Modified Investments for account {self.account_name}: Investment {id} set to {sus}")
 
     def renewal(self, **sus) -> None:
         with Session() as session:
@@ -263,8 +276,7 @@ class InvestorData(SlurmAccount):
                         inv.withdrawn_sus += to_withdraw
                         need_to_rollover -= to_rollover
 
-    @staticmethod
-    def _withdraw_from_investment(investment: Investor, sus: int) -> int:
+    def _withdraw_from_investment(self, investment: Investor, sus: int) -> int:
         """Process the withdrawal for a single investment
 
         The returned number of service units may be less than the requested
@@ -287,6 +299,11 @@ class InvestorData(SlurmAccount):
         to_withdraw = min(sus, maximum_withdrawal)
         investment.current_sus += to_withdraw
         investment.withdrawn_sus += to_withdraw
+
+        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
+        LOG.info(msg)
+        print(msg)
+
         return to_withdraw
 
     def withdraw(self, sus: int) -> None:
@@ -311,9 +328,6 @@ class InvestorData(SlurmAccount):
             investment: Investor
             for investment in investments:
                 withdrawn = self._withdraw_from_investment(investment, sus)
-                msg = f"Withdrew {withdrawn} service units from investment {investment.id} for account {self.account_name}"
-                LOG.info(msg)
-                print(msg)
 
                 # Determine if we are done processing investments
                 sus -= withdrawn
@@ -380,7 +394,7 @@ class Account(ProposalData, InvestorData):
             allocation_total += allocation
 
         usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv['sus'] for inv in investment_info)
+        investment_total = sum(inv['service_units'] for inv in investment_info)
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments

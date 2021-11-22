@@ -2,7 +2,7 @@ from copy import copy
 from unittest import TestCase, skip
 
 from bank.dao import InvestorData
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor
 from bank.settings import app_settings
 from tests.testing_utils import InvestorSetup, ProposalSetup
@@ -65,23 +65,23 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
     def test_sus_are_overwritten(self) -> None:
         """Test that service unit values are updated after method call"""
 
-        inv_id = self.account.get_investment_info()[0]['id']
         for new_sus in (0, 12345):
-            self.account.overwrite_investment_sus(**{str(inv_id): new_sus})
+            self.account.overwrite_investment_sus(id=self.inv_id, sus=new_sus)
             recovered_sus = self.account.get_investment_info()[0]['service_units']
             self.assertEqual(new_sus, recovered_sus)
 
     def test_error_on_invalid_ids(self) -> None:
         """Test an error is raised for invalid investment IDs"""
 
-        with self.assertRaises(ValueError):
-            self.account.overwrite_investment_sus(fake_investment_id=12)
+        with self.assertRaises(MissingInvestmentError):
+            fake_investment_id = 312312
+            self.account.overwrite_investment_sus(id=fake_investment_id, sus=12)
 
     def test_error_on_negative_sus(self) -> None:
         """Tests an error is raised for negative service units"""
-        inv_id = str(self.account.get_investment_info()[0]['id'])
+
         with self.assertRaises(ValueError):
-            self.account.overwrite_investment_sus(**{inv_id: -12})
+            self.account.overwrite_investment_sus(id=self.inv_id, sus=-12)
 
 
 class WithdrawFromInvestment(InvestorSetup, TestCase):
@@ -95,7 +95,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             original_inv = copy(investment)
 
             sus_to_withdraw = 10
-            withdrawn = InvestorData._withdraw_from_investment(investment, sus_to_withdraw)
+            withdrawn = InvestorData(app_settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
             self.assertEqual(sus_to_withdraw, withdrawn)
 
             self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
@@ -110,8 +110,9 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             service_units = investment.service_units
             half_service_units = service_units / 2
 
-            first_withdraw = InvestorData._withdraw_from_investment(investment, half_service_units)
-            second_withdraw = InvestorData._withdraw_from_investment(investment, service_units)
+            dao = InvestorData(app_settings.test_account)
+            first_withdraw = dao._withdraw_from_investment(investment, half_service_units)
+            second_withdraw = dao._withdraw_from_investment(investment, service_units)
             self.assertEqual(half_service_units, first_withdraw)
             self.assertEqual(half_service_units, second_withdraw)
 
@@ -123,7 +124,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             investment.withdrawn_sus = investment.service_units
             original_inv = copy(investment)
 
-            withdrawn = InvestorData._withdraw_from_investment(investment, 1)
+            withdrawn = InvestorData(app_settings.test_account)._withdraw_from_investment(investment, 1)
             self.assertEqual(0, withdrawn)
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
@@ -136,9 +137,10 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestorData._withdraw_from_investment(investment, sus)
+                InvestorData(app_settings.test_account)._withdraw_from_investment(investment, sus)
 
 
+@skip('Withdrawal logic has not been ported yet')
 class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` method"""
 
@@ -149,13 +151,11 @@ class Withdraw(InvestorSetup, TestCase):
             with self.assertRaises(ValueError):
                 self.account.withdraw(sus)
 
-    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_single_investment(self) -> None:
-        ...
+        raise NotImplementedError()
 
-    @skip('This is an example test used to outline future work')
     def test_withdrawal_on_multiple_investments(self) -> None:
-        ...
+        raise NotImplementedError()
 
     def test_error_for_missing_investments(self) -> None:
         """Test the function fails silently if there are no investments"""

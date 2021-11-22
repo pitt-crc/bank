@@ -4,6 +4,7 @@ import os
 
 from sqlalchemy import Column, Integer, Text, Date, Enum
 
+from bank import dao
 from bank.dao import ProposalData, InvestorData
 from bank.orm import Session, Proposal, Investor
 from bank.orm.tables import Base
@@ -37,6 +38,7 @@ class InvestorSetup(ProposalSetup):
     """Reusable setup mixin for configuring tests against user investments"""
 
     num_inv_sus = 10_000
+    inv_id: int = None
 
     def setUp(self) -> None:
         """Ensure there exists a user proposal and investment for the test user account"""
@@ -44,6 +46,7 @@ class InvestorSetup(ProposalSetup):
         super().setUp()
         self.account = InvestorData(app_settings.test_account)
         self.account.create_investment(self.num_inv_sus)
+        self.inv_id = self.account.get_investment_info()[0]['id']
 
 
 class CleanEnviron:
@@ -56,6 +59,20 @@ class CleanEnviron:
     def __exit__(self, *args, **kwargs) -> None:
         os.environ.clear()
         os.environ.update(self._environ)
+
+
+class ProtectLockState:
+    """Restores the test account's lock state after tests are done running"""
+
+    def setUp(self) -> None:
+        """Record the initial lock state of the test account"""
+
+        self.initial_state = dao.Account(app_settings.test_account).get_locked_state()
+
+    def tearDown(self) -> None:
+        """Restore the initial lock state of the test account"""
+
+        dao.Account(app_settings.test_account).set_locked_state(self.initial_state)
 
 
 class DummyEnum(enum.Enum):
