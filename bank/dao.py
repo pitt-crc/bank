@@ -279,8 +279,7 @@ class InvestorData(SlurmAccount):
                         inv.withdrawn_sus += to_withdraw
                         need_to_rollover -= to_rollover
 
-    @staticmethod
-    def _withdraw_from_investment(investment: Investor, sus: int) -> int:
+    def _withdraw_from_investment(self, investment: Investor, sus: int) -> int:
         """Process the withdrawal for a single investment
 
         The returned number of service units may be less than the requested
@@ -303,6 +302,11 @@ class InvestorData(SlurmAccount):
         to_withdraw = min(sus, maximum_withdrawal)
         investment.current_sus += to_withdraw
         investment.withdrawn_sus += to_withdraw
+
+        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
+        LOG.info(msg)
+        print(msg)
+
         return to_withdraw
 
     def withdraw(self, sus: int) -> None:
@@ -327,9 +331,6 @@ class InvestorData(SlurmAccount):
             investment: Investor
             for investment in investments:
                 withdrawn = self._withdraw_from_investment(investment, sus)
-                msg = f"Withdrew {withdrawn} service units from investment {investment.id} for account {self.account_name}"
-                LOG.info(msg)
-                print(msg)
 
                 # Determine if we are done processing investments
                 sus -= withdrawn

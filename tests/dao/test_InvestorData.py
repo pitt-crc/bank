@@ -95,7 +95,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             original_inv = copy(investment)
 
             sus_to_withdraw = 10
-            withdrawn = InvestorData._withdraw_from_investment(investment, sus_to_withdraw)
+            withdrawn = InvestorData(app_settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
             self.assertEqual(sus_to_withdraw, withdrawn)
 
             self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
@@ -110,8 +110,9 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             service_units = investment.service_units
             half_service_units = service_units / 2
 
-            first_withdraw = InvestorData._withdraw_from_investment(investment, half_service_units)
-            second_withdraw = InvestorData._withdraw_from_investment(investment, service_units)
+            dao = InvestorData(app_settings.test_account)
+            first_withdraw = dao._withdraw_from_investment(investment, half_service_units)
+            second_withdraw = dao._withdraw_from_investment(investment, service_units)
             self.assertEqual(half_service_units, first_withdraw)
             self.assertEqual(half_service_units, second_withdraw)
 
@@ -123,7 +124,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             investment.withdrawn_sus = investment.service_units
             original_inv = copy(investment)
 
-            withdrawn = InvestorData._withdraw_from_investment(investment, 1)
+            withdrawn = InvestorData(app_settings.test_account)._withdraw_from_investment(investment, 1)
             self.assertEqual(0, withdrawn)
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
@@ -136,7 +137,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestorData._withdraw_from_investment(investment, sus)
+                InvestorData(app_settings.test_account)._withdraw_from_investment(investment, sus)
 
 
 class Withdraw(InvestorSetup, TestCase):
