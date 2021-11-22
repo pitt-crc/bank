@@ -148,7 +148,7 @@ class Add(ProposalSetup, TestCase):
     def test_error_on_invalid_cluster(self) -> None:
         """Test an error is raised when passed an invalid cluster name"""
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             CLIParser().execute(['add', app_settings.test_account, '--fake_cluster=1000'])
 
     def test_error_on_missing_proposal(self) -> None:

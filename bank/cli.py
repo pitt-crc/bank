@@ -130,6 +130,17 @@ class CLIParser(ArgumentParser):
             for cluster in app_settings.clusters:
                 parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
+    def error(self, message):
+        """Print a usage message to stderr raise the message as an exception.
+
+        Raises:
+            RuntimeError: Error that encapsulates the given message.
+        """
+
+        import sys
+        self.print_usage(sys.stderr)
+        raise RuntimeError(message)
+
     def execute(self, args: List[str] = None) -> None:
         """Entry point for running the command line parser
 
@@ -139,7 +150,7 @@ class CLIParser(ArgumentParser):
             args: A list of command line arguments
         """
 
-        cli_kwargs = vars(self.parse_known_args(args)[0])  # Get parsed arguments as a dictionary
+        cli_kwargs = vars(self.parse_args(args))  # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
 
         # If the ``use_dao_method`` value is set, then evaluate a method of the ``account`` argument
