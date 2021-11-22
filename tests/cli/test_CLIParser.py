@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from bank import dao
 from bank.cli import CLIParser
-from bank.exceptions import MissingProposalError, ProposalExistsError, CmdError
+from bank.exceptions import MissingProposalError, ProposalExistsError, CmdError, MissingInvestmentError
 from bank.orm import Session, Proposal
 from bank.settings import app_settings
 from bank.system import RequireRoot
@@ -220,27 +220,15 @@ class InvestorModify(InvestorSetup, TestCase):
         old_inv = account.get_investment_info()[0]
 
         new_sus = old_inv['service_units'] + 10
-        CLIParser().execute(['investor_modify', app_settings.test_account, str(old_inv['id']), str(new_sus)])
+        CLIParser().execute(['investor_modify', app_settings.test_account, str(self.inv_id), str(new_sus)])
 
         new_inv = account.get_investment_info()[0]
         self.assertEqual(new_sus, new_inv['service_units'])
 
-    def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when passed an account with a missing proposal"""
-
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
-            session.commit()
-
-        account = dao.Account(app_settings.test_account)
-        inv = account.get_investment_info()[0]
-        with self.assertRaises(MissingProposalError):
-            CLIParser().execute(['investor_modify', app_settings.test_account, str(inv['id']), '10_000'])
-
     def test_error_on_missing_investment(self) -> None:
         """Test an error is raised when passed an invalid investment id"""
 
-        with self.assertRaises(MissingProposalError):
+        with self.assertRaises(MissingInvestmentError):
             CLIParser().execute(['investor_modify', app_settings.test_account, '123', '10_000'])
 
 

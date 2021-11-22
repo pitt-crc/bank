@@ -33,7 +33,7 @@ from typing import List, Tuple, Union, Optional
 
 from math import ceil
 
-from bank.exceptions import MissingProposalError, ProposalExistsError
+from bank.exceptions import MissingProposalError, ProposalExistsError, MissingInvestmentError
 from bank.orm import Investor, Proposal, Session
 from bank.orm.enum import ProposalType
 from bank.settings import app_settings
@@ -196,26 +196,23 @@ class InvestorData(SlurmAccount):
             investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
             return tuple(inv.row_to_dict() for inv in investments)
 
-    def overwrite_investment_sus(self, **kwargs: int) -> None:
+    def overwrite_investment_sus(self, id: int, sus: int) -> None:
         """Replace the number of service units allocated to a given investment
 
         Args:
-            **kwargs: New service unit values to set in each investment
+            id: The id of the investment to change
+            sus: New service units to set in the investment
         """
 
-        investment_ids = {str(inv['id']) for inv in self.get_investment_info()}
-        invalid_ids = set(kwargs) - investment_ids
-        if invalid_ids:
-            raise ValueError(f'Account {self.account_name} has no investment with ids {invalid_ids}')
+        if id not in (inv['id'] for inv in self.get_investment_info()):
+            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
 
         with Session() as session:
-            for inv_id, sus in kwargs.items():
-                inv = session.query(Investor).filter(Investor.id == inv_id).first()
-                inv.service_units = kwargs.get(str(inv.id), 0)
-
+            inv = session.query(Investor).filter(Investor.id == id).first()
+            inv.service_units = sus
             session.commit()
 
-        LOG.info(f"Modified Investments for account{self.account_name}: {kwargs}")
+        LOG.info(f"Modified Investments for account {self.account_name}: Investment {id} set to {sus}")
 
     def renewal(self, **sus) -> None:
         with Session() as session:

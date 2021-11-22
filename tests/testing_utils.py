@@ -38,6 +38,7 @@ class InvestorSetup(ProposalSetup):
     """Reusable setup mixin for configuring tests against user investments"""
 
     num_inv_sus = 10_000
+    inv_id: int = None
 
     def setUp(self) -> None:
         """Ensure there exists a user proposal and investment for the test user account"""
@@ -45,6 +46,7 @@ class InvestorSetup(ProposalSetup):
         super().setUp()
         self.account = InvestorData(app_settings.test_account)
         self.account.create_investment(self.num_inv_sus)
+        self.inv_id = self.account.get_investment_info()[0]['id']
 
 
 class CleanEnviron:

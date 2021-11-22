@@ -35,7 +35,7 @@ from .settings import app_settings
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
 _ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
-_inv_id = dict(dest='--id', help='The investment proposal id')
+_inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 _notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
 
 

@@ -22,6 +22,10 @@ class MissingProposalError(Exception):
     """Raised when an account is missing a proposal in the bank database."""
 
 
+class MissingInvestmentError(Exception):
+    """Raised when an account is missing an investment in the bank database."""
+
+
 class ProposalExistsError(Exception):
     """Raised when trying to create a proposal that already exists"""
 

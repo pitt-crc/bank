@@ -1,8 +1,8 @@
 from copy import copy
-from unittest import TestCase, skip
+from unittest import TestCase
 
 from bank.dao import InvestorData
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor
 from bank.settings import app_settings
 from tests.testing_utils import InvestorSetup, ProposalSetup
@@ -65,23 +65,23 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
     def test_sus_are_overwritten(self) -> None:
         """Test that service unit values are updated after method call"""
 
-        inv_id = self.account.get_investment_info()[0]['id']
         for new_sus in (0, 12345):
-            self.account.overwrite_investment_sus(**{str(inv_id): new_sus})
+            self.account.overwrite_investment_sus(id=self.inv_id, sus=new_sus)
             recovered_sus = self.account.get_investment_info()[0]['service_units']
             self.assertEqual(new_sus, recovered_sus)
 
     def test_error_on_invalid_ids(self) -> None:
         """Test an error is raised for invalid investment IDs"""
 
-        with self.assertRaises(ValueError):
-            self.account.overwrite_investment_sus(fake_investment_id=12)
+        with self.assertRaises(MissingInvestmentError):
+            fake_investment_id = 312312
+            self.account.overwrite_investment_sus(id=fake_investment_id, sus=12)
 
     def test_error_on_negative_sus(self) -> None:
         """Tests an error is raised for negative service units"""
-        inv_id = str(self.account.get_investment_info()[0]['id'])
+
         with self.assertRaises(ValueError):
-            self.account.overwrite_investment_sus(**{inv_id: -12})
+            self.account.overwrite_investment_sus(id=self.inv_id, sus=-12)
 
 
 class WithdrawFromInvestment(InvestorSetup, TestCase):
