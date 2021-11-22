@@ -1,5 +1,5 @@
 from copy import copy
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from bank.dao import InvestorData
 from bank.exceptions import MissingProposalError, MissingInvestmentError
@@ -140,6 +140,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
                 InvestorData(app_settings.test_account)._withdraw_from_investment(investment, sus)
 
 
+@skip('Withdrawal logic has not been ported yet')
 class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` method"""
 

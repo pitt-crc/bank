@@ -1,5 +1,5 @@
 from copy import copy
-from unittest import TestCase, skipIf
+from unittest import TestCase, skipIf, skip
 from unittest.mock import patch
 
 from bank import dao
@@ -234,6 +234,7 @@ class InvestorModify(InvestorSetup, TestCase):
 
 # The contents of this class represent the bash source code
 # of the original test suite as a template for future work
+@skip('Renewal logic has not been ported yet')
 class Renewal(InvestorSetup, TestCase):
     """Tests for the ``renewal`` subparser"""
 
@@ -401,6 +402,7 @@ class Renewal(InvestorSetup, TestCase):
         """
 
 
+@skip('Withdrawal logic has not been ported yet')
 class Withdraw(InvestorSetup, TestCase):
     """Tests for the ``withdraw`` subparser"""
 
