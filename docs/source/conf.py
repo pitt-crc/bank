@@ -29,7 +29,6 @@ extensions = [
     'sphinx_autodoc_typehints',
     'sphinx_rtd_theme',
     'sphinxarg.ext',
-    'sphinxcontrib.sqlalchemyviz',
     'sphinx.ext.githubpages'
 ]
 
