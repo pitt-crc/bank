@@ -12,8 +12,14 @@ class ProposalType(Enum):
 
     @classmethod
     def get(cls, name):
+        """Return the enum instance that is equivalent to the non-enumerated value
+
+        Args:
+            The name of the value to return an enumerated instance for
+        """
+
         try:
             return cls[name]
 
         except KeyError:
-            cls._missing_(name)
+            cls(name)
