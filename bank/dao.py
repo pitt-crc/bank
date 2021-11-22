@@ -453,7 +453,8 @@ class Account(ProposalData, InvestorData):
                 account=self.account_name,
                 start_date=proposal['start_date'].strftime(app_settings.date_format),
                 end_date=end_date,
-                perc=usage_perc
+                perc=usage_perc,
+                days_until_expire=days_until_expire
             )
             return formatted.send_to(f'{self.account_name}{app_settings.email_suffix}', subject=subject)
 

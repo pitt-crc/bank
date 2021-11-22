@@ -78,9 +78,10 @@ class Defaults:
     #   usage: Tabular summary of the proposal's service unit usage
     #   perc: Usage percentage threshold that triggered the message being sent
     #   investment: Tabular summary of user's current usage on invested machines
+    #   exp_in_days: Number of days until proposal expires
 
     # An email to send when you have exceeded a proposal threshold
-    notify_levels = (25, 50, 75, 90)
+    notify_levels = (90,)
     usage_warning = """
     <html>
     <head></head>
@@ -107,6 +108,7 @@ class Defaults:
     """
 
     # An email to send when you are 90 days from the end of your proposal
+    warning_days = (60,)
     expiration_warning = """
     <html>
     <head></head>
@@ -114,7 +116,7 @@ class Defaults:
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account_name} on H2P will expire in 90 days on {end_date}. 
+    {account_name} on H2P will expire in {exp_in_days} days on {end_date}. 
     The one year allocation started on {start_date}. 
     Once your proposal expires, you will still be able to login and retrieve your 
     data, but you will be unable to run new compute jobs until you submit a new 
