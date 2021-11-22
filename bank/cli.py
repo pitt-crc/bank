@@ -34,7 +34,6 @@ from .settings import app_settings
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
 _ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
-_date = dict(dest='--date', help=f'The proposal start date using the format {app_settings.date_format}')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', help='The investment proposal id')
 _notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
@@ -92,7 +91,7 @@ class CLIParser(ArgumentParser):
         parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
         parser_modify = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        self._add_args_to_parser(parser_modify, _account, _date, include_clusters=True)
+        self._add_args_to_parser(parser_modify, _account, include_clusters=True)
         parser_modify.set_defaults(use_dao_method='overwrite_allocation_sus')
 
         # Subparsers for adding and modifying investment accounts
@@ -102,7 +101,7 @@ class CLIParser(ArgumentParser):
         parser_investor.set_defaults(use_dao_method='create_investment')
 
         parser_investor_modify = self.subparsers.add_parser('investor_modify')
-        self._add_args_to_parser(parser_investor_modify, _account, _inv_id, _sus, _date)
+        self._add_args_to_parser(parser_investor_modify, _account, _inv_id, _sus)
         parser_investor_modify.set_defaults(use_dao_method='overwrite_investment_sus')
 
         parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')

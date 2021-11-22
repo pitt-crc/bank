@@ -1,5 +1,4 @@
 from copy import copy
-from datetime import timedelta
 from unittest import TestCase, skipIf
 from unittest.mock import patch
 
@@ -165,16 +164,6 @@ class Add(ProposalSetup, TestCase):
 class Modify(ProposalSetup, TestCase):
     """Tests for the ``modify`` subparser"""
 
-    def test_date_is_updated(self) -> None:
-        """Test the command updates the date on the proposal"""
-
-        account = dao.Account(app_settings.test_account)
-        old_date = account.get_proposal_info()['start_date']
-        new_date = (old_date - timedelta(days=1)).strftime(app_settings.date_format)
-
-        CLIParser().execute(['modify', app_settings.test_account, f'--date={new_date}'])
-        self.assertEqual(new_date, account.get_proposal_info()['start_date'])
-
     def test_service_units_are_updated(self) -> None:
         """Test the command updates sus on the given cluster"""
 
@@ -253,16 +242,6 @@ class InvestorModify(InvestorSetup, TestCase):
 
         with self.assertRaises(MissingProposalError):
             CLIParser().execute(['investor_modify', app_settings.test_account, '123', '10_000'])
-
-    def test_date_is_updated(self) -> None:
-        """Test the command updates the date on the investment"""
-
-        account = dao.Account(app_settings.test_account)
-        inv = account.get_investment_info()[0]
-        new_date = (inv['start_date'] - timedelta(days=1)).strftime(app_settings.date_format)
-
-        CLIParser().execute(['investor_modify', app_settings.test_account, str(inv['id']), f'--date={new_date}'])
-        self.assertEqual(new_date, account.get_proposal_info()['start_date'])
 
 
 # The contents of this class represent the bash source code
@@ -456,7 +435,7 @@ class Withdraw(InvestorSetup, TestCase):
         """Test an error is raised when passed an invalid investment id"""
 
         with Session() as session:
-            session.query(Proposal).filter(Investor.account_name == app_settings.test_account).delete()
+            session.query(Proposal).filter(Proposal.account_name == app_settings.test_account).delete()
             session.commit()
 
         with self.assertRaises(MissingProposalError):
