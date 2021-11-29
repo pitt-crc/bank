@@ -20,6 +20,22 @@ Usage Example
    ... def foo():
    ...     print('This function requires root access')
 
+The ``Settings`` class provides access to application settings as instance
+attributes. Setting values can be overwritten via environmental variables.
+
+.. doctest:: python
+
+   >>> import os
+   >>> from bank.system import Settings
+   >>>
+   >>> # Specify the date format as an environmental variable
+   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
+   >>>
+   >>> settings = Settings()
+   >>> print(settings.date_format)
+   %m-%d-%y
+
+
 API Reference
 -------------
 """
@@ -30,17 +46,23 @@ from email.message import EmailMessage
 from functools import wraps
 from logging import getLogger
 from os import geteuid
+from pathlib import Path
 from shlex import split
 from smtplib import SMTP
 from string import Formatter
 from subprocess import PIPE, Popen
-from typing import Any, Tuple, cast, Optional
+from typing import Any
+from typing import Tuple, cast, Optional
 
 from bs4 import BeautifulSoup
+from environ import environ
 
-from .exceptions import CmdError, NoSuchAccountError
+from .exceptions import CmdError
 from .settings import app_settings
 
+# Prefix used to identify environmental variables as settings for this application
+ENV = environ.Env()
+APP_PREFIX = 'BANK_'
 LOG = getLogger('bank.utils')
 
 
@@ -186,6 +208,114 @@ class SlurmAccount:
         # RawUsage to any value other than zero
         clusters = ','.join(app_settings.clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
+
+
+class Settings:
+    """Reflects application settings as set in the working environment"""
+
+    def __init__(self) -> None:
+        self.test_account = self._get_setting('TEST_ACCOUNT', 'sam')
+        self.test_cluster = self._get_setting('TEST_CLUSTER', 'smp')
+        self.date_format = self._get_setting('DATE_FORMAT', '%m/%d/%y')
+
+        # Where and how to write log files to
+        _application_dir = Path(__file__).resolve().parent
+        self.log_path = self._get_setting('LOG_PATH', _application_dir / 'crc_bank.log')
+        self.log_format = self._get_setting('LOG_FORMAT', '[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
+        self.log_level = self._get_setting('LOG_LEVEL', 'INFO')
+
+        # Path to the application SQLite backend
+        self.db_path = self._get_setting('DB_PATH', f"sqlite:///{_application_dir / 'crc_bank.db'}")
+
+        # A list of cluster names to track usage on
+        self.clusters = self._get_setting('CLUSTERS', ('smp', 'mpi', 'gpu', 'htc'))
+
+        # The email suffix for your organization. We assume the ``Description``
+        # field of each account in ``sacctmgr`` contains the prefix.
+        self.email_suffix = self._get_setting('EMAIL_SUFFIX', '@pitt.edu')
+        self.from_address = self._get_setting('FROM_ADDRESS', 'noreply@pitt.edu')
+
+        # The email templates below accept the following formatting fields:
+        #   account: The account name
+        #   start_date: The start date of the proposal
+        #   end_date: The end date of the proposal
+        #   usage: Tabular summary of the proposal's service unit usage
+        #   perc: Usage percentage threshold that triggered the message being sent
+        #   investment: Tabular summary of user's current usage on invested machines
+        #   exp_in_days: Number of days until proposal expires
+
+        # An email to send when a user has exceeded a proposal usage threshold
+        self.notify_levels = self._get_setting('NOTIFY_LEVELS', (90,))
+        self.usage_warning = self._get_setting('USAGE_WARNING', EmailTemplate("""
+            <html>
+            <head></head>
+            <body>
+            <p>
+            To Whom It May Concern,<br><br>
+            This email has been generated automatically because your account on H2P has
+            exceeded {perc}% usage. The one year allocation started on {start_date}. You can 
+            request a supplemental allocation at
+            https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
+            Your usage is printed below:<br>
+            <pre>
+            {usage}
+            </pre>
+            Investment status (if applicable):<br>
+            <pre>
+            {investment}
+            </pre>
+            Thanks,<br><br>
+            The CRC Proposal Bot
+            </p>
+            </body>
+            </html>
+            """))
+
+        # An email to send when a user is  nearing the end of their proposal
+        self.warning_days = self._get_setting('WARNING_DAYS', (60,))
+        self.expiration_warning = self._get_setting('EXPIRATION_WARNING', EmailTemplate("""
+            <html>
+            <head></head>
+            <body>
+            <p>
+            To Whom It May Concern,<br><br>
+            This email has been generated automatically because your proposal for account
+            {account_name} on H2P will expire in {exp_in_days} days on {end_date}. 
+            The one year allocation started on {start_date}. 
+            Once your proposal expires, you will still be able to login and retrieve your 
+            data, but you will be unable to run new compute jobs until you submit a new 
+            proposal or request a supplemental allocation.
+            To do so, please visit
+            https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+            Thanks,<br><br>
+            The CRC Proposal Bot
+            </p>
+            </body>
+            </html>
+            """))
+
+        # An email to send when the proposal has expired
+        self.expired_proposal_notice = self._get_setting('EXPIRED_PROPOSAL_WARNING', EmailTemplate("""
+            <html>
+            <head></head>
+            <body>
+            <p>
+            To Whom It May Concern,<br><br>
+            This email has been generated automatically because your proposal for account
+            {account} on H2P has expired. The one year allocation started on {start_date}. 
+            You will still be able to login and retrieve your data, but you will be unable
+            to run new compute  jobs until you submit a new proposal or request a 
+            supplemental allocation. To do so, please visit
+            https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br
+            Thanks,<br><br>
+            The CRC Proposal Bot
+            </p>
+            </body>
+            </html>
+            """))
+
+    def _get_setting(self, item: str, default) -> Any:
+        return ENV.get_value(APP_PREFIX + item, cast=type(default), default=default)
 
 
 class EmailTemplate(Formatter):
