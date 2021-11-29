@@ -26,91 +26,101 @@ API Reference
 """
 
 from argparse import ArgumentParser
+from datetime import datetime
 from typing import List
 
-from . import dao
 from .settings import app_settings
 
 # Reusable definitions for command line arguments
-_account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
-_ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
+_account = dict(dest='--account', required=True, help='The slurm account to administrate')
+_user = dict(dest='--user', nargs='?', help='Optionally create a user under the parent slurm account')
+_notify = dict(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
+_ptype = dict(dest='--ptype', default='proposal', options=['proposal', 'class'], help='The proposal type')
+_date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, app_settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
-_notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
 
 
 class CLIParser(ArgumentParser):
-    """Parser for command line arguments"""
-
     def __init__(self) -> None:
+        """Parser for command line arguments
+
+        Parser arguments are broken down by the service being administered, the
+        action being taken, and any arguments needed to evaluate that action:
+
+        ``my_cli.py service action --options``
+
+        For a complete usage description, use ``CLIParser().print_usage()``.
+        """
+
         super().__init__()
-        self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
+        service_subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-        # For each command line subparser we:
-        # 1) Create a new subparser instance and give it a name  (e.g. 'info')
-        # 2) Define subparser arguments - add args for the service units of each cluster using ``include_clusters=True``
-        # 3) Define the function to be evaluated by the subparser or indicate the name of a dao method to evaluate
+        info = service_subparsers.add_parser('info', help='Print usage and allocation information')
+        info.add_argument('account', help='The account to print information for')
 
-        # Subparsers for account management and info
+        notify = service_subparsers.add_parser('notify', help='Send any pending email notifications')
+        notify.add_argument('account', help='The account to process notification for')
 
-        parser_info = self.subparsers.add_parser('info')
-        self._add_args_to_parser(parser_info, _account)
-        parser_info.set_defaults(use_dao_method='print_allocation_info')
+        # Parsers for the Slurm service
+        slurm_parser = service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
+        slurm_subparsers = slurm_parser.add_subparsers(title="Slurm actions")
 
-        parser_usage = self.subparsers.add_parser('usage')
-        self._add_args_to_parser(parser_usage, _account)
-        parser_usage.set_defaults(use_dao_method='print_usage_info')
+        slurm_create = slurm_subparsers.add_parser('create', help='Create a new slurm account')
+        self._add_args_to_parser(slurm_create, _account, _user)
 
-        parser_reset_raw_usage = self.subparsers.add_parser('reset_raw_usage')
-        self._add_args_to_parser(parser_reset_raw_usage, _account)
-        parser_reset_raw_usage.set_defaults(use_dao_method='reset_raw_usage')
+        slurm_delete = slurm_subparsers.add_parser('delete', help='Delete an existing slurm account')
+        self._add_args_to_parser(slurm_delete, _account, _user)
 
-        parser_find_unlocked = self.subparsers.add_parser('find_unlocked')
-        parser_find_unlocked.set_defaults(function=lambda: print('\n'.join(dao.Account.find_unlocked())))
+        slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        self._add_args_to_parser(slurm_lock, _account, _notify)
 
-        parser_lock_with_notification = self.subparsers.add_parser('lock_with_notification')
-        self._add_args_to_parser(parser_lock_with_notification, _account, _notify)
-        parser_lock_with_notification.set_defaults(function=lambda account: account.set_locked_state(True))
+        slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
+        self._add_args_to_parser(slurm_unlock, _account, _notify)
 
-        parser_release_hold = self.subparsers.add_parser('release_hold')
-        self._add_args_to_parser(parser_release_hold, _account)
-        parser_release_hold.set_defaults(function=lambda account: account.set_locked_state(False))
+        # Parsers for user proposals
+        proposal_parser = service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
+        proposal_subparsers = proposal_parser.add_subparsers(title="Proposal actions")
 
-        parser_check_proposal_end_date = self.subparsers.add_parser('check_proposal_end_date')
-        self._add_args_to_parser(parser_check_proposal_end_date, _account)
-        parser_check_proposal_end_date.set_defaults(use_dao_method='send_pending_alerts')
+        proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
+        self._add_args_to_parser(proposal_create, _account, _ptype, include_clusters=True)
 
-        # Subparsers for adding and modifying general service unit allocations
+        proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
+        self._add_args_to_parser(proposal_delete, _account, include_clusters=True)
 
-        parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        self._add_args_to_parser(parser_insert, _account, _ptype, include_clusters=True)
-        parser_insert.set_defaults(use_dao_method='create_proposal')
+        proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
+        self._add_args_to_parser(proposal_add, _account, include_clusters=True)
 
-        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
-        self._add_args_to_parser(parser_add, _account, include_clusters=True)
-        parser_add.set_defaults(use_dao_method='add_allocation_sus')
+        proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
+        self._add_args_to_parser(proposal_subtract, _account, include_clusters=True)
 
-        parser_modify = self.subparsers.add_parser('modify', help="Update the properties of a given account/proposal")
-        self._add_args_to_parser(parser_modify, _account, include_clusters=True)
-        parser_modify.set_defaults(use_dao_method='overwrite_allocation_sus')
+        proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
+        self._add_args_to_parser(proposal_overwrite, _account, _date, include_clusters=True)
 
-        # Subparsers for adding and modifying investment accounts
+        # Parsers for investments
+        investment_parser = service_subparsers.add_parser('investment', help='Administrative tools for user investments')
+        investment_subparsers = investment_parser.add_subparsers(title="Investment actions")
 
-        parser_investor = self.subparsers.add_parser('investor', help='Add an investment proposal to a given user')
-        self._add_args_to_parser(parser_investor, _account, _sus)
-        parser_investor.set_defaults(use_dao_method='create_investment')
+        investment_create = investment_subparsers.add_parser('create', description='Create a new investment')
+        self._add_args_to_parser(investment_create, _account, _sus)
 
-        parser_investor_modify = self.subparsers.add_parser('investor_modify')
-        self._add_args_to_parser(parser_investor_modify, _account, _inv_id, _sus)
-        parser_investor_modify.set_defaults(use_dao_method='overwrite_investment_sus')
+        investment_delete = investment_subparsers.add_parser('delete', description='Delete an existing investment')
+        self._add_args_to_parser(investment_delete, _account, _inv_id, _sus)
 
-        parser_renewal = self.subparsers.add_parser('renewal', help='Like modify but rolls over active investments')
-        self._add_args_to_parser(parser_renewal, _account, include_clusters=True)
-        parser_renewal.set_defaults(use_dao_method='renewal')
+        investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
+        self._add_args_to_parser(investment_add, _account, _inv_id, _sus)
 
-        parser_withdraw = self.subparsers.add_parser('withdraw')
-        self._add_args_to_parser(parser_withdraw, _account, _sus)
-        parser_withdraw.set_defaults(use_dao_method='withdraw')
+        investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
+        self._add_args_to_parser(investment_subtract, _account, _inv_id, _sus)
+
+        investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
+        self._add_args_to_parser(investment_overwrite, _account, _inv_id, _sus, _date)
+
+        investment_advance = investment_subparsers.add_parser('advance')
+        self._add_args_to_parser(investment_advance, _account, _sus)
+
+        investment_renew = investment_subparsers.add_parser('renew')
+        self._add_args_to_parser(investment_renew, _account)
 
     @staticmethod
     def _add_args_to_parser(parser: ArgumentParser, *arg_definitions: dict, include_clusters: bool = False) -> None:
@@ -119,6 +129,7 @@ class CLIParser(ArgumentParser):
         Args:
             parser: The parser to add arguments to
             *arg_definitions: Dictionary with arguments for ``parser.add_argument``
+            include_clusters: Dynamically add arguments from application settings for the service units of each cluster
         """
 
         for arg_def in arg_definitions:
@@ -150,12 +161,12 @@ class CLIParser(ArgumentParser):
         """
 
         cli_kwargs = vars(self.parse_args(args))  # Get parsed arguments as a dictionary
-        cli_kwargs = {k.lstrip('-'): v for k, v in cli_kwargs.items()}
 
         # If the ``use_dao_method`` value is set, then evaluate a method of the ``account`` argument
-        use_dao_method = cli_kwargs.pop('use_dao_method', None)
-        if use_dao_method is not None:
-            getattr(cli_kwargs.pop('account'), use_dao_method)(**cli_kwargs)
+        use_arg_method = cli_kwargs.pop('use_arg_method', None)
+        if use_arg_method is not None:
+            arg_name, method_name = use_arg_method.split('.')
+            getattr(cli_kwargs.pop(arg_name), method_name)(**cli_kwargs)
 
         else:
             cli_kwargs.pop('function')(**cli_kwargs)
