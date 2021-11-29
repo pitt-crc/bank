@@ -15,9 +15,10 @@ from sqlalchemy.orm import validates
 
 from .base import CustomBase, Validators
 from .enum import ProposalType
-from ..settings import app_settings
-from ..system import SlurmAccount
+from ..system import Settings
 
+
+app_settings = Settings()
 Base = declarative_base(cls=CustomBase)
 metadata = Base.metadata
 

@@ -280,9 +280,7 @@ class EmailTemplate(Formatter):
         if self.fields:
             raise RuntimeError(f'Message has unformatted fields: {self.fields}')
 
-    def send_to(
-            self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
-    ) -> EmailMessage:
+    def send_to(self, to: str, subject: str, ffrom: str, smtp: Optional[SMTP] = None) -> EmailMessage:
         """Send the email template to the given address
 
         Args:
@@ -305,7 +303,7 @@ class EmailTemplate(Formatter):
         msg.set_content(email_text)
         msg.add_alternative(self._msg, subtype="html")
         msg["Subject"] = subject
-        msg["From"] = ffrom or app_settings.from_address
+        msg["From"] = ffrom
         msg["To"] = to
 
         with smtp or SMTP("localhost") as s:

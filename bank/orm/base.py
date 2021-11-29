@@ -10,7 +10,9 @@ from typing import Collection, Dict, Optional, Union
 
 from sqlalchemy.orm import declarative_mixin
 
-from bank.settings import app_settings
+from ..system import Settings
+
+app_settings = Settings()
 
 
 @declarative_mixin
