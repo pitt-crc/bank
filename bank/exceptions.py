@@ -8,6 +8,7 @@ Summary of Exceptions
 
    bank.exceptions.CmdError
    bank.exceptions.MissingProposalError
+   bank.exceptions.MissingInvestmentError
    bank.exceptions.ProposalExistsError
    bank.exceptions.TableOverwriteError
    bank.exceptions.NoSuchAccountError
