@@ -3,14 +3,14 @@
 from typing import Type
 
 from bank.orm.base import CustomBase
-from bank.settings import app_settings
+from bank import settings
 
 
 class HasDynamicColumns:
     """Test for dynamically added columns based on administered cluster names"""
 
     db_table_class: Type[CustomBase] = None
-    columns_to_test = app_settings.clusters
+    columns_to_test = settings.clusters
 
     def test_hast_columns_for_each_cluster(self) -> None:
         """Test the table has a column for each cluster in application settings"""
@@ -27,7 +27,7 @@ class ServiceUnitsValidation:
     """Tests for the validation of the service units"""
 
     db_table_class: Type[CustomBase] = None
-    columns_to_test = app_settings.clusters
+    columns_to_test = settings.clusters
 
     def test_negative_service_units(self) -> None:
         """Test for a ``ValueError`` when the number of service units are negative"""

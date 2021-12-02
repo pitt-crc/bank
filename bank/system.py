@@ -1,7 +1,7 @@
 """The ``system`` module acts as an interface for the underlying runtime
-environment and provides general utilities for interacting with the parent system.
-It includes wrappers around various command line utilities (e.g., ``sacctmgr``)
-and system services (e.g., ``smtp``).
+environment and provides an object-oriented interface for interacting with
+the parent system. It includes wrappers around various command line utilities
+(e.g., ``sacctmgr``) and system services (e.g., ``smtp``).
 
 Usage Example
 -------------
@@ -34,14 +34,20 @@ from shlex import split
 from smtplib import SMTP
 from string import Formatter
 from subprocess import PIPE, Popen
-from typing import Any, Tuple, cast, Optional
+from typing import Any
+from typing import Tuple, cast, Optional
 
 from bs4 import BeautifulSoup
+from environ import environ
 
+from . import settings
 from .exceptions import CmdError, NoSuchAccountError
-from .settings import app_settings
 
+ENV = environ.Env()
 LOG = getLogger('bank.utils')
+
+# Prefix used to identify environmental variables as settings for this application
+APP_PREFIX = 'BANK_'
 
 
 class RequireRoot:
@@ -67,13 +73,14 @@ class RequireRoot:
 
 
 class ShellCmd:
-    """Executes commands using the underlying shell environment"""
+    """Executes commands using the underlying shell environment
+
+    Output to StdOut and StdError from the executed command are
+    written to the ``out`` and ``err`` attributes respectively.
+    """
 
     def __init__(self, cmd: str) -> None:
         """Execute the given command in the underlying shell
-
-        Output to StdOut and StdError from the executed command are
-        written to the ``out`` and ``err`` attributes respectively.
 
         Args:
             cmd: The command to be run in a new pipe
@@ -152,7 +159,7 @@ class SlurmAccount:
         """
 
         lock_state_int = 0 if lock_state else -1
-        clusters = ','.join(app_settings.clusters)
+        clusters = ','.join(settings.clusters)
         ShellCmd(
             f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
@@ -184,7 +191,7 @@ class SlurmAccount:
 
         # At the time of writing, the sacctmgr utility does not support setting
         # RawUsage to any value other than zero
-        clusters = ','.join(app_settings.clusters)
+        clusters = ','.join(settings.clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters} set RawUsage=0')
 
 
@@ -241,9 +248,7 @@ class EmailTemplate(Formatter):
         if self.fields:
             raise RuntimeError(f'Message has unformatted fields: {self.fields}')
 
-    def send_to(
-            self, to: str, subject: str, ffrom: str = app_settings.from_address, smtp: Optional[SMTP] = None
-    ) -> EmailMessage:
+    def send_to(self, to: str, subject: str, ffrom: str, smtp: Optional[SMTP] = None) -> EmailMessage:
         """Send the email template to the given address
 
         Args:
@@ -266,7 +271,7 @@ class EmailTemplate(Formatter):
         msg.set_content(email_text)
         msg.add_alternative(self._msg, subtype="html")
         msg["Subject"] = subject
-        msg["From"] = ffrom or app_settings.from_address
+        msg["From"] = ffrom
         msg["To"] = to
 
         with smtp or SMTP("localhost") as s:

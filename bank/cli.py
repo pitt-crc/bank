@@ -29,7 +29,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from typing import List
 
-from .settings import app_settings
+from . import settings
 
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', required=True, help='The slurm account to administrate')
@@ -82,7 +82,8 @@ class CLIParser(ArgumentParser):
         proposal_parser = service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_subparsers = proposal_parser.add_subparsers(title="Proposal actions")
 
-        proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
+        proposal_create = proposal_subparsers.add_parser('create',
+                                                         help='Create a new proposal for an existing slurm account')
         self._add_args_to_parser(proposal_create, _account, _ptype, include_clusters=True)
 
         proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
@@ -91,14 +92,17 @@ class CLIParser(ArgumentParser):
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
         self._add_args_to_parser(proposal_add, _account, include_clusters=True)
 
-        proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
+        proposal_subtract = proposal_subparsers.add_parser('subtract',
+                                                           help='Subtract service units from an existing proposal')
         self._add_args_to_parser(proposal_subtract, _account, include_clusters=True)
 
-        proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
+        proposal_overwrite = proposal_subparsers.add_parser('overwrite',
+                                                            help='Overwrite properties of an existing proposal')
         self._add_args_to_parser(proposal_overwrite, _account, _date, include_clusters=True)
 
         # Parsers for investments
-        investment_parser = service_subparsers.add_parser('investment', help='Administrative tools for user investments')
+        investment_parser = service_subparsers.add_parser('investment',
+                                                          help='Administrative tools for user investments')
         investment_subparsers = investment_parser.add_subparsers(title="Investment actions")
 
         investment_create = investment_subparsers.add_parser('create', description='Create a new investment')
@@ -110,10 +114,12 @@ class CLIParser(ArgumentParser):
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
         self._add_args_to_parser(investment_add, _account, _inv_id, _sus)
 
-        investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
+        investment_subtract = investment_subparsers.add_parser('subtract',
+                                                               help='Subtract service units from an existing investment')
         self._add_args_to_parser(investment_subtract, _account, _inv_id, _sus)
 
-        investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
+        investment_overwrite = investment_subparsers.add_parser('overwrite',
+                                                                help='Overwrite properties of an existing investment')
         self._add_args_to_parser(investment_overwrite, _account, _inv_id, _sus, _date)
 
         investment_advance = investment_subparsers.add_parser('advance')
@@ -137,7 +143,7 @@ class CLIParser(ArgumentParser):
             parser.add_argument(**arg_def)
 
         if include_clusters:
-            for cluster in app_settings.clusters:
+            for cluster in settings.clusters:
                 parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
     def error(self, message):

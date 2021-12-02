@@ -1,8 +1,8 @@
 from datetime import date, timedelta
 from unittest import TestCase, skipIf
 
+from bank import settings
 from bank.orm import Proposal
-from bank.settings import app_settings
 from bank.system import SlurmAccount
 from tests.orm import base_tests
 
@@ -49,14 +49,14 @@ class ToArchiveObject(TestCase):
         """Create a ``Proposal`` instance for testing"""
 
         self.proposal = Proposal(
-            account_name=app_settings.test_account,
+            account_name=settings.test_account,
             start_date=date.today(),
             end_date=date.today() + timedelta(days=1),
             percent_notified=10,
             proposal_type=1
         )
 
-        for cluster in app_settings.clusters:
+        for cluster in settings.clusters:
             setattr(self.proposal, cluster, 10)
 
         self.archive_obj = self.proposal.to_archive_object()
@@ -64,15 +64,15 @@ class ToArchiveObject(TestCase):
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 
-        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type', app_settings.test_cluster)
+        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type', settings.test_cluster)
         for c in col_names:
             self.assertEqual(getattr(self.proposal, c), getattr(self.archive_obj, c))
 
     def test_account_usage_matches_slurm_output(self) -> None:
         """Test the account usage agrees with the output of the slurm utility"""
 
-        slurm_account = SlurmAccount(app_settings.test_account)
+        slurm_account = SlurmAccount(settings.test_account)
         self.assertEqual(
-            slurm_account.get_cluster_usage(app_settings.test_cluster),
-            getattr(self.archive_obj, f'{app_settings.test_cluster}_usage')
+            slurm_account.get_cluster_usage(settings.test_cluster),
+            getattr(self.archive_obj, f'{settings.test_cluster}_usage')
         )

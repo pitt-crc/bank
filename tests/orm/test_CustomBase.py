@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from unittest import TestCase
 
-from bank.settings import app_settings
+from bank import settings
 from tests.testing_utils import DummyEnum, DummyTable
 
 
@@ -37,7 +37,7 @@ class RowToJson(TestCase):
         """Test dates are converted to strings using the date format from application settings"""
 
         # Parse the returned date string and see if it matches the original datetime object
-        recovered_date = datetime.strptime(self.row_as_json['date_col'], app_settings.date_format)
+        recovered_date = datetime.strptime(self.row_as_json['date_col'], settings.date_format)
         self.assertEqual(recovered_date.date(), self.test_row.date_col.date())
 
     def test_enum_cast_to_str(self) -> None:

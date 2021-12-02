@@ -29,15 +29,14 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from email.message import EmailMessage
 from logging import getLogger
+from math import ceil
 from typing import List, Tuple, Union, Optional
 
-from math import ceil
-
-from bank.exceptions import MissingProposalError, ProposalExistsError, MissingInvestmentError
-from bank.orm import Investor, Proposal, Session
-from bank.orm.enum import ProposalType
-from bank.settings import app_settings
-from bank.system import SlurmAccount, EmailTemplate
+from . import settings
+from .exceptions import *
+from .orm import Investor, Proposal, Session
+from .orm.enum import ProposalType
+from .system import EmailTemplate, SlurmAccount
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
@@ -142,7 +141,7 @@ class ProposalData:
                 raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
 
             for cluster, service_units in kwargs.items():
-                if cluster not in app_settings.clusters:
+                if cluster not in settings.clusters:
                     raise ValueError(f'Cluster {cluster} is not defined in application settings.')
 
                 setattr(proposal, cluster, service_units)
@@ -246,8 +245,8 @@ class InvestorData(SlurmAccount):
         #     check if there is any rollover
         if current_investments:
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
-            total_usage = sum([current_usage[c] for c in app_settings.clusters])
-            total_proposal_sus = sum([getattr(self.get_proposal_info, c) for c in app_settings.clusters])
+            total_usage = sum([current_usage[c] for c in settings.clusters])
+            total_proposal_sus = sum([getattr(self.get_proposal_info, c) for c in settings.clusters])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
@@ -372,12 +371,12 @@ class Account(ProposalData, InvestorData):
 
         # Print the table header
         print(f"|{'-' * 82}|")
-        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(app_settings.date_format) :^51}|")
+        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(settings.date_format) :^51}|")
 
         # Print usage information for the primary proposal
         usage_total = 0
         allocation_total = 0
-        for cluster in app_settings.clusters:
+        for cluster in settings.clusters:
             usage = self.get_cluster_usage(cluster, in_hours=True)
             allocation = proposal_info[cluster]
             percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
@@ -423,20 +422,20 @@ class Account(ProposalData, InvestorData):
         proposal = self.get_proposal_info()
 
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = sum(self.get_cluster_usage(c) for c in app_settings.clusters())
-        allocated = sum(proposal[c] for c in app_settings.clusters)
+        usage = sum(self.get_cluster_usage(c) for c in settings.clusters())
+        allocated = sum(proposal[c] for c in settings.clusters)
         usage_perc = int(usage / allocated * 100)
-        next_notify = app_settings.notify_levels[bisect_left(app_settings.notify_levels, usage_perc)]
+        next_notify = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
 
         email = None
-        end_date = proposal['end_date'].strftime(app_settings.date_format)
+        end_date = proposal['end_date'].strftime(settings.date_format)
         days_until_expire = (proposal['end_date'] - date.today()).days
-        if days_until_expire in app_settings.warning_days:
-            email = EmailTemplate(app_settings.expiration_warning)
+        if days_until_expire in settings.warning_days:
+            email = EmailTemplate(settings.expiration_warning)
             subject = f'Your proposal expiry reminder for account: {self.account_name}'
 
         elif days_until_expire == 0:
-            email = EmailTemplate(app_settings.expired_proposal_notice)
+            email = EmailTemplate(settings.expired_proposal_notice)
             subject = f'The account for {self.account_name} was locked because it reached the end date {end_date}'
 
         elif proposal['percent_notified'] < next_notify <= usage_perc:
@@ -445,17 +444,18 @@ class Account(ProposalData, InvestorData):
                 db_entry.percent_notified = next_notify
                 session.commit()
 
-            email = EmailTemplate(app_settings.usage_warning.format(perc=usage_perc))
+            email = EmailTemplate(settings.usage_warning.format(perc=usage_perc))
             subject = f"Your account {self.account_name} has exceeded a proposal threshold"
 
         if email:
             formatted = email.format(
                 account=self.account_name,
-                start_date=proposal['start_date'].strftime(app_settings.date_format),
+                start_date=proposal['start_date'].strftime(settings.date_format),
                 end_date=end_date,
-                perc=usage_perc
+                perc=usage_perc,
+                exp_in_days=days_until_expire
             )
-            return formatted.send_to(f'{self.account_name}{app_settings.email_suffix}', subject=subject)
+            return formatted.send_to(f'{self.account_name}{settings.email_suffix}', subject=subject)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:

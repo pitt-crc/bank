@@ -1,5 +1,10 @@
 """The ``exceptions`` module defines custom exceptions raised by the parent application.
 
+The parent application is designed to interface with several external systems.
+This can make tracebacks and error messages confusing at first glance. To
+improve clarity when things go wrong, we take a liberal approach to the
+creation of custom exceptions.
+
 Summary of Exceptions
 ---------------------
 
@@ -8,6 +13,7 @@ Summary of Exceptions
 
    bank.exceptions.CmdError
    bank.exceptions.MissingProposalError
+   bank.exceptions.MissingInvestmentError
    bank.exceptions.ProposalExistsError
    bank.exceptions.TableOverwriteError
    bank.exceptions.NoSuchAccountError
@@ -15,7 +21,7 @@ Summary of Exceptions
 
 
 class CmdError(Exception):
-    """Raised when a piped command writes to STDERR in the underlying sohell."""
+    """Raised when a piped command writes to STDERR in the underlying shell."""
 
 
 class MissingProposalError(Exception):
