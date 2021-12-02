@@ -15,10 +15,9 @@ from sqlalchemy.orm import validates
 
 from .base import CustomBase, Validators
 from .enum import ProposalType
-from ..system import Settings
+from .. import settings
+from ..system import SlurmAccount
 
-
-app_settings = Settings()
 Base = declarative_base(cls=CustomBase)
 metadata = Base.metadata
 
@@ -37,7 +36,7 @@ class Proposal(Base):
     percent_notified = Column(Integer, nullable=False)
     proposal_type = Column(Enum(ProposalType), nullable=False)
 
-    _validate_service_units = validates(*app_settings.clusters)(Validators.validate_service_units)
+    _validate_service_units = validates(*settings.clusters)(Validators.validate_service_units)
     _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
 
     def to_archive_object(self) -> ProposalArchive:
@@ -52,7 +51,7 @@ class Proposal(Base):
         )
 
         slurm_acct = SlurmAccount(self.account_name)
-        for cluster in app_settings.clusters:
+        for cluster in settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
             setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
 
@@ -70,7 +69,7 @@ class ProposalArchive(Base):
     end_date = Column(Date, nullable=False)
     proposal_type = Column(Enum(ProposalType), nullable=False)
 
-    _validate_service_units = validates(*app_settings.clusters, *(f'{c}_usage' for c in app_settings.clusters))(
+    _validate_service_units = validates(*settings.clusters, *(f'{c}_usage' for c in settings.clusters))(
         Validators.validate_service_units
     )
 
@@ -128,7 +127,7 @@ class InvestorArchive(Base):
 
 
 # Dynamically add columns for each of the managed clusters
-for _cluster in app_settings.clusters:
+for _cluster in settings.clusters:
     setattr(Proposal, _cluster, Column(Integer, default=0))
     setattr(ProposalArchive, _cluster, Column(Integer, nullable=False))
     setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer, nullable=False))

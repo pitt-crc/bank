@@ -29,7 +29,7 @@ from argparse import ArgumentParser
 from typing import List
 
 from . import dao
-from .settings import app_settings
+from . import settings
 
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
@@ -86,7 +86,8 @@ class CLIParser(ArgumentParser):
         self._add_args_to_parser(parser_insert, _account, _ptype, include_clusters=True)
         parser_insert.set_defaults(use_dao_method='create_proposal')
 
-        parser_add = self.subparsers.add_parser('add', help='Add SUs to an existing user proposal on top of current values.')
+        parser_add = self.subparsers.add_parser('add',
+                                                help='Add SUs to an existing user proposal on top of current values.')
         self._add_args_to_parser(parser_add, _account, include_clusters=True)
         parser_add.set_defaults(use_dao_method='add_allocation_sus')
 
@@ -126,7 +127,7 @@ class CLIParser(ArgumentParser):
             parser.add_argument(**arg_def)
 
         if include_clusters:
-            for cluster in app_settings.clusters:
+            for cluster in settings.clusters:
                 parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
     def error(self, message):

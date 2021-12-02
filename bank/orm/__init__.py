@@ -8,7 +8,7 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metadata
-from ..system import Settings
+from .. import settings
 
-engine = sqlalchemy.create_engine(Settings().db_path)
+engine = sqlalchemy.create_engine(settings.db_path)
 Session = sessionmaker(bind=engine, future=True, expire_on_commit=False)

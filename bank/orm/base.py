@@ -10,9 +10,7 @@ from typing import Collection, Dict, Optional, Union
 
 from sqlalchemy.orm import declarative_mixin
 
-from ..system import Settings
-
-app_settings = Settings()
+from .. import settings
 
 
 @declarative_mixin
@@ -48,7 +46,7 @@ class CustomBase:
             value = getattr(self, col)
 
             if hasattr(value, 'strftime'):
-                value = value.strftime(app_settings.date_format)
+                value = value.strftime(settings.date_format)
 
             elif isinstance(value, enum.Enum):
                 value = value.name
