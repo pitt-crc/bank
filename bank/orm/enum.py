@@ -11,11 +11,11 @@ class ProposalType(Enum):
     CLASS = 1
     INVESTOR = 2
 
-    @property
-    def valid_values(self) -> List[str]:
+    @classmethod
+    def get_valid_values(cls) -> List[str]:
         """Values represented as enumerated types by the parent class"""
 
-        return list(ProposalType.__members__.keys())
+        return list(cls.__members__.keys())
 
     @classmethod
     def get(cls, name):

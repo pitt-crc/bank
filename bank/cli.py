@@ -13,7 +13,7 @@ and evaluation of all actions related to that service. These classes are
 inherited by the ``CLIParser`` class, which acts as the primary command
 line interface for interacting with the parent application as a whole.
 
-..note:: Parser classes in this module are based on the ``ArgumentParser``
+.. note:: Parser classes in this module are based on the ``ArgumentParser``
   class from the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
 
 Usage Example
@@ -47,7 +47,7 @@ from .orm.enum import ProposalType
 # Reusable definitions for command line arguments
 _user = dict(dest='--user', nargs='?', help='Optionally create a user under the parent slurm account')
 _notify = dict(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
-_ptype = dict(dest='--ptype', default='proposal', choices=ProposalType.valid_values, help='The proposal type')
+_ptype = dict(dest='--ptype', default='proposal', choices=ProposalType.get_valid_values(), help='The proposal type')
 _date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
