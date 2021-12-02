@@ -47,17 +47,6 @@ class BaseParser(ArgumentParser):
         super().__init__()
         self.service_subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-    def error(self, message):
-        """Print a usage message to stderr and raise the message as an exception
-
-        Raises:
-            RuntimeError: Error that encapsulates the given message.
-        """
-
-        import sys
-        self.print_usage(sys.stderr)
-        raise RuntimeError(message)
-
     def execute(self, args: List[str] = None) -> None:
         """Entry point for running the command line parser
 
