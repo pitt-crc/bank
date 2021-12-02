@@ -2,7 +2,6 @@ from unittest import TestCase, skipIf
 from unittest.mock import patch
 
 from bank.exceptions import NoSuchAccountError
-from bank.settings import app_settings
 from bank.system import SlurmAccount, RequireRoot
 
 
