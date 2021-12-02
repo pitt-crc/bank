@@ -1,88 +1,125 @@
-"""The ``settings`` module defines default settings for the parent application.
-It also provides access to any settings that have been overwritten using
-environmental variables in the working environment.
+"""The ``settings`` module is used to define default application settings and
+provides access to application settings as defined in the working environment.
+
+Application Settings
+--------------------
+
+.. list-table::
+   :widths: 25 25 50
+   :header-rows: 1
+
+   * - Heading Setting
+     - Env. Variable
+     - Description
+   * - test_account
+     - CRC_BANK_TEST_ACCOUNT
+     - Name of the account to use when running application tests
+   * - test_cluster
+     - CRC_BANK_TEST_CLUSTER
+     - Name of the cluster to run application tests against
+   * - date_format
+     - CRC_BANK_DATE_FORMAT
+     - The format used when representing datetimes as strings
+   * - log_path
+     - CRC_BANK_LOG_PATH
+     - The path of the application log file
+   * - log_format
+     - CRC_BANK_LOG_FORMAT
+     - The format of log file entries (follows standard python conventions)
+   * - log_level
+     - CRC_BANK_LOG_LEVEL
+     - The minimum severity level to include in the log file (follows standard python conventions)
+   * - db_path
+     - CRC_BANK_DB_PATH
+     - Path to the application SQLite backend
+   * - clusters
+     - CRC_BANK_CLUSTERS
+     - A list of cluster names to track usage on
+   * - email_suffix
+     - CRC_BANK_EMAIL_SUFFIX
+     - The email suffix for user accounts. We assume the ``Description`` field of each account in ``sacctmgr`` contains the prefix.
+   * - from_address
+     - CRC_BANK_FROM_ADDRESS
+     - The address to send user alerts from
+   * - notify_levels
+     - CRC_BANK_NOTIFY_LEVELS
+     - Send an email each time a user exceeds a proposal usage threshold
+   * - usage_warning
+     - CRC_BANK_USAGE_WARNING
+     - The email template used when a user exceeds a proposal usage threshold
+   * - warning_days
+     - CRC_BANK_WARNING_DAYS
+     - Send an email when a user's propsal is a given number of days from expiring
+   * - expiration_warning
+     - CRC_BANK_EXPIRATION_WARNING
+     - The email template to use when a user's propsal is a given number of days from expiring
+   * - expired_proposal_notice
+     - CRC_BANK_EXPIRED_PROPOSAL_NOTICE
+     - The email template to use when a user's propsal has expired
 
 Usage Example
 -------------
 
-The ``Defaults`` class provides access to default application settings.
-Values for each setting are accessible via attributes. For example:
-
-.. doctest:: python
-
-   >>> from bank.settings import Defaults
-   >>>
-   >>> # The datetime format used when displaying or parsing dates
-   >>> print(Defaults.date_format)
-   %m/%d/%y
-
-The ``Settings`` class is similar to the ``Defaults`` class, but
-allows for default settings to be overwritten via environmental variables.
-The ``Settings`` class should be used instead of ``Defaults`` in
-most cases.
+Application settings can be accessed as variables defined in the ``settings``
+module:
 
 .. doctest:: python
 
    >>> import os
-   >>> from bank.settings import Settings
+   >>> from bank import settings
    >>>
-   >>> # Specify the date format as an environmental variable
-   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d-%y'
-   >>>
-   >>> settings = Settings()
+   >>> # The format used by the application to represent dates as strings
    >>> print(settings.date_format)
-   %m-%d-%y
+   %m/%d/%y
 
-API Reference
--------------
+Application settings are cached at import and should not be modified during
+the application runtime. Likewise, modifications to environmental variables
+during execution will not be recognized by the application.
+
+.. doctest:: python
+
+   >>> # Note that changing the environment during runtime does not
+   >>> # effect the application settings.
+   >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d'
+   >>> print(settings.date_format)
+   %m/%d/%y
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
 
-from environ.environ import Env
+from environ import environ
 
-# Prefix used to identify environmental variables as settings for this application
-APP_PREFIX = 'BANK_'
+_ENV = environ.Env()
+_CUR_DIR = Path(__file__).resolve().parent
+_APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
 
+# Settings for running the test suite.
+test_account = _ENV.get_value(_APP_PREFIX + 'TEST_ACCOUNT', default='sam')
+test_cluster = _ENV.get_value(_APP_PREFIX + 'TEST_CLUSTER', default='smp')
 
-class Defaults:
-    """Default settings for the parent application"""
+date_format = _ENV.get_value(_APP_PREFIX + 'DATE_FORMAT', default='%m/%d/%y')
 
-    test_account = 'sam'
-    test_cluster = 'smp'
-    date_format = "%m/%d/%y"
+# Where and how to write log files to
+log_path = _ENV.get_value(_APP_PREFIX + 'LOG_PATH', default=_CUR_DIR / 'crc_bank.log')
+log_format = _ENV.get_value(_APP_PREFIX + 'LOG_FORMAT', default='[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
+log_level = _ENV.get_value(_APP_PREFIX + 'LOG_LEVEL', default='INFO')
 
-    # Where and how to write log files to
-    _application_dir = Path(__file__).resolve().parent
-    log_path = _application_dir / 'crc_bank.log'
-    log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
-    log_level = 'INFO'
+# Path to the application SQLite backend
+db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR / 'crc_bank.db'}")
 
-    # Path to the application SQLite backend
-    db_path = f'sqlite:///{_application_dir / "crc_bank.db"}'
-    db_test_path = f'sqlite:///{_application_dir / "test.db"}'
+# A list of cluster names to track usage on
+clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
 
-    # A list of cluster names to track usage on
-    clusters = ("smp", "mpi", "gpu", "htc")
+# The email suffix for your organization. We assume the ``Description``
+# field of each account in ``sacctmgr`` contains the prefix.
+email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
+from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
 
-    # The email suffix for your organization. We assume the ``Description``
-    # field of each account in ``sacctmgr`` contains the prefix.
-    email_suffix = "@pitt.edu"
-    from_address = "noreply@pitt.edu"
-
-    # The email templates below accept the following formatting fields:
-    #   account: The account name
-    #   start_date: The start date of the proposal
-    #   end_date: The end date of the proposal
-    #   usage: Tabular summary of the proposal's service unit usage
-    #   perc: Usage percentage threshold that triggered the message being sent
-    #   investment: Tabular summary of user's current usage on invested machines
-    #   exp_in_days: Number of days until proposal expires
-
-    # An email to send when you have exceeded a proposal threshold
-    notify_levels = (90,)
-    usage_warning = """
+# An email to send when a user has exceeded a proposal usage threshold
+notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
+usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -105,11 +142,11 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
-    # An email to send when you are 90 days from the end of your proposal
-    warning_days = (60,)
-    expiration_warning = """
+# An email to send when a user is  nearing the end of their proposal
+warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
+expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -128,10 +165,10 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
+    """)
 
-    # An email to send when the proposal has expired
-    expired_proposal_notice = """
+# An email to send when the proposal has expired
+expired_proposal_notice = _ENV.get_value(_APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -148,23 +185,4 @@ class Defaults:
     </p>
     </body>
     </html>
-    """
-
-
-class Settings:
-    """Reflects application settings as set in the working environment"""
-
-    def __init__(self) -> None:
-        """Application settings as defined in the parent environment."""
-        self._env = Env()
-
-    def __getattribute__(self, item: str) -> Any:
-        default = getattr(Defaults, item)
-        env_key = APP_PREFIX + item.upper()
-        env = object.__getattribute__(self, '_env')
-        return env.get_value(env_key, cast=type(default), default=default)
-
-
-app_settings = Settings()
-"""An instance of the ``Settings`` class that reflects application settings as
-they were defined in the working environment at package instantiation"""
+    """)

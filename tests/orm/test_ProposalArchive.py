@@ -1,7 +1,7 @@
 from unittest import TestCase
 
+from bank import settings
 from bank.orm import ProposalArchive
-from bank.settings import app_settings
 from tests.orm import base_tests
 
 
@@ -9,7 +9,7 @@ class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = ProposalArchive
-    columns_to_test = app_settings.clusters
+    columns_to_test = settings.clusters
 
 
 class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
@@ -20,7 +20,7 @@ class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
     def test_has_usage_columns_for_each_cluster(self) -> None:
         """Test the table has a usage column for each cluster in application settings"""
 
-        for col in app_settings.clusters:
+        for col in settings.clusters:
             column_name = col + '_usage'
             try:
                 getattr(self.db_table_class, column_name)
