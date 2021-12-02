@@ -80,7 +80,7 @@ class AdminParser(BaseParser):
 
     def __init__(self) -> None:
         super().__init__()
-        admin_parser = self.service_subparsers.add_parser('admin')
+        admin_parser = self.service_subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers()
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
@@ -168,11 +168,11 @@ class InvestmentParser(BaseParser):
         investment_parser.add_argument('--account', type=dao.InvestorData, help='The parent slurm account')
         investment_subparsers = investment_parser.add_subparsers(title="Investment actions")
 
-        investment_create = investment_subparsers.add_parser('create', description='Create a new investment')
+        investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
         investment_create.set_defaults(function='account.create')
         investment_create.add_argument(**_sus)
 
-        investment_delete = investment_subparsers.add_parser('delete', description='Delete an existing investment')
+        investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
         investment_delete.set_defaults(function='account.delete')
         investment_delete.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
@@ -193,11 +193,11 @@ class InvestmentParser(BaseParser):
         investment_delete.add_argument(**_sus)
         investment_delete.add_argument(**_date)
 
-        investment_advance = investment_subparsers.add_parser('advance')
+        investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
         investment_advance.set_defaults(function='account.advance')
         investment_advance.add_argument(**_sus)
 
-        investment_renew = investment_subparsers.add_parser('renew')
+        investment_renew = investment_subparsers.add_parser('renew', help='Rollover any expired investments')
         investment_renew.set_defaults(function='account.renew')
 
 
