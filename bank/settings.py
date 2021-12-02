@@ -70,7 +70,7 @@ module:
    >>>
    >>> # The format used by the application to represent dates as strings
    >>> print(settings.date_format)
-   %m-%d-%y
+   %m/%d/%y
 
 Application settings are cached at import and should not be modified during
 the application runtime. Likewise, modifications to environmental variables
@@ -82,7 +82,7 @@ during execution will not be recognized by the application.
    >>> # effect the application settings.
    >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d'
    >>> print(settings.date_format)
-   %m-%d-%y
+   %m/%d/%y
 """
 
 from __future__ import annotations
