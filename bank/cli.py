@@ -34,20 +34,21 @@ from . import settings, system, dao
 # Reusable definitions for command line arguments
 _user = dict(dest='--user', nargs='?', help='Optionally create a user under the parent slurm account')
 _notify = dict(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
-_ptype = dict(dest='--ptype', default='proposal', options=['proposal', 'class'], help='The proposal type')
+_ptype = dict(dest='--ptype', default='proposal', choices=['proposal', 'class'], help='The proposal type')
 _date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 
 
 class BaseParser(ArgumentParser):
+    """Parent class for all command line parsers"""
 
     def __init__(self) -> None:
         super().__init__()
         self.service_subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
     def error(self, message):
-        """Print a usage message to stderr raise the message as an exception.
+        """Print a usage message to stderr and raise the message as an exception
 
         Raises:
             RuntimeError: Error that encapsulates the given message.
@@ -60,7 +61,9 @@ class BaseParser(ArgumentParser):
     def execute(self, args: List[str] = None) -> None:
         """Entry point for running the command line parser
 
-        Parse command line arguments and evaluate the corresponding function
+        Parse command line arguments and evaluate the corresponding function.
+        If arguments are not explicitly passed to this function, they are
+        retrieved from the command line.
 
         Args:
             args: A list of command line arguments
@@ -73,9 +76,9 @@ class BaseParser(ArgumentParser):
 
 
 class AdminParser(BaseParser):
+    """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
-
         super().__init__()
         admin_parser = self.service_subparsers.add_parser('admin')
         admin_subparsers = admin_parser.add_subparsers()
@@ -88,9 +91,9 @@ class AdminParser(BaseParser):
 
 
 class SlurmParser(BaseParser):
+    """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
-
         super().__init__()
         slurm_parser = self.service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
         slurm_parser.add_argument('--account', type=system.SlurmAccount, help='The slurm account to administrate')
@@ -114,9 +117,9 @@ class SlurmParser(BaseParser):
 
 
 class ProposalParser(BaseParser):
+    """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
-
         super().__init__()
         proposal_parser = self.service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_parser.add_argument('--account', type=dao.ProposalData, help='The parent slurm account')
@@ -157,9 +160,9 @@ class ProposalParser(BaseParser):
 
 
 class InvestmentParser(BaseParser):
+    """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
-
         super().__init__()
         investment_parser = self.service_subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_parser.add_argument('--account', type=dao.InvestorData, help='The parent slurm account')
@@ -199,4 +202,4 @@ class InvestmentParser(BaseParser):
 
 
 class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
-    ...
+    """Command line parser used as the primary entry point for the parent application"""
