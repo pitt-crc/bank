@@ -5,7 +5,7 @@ from bank.system import EmailTemplate
 
 
 class Formatting(TestCase):
-    """Tests for the formatting of the email template"""
+    """Test the formatting of the email template"""
 
     def test_returns_copy(self) -> None:
         """Test formatting a message returns a copy"""
@@ -21,14 +21,14 @@ class Formatting(TestCase):
         self.assertEqual('Value: 1', formatted_template.msg)
 
     def test_error_for_incorrect_keys(self) -> None:
-        """Test a ``ValueError`` is raised for kwarg names that don't match fields"""
+        """Test a ``ValueError`` is raised for argument names that don't match fields"""
 
         with self.assertRaises(ValueError):
             EmailTemplate('Value: {x}').format(y=1)
 
 
 class FieldIdentification(TestCase):
-    """Tests for the identification of fields"""
+    """Test the identification of fields"""
 
     def test_all_fields_found(self) -> None:
         """Test the template instance is aware of all fields"""
@@ -89,7 +89,7 @@ class MessageSending(TestCase):
 
 
 class StringRepresentation(TestCase):
-    """Tests for the casting of email templates into strings"""
+    """Test the casting of email templates into strings"""
 
     def runTest(self) -> None:
         template = EmailTemplate('This_is_a_test')

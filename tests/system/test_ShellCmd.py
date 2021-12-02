@@ -8,7 +8,7 @@ class InitExceptions(TestCase):
     """Tests related to exceptions raised during instantiation"""
 
     def test_empty_init_arg(self) -> None:
-        """Test for ``ValueError when`` ``cmd`` is an empty string"""
+        """Test for ``ValueError`` when ``cmd`` is an empty string"""
 
         with self.assertRaises(ValueError):
             ShellCmd('')
@@ -34,7 +34,7 @@ class FileDescriptors(TestCase):
 
 
 class RaisingStdErr(TestCase):
-    """Test the ``raise_err`` raises appropriate errors"""
+    """Test the ``raise_err`` method raises appropriate errors"""
 
     @staticmethod
     def test_no_error_on_empty_stderr() -> None:
