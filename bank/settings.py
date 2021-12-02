@@ -96,30 +96,30 @@ _CUR_DIR = Path(__file__).resolve().parent
 _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
 
 # Settings for running the test suite.
-test_account = _ENV.get_value(_APP_PREFIX + 'TEST_ACCOUNT', 'sam')
-test_cluster = _ENV.get_value(_APP_PREFIX + 'TEST_CLUSTER', 'smp')
+test_account = _ENV.get_value(_APP_PREFIX + 'TEST_ACCOUNT', default='sam')
+test_cluster = _ENV.get_value(_APP_PREFIX + 'TEST_CLUSTER', default='smp')
 
-date_format = _ENV.get_value(_APP_PREFIX + 'DATE_FORMAT', '%m/%d/%y')
+date_format = _ENV.get_value(_APP_PREFIX + 'DATE_FORMAT', default='%m/%d/%y')
 
 # Where and how to write log files to
-log_path = _ENV.get_value(_APP_PREFIX + 'LOG_PATH', _CUR_DIR / 'crc_bank.log')
-log_format = _ENV.get_value(_APP_PREFIX + 'LOG_FORMAT', '[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
-log_level = _ENV.get_value(_APP_PREFIX + 'LOG_LEVEL', 'INFO')
+log_path = _ENV.get_value(_APP_PREFIX + 'LOG_PATH', default=_CUR_DIR / 'crc_bank.log')
+log_format = _ENV.get_value(_APP_PREFIX + 'LOG_FORMAT', default='[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
+log_level = _ENV.get_value(_APP_PREFIX + 'LOG_LEVEL', default='INFO')
 
 # Path to the application SQLite backend
-db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', f"sqlite:///{_CUR_DIR / 'crc_bank.db'}")
+db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR / 'crc_bank.db'}")
 
 # A list of cluster names to track usage on
-clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', ('smp', 'mpi', 'gpu', 'htc'))
+clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
 
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.
-email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', '@pitt.edu')
-from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', 'noreply@pitt.edu')
+email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
+from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
 
 # An email to send when a user has exceeded a proposal usage threshold
-notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', (90,))
-usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', """
+notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
+usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -145,7 +145,8 @@ usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', """
     """)
 
 # An email to send when a user is  nearing the end of their proposal
-expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', """
+warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
+expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -165,10 +166,9 @@ expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', """
     </body>
     </html>
     """)
-warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', (60,))
 
 # An email to send when the proposal has expired
-expired_proposal_notice = _ENV.get_value(_APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING', """
+expired_proposal_notice = _ENV.get_value(_APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING', default="""
     <html>
     <head></head>
     <body>

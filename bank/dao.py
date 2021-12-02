@@ -36,7 +36,7 @@ from . import settings
 from .exceptions import *
 from .orm import Investor, Proposal, Session
 from .orm.enum import ProposalType
-from .system import EmailTemplate
+from .system import EmailTemplate, SlurmAccount
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')

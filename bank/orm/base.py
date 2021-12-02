@@ -56,7 +56,7 @@ class CustomBase:
         return return_dict
 
     def row_to_ascii_table(self) -> str:
-        """Return a human readable representation of the entire table row"""
+        """Return a human-readable representation of the entire table row"""
 
         json_str = json.dumps(self.row_to_json(), indent=2).strip('{\n}')
         lines = (str(self.__tablename__), '---------------', json_str, '')
@@ -64,7 +64,11 @@ class CustomBase:
 
 
 class Validators:
-    """Methods for validating column values before interacting with the database"""
+    """Methods for validating column values before interacting with the database
+
+    Despite what it may look like, methods for this class should NOT be static.
+    The ``self`` argument is used by the table using the validator.
+    """
 
     def validate_service_units(self, key: str, value: int) -> int:
         """Verify the given value is a non-negative integer"""
