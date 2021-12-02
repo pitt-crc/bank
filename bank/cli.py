@@ -2,12 +2,24 @@
 application. This module is effectively a command line accessible wrapper
 around existing functionality defined in the ``dao`` module.
 
+Command line functions are grouped together by the service being administered.
+
+.. code-block:: bash
+
+   application.py <service> <action> --arguments
+
+Each service is represented by a distinct class which handles the parsing
+and evaluation of all actions related to that service. These classes are
+inherited by the ``CLIParser`` class, which acts as the primary command
+line interface for interacting with the parent application as a whole.
+
+..note:: Parser classes in this module are based on the ``ArgumentParser``
+  class from the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
+
 Usage Example
 -------------
 
-The ``CLIParser`` object is an extension of the ``ArgumentParser`` class from
-the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
-It is responsible for both the parsing and evaluation  of command line arguments:
+Use the `CLIParser`` object to parsing and evaluate command line arguments:
 
 .. code-block:: python
 
@@ -18,7 +30,7 @@ It is responsible for both the parsing and evaluation  of command line arguments
    >>> # Parse command line arguments but do not evaluate the result
    >>> args = parser.parse_args()
    >>>
-   >>> # Parse command line arguments and evaluate the corresponding function
+   >>> # Parse command line arguments AND evaluate the corresponding function
    >>> parser.execute()
 
 API Reference
