@@ -1,7 +1,7 @@
 from copy import copy
 from unittest import TestCase, skip
 
-from bank.dao import InvestorData
+from bank.dao import InvestorAccount
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor
 from bank import settings
@@ -19,7 +19,7 @@ class CreateInvestment(ProposalSetup, TestCase):
             session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
             session.commit()
 
-        self.account = InvestorData(settings.test_account)
+        self.account = InvestorAccount(settings.test_account)
 
     def test_investment_is_created(self) -> None:
         """Test a new investment is added to the account after the function call"""
@@ -95,7 +95,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             original_inv = copy(investment)
 
             sus_to_withdraw = 10
-            withdrawn = InvestorData(settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
+            withdrawn = InvestorAccount(settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
             self.assertEqual(sus_to_withdraw, withdrawn)
 
             self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
@@ -110,7 +110,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             service_units = investment.service_units
             half_service_units = service_units / 2
 
-            dao = InvestorData(settings.test_account)
+            dao = InvestorAccount(settings.test_account)
             first_withdraw = dao._withdraw_from_investment(investment, half_service_units)
             second_withdraw = dao._withdraw_from_investment(investment, service_units)
             self.assertEqual(half_service_units, first_withdraw)
@@ -124,7 +124,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             investment.withdrawn_sus = investment.service_units
             original_inv = copy(investment)
 
-            withdrawn = InvestorData(settings.test_account)._withdraw_from_investment(investment, 1)
+            withdrawn = InvestorAccount(settings.test_account)._withdraw_from_investment(investment, 1)
             self.assertEqual(0, withdrawn)
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
@@ -137,7 +137,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestorData(settings.test_account)._withdraw_from_investment(investment, sus)
+                InvestorAccount(settings.test_account)._withdraw_from_investment(investment, sus)
 
 
 @skip('Withdrawal logic has not been ported yet')

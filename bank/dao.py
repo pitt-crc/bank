@@ -1,26 +1,6 @@
 """The ``dao`` module acts as the primary data access layer for the parent
 application and defines the bulk of the account management logic.
 
-Usage Example
--------------
-
-The ``Account`` class is used as the primary administration tool to manage new
-and existing user accounts. For example:
-
-.. code-block:: python
-
-  >>> from bank.dao import Account
-  >>>
-  >>> # Create an account with a new proposal
-  >>> account = Account('account_name')
-  >>> account.create_proposal(cluster_name=1000)
-  >>>
-  >>> # Add service units to a proposal
-  >>> account.add(cluster_name=500)
-  >>>
-  >>> # Lock the user account from running any more jobs
-  >>> account.set_locked_state(lock_state=True)
-
 API Reference
 -------------
 """
@@ -42,7 +22,7 @@ Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
-class ProposalData:
+class ProposalAccount:
     """Data access for proposal information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
@@ -168,8 +148,18 @@ class ProposalData:
         LOG.info(f"Changed proposal for {self.account_name} to {self._get_proposal_info()}")
 
 
-class InvestorData(SlurmAccount):
+class InvestorAccount:
     """Data access for investment information associated with a given account"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        self.account_name = account_name
+        self._raise_if_missing_proposal()
 
     def _raise_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception if the account does not have a primary proposal"""
@@ -396,7 +386,7 @@ class InvestorData(SlurmAccount):
                         need_to_rollover -= to_rollover
 
 
-class Admin(ProposalData, InvestorData):
+class Account(ProposalAccount, InvestorAccount):
     """Administration for existing bank accounts"""
 
     @staticmethod
