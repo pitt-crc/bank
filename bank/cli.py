@@ -84,7 +84,7 @@ class AdminParser(BaseParser):
     def __init__(self) -> None:
         super().__init__()
         admin_parser = self.service_subparsers.add_parser('admin', help='Tools for general system status')
-        admin_subparsers = admin_parser.add_subparsers()
+        admin_subparsers = admin_parser.add_subparsers(title="admin  actions")
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
         info.set_defaults(function=dao.Account.print_info)
@@ -106,7 +106,7 @@ class SlurmParser(BaseParser):
         slurm_parser = self.service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
         slurm_parser.add_argument('--account', type=system.SlurmAccount, help='The slurm account to administrate')
 
-        slurm_subparsers = slurm_parser.add_subparsers(title="Slurm actions")
+        slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
         slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
         slurm_create.set_defaults(function=system.SlurmAccount.create_account)
 
@@ -137,7 +137,7 @@ class ProposalParser(BaseParser):
         super().__init__()
         proposal_parser = self.service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_parser.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
-        proposal_subparsers = proposal_parser.add_subparsers(title="Proposal actions")
+        proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
         proposal_create.set_defaults(function=dao.ProposalAccount.create_proposal)
@@ -180,7 +180,7 @@ class InvestmentParser(BaseParser):
         super().__init__()
         investment_parser = self.service_subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_parser.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
-        investment_subparsers = investment_parser.add_subparsers(title="Investment actions")
+        investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
         investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
         investment_create.set_defaults(function=dao.InvestorAccount.create_investment)
@@ -215,5 +215,5 @@ class InvestmentParser(BaseParser):
         investment_renew.set_defaults(function=dao.InvestorAccount.renew)
 
 
-class CLIParser(AdminParser, SlurmParser):
+class CLIParser(AdminParser, SlurmParser, InvestmentParser, ProposalParser):
     """Command line parser used as the primary entry point for the parent application"""
