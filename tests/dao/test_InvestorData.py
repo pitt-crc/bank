@@ -25,9 +25,9 @@ class CreateInvestment(ProposalSetup, TestCase):
         """Test a new investment is added to the account after the function call"""
 
         # Avoid false positives by checking there are no existing doesn't already exist
-        original_inv = len(self.account.get_investment_info())
+        original_inv = len(self.account._get_investment_info())
         self.account.create_investment(sus=1000)
-        new_inv = len(self.account.get_investment_info())
+        new_inv = len(self.account._get_investment_info())
 
         self.assertEqual(original_inv + 1, new_inv, 'Number of investments in database did not increase.')
 
@@ -36,7 +36,7 @@ class CreateInvestment(ProposalSetup, TestCase):
 
         test_sus = 12345
         self.account.create_investment(sus=test_sus)
-        new_investment = self.account.get_investment_info()[0]
+        new_investment = self.account._get_investment_info()[0]
         self.assertEqual(test_sus, new_investment['service_units'])
 
     def test_error_on_missing_proposal(self) -> None:
@@ -67,7 +67,7 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
 
         for new_sus in (0, 12345):
             self.account.overwrite_investment_sus(id=self.inv_id, sus=new_sus)
-            recovered_sus = self.account.get_investment_info()[0]['service_units']
+            recovered_sus = self.account._get_investment_info()[0]['service_units']
             self.assertEqual(new_sus, recovered_sus)
 
     def test_error_on_invalid_ids(self) -> None:
