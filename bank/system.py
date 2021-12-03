@@ -141,6 +141,27 @@ class SlurmAccount:
         except (CmdError, FileNotFoundError, Exception):
             return False
 
+    @classmethod
+    def create_account(cls, account_name) -> SlurmAccount:
+        """Create a new slurm account"""
+
+        raise NotImplementedError()
+
+    def delete_account(self) -> None:
+        """Delete the slurm account"""
+
+        raise NotImplementedError()
+
+    def add_user(self, user_name) -> None:
+        """Add a user to the slurm account"""
+
+        raise NotImplementedError()
+
+    def delete_user(self, user_name) -> None:
+        """Delete a user from the slurm account"""
+
+        raise NotImplementedError()
+
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked
 

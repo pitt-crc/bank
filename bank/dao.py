@@ -16,7 +16,7 @@ and existing user accounts. For example:
   >>> account.create_proposal(cluster_name=1000)
   >>>
   >>> # Add service units to a proposal
-  >>> account.add_allocation_sus(cluster_name=500)
+  >>> account.add(cluster_name=500)
   >>>
   >>> # Lock the user account from running any more jobs
   >>> account.set_locked_state(lock_state=True)
@@ -87,7 +87,12 @@ class ProposalData:
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
         LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
 
-    def get_proposal_info(self) -> dict:
+    def delete_proposal(self) -> None:
+        """Delete the account's current proposal"""
+
+        raise NotImplementedError()
+
+    def _get_proposal_info(self) -> dict:
         """Information about the primary account proposal
 
         Returns:
@@ -104,7 +109,7 @@ class ProposalData:
 
             return proposal.row_to_dict()
 
-    def add_allocation_sus(self, **kwargs: int) -> None:
+    def add(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
 
         Args:
@@ -114,7 +119,7 @@ class ProposalData:
             MissingProposalError: If the account does not have a proposal
         """
 
-        proposal_info = self.get_proposal_info()
+        proposal_info = self._get_proposal_info()
         new_allocation = dict()
         for cluster, sus_to_add in kwargs.items():
             if sus_to_add < 0:
@@ -122,10 +127,22 @@ class ProposalData:
 
             new_allocation[cluster] = proposal_info.get(cluster, 0) + sus_to_add
 
-        self.overwrite_allocation_sus(**new_allocation)
+        self.overwrite(**new_allocation)
         LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {new_allocation}")
 
-    def overwrite_allocation_sus(self, **kwargs) -> None:
+    def subtract(self, **kwargs: int) -> None:
+        """Subtract service units from the account's current allocation
+
+        Args:
+            **kwargs: Service units to add to the account for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        raise NotImplementedError()
+
+    def overwrite(self, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
@@ -148,7 +165,7 @@ class ProposalData:
 
             session.commit()
 
-        LOG.info(f"Changed proposal for {self.account_name} to {self.get_proposal_info()}")
+        LOG.info(f"Changed proposal for {self.account_name} to {self._get_proposal_info()}")
 
 
 class InvestorData(SlurmAccount):
@@ -188,7 +205,49 @@ class InvestorData(SlurmAccount):
 
         LOG.info(f"Inserted investment for {self.account_name} with per year allocations of `{sus}`")
 
-    def get_investment_info(self) -> Tuple[dict, ...]:
+    def delete_investment(self) -> None:
+        raise NotImplementedError()
+
+    def add(self, id: int, sus: int) -> None:
+        """Add service units to the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: Number of service units to add
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        raise NotImplementedError()
+
+    def subtract(self, id: int, sus: int) -> None:
+        """Subtract service units from the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: Number of service units to remove
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        raise NotImplementedError()
+
+    def overwrite(self, id: int, sus: int) -> None:
+        """Overwrite service units allocated to the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: New number of service units to assign to the investment
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        raise NotImplementedError()
+
+    def _get_investment_info(self) -> Tuple[dict, ...]:
         """Tuple with information for each investment associated with the account"""
 
         with Session() as session:
@@ -203,7 +262,7 @@ class InvestorData(SlurmAccount):
             sus: New service units to set in the investment
         """
 
-        if id not in (inv['id'] for inv in self.get_investment_info()):
+        if id not in (inv['id'] for inv in self._get_investment_info()):
             raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
 
         with Session() as session:
@@ -213,7 +272,68 @@ class InvestorData(SlurmAccount):
 
         LOG.info(f"Modified Investments for account {self.account_name}: Investment {id} set to {sus}")
 
-    def renewal(self, **sus) -> None:
+    def _withdraw_from_investment(self, investment: Investor, sus: int) -> int:
+        """Process the withdrawal for a single investment
+
+        The returned number of service units may be less than the requested
+        withdrawal if there are insufficient service units in the account balance.
+        The ``investment`` argument is mutated to reflect the withdrawal, but no
+         commits are made to the database by this method.
+
+        Args:
+            investment: The investment to withdraw from
+            sus: The requested number of service units to withdraw
+
+        Returns:
+            The number of service units that were actually withdrawn
+        """
+
+        if sus <= 0:
+            raise ValueError('Withdrawal amount must be greater than zero')
+
+        maximum_withdrawal = investment.service_units - investment.withdrawn_sus
+        to_withdraw = min(sus, maximum_withdrawal)
+        investment.current_sus += to_withdraw
+        investment.withdrawn_sus += to_withdraw
+
+        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
+        LOG.info(msg)
+        print(msg)
+
+        return to_withdraw
+
+    def advance(self, sus: int) -> None:
+        """Withdraw service units from future investments
+
+        Args:
+            sus: The number of service units to withdraw
+        """
+
+        with Session() as session:
+            investments = session.query(Investor) \
+                .filter(Investor.account_name == self.account_name) \
+                .order_by(Investor.start_date) \
+                .all()
+
+            # Make sure there are enough service units in the account to withdraw
+            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
+            if sus > available_sus:
+                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
+
+            # Go through investments, oldest first and start withdrawing
+            investment: Investor
+            for investment in investments:
+                withdrawn = self._withdraw_from_investment(investment, sus)
+
+                # Determine if we are done processing investments
+                sus -= withdrawn
+                if sus <= 0:
+                    break
+
+            LOG.debug('Committing withdrawals to database')
+            session.commit()
+
+    def renew(self, **sus) -> None:
         with Session() as session:
             self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
             self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
@@ -275,69 +395,8 @@ class InvestorData(SlurmAccount):
                         inv.withdrawn_sus += to_withdraw
                         need_to_rollover -= to_rollover
 
-    def _withdraw_from_investment(self, investment: Investor, sus: int) -> int:
-        """Process the withdrawal for a single investment
 
-        The returned number of service units may be less than the requested
-        withdrawal if there are insufficient service units in the account balance.
-        The ``investment`` argument is mutated to reflect the withdrawal, but no
-         commits are made to the database by this method.
-
-        Args:
-            investment: The investment to withdraw from
-            sus: The requested number of service units to withdraw
-
-        Returns:
-            The number of service units that were actually withdrawn
-        """
-
-        if sus <= 0:
-            raise ValueError('Withdrawal amount must be greater than zero')
-
-        maximum_withdrawal = investment.service_units - investment.withdrawn_sus
-        to_withdraw = min(sus, maximum_withdrawal)
-        investment.current_sus += to_withdraw
-        investment.withdrawn_sus += to_withdraw
-
-        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
-        LOG.info(msg)
-        print(msg)
-
-        return to_withdraw
-
-    def withdraw(self, sus: int) -> None:
-        """Withdraw service units from future investments
-
-        Args:
-            sus: The number of service units to withdraw
-        """
-
-        with Session() as session:
-            investments = session.query(Investor) \
-                .filter(Investor.account_name == self.account_name) \
-                .order_by(Investor.start_date) \
-                .all()
-
-            # Make sure there are enough service units in the account to withdraw
-            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
-            if sus > available_sus:
-                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
-
-            # Go through investments, oldest first and start withdrawing
-            investment: Investor
-            for investment in investments:
-                withdrawn = self._withdraw_from_investment(investment, sus)
-
-                # Determine if we are done processing investments
-                sus -= withdrawn
-                if sus <= 0:
-                    break
-
-            LOG.debug('Committing withdrawals to database')
-            session.commit()
-
-
-class Account(ProposalData, InvestorData):
+class Admin(ProposalData, InvestorData):
     """Administration for existing bank accounts"""
 
     @staticmethod
@@ -349,25 +408,11 @@ class Account(ProposalData, InvestorData):
 
         return 0
 
-    def print_allocation_info(self) -> None:
-        """Print proposal information for the account"""
+    def print_info(self) -> None:
+        """Print a summary of service units allocated to and used by the account"""
 
-        with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-
-            if proposal is None:
-                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-            print(proposal.row_to_ascii_table())
-            for inv in investments:
-                print(inv.row_to_ascii_table())
-
-    def print_usage_info(self) -> None:
-        """Print a summary of service units used by the given account"""
-
-        proposal_info = self.get_proposal_info()
-        investment_info = self.get_investment_info()
+        proposal_info = self._get_proposal_info()
+        investment_info = self._get_investment_info()
 
         # Print the table header
         print(f"|{'-' * 82}|")
@@ -419,7 +464,7 @@ class Account(ProposalData, InvestorData):
             If an alert is sent, returns a copy of the email alert
         """
 
-        proposal = self.get_proposal_info()
+        proposal = self._get_proposal_info()
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self.get_cluster_usage(c) for c in settings.clusters())
@@ -468,4 +513,4 @@ class Account(ProposalData, InvestorData):
         # Query database for accounts that are unlocked and expired
         with Session() as session:
             proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
-            return tuple(p.account_name for p in proposals if not Account(p.account_name).get_locked_state())
+            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())

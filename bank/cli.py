@@ -54,7 +54,10 @@ _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 
 
 class BaseParser(ArgumentParser):
-    """Parent class for all command line parsers"""
+    """Parent class for all command line parsers
+    
+    Child classes should add new parsers to the ``service_subparsers`` attribute.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -71,10 +74,8 @@ class BaseParser(ArgumentParser):
             args: A list of command line arguments
         """
 
-        # Get parsed arguments as a dictionary
         cli_kwargs = {k.lstrip('-'): v for k, v in vars(self.parse_args(args)).items()}
-        arg_name, method_name = cli_kwargs.pop('function').split('.')
-        getattr(cli_kwargs.pop(arg_name), method_name)(**cli_kwargs)
+        cli_kwargs.pop('function')(**cli_kwargs)
 
 
 class AdminParser(BaseParser):
@@ -86,10 +87,15 @@ class AdminParser(BaseParser):
         admin_subparsers = admin_parser.add_subparsers()
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
+        info.set_defaults(function=dao.Admin.print_info)
         info.add_argument('account', help='The account to print information for')
 
         notify = admin_subparsers.add_parser('notify', help='Send any pending email notifications')
-        notify.add_argument('account', help='The account to process notification for')
+        notify.set_defaults(function=dao.Admin.send_pending_alerts)
+        notify.add_argument('account', help='The account to process notifications for')
+
+        unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
+        unlocked.set_defaults(function=dao.Admin.find_unlocked)
 
 
 class SlurmParser(BaseParser):
@@ -101,20 +107,26 @@ class SlurmParser(BaseParser):
         slurm_parser.add_argument('--account', type=system.SlurmAccount, help='The slurm account to administrate')
 
         slurm_subparsers = slurm_parser.add_subparsers(title="Slurm actions")
-        slurm_create = slurm_subparsers.add_parser('create', help='Create a new slurm account')
-        slurm_create.set_defaults(function='account.create')
-        slurm_create.add_argument(**_user)
+        slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
+        slurm_create.set_defaults(function=system.SlurmAccount.create_account)
 
-        slurm_delete = slurm_subparsers.add_parser('delete', help='Delete an existing slurm account')
-        slurm_delete.set_defaults(function='account.delete')
-        slurm_delete.add_argument(**_user)
+        slurm_delete = slurm_subparsers.add_parser('delete_acc', help='Delete an existing slurm account')
+        slurm_delete.set_defaults(function=system.SlurmAccount.delete_account)
+
+        slurm_add_user = slurm_subparsers.add_parser('add_user', help='Add a user to an existing slurm account')
+        slurm_add_user.set_defaults(function=system.SlurmAccount.add_user)
+        slurm_add_user.add_argument(**_user)
+
+        slurm_delete_user = slurm_subparsers.add_parser('delete_user', help='Remove a user to an existing slurm account')
+        slurm_delete_user.set_defaults(function=system.SlurmAccount.delete_user)
+        slurm_delete_user.add_argument(**_user)
 
         slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.set_defaults(function='account.lock')
+        slurm_lock.set_defaults(function=system.SlurmAccount.set_locked_state, lock_state=True)
         slurm_lock.add_argument(**_notify)
 
         slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
-        slurm_unlock.set_defaults(function='account.unlock')
+        slurm_lock.set_defaults(function=system.SlurmAccount.set_locked_state, lock_state=False)
         slurm_unlock.add_argument(**_notify)
 
 
@@ -128,24 +140,24 @@ class ProposalParser(BaseParser):
         proposal_subparsers = proposal_parser.add_subparsers(title="Proposal actions")
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
-        proposal_create.set_defaults(function='account.create')
+        proposal_create.set_defaults(function=dao.ProposalData.create_proposal)
         proposal_create.add_argument(**_ptype)
         self._add_cluster_args(proposal_create)
 
         proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
-        proposal_delete.set_defaults(function='account.delete')
+        proposal_delete.set_defaults(function=dao.ProposalData.delete_proposal)
         self._add_cluster_args(proposal_delete)
 
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
-        proposal_add.set_defaults(function='account.add')
+        proposal_add.set_defaults(function=dao.ProposalData.add)
         self._add_cluster_args(proposal_add)
 
         proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
-        proposal_subtract.set_defaults(function='account.subtract')
+        proposal_subtract.set_defaults(function=dao.ProposalData.subtract)
         self._add_cluster_args(proposal_subtract)
 
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        proposal_overwrite.set_defaults(function='account.overwrite')
+        proposal_overwrite.set_defaults(function=dao.ProposalData.overwrite)
         proposal_overwrite.add_argument(**_date)
         self._add_cluster_args(proposal_overwrite)
 
@@ -171,37 +183,37 @@ class InvestmentParser(BaseParser):
         investment_subparsers = investment_parser.add_subparsers(title="Investment actions")
 
         investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
-        investment_create.set_defaults(function='account.create')
+        investment_create.set_defaults(function=dao.InvestorData.create_investment)
         investment_create.add_argument(**_sus)
 
         investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
-        investment_delete.set_defaults(function='account.delete')
+        investment_delete.set_defaults(function=dao.InvestorData.delete_investment)
         investment_delete.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
-        investment_add.set_defaults(function='account.add')
+        investment_add.set_defaults(function=dao.InvestorData.add)
         investment_add.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
-        investment_subtract.set_defaults(function='account.subtract')
+        investment_subtract.set_defaults(function=dao.InvestorData.subtract)
         investment_subtract.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
-        investment_overwrite.set_defaults(function='account.overwrite')
+        investment_overwrite.set_defaults(function=dao.InvestorData.overwrite)
         investment_overwrite.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
         investment_delete.add_argument(**_date)
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
-        investment_advance.set_defaults(function='account.advance')
+        investment_advance.set_defaults(function=dao.InvestorData.advance)
         investment_advance.add_argument(**_sus)
 
         investment_renew = investment_subparsers.add_parser('renew', help='Rollover any expired investments')
-        investment_renew.set_defaults(function='account.renew')
+        investment_renew.set_defaults(function=dao.InvestorData.renew)
 
 
-class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
+class CLIParser(AdminParser, SlurmParser):
     """Command line parser used as the primary entry point for the parent application"""

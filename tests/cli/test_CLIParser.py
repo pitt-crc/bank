@@ -118,7 +118,7 @@ class Insert(GenericSetup, TestCase):
         CLIParser().execute(['insert', settings.test_account, 'proposal', f'--{settings.test_cluster}={number_of_sus}'])
 
         # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(settings.test_account).get_proposal_info()
+        allocations = dao.Account(settings.test_account)._get_proposal_info()
         self.assertEqual(number_of_sus, allocations.pop(settings.test_cluster))
 
     def test_error_if_already_exists(self) -> None:
@@ -136,11 +136,11 @@ class Add(ProposalSetup, TestCase):
         """Test the allocated service units are incremented by a given amount"""
 
         account = dao.Account(settings.test_account)
-        original_sus = account.get_proposal_info()[settings.test_cluster]
+        original_sus = account._get_proposal_info()[settings.test_cluster]
 
         sus_to_add = 100
         CLIParser().execute(['add', settings.test_account, f'--{settings.test_cluster}={sus_to_add}'])
-        new_sus = account.get_proposal_info()[settings.test_cluster]
+        new_sus = account._get_proposal_info()[settings.test_cluster]
 
         self.assertEqual(original_sus + sus_to_add, new_sus)
 
@@ -169,11 +169,11 @@ class Modify(ProposalSetup, TestCase):
 
         # Set the existing allocation to zero
         account = dao.Account(settings.test_account)
-        account.overwrite_allocation_sus(**{settings.test_cluster: 0})
+        account.overwrite(**{settings.test_cluster: 0})
 
         new_sus = 1_000
         CLIParser().execute(['modify', settings.test_account, f'--{settings.test_cluster}={new_sus}'])
-        self.assertEqual(new_sus, account.get_proposal_info()[settings.test_cluster])
+        self.assertEqual(new_sus, account._get_proposal_info()[settings.test_cluster])
 
     def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when passed an account with a missing proposal"""
