@@ -13,9 +13,13 @@ jobs:
       matrix:
         python-version: [ 3.7, 3.8, 3.9 ]
 
-    defaults: # Set default shell options for all run steps
+    env:
+      ENV_NAME: bank_test_${{ matrix.python-version }}_${{ github.run_id }}
+
+    # Set default shell options for all run steps
+    # This lets us use the lmod system on CRC machines
+    defaults:
       run:
-        # This lets us use the lmod system on CRC machines
         shell: bash -leo pipefail {0}
 
     steps:
@@ -28,9 +32,8 @@ jobs:
           module purge
 
           # Create a unique test environment using conda
-          ENV_NAME = bank_test_${{ matrix.python-version }}_${{ github.run_id }}
-          conda create -n $ENV_NAME python=${{ matrix.python-version }} -y
-          conda activate $ENV_NAME
+          conda create -n $env.ENV_NAME python=${{ matrix.python-version }} -y
+          conda activate $env.ENV_NAME
 
       - name: Install Package Dependencies
         run: |
@@ -57,7 +60,7 @@ jobs:
         if: always()
         run: |
           echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
-          conda env remove -n bank_test_${{ matrix.python-version }}_${{ github.run_id }} -y
+          conda env remove -n ${{ env.ENV_NAME }} -y
 
 
   codacy-coverage-reporter:
