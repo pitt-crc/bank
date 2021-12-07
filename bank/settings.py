@@ -8,7 +8,7 @@ Application Settings
    :widths: 25 25 50
    :header-rows: 1
 
-   * - Heading Setting
+   * - Variable Name
      - Env. Variable
      - Description
    * - test_account
@@ -78,8 +78,8 @@ during execution will not be recognized by the application.
 
 .. doctest:: python
 
-   >>> # Note that changing the environment during runtime does not
-   >>> # effect the application settings.
+   >>> # Changing the environment during runtime
+   >>> # does not affect the application settings
    >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d'
    >>> print(settings.date_format)
    %m/%d/%y
