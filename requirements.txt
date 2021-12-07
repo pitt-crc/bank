@@ -1,0 +1,4 @@
+SQLAlchemy~=1.4.23
+sqlalchemy-utils==0.37.8
+beautifulsoup4~=4.9.1
+python-environ==0.4.54
