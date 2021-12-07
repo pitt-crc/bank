@@ -26,6 +26,8 @@ jobs:
           module purge
 
           # The conda environemnt needs to be created on the test server ahead of time
+          conda env remove -n bank_test_${{ matrix.python-version }} -y
+          conda create -n bank_test_${{ matrix.python-version }} python=${{ matrix.python-version }} -y
           conda activate bank_test_${{ matrix.python-version }}
 
           # Install package requirements in addition to any packages required for running tests
