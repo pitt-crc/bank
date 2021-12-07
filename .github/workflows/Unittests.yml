@@ -6,7 +6,9 @@ on:
 
 jobs:
   python_tests:
+    name: Run Python Unittests
     runs-on: [ self-hosted ]
+
     strategy:
       matrix:
         python-version: [ 3.7, 3.8, 3.9 ]
@@ -20,7 +22,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Setup Python Environment
+      - name: Create Testing Environment
         run: |
           # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
@@ -30,8 +32,13 @@ jobs:
           conda create -n $ENV_NAME python=${{ matrix.python-version }} -y
           conda activate $ENV_NAME
 
+      - name: Install Package Dependencies
+        run: |
           # Install package requirements in addition to any packages required for running tests
           pip install -r requirements.txt
+
+      - name: Install Test Suite Dependencies
+        run: |
           pip install coverage
 
       - name: Run tests with coverage
@@ -46,9 +53,16 @@ jobs:
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
+      - name: Clean up
+        if: always()
+        run: |
+          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
+          conda env remove -n bank_test_${{ matrix.python-version }}_${{ github.run_id }} -y
+
+
   codacy-coverage-reporter:
-    runs-on: [ self-hosted ]
     name: Report code coverage
+    runs-on: [ self-hosted ]
     needs: python_tests
     steps:
 
@@ -58,15 +72,3 @@ jobs:
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-  clean-up:
-    runs-on: [ self-hosted ]
-    name: Clean up build environment
-    strategy:
-      matrix:
-        python-version: [ 3.7, 3.8, 3.9 ]
-
-    steps:
-      - name: Clean up
-        run: |
-          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
-          conda env remove -n bank_test_${{ matrix.python-version }}_${{ github.run_id }} -y
