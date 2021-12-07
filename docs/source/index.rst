@@ -10,7 +10,7 @@ functionality for managing user allocations.
 
 The ``crc_bank`` application extends the existing functionality of `slurm` by providing:
 
- - Streamlined utilities for managing Slurm user accounts
+ - Streamlined utilities for managing Slurm user accounts across multiple clusters
  - Fine grained control over resource allocations per Slurm account/cluster
  - Automatic and configurable user notifications based on their usage of cluster resources
  - Support for the prioritized allocation of resources to users who have donated hardware (`investments`)

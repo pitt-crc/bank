@@ -1,128 +1,99 @@
 Install and Setup
 =================
 
-Prerequisites
--------------
+System Prerequisites
+--------------------
 
-You will need the following utilities installed
+You will need the following utilities installed before using the application.
+Links to further documentation are provided if you don't already have a
+prerequisite application installed.
 
-- Slurm: 17.11.7 is recommended, but most of the queries should work for
-  older, and newer, versions.
-- SMTP: A working SMTP server to send emails via `smtplib` in python.
+.. list-table::
+   :widths: 25 25 50
+   :header-rows: 1
 
-Installing Source Code
-----------------------
+   * - Requirements
+     - Further Reading
+     - Description
+   * - **Python**
+     - `docs.conda.io <https://docs.conda.io/en/latest/miniconda.html>`_
+     - Any version from 3.5 onward should work. Older versions of Python
+       (e.g., 2.7) are explicitly not supported. We recommend miniconda.
+   * - **Slurm**
+     - `slurm.schedmd.com <https://slurm.schedmd.com/overview.html>`_
+     - Version 17.11.7 is recommended, but most of the queries should work for
+       older, and newer, versions.
+   * - **SMTP**
+     -
+     - A working SMTP server to send emails via ``smtplib`` in python.
+
+The ``git`` and ``pip`` command line utilities are not technically required, but
+make life easier when installing the application source code / dependencies.
+
+Installing The Application
+--------------------------
+
+Application source code is available on
+`GitHub.com <https://github.com/pitt-crc/bank>`_
+and can be downloaded using ``git``:
 
 .. code-block:: bash
 
-   git clone https://github.com/pitt-crc/bank
-   pip install -r requirements.txt
+   git clone https://github.com/pitt-crc/bank bank_source
+
+Once you have the source code downloaded, install the necessary python
+requirements:
+
+.. code-block:: bash
+
+   pip install -r bank_source/requirements.txt
 
 Configuring Slurm
 -----------------
 
-In your Slurm configuration you will need to configure the following:
+In your Slurm configuration, you will need to configure the following values:
 
 .. code-block::
 
    PriorityDecayHalfLife=0-00:00:00
    PriorityUsageResetPeriod=NONE
 
+If your curious what this does, here is a snippet from the Slurm documentation:
 
-Slurm Accounts
-^^^^^^^^^^^^^^
+.. code-block:: text
 
-By default, when you create an account:
+   PriorityDecayHalfLife
+       This controls how long prior resource use is considered in determining how
+       over- or under-serviced an association is (user, bank account and cluster) in
+       determining job priority. The record of usage will be decayed over time, with
+       half of the original value cleared at age PriorityDecayHalfLife. If set to 0 no
+       decay will be applied. This is helpful if you want to enforce hard time limits
+       per association. If set to 0 PriorityUsageResetPeriod must be set to some
+       interval.
+
+.. important::
+   If you don't properly configure the above values, ``slurm`` will compete
+   with the ``crc_bank`` utility for control over the ``RawUsage`` value of each
+   account. This can lead to unpredictable behavior by both tools.
+
+Configuring The Application
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``crc_bank`` application was built at the University of Pittsburgh and
+comes configured out of the box to run on Pitt servers. You will need to
+configure the application settings to work on your system.
+
+Application settings can be modified by setting variables in the working
+environment. For a full list of application settings, see the table of
+available settings in the :ref:`API documentation <settings>`.
+
+Testing Your Installation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You may wish to run the application test suite to make sure everything is
+working properly.
 
 .. code-block:: bash
 
-   sacctmgr add account barrymoo
-   sacctmgr list account
-
-      Account                Descr                  Org
-   ---------- -------------------- --------------------
-     barrymoo             barrymoo             barrymoo
-
-The script pulls the description and turns it into an email address to notify
-users. Removing the ``@<email.com>`` can be done but is not necessary. To do
-this for existing accounts (if you are unsure):
-
-.. code-block:: bash
-
-   sacctmgr update account where account=barrymoo set description="<email>"
-
-Slurm Associations
-^^^^^^^^^^^^^^^^^^
-
-If you have multiple Slurm clusters, this tool was designed to provide a single
-bank account for all of them. Obviously, you can modify the script to enforce
-them separately or use multiple versions. It is recommended to explicitly define
-all available clusters (especially if you have some clusters for which there is
-no banking enforcement),
-
-.. code-block:: bash
-
-   sacctmgr add account barrymoo description="<email>" cluster=<cluster/s>
-
-
-Applications Settings
-^^^^^^^^^^^^^^^^^^^^^
-
-Application settings can be modified by setting variables in the working environment.
-The table below lists the available settings and their default value.
-Default file paths are typically relative to the installation directory of the application (``[INSTALLDIR]``).
-
-.. list-table::
-   :header-rows: 1
-
-   * - Environmental Variable
-     - Default Value
-     - Description
-
-   * - BANK_DATE_FORMAT
-     - ``%m/%d/%y``
-     - Format used by the commandline parser when specifying dates as strings.
-
-   * - BANK_LOG_PATH
-     - ``[INSTALLDIR]/crc_bank.log``
-     - The location of the application log file.
-
-   * - BANK_LOG_FORMAT
-     - ``[%(levelname)s] %(asctime)s - %(name)s - %(message)s``
-     - The format for content written to the log file.
-
-   * - BANK_LOG_LEVEL
-     - ``INFO``
-     - The minimum severity level required for an entry to be written to the log.
-
-   * - BANK_DB_PATH
-     - ``sqlite:///[INSTALLDIR]/crc_bank.db``
-     - Path to the backend application database.
-
-   * - BANK_CLUSTERS
-     - ``smp,mpi,gpu,htc``
-     - A list of slurm clusters being administrated by the application.
-
-   * - BANK_EMAIL_SUFFIX
-     - ``@pitt.edu``
-     - The email suffix to use when sending alerts to user accounts.
-
-
-   * - BANK_NOTIFY_LEVELS
-     - ``25,50,75,90``
-     - Notify account holders via email when their proposal reaches any of the listed thresholds.
-
-
-   * - BANK_NOTIFY_SUS_LIMIT_EMAIL_TEXT
-     -
-     - Email message used to notify account holders about service unit usage and limits.
-
-   * - BANK_THREE_MONTH_PROPOSAL_EXPIRY_NOTIFICATION_EMAIL
-     -
-     - Email message to send when an account is 90 days from the end of its proposal.
-
-
-   * - BANK_PROPOSAL_EXPIRES_NOTIFICATION_EMAIL
-     -
-     - An email to send when an account's proposal has expired.
-
+   cd bank_source
+   python -m unittest discover tests
