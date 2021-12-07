@@ -45,7 +45,6 @@ class Proposal(Base):
             account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
-            proposal_type=self.proposal_type
         )
 
         slurm_acct = SlurmAccount(self.account_name)

@@ -115,7 +115,7 @@ class Insert(GenericSetup, TestCase):
         """Test that a proposal has been created for the user account and cluster"""
 
         number_of_sus = 5000
-        CLIParser().execute(['insert', settings.test_account, 'proposal', f'--{settings.test_cluster}={number_of_sus}'])
+        CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}={number_of_sus}'])
 
         # Test service units have been allocated to the cluster specified to the CLI parser
         allocations = dao.Account(settings.test_account).get_proposal_info()
@@ -126,7 +126,7 @@ class Insert(GenericSetup, TestCase):
 
         dao.Account(settings.test_account).create_proposal(**{settings.test_cluster: 1000})
         with self.assertRaises(ProposalExistsError):
-            CLIParser().execute(['insert', settings.test_account, 'proposal', f'--{settings.test_cluster}=1000'])
+            CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}=1000'])
 
 
 class Add(ProposalSetup, TestCase):
