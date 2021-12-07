@@ -36,7 +36,7 @@ each account and automatically notifies/locks user accounts if their total usage
 exceeds a given threshold. These notifications are configurable and can be sent
 based on:
 
- 1. The percent usage of an account's allocation,
+ 1. The percent usage of an account's allocation
  2. The number of days left until an account is scheduled to expire
  3. Whether an account has run out of service units
 
