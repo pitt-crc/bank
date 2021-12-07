@@ -6,37 +6,31 @@ on:
 
 jobs:
   python_tests:
-    name: Run Python Unittests
-    runs-on: [ self-hosted ]
-
+    runs-on: [self-hosted]
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9 ]  # Define what python versions to test
+        python-version: [3.7, 3.8, 3.9]
 
-    env:
-      # Unique name of the conda runtime environment used for each test
-      TEST_ENV_NAME: bank_test_${{ matrix.python-version }}_${{ github.run_id }}
-
+    # Set default shell options for all run steps
     defaults:
       run:
-        shell: bash -leo pipefail {0}  # Lets us use the lmod system on CRC machines
+        shell: bash -leo pipefail {0}
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      # Create and activate a unique test environment using conda
-      - name: Create Testing Environment
+      - name: Setup Python Environment
         run: |
+          # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
-          conda create -n $env.ENV_NAME python=${{ matrix.python-version }} -y
-          conda activate $env.ENV_NAME
 
-      - name: Install Package Dependencies
-        run: pip install -r requirements.txt
+          # The conda environemnt needs to be created on the test server ahead of time
+          conda activate bank_test_${{ matrix.python-version }}
 
-      - name: Install Test Suite Dependencies
-        run: pip install coverage
+          # Install package requirements in addition to any packages required for running tests
+          pip install -r requirements.txt
+          pip install coverage
 
       - name: Run tests with coverage
         run: |
@@ -50,16 +44,9 @@ jobs:
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-      # Delete the conda environment created for this test
-      - name: Clean up
-        if: always()
-        run: |
-          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
-          conda env remove -n ${{ env.ENV_NAME }} -y
-
   codacy-coverage-reporter:
+    runs-on: [self-hosted]
     name: Report code coverage
-    runs-on: [ self-hosted ]
     needs: python_tests
     steps:
 
@@ -68,4 +55,3 @@ jobs:
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-
