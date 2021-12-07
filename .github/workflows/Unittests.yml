@@ -11,38 +11,32 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9 ]
+        python-version: [ 3.7, 3.8, 3.9 ]  # Define what python versions to test
 
     env:
-      ENV_NAME: bank_test_${{ matrix.python-version }}_${{ github.run_id }}
+      # Unique name of the conda runtime environment used for each test
+      TEST_ENV_NAME: bank_test_${{ matrix.python-version }}_${{ github.run_id }}
 
-    # Set default shell options for all run steps
-    # This lets us use the lmod system on CRC machines
     defaults:
       run:
-        shell: bash -leo pipefail {0}
+        shell: bash -leo pipefail {0}  # Lets us use the lmod system on CRC machines
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v2
 
+      # Create and activate a unique test environment using conda
       - name: Create Testing Environment
         run: |
-          # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
-
-          # Create a unique test environment using conda
           conda create -n $env.ENV_NAME python=${{ matrix.python-version }} -y
           conda activate $env.ENV_NAME
 
       - name: Install Package Dependencies
-        run: |
-          # Install package requirements in addition to any packages required for running tests
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Install Test Suite Dependencies
-        run: |
-          pip install coverage
+        run: pip install coverage
 
       - name: Run tests with coverage
         run: |
@@ -56,12 +50,12 @@ jobs:
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
+      # Delete the conda environment created for this test
       - name: Clean up
         if: always()
         run: |
           echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
           conda env remove -n ${{ env.ENV_NAME }} -y
-
 
   codacy-coverage-reporter:
     name: Report code coverage
