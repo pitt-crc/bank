@@ -6,14 +6,14 @@ on:
 
 jobs:
   python_tests:
-    runs-on: [self-hosted]
+    runs-on: [ self-hosted ]
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10]
+        python-version: [ 3.7, 3.8, 3.9 ]
 
-    # Set default shell options for all run steps
-    defaults:
+    defaults: # Set default shell options for all run steps
       run:
+        # This lets us use the lmod system on CRC machines
         shell: bash -leo pipefail {0}
 
     steps:
@@ -25,10 +25,10 @@ jobs:
           # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
 
-          # The conda environemnt needs to be created on the test server ahead of time
-          conda env remove -n bank_test_${{ matrix.python-version }} -y
-          conda create -n bank_test_${{ matrix.python-version }} python=${{ matrix.python-version }} -y
-          conda activate bank_test_${{ matrix.python-version }}
+          # Create a unique test environment using conda
+          ENV_NAME = bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }}
+          conda create -n $ENV_NAME python=${{ matrix.python-version }} -y
+          conda activate $ENV_NAME
 
           # Install package requirements in addition to any packages required for running tests
           pip install -r requirements.txt
@@ -47,7 +47,7 @@ jobs:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
   codacy-coverage-reporter:
-    runs-on: [self-hosted]
+    runs-on: [ self-hosted ]
     name: Report code coverage
     needs: python_tests
     steps:
@@ -57,3 +57,16 @@ jobs:
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+  clean-up:
+    runs-on: [ self-hosted ]
+    name: Clean up build environment
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8, 3.9 ]
+
+    steps:
+      - name: Clean up
+        run: |
+          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }}"
+          conda env remove -n bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }} -y
