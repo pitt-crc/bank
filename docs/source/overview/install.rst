@@ -9,7 +9,7 @@ Links to further documentation are provided if you don't already have a
 prerequisite application installed.
 
 .. list-table::
-   :widths: 25 25 50
+   :widths: 10 10 80
    :header-rows: 1
 
    * - Requirements

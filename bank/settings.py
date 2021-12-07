@@ -5,7 +5,7 @@ Application Settings
 --------------------
 
 .. list-table::
-   :widths: 25 25 50
+   :widths: 20 25 55
    :header-rows: 1
 
    * - Variable Name
