@@ -26,7 +26,7 @@ jobs:
           module purge
 
           # Create a unique test environment using conda
-          ENV_NAME = bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }}
+          ENV_NAME = bank_test_${{ matrix.python-version }}_${{ github.run_id }}
           conda create -n $ENV_NAME python=${{ matrix.python-version }} -y
           conda activate $ENV_NAME
 
@@ -68,5 +68,5 @@ jobs:
     steps:
       - name: Clean up
         run: |
-          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }}"
-          conda env remove -n bank_test_${{ matrix.python-version }}_${{ GITHUB_RUN_ID }} -y
+          echo "Removing build environemnt bank_test_${{ matrix.python-version }}_${{ github.run_id }}"
+          conda env remove -n bank_test_${{ matrix.python-version }}_${{ github.run_id }} -y
