@@ -4,7 +4,6 @@ from bank import settings
 from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
-from bank.orm.enum import ProposalType
 from tests.testing_utils import ProposalSetup
 
 
@@ -59,20 +58,6 @@ class CreateProposal(TestCase):
 
         with self.assertRaises(ValueError):
             self.account.create_proposal(**{settings.test_cluster: -1})
-
-    def test_error_on_invalid_proposal_type(self) -> None:
-        """Test an error is raised for invalid proposal types"""
-
-        with self.assertRaises(ValueError):
-            self.account.create_proposal(ptype='fake_proposal_type')
-
-    def test_proposal_type_not_case_sensitive(self) -> None:
-        """Test an error is raised for invalid proposal types"""
-
-        ptype_lower = 'proposal'
-        expected_type = ProposalType[ptype_lower.upper()]
-        self.account.create_proposal(ptype=ptype_lower)
-        self.assertEqual(expected_type, self.account.get_proposal_info()['proposal_type'])
 
 
 class AddAllocationSus(ProposalSetup, TestCase):

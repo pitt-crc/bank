@@ -52,8 +52,7 @@ class ToArchiveObject(TestCase):
             account_name=settings.test_account,
             start_date=date.today(),
             end_date=date.today() + timedelta(days=1),
-            percent_notified=10,
-            proposal_type=1
+            percent_notified=10
         )
 
         for cluster in settings.clusters:
@@ -64,7 +63,7 @@ class ToArchiveObject(TestCase):
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original proposal"""
 
-        col_names = ('id', 'account_name', 'start_date', 'end_date', 'proposal_type', settings.test_cluster)
+        col_names = ('id', 'account_name', 'start_date', 'end_date', settings.test_cluster)
         for c in col_names:
             self.assertEqual(getattr(self.proposal, c), getattr(self.archive_obj, c))
 

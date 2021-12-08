@@ -29,13 +29,13 @@ from bisect import bisect_left
 from datetime import date, timedelta
 from email.message import EmailMessage
 from logging import getLogger
-from math import ceil
 from typing import List, Tuple, Union, Optional
+
+from math import ceil
 
 from . import settings
 from .exceptions import *
 from .orm import Investor, Proposal, Session
-from .orm.enum import ProposalType
 from .system import EmailTemplate, SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -54,15 +54,13 @@ class ProposalData:
 
         self.account_name = account_name
 
-    def create_proposal(self, ptype: str = 'PROPOSAL', **sus_per_cluster: int) -> None:
+    def create_proposal(self, **sus_per_cluster: int) -> None:
         """Create a new proposal for the given account
 
         Args:
             ptype: The type of proposal
             **sus_per_cluster: Service units to add on to each cluster
         """
-
-        proposal_type = ProposalType.get(ptype.upper())
 
         proposal_duration = timedelta(days=365)
         start_date = date.today()
@@ -74,7 +72,6 @@ class ProposalData:
 
             new_proposal = Proposal(
                 account_name=self.account_name,
-                proposal_type=proposal_type,
                 percent_notified=0,
                 start_date=start_date,
                 end_date=start_date + proposal_duration,
@@ -85,7 +82,7 @@ class ProposalData:
             session.commit()
 
         sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
-        LOG.info(f"Inserted proposal with type {proposal_type.name} for {self.account_name} with {sus_as_str}")
+        LOG.info(f"Inserted proposal for {self.account_name} with {sus_as_str}")
 
     def get_proposal_info(self) -> dict:
         """Information about the primary account proposal

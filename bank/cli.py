@@ -33,7 +33,6 @@ from . import settings
 
 # Reusable definitions for command line arguments
 _account = dict(dest='--account', type=dao.Account, help='The associated slurm account')
-_ptype = dict(dest='--ptype', type=str, help='The proposal type: proposal or class')
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 _notify = dict(dest='--notify', type=bool, help='Send a notification to the corresponding user account', default=True)
@@ -83,7 +82,7 @@ class CLIParser(ArgumentParser):
         # Subparsers for adding and modifying general service unit allocations
 
         parser_insert = self.subparsers.add_parser('insert', help='Add a proposal to a user for the first time.')
-        self._add_args_to_parser(parser_insert, _account, _ptype, include_clusters=True)
+        self._add_args_to_parser(parser_insert, _account, include_clusters=True)
         parser_insert.set_defaults(use_dao_method='create_proposal')
 
         parser_add = self.subparsers.add_parser('add',
