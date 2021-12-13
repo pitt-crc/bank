@@ -4,16 +4,16 @@ from unittest import TestCase, skipIf
 from bank import settings
 from bank.orm import Proposal
 from bank.system import SlurmAccount
-from tests.orm import base_tests
+from tests.orm import _utils
 
 
-class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
+class HasDynamicColumns(TestCase, _utils.HasDynamicColumns):
     """Test for dynamically added columns based on administered cluster names"""
 
     db_table_class = Proposal
 
 
-class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
+class ServiceUnitsValidation(TestCase, _utils.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = Proposal

@@ -3,7 +3,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from bank import settings
-from ._utils import DummyTable
+from tests.orm._utils import DummyTable
 
 
 class RowToDict(TestCase):
@@ -39,11 +39,6 @@ class RowToJson(TestCase):
         # Parse the returned date string and see if it matches the original datetime object
         recovered_date = datetime.strptime(self.row_as_json['date_col'], settings.date_format)
         self.assertEqual(recovered_date.date(), self.test_row.date_col.date())
-
-    def test_enum_cast_to_str(self) -> None:
-        """Test enum types are cast to strings"""
-
-        self.assertEqual(self.test_row.enum_col.name, self.row_as_json['enum_col'])
 
     def test_return_is_json_parsable(self) -> None:
         """Test the returned dictionary is parsable by the json package"""

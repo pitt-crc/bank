@@ -2,17 +2,17 @@ from unittest import TestCase
 
 from bank import settings
 from bank.orm import ProposalArchive
-from tests.orm import base_tests
+from tests.orm import _utils
 
 
-class ServiceUnitsValidation(TestCase, base_tests.ServiceUnitsValidation):
+class ServiceUnitsValidation(TestCase, _utils.ServiceUnitsValidation):
     """Tests for the validation of the service units"""
 
     db_table_class = ProposalArchive
     columns_to_test = settings.clusters
 
 
-class HasDynamicColumns(TestCase, base_tests.HasDynamicColumns):
+class HasDynamicColumns(TestCase, _utils.HasDynamicColumns):
     """Test for dynamically added columns based on administered cluster names"""
 
     db_table_class = ProposalArchive
