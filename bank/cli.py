@@ -42,122 +42,96 @@ from datetime import datetime
 from typing import List
 
 from . import settings, system, dao
-from .orm.enum import ProposalType
 
 # Reusable definitions for command line arguments
 _user = dict(dest='--user', nargs='?', help='Optionally create a user under the parent slurm account')
 _notify = dict(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
-_ptype = dict(dest='--ptype', default='proposal', choices=ProposalType.get_valid_values(), help='The proposal type')
 _date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 
 
-class BaseParser(ArgumentParser):
-    """Parent class for all command line parsers
-    
-    Child classes should add new parsers to the ``service_subparsers`` attribute.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.service_subparsers = self.add_subparsers(parser_class=ArgumentParser)
-
-    def execute(self, args: List[str] = None) -> None:
-        """Method used to evaluate the command line parser
-
-        Parse command line arguments and evaluate the corresponding function.
-        If arguments are not explicitly passed to this function, they are
-        retrieved from the command line.
-
-        Args:
-            args: A list of command line arguments
-        """
-
-        cli_kwargs = {k.lstrip('-'): v for k, v in vars(self.parse_args(args)).items()}
-        cli_kwargs.pop('function')(**cli_kwargs)
-
-
-class AdminParser(BaseParser):
+class AdminParser(ArgumentParser, dao.AdminServices):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
-        super().__init__()
-        admin_parser = self.service_subparsers.add_parser('admin', help='Tools for general system status')
+        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        admin_parser = service_subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin  actions")
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
-        info.set_defaults(function=dao.Account.print_info)
+        info.set_defaults(function=super(AdminParser, AdminParser).print_info)
         info.add_argument('account', help='The account to print information for')
 
         notify = admin_subparsers.add_parser('notify', help='Send any pending email notifications')
-        notify.set_defaults(function=dao.Account.send_pending_alerts)
+        notify.set_defaults(function=super(AdminParser, AdminParser).send_pending_alerts)
         notify.add_argument('account', help='The account to process notifications for')
 
         unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
-        unlocked.set_defaults(function=dao.Account.find_unlocked)
+        unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
 
-class SlurmParser(BaseParser):
+class SlurmParser(ArgumentParser, system.SlurmAccount):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        slurm_parser = self.service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
+        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        slurm_parser = service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
         slurm_parser.add_argument('--account', type=system.SlurmAccount, help='The slurm account to administrate')
 
         slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
         slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
-        slurm_create.set_defaults(function=system.SlurmAccount.create_account)
+        slurm_create.set_defaults(function=super(SlurmParser, SlurmParser).create_account)
 
         slurm_delete = slurm_subparsers.add_parser('delete_acc', help='Delete an existing slurm account')
-        slurm_delete.set_defaults(function=system.SlurmAccount.delete_account)
+        slurm_delete.set_defaults(function=super(SlurmParser, SlurmParser).delete_account)
 
         slurm_add_user = slurm_subparsers.add_parser('add_user', help='Add a user to an existing slurm account')
-        slurm_add_user.set_defaults(function=system.SlurmAccount.add_user)
+        slurm_add_user.set_defaults(function=super(SlurmParser, SlurmParser).add_user)
         slurm_add_user.add_argument(**_user)
 
         slurm_delete_user = slurm_subparsers.add_parser('delete_user', help='Remove a user to an existing slurm account')
-        slurm_delete_user.set_defaults(function=system.SlurmAccount.delete_user)
+        slurm_delete_user.set_defaults(function=super(SlurmParser, SlurmParser).delete_user)
         slurm_delete_user.add_argument(**_user)
 
         slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.set_defaults(function=system.SlurmAccount.set_locked_state, lock_state=True)
+        slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=True)
         slurm_lock.add_argument(**_notify)
 
         slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
-        slurm_lock.set_defaults(function=system.SlurmAccount.set_locked_state, lock_state=False)
+        slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=False)
         slurm_unlock.add_argument(**_notify)
 
 
-class ProposalParser(BaseParser):
+class ProposalParser(ArgumentParser, dao.ProposalServices):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        proposal_parser = self.service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
+        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        proposal_parser = service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_parser.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
-        proposal_create.set_defaults(function=dao.ProposalAccount.create_proposal)
-        proposal_create.add_argument(**_ptype)
+        proposal_create.set_defaults(function=super(ProposalParser, ProposalParser).create_proposal)
         self._add_cluster_args(proposal_create)
 
         proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
-        proposal_delete.set_defaults(function=dao.ProposalAccount.delete_proposal)
+        proposal_delete.set_defaults(function=super(ProposalParser, ProposalParser).delete_proposal)
         self._add_cluster_args(proposal_delete)
 
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
-        proposal_add.set_defaults(function=dao.ProposalAccount.add)
+        proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add)
         self._add_cluster_args(proposal_add)
 
         proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
-        proposal_subtract.set_defaults(function=dao.ProposalAccount.subtract)
+        proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract)
         self._add_cluster_args(proposal_subtract)
 
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        proposal_overwrite.set_defaults(function=dao.ProposalAccount.overwrite)
+        proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
         proposal_overwrite.add_argument(**_date)
         self._add_cluster_args(proposal_overwrite)
 
@@ -173,47 +147,62 @@ class ProposalParser(BaseParser):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(BaseParser):
+class InvestmentParser(ArgumentParser, dao.InvestmentServices):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        investment_parser = self.service_subparsers.add_parser('investment', help='Administrative tools for user investments')
+        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        investment_parser = service_subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_parser.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
         investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
-        investment_create.set_defaults(function=dao.InvestorAccount.create_investment)
+        investment_create.set_defaults(function=super(InvestmentParser, InvestmentParser).create_investment)
         investment_create.add_argument(**_sus)
 
         investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
-        investment_delete.set_defaults(function=dao.InvestorAccount.delete_investment)
+        investment_delete.set_defaults(function=super(InvestmentParser, InvestmentParser).delete_investment)
         investment_delete.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
-        investment_add.set_defaults(function=dao.InvestorAccount.add)
+        investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add)
         investment_add.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
-        investment_subtract.set_defaults(function=dao.InvestorAccount.subtract)
+        investment_subtract.set_defaults(function=super(InvestmentParser, InvestmentParser).subtract)
         investment_subtract.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
 
         investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
-        investment_overwrite.set_defaults(function=dao.InvestorAccount.overwrite)
+        investment_overwrite.set_defaults(function=super(InvestmentParser, InvestmentParser).overwrite)
         investment_overwrite.add_argument(**_inv_id)
         investment_delete.add_argument(**_sus)
         investment_delete.add_argument(**_date)
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
-        investment_advance.set_defaults(function=dao.InvestorAccount.advance)
+        investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)
         investment_advance.add_argument(**_sus)
 
         investment_renew = investment_subparsers.add_parser('renew', help='Rollover any expired investments')
-        investment_renew.set_defaults(function=dao.InvestorAccount.renew)
+        investment_renew.set_defaults(function=super(InvestmentParser, InvestmentParser).renew)
 
 
 class CLIParser(AdminParser, SlurmParser, InvestmentParser, ProposalParser):
     """Command line parser used as the primary entry point for the parent application"""
+
+    def execute(self, args: List[str] = None) -> None:
+        """Method used to evaluate the command line parser
+
+        Parse command line arguments and evaluate the corresponding function.
+        If arguments are not explicitly passed to this function, they are
+        retrieved from the command line.
+
+        Args:
+            args: A list of command line arguments
+        """
+
+        cli_kwargs = {k.lstrip('-'): v for k, v in vars(self.parse_args(args)).items()}
+        cli_kwargs.pop('function')(**cli_kwargs)
