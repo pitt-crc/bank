@@ -14,13 +14,13 @@ class CLIAsserts:
         cmd = cmd.split()
         known_args, unknown_args = self.parser.parse_known_args(cmd)
         if unknown_args:
-            self.fail(f'Parser recieved unknown arguments: {unknown_args}')
+            self.fail(f'Parser received unknown arguments: {unknown_args}')
 
         parsed_args = dict(known_args._get_kwargs())
         function = parsed_args.pop('function')
 
         try:
-            inspect.getcallargs(function, *parsed_args.items())
+            inspect.getcallargs(function, **parsed_args)
 
         except Exception as e:
             self.fail(str(e))

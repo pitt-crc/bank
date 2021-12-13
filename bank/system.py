@@ -199,7 +199,6 @@ class SlurmAccount:
         """
 
         lock_state_int = 0 if lock_state else -1
-
         ShellCmd(
             f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
@@ -241,8 +240,8 @@ class EmailTemplate(Formatter):
     def __init__(self, msg: str) -> None:
         """A formattable email template
 
-        Email messages passed at innit should follow the standard python formatting syntax.
-        The message can be in plain text or in HTML format.
+        Email messages passed at init should follow the standard python
+        formatting syntax. The message can be in plain text or in HTML format.
 
         Args:
             msg: A partially unformatted email template

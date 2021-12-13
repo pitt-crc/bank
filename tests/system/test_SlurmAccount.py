@@ -29,17 +29,24 @@ class InitExceptions(TestCase):
 class AccountLocking(TestCase):
     """Test the locking and unlocking of an account"""
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.account = SlurmAccount(settings.test_account)
+        cls.original_lock_state = cls.account.get_locked_state()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.account.set_lock_state(cls.original_lock_state)
+
     def runTest(self) -> None:
-        account = SlurmAccount(settings.test_account)
+        self.account.set_locked_state(False)
+        self.assertFalse(self.account.get_locked_state())
 
-        account.set_locked_state(False)
-        self.assertFalse(account.get_locked_state())
+        self.account.set_locked_state(True)
+        self.assertTrue(self.account.get_locked_state())
 
-        account.set_locked_state(True)
-        self.assertTrue(account.get_locked_state())
-
-        account.set_locked_state(False)
-        self.assertFalse(account.get_locked_state())
+        self.account.set_locked_state(False)
+        self.assertFalse(self.account.get_locked_state())
 
 
 class AccountUsage(TestCase):

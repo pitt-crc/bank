@@ -191,7 +191,7 @@ class InvestorAccount:
 
         LOG.info(f"Inserted investment for {self.account_name} with per year allocations of `{sus}`")
 
-    def delete_investment(self) -> None:
+    def delete_investment(self, id: int) -> None:
         raise NotImplementedError()
 
     def add(self, id: int, sus: int) -> None:
@@ -394,7 +394,8 @@ class AdminServices:
 
         return 0
 
-    def print_info(self, account: str) -> None:
+    @staticmethod
+    def print_info(account: str) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         proposal_info = self._get_proposal_info()
@@ -443,7 +444,9 @@ class AdminServices:
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def send_pending_alerts(self, account: str) -> Optional[EmailMessage]:
+
+    @staticmethod
+    def send_pending_alerts(account: str) -> Optional[EmailMessage]:
         """Send any pending usage alerts to the account
 
         Returns:

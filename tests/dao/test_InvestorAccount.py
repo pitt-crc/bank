@@ -5,7 +5,7 @@ from bank.dao import InvestorAccount
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor
 from bank import settings
-from tests.testing_utils import InvestorSetup, ProposalSetup
+from tests.dao._utils import InvestorSetup, ProposalSetup
 
 
 class CreateInvestment(ProposalSetup, TestCase):

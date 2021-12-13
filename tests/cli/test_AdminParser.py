@@ -12,10 +12,10 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         cls.parser = AdminParser()
 
     def test_account_info(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin info --account={settings.test_account}')
+        self.assert_parser_matches_func_signature(f'admin info --account {settings.test_account}')
 
     def test_notify_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin notify --account={settings.test_account}')
+        self.assert_parser_matches_func_signature(f'admin notify --account {settings.test_account}')
 
     def test_unlocked_accounts(self) -> None:
         self.assert_parser_matches_func_signature(f'admin unlocked')
