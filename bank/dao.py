@@ -21,27 +21,33 @@ Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
-class SlurmManagement:
+class SlurmAccount:
     """Common administrative tasks relating to Slurm user accounts"""
 
     def __init__(self, account_name: str) -> None:
         """A Slurm user account
 
         Args:
-            account_name: The name of the user account
+            account_name: The name of the slurm account
 
         Raises:
             SystemError: When the ``sacctmgr`` utility is not installed
             NoSuchAccountError: If the given account name does not exist
         """
 
-        self.account_name = account_name
+        self._account = account_name
         if not self.check_slurm_installed():
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
-        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
+        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self._account}').out
         if not account_exists:
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
+    @property
+    def account(self) -> str:
+        """The name of the slurm account being administered"""
+
+        return self._account
 
     @staticmethod
     def check_slurm_installed() -> bool:
@@ -58,37 +64,50 @@ class SlurmManagement:
             return False
 
     @classmethod
-    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmManagement:
-        """Create a new slurm account"""
+    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
+        """Create a new slurm account
+
+        Args:
+            account_name: The name of the slurm account
+            description: The description of the account
+            organization: The organization name of the account
+        """
 
         ShellCmd(
-            f'sacctmgr -i add account {account_name} description={description} organization="{organization}" clusters={settings.clusters_as_str}'
+            f'sacctmgr -i add account {account_name} '
+            f'description={description} '
+            f'organization="{organization}" '
+            f'clusters={settings.clusters_as_str}'
         ).raise_err()
-        return SlurmManagement(account_name)
+        return SlurmAccount(account_name)
 
     def delete_account(self) -> None:
         """Delete the slurm account"""
 
-        ShellCmd(f"sacctmgr -i delete account {self.account_name} cluster={settings.clusters_as_str}").raise_err()
+        ShellCmd(f"sacctmgr -i delete account {self._account} cluster={settings.clusters_as_str}").raise_err()
 
     def add_user(self, user_name) -> None:
-        """Add a user to the slurm account"""
+        """Add a user to the slurm account
+
+        Args:
+            user_name: The name of the user to add to the account
+        """
 
         raise NotImplementedError()
 
     def delete_user(self, user_name) -> None:
-        """Delete a user from the slurm account"""
+        """Delete a user from the slurm account
+
+        Args:
+            user_name: The name of the user to remove from the account
+        """
 
         raise NotImplementedError()
 
     def get_locked_state(self) -> bool:
-        """Return whether the user account is locked
+        """Return whether the user account is locked"""
 
-        Returns:
-            The account lock state as a boolean
-        """
-
-        cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
+        cmd = f'sacctmgr -n -P show assoc account={self._account} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
     def set_locked_state(self, lock_state: bool) -> False:
@@ -101,38 +120,8 @@ class SlurmManagement:
         lock_state_int = 0 if lock_state else -1
 
         ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
+            f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
-
-    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
-        """Return the raw account usage on a given cluster
-
-        Args:
-            cluster: The name of the cluster
-            in_hours: Return usage in units of hours (Defaults to seconds)
-
-        Returns:
-            The account's usage of the given cluster
-        """
-
-        # Only the second and third line are necessary from the output table
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
-        header, data = cmd.out.split('\n')[1:3]
-        raw_usage_index = header.split('|').index("RawUsage")
-        usage = int(data.split('|')[raw_usage_index])
-
-        if in_hours:  # Convert from seconds to hours
-            usage //= 60
-
-        return usage
-
-    def reset_raw_usage(self) -> None:
-        """Reset the raw account usage on all clusters to zero"""
-
-        # At the time of writing, the sacctmgr utility does not support setting
-        # RawUsage to any value other than zero
-
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={settings.clusters_as_str} set RawUsage=0')
 
 
 class ProposalAccount:
@@ -496,7 +485,7 @@ class InvestorAccount:
                         need_to_rollover -= to_rollover
 
 
-class Account(ProposalAccount, InvestorAccount):
+class AdminServices(ProposalAccount, InvestorAccount):
     """Administration for existing bank accounts"""
 
     @staticmethod

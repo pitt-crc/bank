@@ -41,11 +41,8 @@ from argparse import ArgumentParser
 from datetime import datetime
 from typing import List
 
-from . import settings, system, dao
+from . import settings, dao
 
-# Reusable definitions for command line arguments
-_user = dict(dest='--user', nargs='?', help='Optionally create a user under the parent slurm account')
-_notify = dict(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
 _date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
@@ -55,8 +52,8 @@ class AdminParser(ArgumentParser, dao.AdminServices):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
-        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
-        admin_parser = service_subparsers.add_parser('admin', help='Tools for general system status')
+        subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin  actions")
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
@@ -71,14 +68,13 @@ class AdminParser(ArgumentParser, dao.AdminServices):
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
 
-class SlurmParser(ArgumentParser, dao.SlurmManagement):
+class SlurmParser(ArgumentParser, dao.SlurmAccount):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
-        slurm_parser = service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
-        slurm_parser.add_argument('--account', type=dao.SlurmManagement, help='The slurm account to administrate')
+        subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        slurm_parser = subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
 
         slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
         slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
@@ -86,31 +82,36 @@ class SlurmParser(ArgumentParser, dao.SlurmManagement):
 
         slurm_delete = slurm_subparsers.add_parser('delete_acc', help='Delete an existing slurm account')
         slurm_delete.set_defaults(function=super(SlurmParser, SlurmParser).delete_account)
+        slurm_delete.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
 
         slurm_add_user = slurm_subparsers.add_parser('add_user', help='Add a user to an existing slurm account')
         slurm_add_user.set_defaults(function=super(SlurmParser, SlurmParser).add_user)
-        slurm_add_user.add_argument(**_user)
+        slurm_add_user.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
+        slurm_add_user.add_argument(dest='--user', help='Optionally create a user under the parent slurm account')
 
         slurm_delete_user = slurm_subparsers.add_parser('delete_user', help='Remove a user to an existing slurm account')
         slurm_delete_user.set_defaults(function=super(SlurmParser, SlurmParser).delete_user)
-        slurm_delete_user.add_argument(**_user)
+        slurm_delete_user.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
+        slurm_delete_user.add_argument(dest='--user', help='Optionally create a user under the parent slurm account')
 
         slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=True)
-        slurm_lock.add_argument(**_notify)
+        slurm_lock.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
+        slurm_lock.add_argument(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
 
         slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
         slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=False)
-        slurm_unlock.add_argument(**_notify)
+        slurm_lock.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
+        slurm_unlock.add_argument(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
 
 
-class ProposalParser(ArgumentParser, dao.ProposalServices):
+class ProposalParser(ArgumentParser, dao.ProposalAccount):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
-        proposal_parser = service_subparsers.add_parser('proposal', help='Administrative tools for user proposals')
+        subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_parser.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
@@ -147,13 +148,13 @@ class ProposalParser(ArgumentParser, dao.ProposalServices):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(ArgumentParser, dao.InvestmentServices):
+class InvestmentParser(ArgumentParser, dao.InvestorAccount):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
         super().__init__()
-        service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
-        investment_parser = service_subparsers.add_parser('investment', help='Administrative tools for user investments')
+        subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
+        investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_parser.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
