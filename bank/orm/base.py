@@ -63,12 +63,10 @@ class CustomBase:
         return '\n'.join(lines)
 
 
+# Despite what it may look like, methods for this class should NOT be static.
+# The ``self`` argument is used by the table using the validator.
 class Validators:
-    """Methods for validating column values before interacting with the database
-
-    Despite what it may look like, methods for this class should NOT be static.
-    The ``self`` argument is used by the table using the validator.
-    """
+    """Methods for validating column values before interacting with the database"""
 
     def validate_service_units(self, key: str, value: int) -> int:
         """Verify the given value is a non-negative integer"""

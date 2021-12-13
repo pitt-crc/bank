@@ -71,14 +71,14 @@ class AdminParser(ArgumentParser, dao.AdminServices):
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
 
-class SlurmParser(ArgumentParser, system.SlurmAccount):
+class SlurmParser(ArgumentParser, dao.SlurmManagement):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
         super().__init__()
         service_subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         slurm_parser = service_subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
-        slurm_parser.add_argument('--account', type=system.SlurmAccount, help='The slurm account to administrate')
+        slurm_parser.add_argument('--account', type=dao.SlurmManagement, help='The slurm account to administrate')
 
         slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
         slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')

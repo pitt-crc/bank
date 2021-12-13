@@ -5,21 +5,134 @@ API Reference
 -------------
 """
 
+from __future__ import annotations
+
 from bisect import bisect_left
 from datetime import date, timedelta
-from email.message import EmailMessage
-from logging import getLogger
-from typing import List, Tuple, Union, Optional
-
 from math import ceil
+from typing import List, Union
 
+from bank.system import *
 from . import settings
 from .exceptions import *
 from .orm import Investor, Proposal, Session
-from .system import EmailTemplate, SlurmAccount
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
+
+
+class SlurmManagement:
+    """Common administrative tasks relating to Slurm user accounts"""
+
+    def __init__(self, account_name: str) -> None:
+        """A Slurm user account
+
+        Args:
+            account_name: The name of the user account
+
+        Raises:
+            SystemError: When the ``sacctmgr`` utility is not installed
+            NoSuchAccountError: If the given account name does not exist
+        """
+
+        self.account_name = account_name
+        if not self.check_slurm_installed():
+            raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
+
+        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self.account_name}').out
+        if not account_exists:
+            raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
+    @staticmethod
+    def check_slurm_installed() -> bool:
+        """Return whether ``sacctmgr`` is installed on the host machine"""
+
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            return cmd.out.startswith('slurm')
+
+        # We catch all exceptions, but explicitly list the
+        # common cases for reference by curious developers
+        except (CmdError, FileNotFoundError, Exception):
+            return False
+
+    @classmethod
+    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmManagement:
+        """Create a new slurm account"""
+
+        ShellCmd(
+            f'sacctmgr -i add account {account_name} description={description} organization="{organization}" clusters={settings.clusters_as_str}'
+        ).raise_err()
+        return SlurmManagement(account_name)
+
+    def delete_account(self) -> None:
+        """Delete the slurm account"""
+
+        ShellCmd(f"sacctmgr -i delete account {self.account_name} cluster={settings.clusters_as_str}").raise_err()
+
+    def add_user(self, user_name) -> None:
+        """Add a user to the slurm account"""
+
+        raise NotImplementedError()
+
+    def delete_user(self, user_name) -> None:
+        """Delete a user from the slurm account"""
+
+        raise NotImplementedError()
+
+    def get_locked_state(self) -> bool:
+        """Return whether the user account is locked
+
+        Returns:
+            The account lock state as a boolean
+        """
+
+        cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=grptresrunmins'
+        return 'cpu=0' in ShellCmd(cmd).out
+
+    def set_locked_state(self, lock_state: bool) -> False:
+        """Lock or unlock the user account
+
+        Args:
+            lock_state: Whether to lock (``True``) or unlock (``False``) the user account
+        """
+
+        lock_state_int = 0 if lock_state else -1
+
+        ShellCmd(
+            f'sacctmgr -i modify account where account={self.account_name} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
+        ).raise_err()
+
+    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the raw account usage on a given cluster
+
+        Args:
+            cluster: The name of the cluster
+            in_hours: Return usage in units of hours (Defaults to seconds)
+
+        Returns:
+            The account's usage of the given cluster
+        """
+
+        # Only the second and third line are necessary from the output table
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        header, data = cmd.out.split('\n')[1:3]
+        raw_usage_index = header.split('|').index("RawUsage")
+        usage = int(data.split('|')[raw_usage_index])
+
+        if in_hours:  # Convert from seconds to hours
+            usage //= 60
+
+        return usage
+
+    def reset_raw_usage(self) -> None:
+        """Reset the raw account usage on all clusters to zero"""
+
+        # At the time of writing, the sacctmgr utility does not support setting
+        # RawUsage to any value other than zero
+
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={settings.clusters_as_str} set RawUsage=0')
 
 
 class ProposalAccount:
