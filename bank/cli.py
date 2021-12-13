@@ -41,7 +41,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from typing import List
 
-from . import settings, dao
+from . import settings, dao, system
 
 _date = dict(dest='--date', nargs='?', type=lambda s: datetime.strptime(s, settings.date_format))
 _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
@@ -68,7 +68,7 @@ class AdminParser(ArgumentParser, dao.AdminServices):
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
 
-class SlurmParser(ArgumentParser, dao.SlurmAccount):
+class SlurmParser(ArgumentParser, system.SlurmAccount):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
