@@ -14,7 +14,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates
 
 from .base import CustomBase, Validators
-from .enum import ProposalType
 from .. import settings
 from ..system import SlurmAccount
 
@@ -34,7 +33,6 @@ class Proposal(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False)
-    proposal_type = Column(Enum(ProposalType), nullable=False)
 
     _validate_service_units = validates(*settings.clusters)(Validators.validate_service_units)
     _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
@@ -47,7 +45,6 @@ class Proposal(Base):
             account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
-            proposal_type=self.proposal_type
         )
 
         slurm_acct = SlurmAccount(self.account_name)
@@ -67,7 +64,6 @@ class ProposalArchive(Base):
     account_name = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    proposal_type = Column(Enum(ProposalType), nullable=False)
 
     _validate_service_units = validates(*settings.clusters, *(f'{c}_usage' for c in settings.clusters))(
         Validators.validate_service_units
