@@ -37,6 +37,7 @@ API Reference
 -------------
 """
 
+from collections import OrderedDict
 from argparse import ArgumentParser
 from datetime import datetime
 from typing import List
@@ -68,17 +69,18 @@ class AdminParser(ArgumentParser, dao.AdminServices):
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
 
-class SlurmParser(ArgumentParser, system.SlurmAccount):
+class SlurmParser(system.SlurmAccount, ArgumentParser):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
-        super().__init__()
+        super(system.SlurmAccount, self).__init__()
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         slurm_parser = subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
-
         slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
+
         slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
         slurm_create.set_defaults(function=super(SlurmParser, SlurmParser).create_account)
+        slurm_create.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
 
         slurm_delete = slurm_subparsers.add_parser('delete_acc', help='Delete an existing slurm account')
         slurm_delete.set_defaults(function=super(SlurmParser, SlurmParser).delete_account)
@@ -100,8 +102,8 @@ class SlurmParser(ArgumentParser, system.SlurmAccount):
         slurm_lock.add_argument(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
 
         slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
-        slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=False)
-        slurm_lock.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
+        slurm_unlock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=False)
+        slurm_unlock.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
         slurm_unlock.add_argument(dest='--notify', action='store_true', help='Optionally notify the account holder via email')
 
 
@@ -205,5 +207,5 @@ class CLIParser(AdminParser, SlurmParser, InvestmentParser, ProposalParser):
             args: A list of command line arguments
         """
 
-        cli_kwargs = {k.lstrip('-'): v for k, v in vars(self.parse_args(args)).items()}
-        cli_kwargs.pop('function')(**cli_kwargs)
+        cli_kwargs = OrderedDict(self.parse_args(args)._get_kwargs())
+        cli_kwargs.pop('function')(*cli_kwargs.values())

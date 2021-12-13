@@ -204,6 +204,36 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
+    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+        """Return the raw account usage on a given cluster
+
+        Args:
+            cluster: The name of the cluster
+            in_hours: Return usage in units of hours (Defaults to seconds)
+
+        Returns:
+            The account's usage of the given cluster
+        """
+
+        # Only the second and third line are necessary from the output table
+        cmd = ShellCmd(f"sshare -A {self._account} -M {cluster} -P -a")
+        header, data = cmd.out.split('\n')[1:3]
+        raw_usage_index = header.split('|').index("RawUsage")
+        usage = int(data.split('|')[raw_usage_index])
+
+        if in_hours:  # Convert from seconds to hours
+            usage //= 60
+
+        return usage
+
+    def reset_raw_usage(self) -> None:
+        """Reset the raw account usage on all clusters to zero"""
+
+        # At the time of writing, the sacctmgr utility does not support setting
+        # RawUsage to any value other than zero
+
+        ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set RawUsage=0')
+
 
 class EmailTemplate(Formatter):
     """A formattable email template"""
