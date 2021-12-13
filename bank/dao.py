@@ -382,7 +382,7 @@ class InvestorAccount:
                         need_to_rollover -= to_rollover
 
 
-class AdminServices(ProposalAccount, InvestorAccount):
+class AdminServices:
     """Administration for existing bank accounts"""
 
     @staticmethod
@@ -394,7 +394,7 @@ class AdminServices(ProposalAccount, InvestorAccount):
 
         return 0
 
-    def print_info(self) -> None:
+    def print_info(self, account: str) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         proposal_info = self._get_proposal_info()
@@ -443,7 +443,7 @@ class AdminServices(ProposalAccount, InvestorAccount):
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def send_pending_alerts(self) -> Optional[EmailMessage]:
+    def send_pending_alerts(self, account: str) -> Optional[EmailMessage]:
         """Send any pending usage alerts to the account
 
         Returns:

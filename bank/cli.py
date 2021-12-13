@@ -37,8 +37,8 @@ API Reference
 -------------
 """
 
-from collections import OrderedDict
 from argparse import ArgumentParser
+from collections import OrderedDict
 from datetime import datetime
 from typing import List
 
@@ -162,40 +162,45 @@ class InvestmentParser(dao.InvestorAccount, ArgumentParser):
         super(dao.InvestorAccount, self).__init__()
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
-        investment_parser.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
         investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
         investment_create.set_defaults(function=super(InvestmentParser, InvestmentParser).create_investment)
+        investment_create.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_create.add_argument(**_sus)
 
         investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
         investment_delete.set_defaults(function=super(InvestmentParser, InvestmentParser).delete_investment)
+        investment_delete.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_delete.add_argument(**_inv_id)
-        investment_delete.add_argument(**_sus)
 
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
         investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add)
+        investment_add.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_add.add_argument(**_inv_id)
-        investment_delete.add_argument(**_sus)
+        investment_add.add_argument(**_sus)
 
         investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
         investment_subtract.set_defaults(function=super(InvestmentParser, InvestmentParser).subtract)
+        investment_subtract.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_subtract.add_argument(**_inv_id)
-        investment_delete.add_argument(**_sus)
+        investment_subtract.add_argument(**_sus)
 
         investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
         investment_overwrite.set_defaults(function=super(InvestmentParser, InvestmentParser).overwrite)
+        investment_overwrite.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_overwrite.add_argument(**_inv_id)
-        investment_delete.add_argument(**_sus)
-        investment_delete.add_argument(**_date)
+        investment_overwrite.add_argument(**_sus)
+        investment_overwrite.add_argument(**_date)
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
         investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)
+        investment_advance.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
         investment_advance.add_argument(**_sus)
 
         investment_renew = investment_subparsers.add_parser('renew', help='Rollover any expired investments')
         investment_renew.set_defaults(function=super(InvestmentParser, InvestmentParser).renew)
+        investment_renew.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
 
 
 class CLIParser(AdminParser, SlurmParser, InvestmentParser, ProposalParser):
