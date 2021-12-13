@@ -49,10 +49,11 @@ _sus = dict(dest='--sus', type=int, help='The number of SUs you want to insert')
 _inv_id = dict(dest='--id', type=int, help='The investment proposal id')
 
 
-class AdminParser(ArgumentParser, dao.AdminServices):
+class AdminParser(dao.AdminServices, ArgumentParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
+        super(dao.AdminServices, self).__init__()
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin  actions")
@@ -107,34 +108,38 @@ class SlurmParser(system.SlurmAccount, ArgumentParser):
         slurm_unlock.add_argument('--account', type=dao.SlurmAccount, help='The slurm account to administrate')
 
 
-class ProposalParser(ArgumentParser, dao.ProposalAccount):
+class ProposalParser(dao.ProposalAccount, ArgumentParser):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
-        super().__init__()
+        super(dao.ProposalAccount, self).__init__()
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
-        proposal_parser.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
         proposal_create.set_defaults(function=super(ProposalParser, ProposalParser).create_proposal)
+        proposal_create.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         self._add_cluster_args(proposal_create)
 
         proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
         proposal_delete.set_defaults(function=super(ProposalParser, ProposalParser).delete_proposal)
+        proposal_delete.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         self._add_cluster_args(proposal_delete)
 
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
         proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add)
+        proposal_add.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         self._add_cluster_args(proposal_add)
 
         proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
         proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract)
+        proposal_subtract.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         self._add_cluster_args(proposal_subtract)
 
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
         proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
+        proposal_overwrite.add_argument('--account', type=dao.ProposalAccount, help='The parent slurm account')
         proposal_overwrite.add_argument(**_date)
         self._add_cluster_args(proposal_overwrite)
 
@@ -150,11 +155,11 @@ class ProposalParser(ArgumentParser, dao.ProposalAccount):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(ArgumentParser, dao.InvestorAccount):
+class InvestmentParser(dao.InvestorAccount, ArgumentParser):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
-        super().__init__()
+        super(dao.InvestorAccount, self).__init__()
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_parser.add_argument('--account', type=dao.InvestorAccount, help='The parent slurm account')
