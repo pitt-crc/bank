@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from bank import settings
-from bank.dao import ProposalAccount
+from bank.dao import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
 from tests.dao._utils import ProposalSetup
@@ -17,7 +17,7 @@ class CreateProposal(TestCase):
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
             session.commit()
 
-        self.account = ProposalAccount(settings.test_account)
+        self.account = ProposalServices(settings.test_account)
 
     def test_proposal_is_created(self) -> None:
         """Test a proposal is created after the function call"""

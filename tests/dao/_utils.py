@@ -1,5 +1,5 @@
 from bank import settings
-from bank.dao import ProposalAccount, InvestorAccount
+from bank.dao import ProposalServices, InvestmentServices
 from bank.orm import Session, Proposal, Investor
 
 
@@ -22,7 +22,7 @@ class ProposalSetup(GenericSetup):
         """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
-        self.account = ProposalAccount(settings.test_account)
+        self.account = ProposalServices(settings.test_account)
         self.account.create_proposal()
 
 
@@ -36,6 +36,6 @@ class InvestorSetup(ProposalSetup):
         """Ensure there exists a user proposal and investment for the test user account"""
 
         super().setUp()
-        self.account = InvestorAccount(settings.test_account)
+        self.account = InvestmentServices(settings.test_account)
         self.account.create_investment(self.num_inv_sus)
         self.inv_id = self.account._get_investment_info()[0]['id']

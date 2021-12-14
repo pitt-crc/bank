@@ -21,7 +21,7 @@ Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
-class ProposalAccount:
+class ProposalServices:
     """Data access for proposal information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
@@ -144,7 +144,7 @@ class ProposalAccount:
         LOG.info(f"Changed proposal for {self.account_name} to {self._get_proposal_info()}")
 
 
-class InvestorAccount:
+class InvestmentServices:
     """Data access for investment information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
