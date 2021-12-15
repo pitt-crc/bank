@@ -26,10 +26,6 @@ class CreateProposal(TestCase):
     def test_proposal_is_created(self) -> None:
         """Test a proposal is created after the function call"""
 
-        # Avoid false positives by checking the proposal doesn't already exist
-        with self.assertRaises(MissingProposalError):
-            self.account._get_proposal_info(self.session)
-
         self.account.create_proposal()
         self.assertTrue(self.account._get_proposal_info(self.session))
 
@@ -44,11 +40,9 @@ class CreateProposal(TestCase):
     def test_non_default_sus_are_set(self) -> None:
         """Tests proposal are assigned the number of sus specified by kwargs"""
 
-        self.account.create_proposal(**{c: 1000 for c in settings.clusters})
+        self.account.create_proposal(**{settings.test_cluster: 1000})
         proposal_info = self.account._get_proposal_info(self.session)
-
-        for cluster in settings.clusters:
-            self.assertEqual(1000, getattr(proposal_info, cluster))
+        self.assertEqual(1000, getattr(proposal_info, settings.test_cluster))
 
     def test_error_if_already_exists(self) -> None:
         """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
@@ -68,14 +62,16 @@ class DeleteProposal(ProposalSetup, TestCase):
     """Tests for the deletion of proposals via the ``delete_proposal`` method"""
 
     def test_proposal_is_deleted(self) -> None:
+        """Test the proposal is moved from the ``Proposal`` to ``ProposalArchive`` table"""
+
         proposal_id = self.account._get_proposal_info(self.session).id
         self.account.delete_proposal()
 
-        prop_query = self.session.query(Proposal).filter(Proposal.account_name == self.account.account_name).first()
-        self.assertIsNone(prop_query, 'Proposal was not deleted')
+        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account._account_name).first()
+        self.assertIsNone(proposal, 'Proposal was not deleted')
 
-        archive_query = self.session.query(ProposalArchive).filter(ProposalArchive.id == proposal_id).first()
-        self.assertIsNotNone(archive_query, 'No archive object created with matching proposal id')
+        archive = self.session.query(ProposalArchive).filter(ProposalArchive.id == proposal_id).first()
+        self.assertIsNotNone(archive, 'No archive object created with matching proposal id')
 
     def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal"""
@@ -89,10 +85,7 @@ class AddSus(ProposalSetup, TestCase):
     """Tests for the addition of sus via the ``add`` method"""
 
     def test_sus_are_added(self) -> None:
-        """Test SUs from kwargs are set in the proposal"""
-
-        proposal = self.account._get_proposal_info(self.session)
-        original_sus = getattr(proposal, settings.test_cluster)
+        """Test SUs are added to the proposal"""
 
         sus_to_add = 1000
         self.account.add(**{settings.test_cluster: sus_to_add})
@@ -100,7 +93,7 @@ class AddSus(ProposalSetup, TestCase):
             proposal = self.account._get_proposal_info(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
-        self.assertEqual(original_sus + sus_to_add, new_sus, f'SUs not added (tried to add {sus_to_add})')
+        self.assertEqual(self.num_proposal_sus + sus_to_add, new_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -110,13 +103,13 @@ class AddSus(ProposalSetup, TestCase):
             self.account.add(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
-        """Test an error is raised when assigning negative service units"""
+        """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
             self.account.add(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when account has no proposal"""
+        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
@@ -129,19 +122,16 @@ class AddSus(ProposalSetup, TestCase):
 class SubtractSus(ProposalSetup, TestCase):
     """Tests for the subtraction of sus via the ``subtract`` method"""
 
-    def test_sus_are_added(self) -> None:
-        """Test SUs from kwargs are set in the proposal"""
+    def test_sus_are_subtracted(self) -> None:
+        """Test SUs are removed from the proposal"""
 
-        proposal = self.account._get_proposal_info(self.session)
-        original_sus = getattr(proposal, settings.test_cluster)
-
-        sus_to_add = 1000
-        self.account.add(**{settings.test_cluster: sus_to_add})
+        sus_to_subtract = 10
+        self.account.subtract(**{settings.test_cluster: sus_to_subtract})
         with Session() as session:
             proposal = self.account._get_proposal_info(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
-        self.assertEqual(original_sus + sus_to_add, new_sus, f'SUs not added (tried to add {sus_to_add})')
+        self.assertEqual(self.num_proposal_sus - sus_to_subtract, new_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -151,13 +141,13 @@ class SubtractSus(ProposalSetup, TestCase):
             self.account.subtract(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
-        """Test an error is raised when assigning negative service units"""
+        """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
             self.account.subtract(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when account has no proposal"""
+        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
@@ -185,13 +175,13 @@ class OverwriteSus(ProposalSetup, TestCase):
             self.account.overwrite(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
-        """Test an error is raised when assigning negative service units"""
+        """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
             self.account.overwrite(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when account has no proposal"""
+        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()

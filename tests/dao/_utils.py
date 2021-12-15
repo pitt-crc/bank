@@ -20,12 +20,14 @@ class GenericSetup:
 class ProposalSetup(GenericSetup):
     """Reusable setup mixin for configuring tests against user proposals"""
 
+    num_proposal_sus = 10_000
+
     def setUp(self) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
         self.account = ProposalServices(settings.test_account)
-        self.account.create_proposal()
+        self.account.create_proposal(**{settings.test_cluster: self.num_proposal_sus})
         self.session = Session()
 
     def tearDown(self) -> None:
