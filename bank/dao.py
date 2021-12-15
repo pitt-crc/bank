@@ -105,7 +105,7 @@ class ProposalServices:
         with Session() as session:
             proposal = self._get_proposal_info(session)
             session.add(proposal.to_archive_object())
-            proposal.delete()
+            session.query(Proposal).filter(Proposal.id == proposal.id).delete()
             session.commit()
 
     def add(self, **kwargs: int) -> None:

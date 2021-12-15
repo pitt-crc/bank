@@ -1,6 +1,6 @@
 from bank import settings
 from bank.dao import ProposalServices, InvestmentServices
-from bank.orm import Session, Proposal, Investor
+from bank.orm import Session, Proposal, Investor, ProposalArchive, InvestorArchive
 
 
 class GenericSetup:
@@ -11,7 +11,9 @@ class GenericSetup:
 
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
+            session.query(ProposalArchive).filter(ProposalArchive.account_name == settings.test_account).delete()
             session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
+            session.query(InvestorArchive).filter(InvestorArchive.account_name == settings.test_account).delete()
             session.commit()
 
 
@@ -24,6 +26,10 @@ class ProposalSetup(GenericSetup):
         super().setUp()
         self.account = ProposalServices(settings.test_account)
         self.account.create_proposal()
+        self.session = Session()
+
+    def tearDown(self) -> None:
+        self.session.close()
 
 
 class InvestorSetup(ProposalSetup):
