@@ -180,45 +180,64 @@ class InvestmentServices:
             account_name: The name of the account
         """
 
-        self.account_name = account_name
-        self._raise_if_missing_proposal()
-
-    def _raise_if_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` exception if the account does not have a primary proposal"""
-
+        self._account_name = account_name
         with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+            proposal = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
             if proposal is None:
-                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+                raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
 
-    def create_investment(self, sus: int) -> None:
+    @property
+    def account_name(self) -> str:
+        return self._account_name
+
+    def _raise_invalid_sus(self, sus) -> None:
+        if sus <= 0:
+            raise ValueError('Service units must be greater than zero.')
+
+    def _get_investment(self, session: Session, id: int) -> Investor:
+        inv = session.query(Investor).filter(Investor.account_name == self._account_name, Investor.id == id).first()
+        if not inv:
+            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
+
+        return inv
+
+    def create_investment(self, start: date = date.today(), duration: int = 365, repeat=0, sus: int = 0) -> None:
         """Add a new investor proposal for the given account
 
         Args:
+            start: The start date of the investment
             sus: The number of service units to add
         """
 
-        self._raise_if_missing_proposal()
-        start_date = date.today()
-        end_date = start_date + timedelta(days=5 * 365)  # Investor accounts last 5 years
-        new_investor = Investor(
-            account_name=self.account_name,
-            start_date=start_date,
-            end_date=end_date,
-            service_units=sus,
-            current_sus=ceil(sus / 5),
-            withdrawn_sus=0,
-            rollover_sus=0
-        )
-
+        self._raise_invalid_sus(sus)
+        duration = timedelta(days=duration)
+        sus_per_instance = ceil(sus / (repeat + 1))
         with Session() as session:
-            session.add(new_investor)
-            session.commit()
+            for _ in range(repeat, repeat + 1):
+                new_investor = Investor(
+                    account_name=self._account_name,
+                    start_date=start,
+                    end_date=start + duration,
+                    service_units=sus,
+                    current_sus=sus_per_instance,
+                    withdrawn_sus=0,
+                    rollover_sus=0
+                )
 
-        LOG.info(f"Inserted investment for {self.account_name} with per year allocations of `{sus}`")
+                session.add(new_investor)
+                start += duration
+
+            session.commit()
+            LOG.info(f"Inserted investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
 
     def delete_investment(self, id: int) -> None:
-        raise NotImplementedError()
+        with Session() as session:
+            investment = self._get_investment(session, id)
+            session.add(investment.to_archive_object())
+            session.query(Investor).filter(Investor.id == investment.id).delete()
+            session.commit()
+
+        LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
 
     def add(self, id: int, sus: int) -> None:
         """Add service units to the given investment
@@ -228,10 +247,13 @@ class InvestmentServices:
             sus: Number of service units to add
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have a proposal
         """
 
-        raise NotImplementedError()
+        self._raise_invalid_sus(sus)
+        with Session() as session:
+            self._get_investment(session, id).service_units += sus
+            session.commit()
 
     def subtract(self, id: int, sus: int) -> None:
         """Subtract service units from the given investment
@@ -241,10 +263,13 @@ class InvestmentServices:
             sus: Number of service units to remove
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have a proposal
         """
 
-        raise NotImplementedError()
+        self._raise_invalid_sus(sus)
+        with Session() as session:
+            self._get_investment(session, id).service_units -= sus
+            session.commit()
 
     def overwrite(self, id: int, sus: int) -> None:
         """Overwrite service units allocated to the given investment
@@ -254,35 +279,13 @@ class InvestmentServices:
             sus: New number of service units to assign to the investment
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have a proposal
         """
 
-        raise NotImplementedError()
-
-    def _get_investment_info(self) -> Tuple[dict, ...]:
-        """Tuple with information for each investment associated with the account"""
-
+        self._raise_invalid_sus(sus)
         with Session() as session:
-            investments = session.query(Investor).filter(Investor.account_name == self.account_name).all()
-            return tuple(inv.row_to_dict() for inv in investments)
-
-    def overwrite_investment_sus(self, id: int, sus: int) -> None:
-        """Replace the number of service units allocated to a given investment
-
-        Args:
-            id: The id of the investment to change
-            sus: New service units to set in the investment
-        """
-
-        if id not in (inv['id'] for inv in self._get_investment_info()):
-            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
-
-        with Session() as session:
-            inv = session.query(Investor).filter(Investor.id == id).first()
-            inv.service_units = sus
+            self._get_investment(session, id).service_units = sus
             session.commit()
-
-        LOG.info(f"Modified Investments for account {self.account_name}: Investment {id} set to {sus}")
 
     def _withdraw_from_investment(self, investment: Investor, sus: int) -> int:
         """Process the withdrawal for a single investment
@@ -300,18 +303,14 @@ class InvestmentServices:
             The number of service units that were actually withdrawn
         """
 
-        if sus <= 0:
-            raise ValueError('Withdrawal amount must be greater than zero')
+        self._raise_invalid_sus(sus)
 
         maximum_withdrawal = investment.service_units - investment.withdrawn_sus
         to_withdraw = min(sus, maximum_withdrawal)
         investment.current_sus += to_withdraw
         investment.withdrawn_sus += to_withdraw
 
-        msg = f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self.account_name}"
-        LOG.info(msg)
-        print(msg)
-
+        LOG.info(f"Withdrew {to_withdraw} service units from investment {investment.id} for account {self._account_name}")
         return to_withdraw
 
     def advance(self, sus: int) -> None:
@@ -321,9 +320,10 @@ class InvestmentServices:
             sus: The number of service units to withdraw
         """
 
+        self._raise_invalid_sus(sus)
         with Session() as session:
             investments = session.query(Investor) \
-                .filter(Investor.account_name == self.account_name) \
+                .filter(Investor.account_name == self._account_name) \
                 .order_by(Investor.start_date) \
                 .all()
 
@@ -332,8 +332,7 @@ class InvestmentServices:
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
-            # Go through investments, oldest first and start withdrawing
-            investment: Investor
+            # Go through investments in order of age and start withdrawing
             for investment in investments:
                 withdrawn = self._withdraw_from_investment(investment, sus)
 
