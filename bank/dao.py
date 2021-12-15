@@ -21,8 +21,7 @@ Numeric = Union[int, float, complex]
 LOG = getLogger('bank.cli')
 
 
-class ProposalServices:
-    """Account logic for primary account proposals"""
+class BaseDataAccess:
 
     def __init__(self, account_name: str) -> None:
         """Manage an existing proposal in the bank
@@ -36,25 +35,6 @@ class ProposalServices:
     @property
     def account_name(self) -> str:
         return self._account_name
-
-    @staticmethod
-    def _raise_cluster_kwargs(**kwargs: int) -> None:
-        """Check whether keyword arguments are valid service unit values
-
-        Args:
-            **kwargs: Keyword arguments to check
-
-        Raises:
-            ValueError: For an invalid cluster name
-            ValueError: For negative service units
-        """
-
-        for k, v in kwargs.items():
-            if k not in settings.clusters:
-                raise ValueError(f'Cluster {k} is not defined in the application settings')
-
-            if v < 0:
-                raise ValueError('Service unit values must be greater than zero')
 
     def _get_proposal_info(self, session: Session) -> Proposal:
         """Return the proposal record from the application database
@@ -74,6 +54,36 @@ class ProposalServices:
             raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
 
         return proposal
+
+    def _get_investment(self, session: Session, id: int) -> Investor:
+        inv = session.query(Investor).filter(Investor.account_name == self._account_name, Investor.id == id).first()
+        if not inv:
+            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
+
+        return inv
+
+
+class ProposalServices(BaseDataAccess):
+    """Account logic for primary account proposals"""
+
+    @staticmethod
+    def _raise_cluster_kwargs(**kwargs: int) -> None:
+        """Check whether keyword arguments are valid service unit values
+
+        Args:
+            **kwargs: Keyword arguments to check
+
+        Raises:
+            ValueError: For an invalid cluster name
+            ValueError: For negative service units
+        """
+
+        for k, v in kwargs.items():
+            if k not in settings.clusters:
+                raise ValueError(f'Cluster {k} is not defined in the application settings')
+
+            if v < 0:
+                raise ValueError('Service unit values must be greater than zero')
 
     def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
         """Create a new proposal for the given account
@@ -170,7 +180,7 @@ class ProposalServices:
             LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
 
-class InvestmentServices:
+class InvestmentServices(BaseDataAccess):
     """Data access for investment information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
@@ -180,26 +190,13 @@ class InvestmentServices:
             account_name: The name of the account
         """
 
-        self._account_name = account_name
+        super().__init__(account_name)
         with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
-            if proposal is None:
-                raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
-
-    @property
-    def account_name(self) -> str:
-        return self._account_name
+            self._get_proposal_info(session)
 
     def _raise_invalid_sus(self, sus) -> None:
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
-
-    def _get_investment(self, session: Session, id: int) -> Investor:
-        inv = session.query(Investor).filter(Investor.account_name == self._account_name, Investor.id == id).first()
-        if not inv:
-            raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
-
-        return inv
 
     def create_investment(self, start: date = date.today(), duration: int = 365, repeat=0, sus: int = 0) -> None:
         """Add a new investor proposal for the given account
@@ -344,45 +341,58 @@ class InvestmentServices:
             LOG.debug('Committing withdrawals to database')
             session.commit()
 
-    def renew(self, **sus) -> None:
+    def renew(self, sus) -> None:
+        self._raise_invalid_sus(sus)
         with Session() as session:
-            self.proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            self._investments = session.query(Investor).filter(Investor.account_name == self.account_name).first()
+            # Archive the current proposal
+            query = session.query(Proposal).filter(Proposal.account_name == self.account_name)
+            session.add(query.first().to_archive_object())
+            query.delete()
 
-            # Move the old account proposal to the archive table
-            session.add(self.get_proposal_info.to_archive_object())
-            self.get_proposal_info.proposal.delete()
+        # Archive any investments which are
+        # - past their end_date
+        # - withdraw + renewal leaves no current_sus and fully withdrawn account
+        investor_rows = investor_table.find(account=args["<account>"])
+        for investor_row in investor_rows:
+            archive = False
+            if investor_row["end_date"] <= date.today():
+                archive = True
+            elif (
+                    investor_row["current_sus"] == 0
+                    and investor_row["withdrawn_sus"] == investor_row["service_units"]
+            ):
+                archive = True
 
-            # Move any expired investments to the archive table
-            for investment in self._investments.get_investment_info:
-                if investment.expired:
-                    session.add(investment.to_archive_obj())
-                    investment.delete()
+            if archive:
+                to_insert = {
+                    "service_units": investor_row["service_units"],
+                    "current_sus": investor_row[f"current_sus"],
+                    "start_date": investor_row["start_date"],
+                    "end_date": investor_row["end_date"],
+                    "exhaustion_date": date.today(),
+                    "account": args["<account>"],
+                    "proposal_id": current_proposal["id"],
+                    "investor_id": investor_row["id"],
+                }
+                investor_archive_table.insert(to_insert)
+                investor_table.delete(id=investor_row["id"])
 
-            # Add new proposal and rollover investment service units
-            self.proposal = Proposal(**sus)
-            self._rollover_investments()
-            session.commit()
-
-        # Set RawUsage to zero and unlock the account
-        self.reset_raw_usage()
-        self.set_locked_state(False)
-
-    def _rollover_investments(self):
         # Renewal, should exclude any previously rolled over SUs
-        current_investments = sum(inv.current_sus for inv in self._investments)
+        current_investments = sum(
+            utils.get_current_investor_sus_no_rollover(args["<account>"])
+        )
 
         # If there are relevant investments,
         #     check if there is any rollover
-        if current_investments:
+        if current_investments != 0:
+            need_to_rollover = 0
             # If current usage exceeds proposal, rollover some SUs, else rollover all SUs
-            total_usage = sum([current_usage[c] for c in settings.clusters])
-            total_proposal_sus = sum([getattr(self.get_proposal_info, c) for c in settings.clusters])
+            total_usage = sum([current_usage[c] for c in CLUSTERS])
+            total_proposal_sus = sum([current_proposal[c] for c in CLUSTERS])
             if total_usage > total_proposal_sus:
                 need_to_rollover = total_proposal_sus + current_investments - total_usage
             else:
                 need_to_rollover = current_investments
-
             # Only half should rollover
             need_to_rollover /= 2
 
@@ -392,19 +402,43 @@ class InvestmentServices:
 
             if need_to_rollover > 0:
                 # Go through investments and roll them over
-                for inv in self._investments:
+                investor_rows = investor_table.find(account=args["<account>"])
+                for investor_row in investor_rows:
                     if need_to_rollover > 0:
-                        years_left = inv.end_date.year - date.today().year
-                        to_withdraw = (inv.service_units - inv.withdrawn_sus) // years_left
+                        to_withdraw = (
+                                              investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
+                                      ) // utils.years_left(investor_row["end_date"])
                         to_rollover = int(
-                            inv.current_sus
-                            if inv.current_sus < need_to_rollover
+                            investor_row[f"current_sus"]
+                            if investor_row[f"current_sus"] < need_to_rollover
                             else need_to_rollover
                         )
-                        inv.current_sus = to_withdraw
-                        inv.rollover_sus = to_rollover
-                        inv.withdrawn_sus += to_withdraw
+                        investor_row[f"current_sus"] = to_withdraw
+                        investor_row[f"rollover_sus"] = to_rollover
+                        investor_row[f"withdrawn_sus"] += to_withdraw
+                        investor_table.update(investor_row, ["id"])
                         need_to_rollover -= to_rollover
+
+        # Insert new proposal
+        proposal_type = utils.ProposalType(current_proposal["proposal_type"])
+        proposal_duration = utils.get_proposal_duration(proposal_type)
+        start_date = date.today()
+        end_date = start_date + proposal_duration
+        update_with = {
+            "percent_notified": utils.PercentNotified.Zero.value,
+            "start_date": start_date,
+            "end_date": end_date,
+            "id": proposal_id,
+        }
+        for c in CLUSTERS:
+            update_with[c] = sus[c]
+        proposal_table.update(update_with, ["id"])
+
+        # Set RawUsage to zero
+        utils.reset_raw_usage(args["<account>"])
+
+        # Unlock the account
+        utils.unlock_account(args["<account>"])
 
 
 class AdminServices:
