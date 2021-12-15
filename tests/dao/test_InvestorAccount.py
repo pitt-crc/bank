@@ -1,11 +1,11 @@
 from copy import copy
 from unittest import TestCase, skip
 
-from bank.dao import InvestorData
+from bank.dao import InvestmentServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor
 from bank import settings
-from tests.testing_utils import InvestorSetup, ProposalSetup
+from tests.dao._utils import InvestorSetup, ProposalSetup
 
 
 class CreateInvestment(ProposalSetup, TestCase):
@@ -19,15 +19,15 @@ class CreateInvestment(ProposalSetup, TestCase):
             session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
             session.commit()
 
-        self.account = InvestorData(settings.test_account)
+        self.account = InvestmentServices(settings.test_account)
 
     def test_investment_is_created(self) -> None:
         """Test a new investment is added to the account after the function call"""
 
         # Avoid false positives by checking there are no existing doesn't already exist
-        original_inv = len(self.account.get_investment_info())
+        original_inv = len(self.account._get_investment_info())
         self.account.create_investment(sus=1000)
-        new_inv = len(self.account.get_investment_info())
+        new_inv = len(self.account._get_investment_info())
 
         self.assertEqual(original_inv + 1, new_inv, 'Number of investments in database did not increase.')
 
@@ -36,7 +36,7 @@ class CreateInvestment(ProposalSetup, TestCase):
 
         test_sus = 12345
         self.account.create_investment(sus=test_sus)
-        new_investment = self.account.get_investment_info()[0]
+        new_investment = self.account._get_investment_info()[0]
         self.assertEqual(test_sus, new_investment['service_units'])
 
     def test_error_on_missing_proposal(self) -> None:
@@ -67,7 +67,7 @@ class OverwriteInvestmentSus(InvestorSetup, TestCase):
 
         for new_sus in (0, 12345):
             self.account.overwrite_investment_sus(id=self.inv_id, sus=new_sus)
-            recovered_sus = self.account.get_investment_info()[0]['service_units']
+            recovered_sus = self.account._get_investment_info()[0]['service_units']
             self.assertEqual(new_sus, recovered_sus)
 
     def test_error_on_invalid_ids(self) -> None:
@@ -95,7 +95,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             original_inv = copy(investment)
 
             sus_to_withdraw = 10
-            withdrawn = InvestorData(settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
+            withdrawn = InvestmentServices(settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
             self.assertEqual(sus_to_withdraw, withdrawn)
 
             self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
@@ -110,7 +110,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             service_units = investment.service_units
             half_service_units = service_units / 2
 
-            dao = InvestorData(settings.test_account)
+            dao = InvestmentServices(settings.test_account)
             first_withdraw = dao._withdraw_from_investment(investment, half_service_units)
             second_withdraw = dao._withdraw_from_investment(investment, service_units)
             self.assertEqual(half_service_units, first_withdraw)
@@ -124,7 +124,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
             investment.withdrawn_sus = investment.service_units
             original_inv = copy(investment)
 
-            withdrawn = InvestorData(settings.test_account)._withdraw_from_investment(investment, 1)
+            withdrawn = InvestmentServices(settings.test_account)._withdraw_from_investment(investment, 1)
             self.assertEqual(0, withdrawn)
             self.assertEqual(original_inv.current_sus, investment.current_sus)
             self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
@@ -137,7 +137,7 @@ class WithdrawFromInvestment(InvestorSetup, TestCase):
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestorData(settings.test_account)._withdraw_from_investment(investment, sus)
+                InvestmentServices(settings.test_account)._withdraw_from_investment(investment, sus)
 
 
 @skip('Withdrawal logic has not been ported yet')

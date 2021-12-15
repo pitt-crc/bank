@@ -8,3 +8,19 @@ and their default values is provided below.
 .. argparse::
    :module: bank.cli
    :func: CLIParser
+   :path: admin
+
+.. argparse::
+   :module: bank.cli
+   :func: CLIParser
+   :path: slurm
+
+.. argparse::
+   :module: bank.cli
+   :func: CLIParser
+   :path: proposal
+
+.. argparse::
+   :module: bank.cli
+   :func: CLIParser
+   :path: investment

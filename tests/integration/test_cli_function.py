@@ -1,16 +1,57 @@
 from copy import copy
-from unittest import TestCase, skipIf, skip
+from unittest import TestCase, skip, skipIf
 from unittest.mock import patch
 
-from bank import dao
-from bank.cli import CLIParser
-from bank.exceptions import MissingProposalError, ProposalExistsError, CmdError, MissingInvestmentError
-from bank.orm import Session, Proposal
+from bank import dao, system
 from bank import settings
+from bank.cli import CLIParser
+from bank.exceptions import MissingProposalError, ProposalExistsError, MissingInvestmentError, CmdError
+from bank.orm import Session, Proposal
 from bank.system import RequireRoot
-from tests.testing_utils import InvestorSetup, ProtectLockState, ProposalSetup, GenericSetup
+from ._utils import InvestorSetup, ProposalSetup, GenericSetup, ProtectLockState
 
 
+@skip('These tests are an outline for future work')
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class LockWithNotification(ProtectLockState, TestCase):
+    """Tests for the ``lock_with_notification`` subparser"""
+
+    def test_account_is_locked(self) -> None:
+        """Test that an unlocked account becomes locked"""
+
+        account = system.SlurmAccount(settings.test_account)
+        account.set_locked_state(False)
+        CLIParser().execute(['lock_with_notification', settings.test_account, 'notify=False'])
+        self.assertTrue(account.get_locked_state())
+
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['lock_with_notification', 'fake_account'])
+
+
+@skip('These tests are an outline for future work')
+@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
+class ReleaseHold(ProtectLockState, TestCase):
+    """Tests for the ``release_hold`` subparser"""
+
+    def test_account_is_unlocked(self) -> None:
+        """Test that a locked account becomes unlocked"""
+
+        account = system.SlurmAccount(settings.test_account)
+        account.set_locked_state(True)
+        CLIParser().execute(['release_hold', settings.test_account])
+        self.assertFalse(account.get_locked_state())
+
+    def test_error_on_missing_account(self) -> None:
+        """Test a ``CmdError`` error is raised if the account does not exist"""
+
+        with self.assertRaises(CmdError):
+            CLIParser().execute(['release_hold', 'fake_account'])
+
+
+@skip('These tests are an outline for future work')
 class DynamicallyAddedClusterArguments(TestCase):
     """Test that selected subparsers have an argument for each cluster defined in the application settings"""
 
@@ -26,6 +67,7 @@ class DynamicallyAddedClusterArguments(TestCase):
             self.assertTrue(clusters.issubset(args), f'Parser {subparser_name} is missing arguments: {clusters - args}')
 
 
+@skip('These tests are an outline for future work')
 class Info(InvestorSetup, TestCase):
     """Tests for the ``info`` subparser"""
 
@@ -49,6 +91,7 @@ class Info(InvestorSetup, TestCase):
             CLIParser().execute(['info', 'fake_account'])
 
 
+@skip('These tests are an outline for future work')
 class Usage(InvestorSetup, TestCase):
     """Tests for the ``usage`` subparser"""
 
@@ -70,44 +113,7 @@ class Usage(InvestorSetup, TestCase):
             CLIParser().execute(['usage', 'fake_account'])
 
 
-@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
-class LockWithNotification(ProtectLockState, TestCase):
-    """Tests for the ``lock_with_notification`` subparser"""
-
-    def test_account_is_locked(self) -> None:
-        """Test that an unlocked account becomes locked"""
-
-        account = dao.Account(settings.test_account)
-        account.set_locked_state(False)
-        CLIParser().execute(['lock_with_notification', settings.test_account, 'notify=False'])
-        self.assertTrue(account.get_locked_state())
-
-    def test_error_on_missing_account(self) -> None:
-        """Test a ``CmdError`` error is raised if the account does not exist"""
-
-        with self.assertRaises(CmdError):
-            CLIParser().execute(['lock_with_notification', 'fake_account'])
-
-
-@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
-class ReleaseHold(ProtectLockState, TestCase):
-    """Tests for the ``release_hold`` subparser"""
-
-    def test_account_is_unlocked(self) -> None:
-        """Test that a locked account becomes unlocked"""
-
-        account = dao.Account(settings.test_account)
-        account.set_locked_state(True)
-        CLIParser().execute(['release_hold', settings.test_account])
-        self.assertFalse(account.get_locked_state())
-
-    def test_error_on_missing_account(self) -> None:
-        """Test a ``CmdError`` error is raised if the account does not exist"""
-
-        with self.assertRaises(CmdError):
-            CLIParser().execute(['release_hold', 'fake_account'])
-
-
+@skip('These tests are an outline for future work')
 class Insert(GenericSetup, TestCase):
     """Tests for the ``insert`` subparser"""
 
@@ -118,7 +124,7 @@ class Insert(GenericSetup, TestCase):
         CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}={number_of_sus}'])
 
         # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(settings.test_account).get_proposal_info()
+        allocations = dao.Account(settings.test_account)._get_proposal_info()
         self.assertEqual(number_of_sus, allocations.pop(settings.test_cluster))
 
     def test_error_if_already_exists(self) -> None:
@@ -129,6 +135,7 @@ class Insert(GenericSetup, TestCase):
             CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}=1000'])
 
 
+@skip('These tests are an outline for future work')
 class Add(ProposalSetup, TestCase):
     """Tests for the ``add`` subparser"""
 
@@ -136,11 +143,11 @@ class Add(ProposalSetup, TestCase):
         """Test the allocated service units are incremented by a given amount"""
 
         account = dao.Account(settings.test_account)
-        original_sus = account.get_proposal_info()[settings.test_cluster]
+        original_sus = account._get_proposal_info()[settings.test_cluster]
 
         sus_to_add = 100
         CLIParser().execute(['add', settings.test_account, f'--{settings.test_cluster}={sus_to_add}'])
-        new_sus = account.get_proposal_info()[settings.test_cluster]
+        new_sus = account._get_proposal_info()[settings.test_cluster]
 
         self.assertEqual(original_sus + sus_to_add, new_sus)
 
@@ -161,6 +168,7 @@ class Add(ProposalSetup, TestCase):
             CLIParser().execute(['add', settings.test_account, f'--{settings.test_cluster}=1000'])
 
 
+@skip('These tests are an outline for future work')
 class Modify(ProposalSetup, TestCase):
     """Tests for the ``modify`` subparser"""
 
@@ -169,11 +177,11 @@ class Modify(ProposalSetup, TestCase):
 
         # Set the existing allocation to zero
         account = dao.Account(settings.test_account)
-        account.overwrite_allocation_sus(**{settings.test_cluster: 0})
+        account.overwrite(**{settings.test_cluster: 0})
 
         new_sus = 1_000
         CLIParser().execute(['modify', settings.test_account, f'--{settings.test_cluster}={new_sus}'])
-        self.assertEqual(new_sus, account.get_proposal_info()[settings.test_cluster])
+        self.assertEqual(new_sus, account._get_proposal_info()[settings.test_cluster])
 
     def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when passed an account with a missing proposal"""
@@ -186,6 +194,7 @@ class Modify(ProposalSetup, TestCase):
             CLIParser().execute(['modify', settings.test_account, f'--{settings.test_cluster}=1000'])
 
 
+@skip('These tests are an outline for future work')
 class Investor(ProposalSetup, TestCase):
     """Tests for the ``investor`` subparser"""
 
@@ -210,6 +219,7 @@ class Investor(ProposalSetup, TestCase):
             CLIParser().execute(['investor', settings.test_account, '1000'])
 
 
+@skip('These tests are an outline for future work')
 class InvestorModify(InvestorSetup, TestCase):
     """Tests for the ``investor_modify`` subparser"""
 

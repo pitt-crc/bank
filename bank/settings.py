@@ -111,6 +111,7 @@ db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR 
 
 # A list of cluster names to track usage on
 clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
+clusters_as_str = ','.join(clusters)
 
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.

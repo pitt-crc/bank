@@ -1,10 +1,10 @@
 from unittest import TestCase
 
 from bank import settings
-from bank.dao import ProposalData
+from bank.dao import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
-from tests.testing_utils import ProposalSetup
+from tests.dao._utils import ProposalSetup
 
 
 class CreateProposal(TestCase):
@@ -17,23 +17,23 @@ class CreateProposal(TestCase):
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
             session.commit()
 
-        self.account = ProposalData(settings.test_account)
+        self.account = ProposalServices(settings.test_account)
 
     def test_proposal_is_created(self) -> None:
         """Test a proposal is created after the function call"""
 
         # Avoid false positives by checking the proposal doesn't already exist
         with self.assertRaises(MissingProposalError):
-            self.account.get_proposal_info()
+            self.account._get_proposal_info()
 
         self.account.create_proposal()
-        self.assertTrue(self.account.get_proposal_info())
+        self.assertTrue(self.account._get_proposal_info())
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
-        proposal_info = self.account.get_proposal_info()
+        proposal_info = self.account._get_proposal_info()
         for cluster in settings.clusters:
             self.assertEqual(0, proposal_info[cluster])
 
@@ -41,7 +41,7 @@ class CreateProposal(TestCase):
         """Tests proposal are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{c: 1000 for c in settings.clusters})
-        proposal_info = self.account.get_proposal_info()
+        proposal_info = self.account._get_proposal_info()
 
         for cluster in settings.clusters:
             self.assertEqual(1000, proposal_info[cluster])
@@ -61,16 +61,16 @@ class CreateProposal(TestCase):
 
 
 class AddAllocationSus(ProposalSetup, TestCase):
-    """Tests for the addition of sus via the ``add_allocation_sus`` method"""
+    """Tests for the addition of sus via the ``add`` method"""
 
     def test_sus_are_added(self) -> None:
         """Test SUs from kwargs are set in the proposal"""
 
         cluster_name = settings.test_cluster
         for sus_to_add in (0, 1000):
-            original_sus = self.account.get_proposal_info()[cluster_name]
-            self.account.add_allocation_sus(**{cluster_name: sus_to_add})
-            new_sus = self.account.get_proposal_info()[cluster_name]
+            original_sus = self.account._get_proposal_info()[cluster_name]
+            self.account.add(**{cluster_name: sus_to_add})
+            new_sus = self.account._get_proposal_info()[cluster_name]
             self.assertEqual(original_sus + sus_to_add, new_sus, f'SUs not added (tried to add {sus_to_add})')
 
     def test_error_on_bad_cluster_name(self) -> None:
@@ -78,13 +78,13 @@ class AddAllocationSus(ProposalSetup, TestCase):
 
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined in application settings.'):
-            self.account.add_allocation_sus(**{fake_cluster_name: 1000})
+            self.account.add(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.add_allocation_sus(**{settings.test_cluster: -1})
+            self.account.add(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when account has no proposal"""
@@ -94,7 +94,7 @@ class AddAllocationSus(ProposalSetup, TestCase):
             session.commit()
 
         with self.assertRaises(MissingProposalError):
-            self.account.add_allocation_sus(**{settings.test_cluster: -1})
+            self.account.add(**{settings.test_cluster: -1})
 
 
 class SetClusterAllocation(ProposalSetup, TestCase):
@@ -103,8 +103,8 @@ class SetClusterAllocation(ProposalSetup, TestCase):
     def test_sus_are_modified(self) -> None:
         """Test sus from kwargs are set in the proposal"""
 
-        self.account.overwrite_allocation_sus(**{settings.test_cluster: 1000})
-        recovered_sus = self.account.get_proposal_info()[settings.test_cluster]
+        self.account.overwrite(**{settings.test_cluster: 1000})
+        recovered_sus = self.account._get_proposal_info()[settings.test_cluster]
         self.assertEqual(1000, recovered_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
@@ -112,13 +112,13 @@ class SetClusterAllocation(ProposalSetup, TestCase):
 
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined in application settings.'):
-            self.account.overwrite_allocation_sus(**{fake_cluster_name: 1000})
+            self.account.overwrite(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.overwrite_allocation_sus(**{settings.test_cluster: -1})
+            self.account.overwrite(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
         """Test an error is raised when account has no proposal"""
@@ -128,4 +128,4 @@ class SetClusterAllocation(ProposalSetup, TestCase):
             session.commit()
 
         with self.assertRaises(MissingProposalError):
-            self.account.overwrite_allocation_sus(**{settings.test_cluster: 1})
+            self.account.overwrite(**{settings.test_cluster: 1})
