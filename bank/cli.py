@@ -47,7 +47,7 @@ class AdminParser(dao.AdminServices, ArgumentParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
-        super(dao.AdminServices, self).__init__()
+        ArgumentParser.__init__(self)
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
@@ -68,7 +68,7 @@ class SlurmParser(system.SlurmAccount, ArgumentParser):
     """Command line parser for the ``slurm`` service"""
 
     def __init__(self) -> None:
-        super(system.SlurmAccount, self).__init__()
+        ArgumentParser.__init__(self)
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         slurm_parser = subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
         slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
@@ -106,7 +106,7 @@ class ProposalParser(dao.ProposalServices, ArgumentParser):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
-        super(dao.ProposalServices, self).__init__()
+        ArgumentParser.__init__(self)
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
@@ -151,7 +151,7 @@ class InvestmentParser(dao.InvestmentServices, ArgumentParser):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
-        super(dao.InvestmentServices, self).__init__()
+        ArgumentParser.__init__(self)
         subparsers = self._subparsers or self.add_subparsers(parser_class=ArgumentParser)
         investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
@@ -194,7 +194,7 @@ class InvestmentParser(dao.InvestmentServices, ArgumentParser):
         investment_renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help='The parent slurm account')
 
 
-class CLIParser(AdminParser, SlurmParser, InvestmentParser, ProposalParser):
+class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
     """Command line parser used as the primary entry point for the parent application"""
 
     def execute(self, args: List[str] = None) -> None:
