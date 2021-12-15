@@ -5,10 +5,10 @@ from unittest.mock import patch
 from bank import dao, system
 from bank import settings
 from bank.cli import CLIParser
-from bank.exceptions import MissingProposalError, ProposalExistsError, MissingInvestmentError, CmdError
+from bank.exceptions import MissingProposalError, MissingInvestmentError, CmdError
 from bank.orm import Session, Proposal
 from bank.system import RequireRoot
-from ._utils import InvestorSetup, ProposalSetup, GenericSetup, ProtectLockState
+from ._utils import InvestorSetup, ProposalSetup, ProtectLockState
 
 
 @skip('These tests are an outline for future work')
@@ -111,87 +111,6 @@ class Usage(InvestorSetup, TestCase):
 
         with self.assertRaises(MissingProposalError):
             CLIParser().execute(['usage', 'fake_account'])
-
-
-@skip('These tests are an outline for future work')
-class Insert(GenericSetup, TestCase):
-    """Tests for the ``insert`` subparser"""
-
-    def test_proposal_is_created(self) -> None:
-        """Test that a proposal has been created for the user account and cluster"""
-
-        number_of_sus = 5000
-        CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}={number_of_sus}'])
-
-        # Test service units have been allocated to the cluster specified to the CLI parser
-        allocations = dao.Account(settings.test_account)._get_proposal_info()
-        self.assertEqual(number_of_sus, allocations.pop(settings.test_cluster))
-
-    def test_error_if_already_exists(self) -> None:
-        """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
-
-        dao.Account(settings.test_account).create_proposal(**{settings.test_cluster: 1000})
-        with self.assertRaises(ProposalExistsError):
-            CLIParser().execute(['insert', settings.test_account, f'--{settings.test_cluster}=1000'])
-
-
-@skip('These tests are an outline for future work')
-class Add(ProposalSetup, TestCase):
-    """Tests for the ``add`` subparser"""
-
-    def test_sus_are_updated(self) -> None:
-        """Test the allocated service units are incremented by a given amount"""
-
-        account = dao.Account(settings.test_account)
-        original_sus = account._get_proposal_info()[settings.test_cluster]
-
-        sus_to_add = 100
-        CLIParser().execute(['add', settings.test_account, f'--{settings.test_cluster}={sus_to_add}'])
-        new_sus = account._get_proposal_info()[settings.test_cluster]
-
-        self.assertEqual(original_sus + sus_to_add, new_sus)
-
-    def test_error_on_invalid_cluster(self) -> None:
-        """Test an error is raised when passed an invalid cluster name"""
-
-        with self.assertRaises(RuntimeError):
-            CLIParser().execute(['add', settings.test_account, '--fake_cluster=1000'])
-
-    def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when passed an account with a missing proposal"""
-
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
-        with self.assertRaises(MissingProposalError):
-            CLIParser().execute(['add', settings.test_account, f'--{settings.test_cluster}=1000'])
-
-
-@skip('These tests are an outline for future work')
-class Modify(ProposalSetup, TestCase):
-    """Tests for the ``modify`` subparser"""
-
-    def test_service_units_are_updated(self) -> None:
-        """Test the command updates sus on the given cluster"""
-
-        # Set the existing allocation to zero
-        account = dao.Account(settings.test_account)
-        account.overwrite(**{settings.test_cluster: 0})
-
-        new_sus = 1_000
-        CLIParser().execute(['modify', settings.test_account, f'--{settings.test_cluster}={new_sus}'])
-        self.assertEqual(new_sus, account._get_proposal_info()[settings.test_cluster])
-
-    def test_error_on_missing_proposal(self) -> None:
-        """Test an error is raised when passed an account with a missing proposal"""
-
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
-        with self.assertRaises(MissingProposalError):
-            CLIParser().execute(['modify', settings.test_account, f'--{settings.test_cluster}=1000'])
 
 
 @skip('These tests are an outline for future work')
