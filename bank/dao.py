@@ -125,7 +125,8 @@ class ProposalServices(BaseDataAccess):
 
             session.add(new_proposal)
             session.commit()
-            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+
+        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self) -> None:
         """Delete the account's current proposal"""
@@ -135,6 +136,8 @@ class ProposalServices(BaseDataAccess):
             session.add(proposal.to_archive_object())
             session.query(Proposal).filter(Proposal.id == proposal.id).delete()
             session.commit()
+
+        LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
 
     def add(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
@@ -154,7 +157,8 @@ class ProposalServices(BaseDataAccess):
                 setattr(proposal, key, getattr(proposal, key) + val)
 
             session.commit()
-            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
 
     def subtract(self, **kwargs: int) -> None:
         """Subtract service units from the account's current allocation
@@ -174,7 +178,8 @@ class ProposalServices(BaseDataAccess):
                 setattr(proposal, key, getattr(proposal, key) - val)
 
             session.commit()
-            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
     def overwrite(self, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
@@ -194,7 +199,8 @@ class ProposalServices(BaseDataAccess):
                 setattr(proposal, key, val)
 
             session.commit()
-            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
 
 class InvestmentServices(BaseDataAccess):
@@ -251,9 +257,11 @@ class InvestmentServices(BaseDataAccess):
 
                 session.add(new_investor)
                 start += duration
+                LOG.debug(f"Inserting investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
 
             session.commit()
-            LOG.info(f"Inserted investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
+
+        LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
     def delete_investment(self, id: int) -> None:
         """Delete one of the account's associated investments
@@ -283,8 +291,11 @@ class InvestmentServices(BaseDataAccess):
 
         self._raise_invalid_sus(sus)
         with Session() as session:
-            self._get_investment(session, id).service_units += sus
+            investment = self._get_investment(session, id)
+            investment.service_units += sus
             session.commit()
+
+        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def subtract(self, id: int, sus: int) -> None:
         """Subtract service units from the given investment
@@ -299,8 +310,11 @@ class InvestmentServices(BaseDataAccess):
 
         self._raise_invalid_sus(sus)
         with Session() as session:
-            self._get_investment(session, id).service_units -= sus
+            investment = self._get_investment(session, id)
+            investment.service_units -= sus
             session.commit()
+
+        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def overwrite(self, id: int, sus: int) -> None:
         """Overwrite service units allocated to the given investment
@@ -315,8 +329,11 @@ class InvestmentServices(BaseDataAccess):
 
         self._raise_invalid_sus(sus)
         with Session() as session:
-            self._get_investment(session, id).service_units = sus
+            investment = self._get_investment(session, id)
+            investment.service_units = sus
             session.commit()
+
+        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
@@ -344,13 +361,16 @@ class InvestmentServices(BaseDataAccess):
                 investment.current_sus += to_withdraw
                 investment.withdrawn_sus += to_withdraw
 
+                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
+
                 # Determine if we are done processing investments
                 sus -= to_withdraw
                 if sus <= 0:
                     break
 
-            LOG.debug('Committing withdrawals to database')
             session.commit()
+
+        LOG.info(f'Advanced {sus} service units for account {self._account_name}')
 
     def renew(self, sus) -> None:
         raise NotImplementedError()
