@@ -22,126 +22,152 @@ LOG = getLogger('bank.cli')
 
 
 class ProposalServices:
-    """Data access for proposal information associated with a given account"""
+    """Account logic for primary account proposals"""
 
     def __init__(self, account_name: str) -> None:
-        """An existing account in the bank
+        """Manage an existing proposal in the bank
 
         Args:
             account_name: The name of the account
         """
 
-        self.account_name = account_name
+        self._account_name = account_name
 
-    def create_proposal(self, **sus_per_cluster: int) -> None:
+    @property
+    def account_name(self) -> str:
+        return self._account_name
+
+    @staticmethod
+    def _raise_cluster_kwargs(**kwargs: int) -> None:
+        """Check whether keyword arguments are valid service unit values
+
+        Args:
+            **kwargs: Keyword arguments to check
+
+        Raises:
+            ValueError: For an invalid cluster name
+            ValueError: For negative service units
+        """
+
+        for k, v in kwargs.items():
+            if k not in settings.clusters:
+                raise ValueError(f'Cluster {k} is not defined in the application settings')
+
+            if v < 0:
+                raise ValueError('Service unit values must be greater than zero')
+
+    def _get_proposal_info(self, session: Session) -> Proposal:
+        """Return the proposal record from the application database
+
+        Args:
+            session: An open database session to use for executing queries
+
+        Returns:
+            An entry in the Proposal database
+
+        Raises:
+            MissingProposalError: If the account has no associated proposal
+        """
+
+        proposal = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
+        if proposal is None:
+            raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
+
+        return proposal
+
+    def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
         """Create a new proposal for the given account
 
         Args:
-            ptype: The type of proposal
-            **sus_per_cluster: Service units to add on to each cluster
+            start: The start date of the proposal
+            duration: How many days before the proposal expires
+            **kwargs: Service units to add on to each cluster
         """
 
-        proposal_duration = timedelta(days=365)
-        start_date = date.today()
-
         with Session() as session:
-            # Make sure proposal does not already exist
-            if session.query(Proposal).filter(Proposal.account_name == self.account_name).first():
-                raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
+            if session.query(Proposal).filter(Proposal.account_name == self._account_name).first():
+                raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
 
             new_proposal = Proposal(
-                account_name=self.account_name,
+                account_name=self._account_name,
                 percent_notified=0,
-                start_date=start_date,
-                end_date=start_date + proposal_duration,
-                **sus_per_cluster
+                start_date=start,
+                end_date=start + timedelta(days=duration),
+                **kwargs
             )
 
             session.add(new_proposal)
             session.commit()
-
-        sus_as_str = ', '.join(f'{k}={v}' for k, v in sus_per_cluster.items())
-        LOG.info(f"Inserted proposal for {self.account_name} with {sus_as_str}")
+            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self) -> None:
         """Delete the account's current proposal"""
 
-        raise NotImplementedError()
-
-    def _get_proposal_info(self) -> dict:
-        """Information about the primary account proposal
-
-        Returns:
-            Properties of the account's proposal as a dictionary
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
         with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            if proposal is None:
-                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
-
-            return proposal.row_to_dict()
+            proposal = self._get_proposal_info(session)
+            session.add(proposal.to_archive_object())
+            session.query(Proposal).filter(Proposal.id == proposal.id).delete()
+            session.commit()
 
     def add(self, **kwargs: int) -> None:
         """Add service units to the account's current allocation
 
         Args:
-            **kwargs: Service units to add to the account for each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        proposal_info = self._get_proposal_info()
-        new_allocation = dict()
-        for cluster, sus_to_add in kwargs.items():
-            if sus_to_add < 0:
-                raise ValueError(f'Cannot add negative service units (received {sus_to_add} for {cluster})')
-
-            new_allocation[cluster] = proposal_info.get(cluster, 0) + sus_to_add
-
-        self.overwrite(**new_allocation)
-        LOG.debug(f"Added SUs to proposal for {self.account_name}, new limits are {new_allocation}")
-
-    def subtract(self, **kwargs: int) -> None:
-        """Subtract service units from the account's current allocation
-
-        Args:
-            **kwargs: Service units to add to the account for each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        raise NotImplementedError()
-
-    def overwrite(self, **kwargs) -> None:
-        """Replace the number of service units allocated to a given cluster
-
-        Args:
-            **kwargs: New service unit values for each cluster
+            **kwargs: Service units to add for each cluster
 
         Raises:
             MissingProposalError: If the account does not have a proposal
         """
 
         with Session() as session:
-            proposal = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
-            if proposal is None:
-                raise MissingProposalError(f'Account `{self.account_name}` does not have an associated proposal.')
+            proposal = self._get_proposal_info(session)
 
-            for cluster, service_units in kwargs.items():
-                if cluster not in settings.clusters:
-                    raise ValueError(f'Cluster {cluster} is not defined in application settings.')
-
-                setattr(proposal, cluster, service_units)
+            self._raise_cluster_kwargs(**kwargs)
+            for key, val in kwargs.items():
+                setattr(proposal, key, getattr(proposal, key) + val)
 
             session.commit()
+            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
 
-        LOG.info(f"Changed proposal for {self.account_name} to {self._get_proposal_info()}")
+    def subtract(self, **kwargs: int) -> None:
+        """Subtract service units from the account's current allocation
+
+        Args:
+            **kwargs: Service units to subtract from each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with Session() as session:
+            proposal = self._get_proposal_info(session)
+
+            self._raise_cluster_kwargs(**kwargs)
+            for key, val in kwargs.items():
+                setattr(proposal, key, getattr(proposal, key) - val)
+
+            session.commit()
+            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
+
+    def overwrite(self, **kwargs) -> None:
+        """Replace the number of service units allocated to a given cluster
+
+        Args:
+            **kwargs: New service unit values to assign for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with Session() as session:
+            proposal = self._get_proposal_info(session)
+
+            self._raise_cluster_kwargs(**kwargs)
+            for key, val in kwargs.items():
+                setattr(proposal, key, val)
+
+            session.commit()
+            LOG.debug(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
 
 class InvestmentServices:
@@ -465,30 +491,30 @@ class AdminServices:
         days_until_expire = (proposal['end_date'] - date.today()).days
         if days_until_expire in settings.warning_days:
             email = EmailTemplate(settings.expiration_warning)
-            subject = f'Your proposal expiry reminder for account: {self.account_name}'
+            subject = f'Your proposal expiry reminder for account: {self._account_name}'
 
         elif days_until_expire == 0:
             email = EmailTemplate(settings.expired_proposal_notice)
-            subject = f'The account for {self.account_name} was locked because it reached the end date {end_date}'
+            subject = f'The account for {self._account_name} was locked because it reached the end date {end_date}'
 
         elif proposal['percent_notified'] < next_notify <= usage_perc:
             with Session() as session:
-                db_entry = session.query(Proposal).filter(Proposal.account_name == self.account_name).first()
+                db_entry = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
                 db_entry.percent_notified = next_notify
                 session.commit()
 
             email = EmailTemplate(settings.usage_warning.format(perc=usage_perc))
-            subject = f"Your account {self.account_name} has exceeded a proposal threshold"
+            subject = f"Your account {self._account_name} has exceeded a proposal threshold"
 
         if email:
             formatted = email.format(
-                account=self.account_name,
+                account=self._account_name,
                 start_date=proposal['start_date'].strftime(settings.date_format),
                 end_date=end_date,
                 perc=usage_perc,
                 exp_in_days=days_until_expire
             )
-            return formatted.send_to(f'{self.account_name}{settings.email_suffix}', subject=subject)
+            return formatted.send_to(f'{self._account_name}{settings.email_suffix}', subject=subject)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:

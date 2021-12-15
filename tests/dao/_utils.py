@@ -1,6 +1,6 @@
 from bank import settings
 from bank.dao import ProposalServices, InvestmentServices
-from bank.orm import Session, Proposal, Investor
+from bank.orm import Session, Proposal, Investor, ProposalArchive, InvestorArchive
 
 
 class GenericSetup:
@@ -11,19 +11,27 @@ class GenericSetup:
 
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
+            session.query(ProposalArchive).filter(ProposalArchive.account_name == settings.test_account).delete()
             session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
+            session.query(InvestorArchive).filter(InvestorArchive.account_name == settings.test_account).delete()
             session.commit()
 
 
 class ProposalSetup(GenericSetup):
     """Reusable setup mixin for configuring tests against user proposals"""
 
+    num_proposal_sus = 10_000
+
     def setUp(self) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
         self.account = ProposalServices(settings.test_account)
-        self.account.create_proposal()
+        self.account.create_proposal(**{settings.test_cluster: self.num_proposal_sus})
+        self.session = Session()
+
+    def tearDown(self) -> None:
+        self.session.close()
 
 
 class InvestorSetup(ProposalSetup):
