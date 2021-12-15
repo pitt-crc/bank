@@ -444,7 +444,6 @@ class AdminServices:
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-
     @staticmethod
     def send_pending_alerts(account: str) -> Optional[EmailMessage]:
         """Send any pending usage alerts to the account
