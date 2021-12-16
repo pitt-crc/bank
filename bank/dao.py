@@ -32,6 +32,7 @@ class BaseDataAccess:
         """
 
         self._account_name = account_name
+        self._slurm_acct = SlurmAccount(account_name)
 
     @property
     def account_name(self) -> str:
@@ -378,36 +379,36 @@ class InvestmentServices(BaseDataAccess):
     def renew(self, sus) -> None:
         raise NotImplementedError()
 
-git
-class AdminServices:
+
+class AdminServices(BaseDataAccess):
     """Administration for existing bank accounts"""
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
-        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer isinfinity"""
+        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer is infinity"""
 
         if total > 0:
             return 100 * usage / total
 
         return 0
 
-    @staticmethod
-    def print_info(account: str) -> None:
+    def print_info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
-        proposal_info = self._get_proposal_info()
-        investment_info = self._get_investment_info()
+        with Session() as session:
+            proposal = self._get_proposal_info(session)
+            investments = self._get_investment(session)
 
         # Print the table header
         print(f"|{'-' * 82}|")
-        print(f"|{'Proposal End Date':^30}|{proposal_info['end_date'].strftime(settings.date_format) :^51}|")
+        print(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
 
         # Print usage information for the primary proposal
         usage_total = 0
         allocation_total = 0
         for cluster in settings.clusters:
-            usage = self.get_cluster_usage(cluster, in_hours=True)
-            allocation = proposal_info[cluster]
+            usage = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
+            allocation = getattr(proposal, cluster)
             percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
             print(f"|{'-' * 82}|\n"
                   f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
@@ -422,7 +423,7 @@ class AdminServices:
             allocation_total += allocation
 
         usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv['service_units'] for inv in investment_info)
+        investment_total = sum(inv.service_units for inv in investments)
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
@@ -441,25 +442,25 @@ class AdminServices:
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    @staticmethod
-    def send_pending_alerts(account: str) -> Optional[EmailMessage]:
+    def send_pending_alerts(self) -> Optional[EmailMessage]:
         """Send any pending usage alerts to the account
 
         Returns:
             If an alert is sent, returns a copy of the email alert
         """
 
-        proposal = self._get_proposal_info()
+        with Session() as session:
+            proposal = self._get_proposal_info(session)
 
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = sum(self.get_cluster_usage(c) for c in settings.clusters())
+        usage = sum(self._slurm_acct.get_cluster_usage(c) for c in settings.clusters())
         allocated = sum(proposal[c] for c in settings.clusters)
         usage_perc = int(usage / allocated * 100)
         next_notify = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
 
         email = None
-        end_date = proposal['end_date'].strftime(settings.date_format)
-        days_until_expire = (proposal['end_date'] - date.today()).days
+        end_date = proposal.end_date.strftime(settings.date_format)
+        days_until_expire = (proposal.end_date - date.today()).days
         if days_until_expire in settings.warning_days:
             email = EmailTemplate(settings.expiration_warning)
             subject = f'Your proposal expiry reminder for account: {self._account_name}'
@@ -468,7 +469,7 @@ class AdminServices:
             email = EmailTemplate(settings.expired_proposal_notice)
             subject = f'The account for {self._account_name} was locked because it reached the end date {end_date}'
 
-        elif proposal['percent_notified'] < next_notify <= usage_perc:
+        elif proposal.percent_notified < next_notify <= usage_perc:
             with Session() as session:
                 db_entry = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
                 db_entry.percent_notified = next_notify
@@ -480,7 +481,7 @@ class AdminServices:
         if email:
             formatted = email.format(
                 account=self._account_name,
-                start_date=proposal['start_date'].strftime(settings.date_format),
+                start_date=proposal.start_date.strftime(settings.date_format),
                 end_date=end_date,
                 perc=usage_perc,
                 exp_in_days=days_until_expire
