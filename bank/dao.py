@@ -242,7 +242,6 @@ class InvestmentServices(BaseDataAccess):
             repeat: Spread out the given service units equally across n additional investment instances
         """
 
-        self._raise_invalid_sus(sus)
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / (repeat + 1))
         with Session() as session:
