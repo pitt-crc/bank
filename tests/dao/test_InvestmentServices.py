@@ -1,10 +1,10 @@
 from copy import copy
 from unittest import TestCase, skip
 
+from bank import settings
 from bank.dao import InvestmentServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
-from bank.orm import Session, Proposal, Investor
-from bank import settings
+from bank.orm import Session, Proposal, Investor, InvestorArchive
 from tests.dao._utils import InvestorSetup, ProposalSetup
 
 
@@ -24,20 +24,15 @@ class CreateInvestment(ProposalSetup, TestCase):
     def test_investment_is_created(self) -> None:
         """Test a new investment is added to the account after the function call"""
 
-        # Avoid false positives by checking there are no existing doesn't already exist
-        original_inv = len(self.account._get_investment_info())
         self.account.create_investment(sus=1000)
-        new_inv = len(self.account._get_investment_info())
-
-        self.assertEqual(original_inv + 1, new_inv, 'Number of investments in database did not increase.')
+        self.assertEqual(1, len(self.account._get_investment(self.session)))
 
     def test_investment_has_assigned_number_of_sus(self) -> None:
         """Test the number of assigned sus in the new investment matches kwargs in the function call"""
 
         test_sus = 12345
         self.account.create_investment(sus=test_sus)
-        new_investment = self.account._get_investment_info()[0]
-        self.assertEqual(test_sus, new_investment['service_units'])
+        self.assertEqual(test_sus, self.account._get_investment(self.session)[0].service_units)
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised"""
@@ -47,9 +42,6 @@ class CreateInvestment(ProposalSetup, TestCase):
             session.commit()
 
         with self.assertRaises(MissingProposalError):
-            self.account._raise_if_missing_proposal()
-
-        with self.assertRaises(MissingProposalError):
             self.account.create_investment(1000)
 
     def test_error_on_negative_sus(self) -> None:
@@ -57,6 +49,21 @@ class CreateInvestment(ProposalSetup, TestCase):
 
         with self.assertRaises(ValueError):
             self.account.create_investment(sus=-1)
+
+
+class DeleteInvestment(InvestorSetup, TestCase):
+    """Tests for the deletion of investments via the ``delete_investment`` method"""
+
+    def test_investment_is_deleted(self) -> None:
+        """Test the investment is moved from the ``Investor`` to ``InvestorArchive`` table"""
+
+        self.account.delete_investment(id=self.inv_id)
+
+        investment = self.session.query(Investor).filter(Investor.id == self.inv_id).first()
+        self.assertIsNone(investment, 'Proposal was not deleted')
+
+        archive = self.session.query(InvestorArchive).filter(InvestorArchive.id == self.inv_id).first()
+        self.assertIsNotNone(archive, 'No archive object created with matching proposal id')
 
 
 class OverwriteInvestmentSus(InvestorSetup, TestCase):

@@ -217,7 +217,8 @@ class InvestmentServices(BaseDataAccess):
         with Session() as session:
             self._get_proposal_info(session)
 
-    def _raise_invalid_sus(self, sus: int) -> None:
+    @staticmethod
+    def _raise_invalid_sus(sus: int) -> None:
         """Check whether the given value is a valid service unit
 
         Args:
@@ -244,6 +245,8 @@ class InvestmentServices(BaseDataAccess):
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / (repeat + 1))
         with Session() as session:
+            self._get_proposal_info(session)
+
             for _ in range(repeat, repeat + 1):
                 new_investor = Investor(
                     account_name=self._account_name,
@@ -375,7 +378,7 @@ class InvestmentServices(BaseDataAccess):
     def renew(self, sus) -> None:
         raise NotImplementedError()
 
-
+git
 class AdminServices:
     """Administration for existing bank accounts"""
 
