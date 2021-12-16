@@ -37,6 +37,8 @@ API Reference
 -------------
 """
 
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from typing import List
 
@@ -79,18 +81,18 @@ class AdminParser(dao.AdminServices, BaseParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self) -> None:
-        super(dao.AdminServices, self).__init__()
+        super(BaseParser, self).__init__()
         subparsers = self.add_subparsers(parser_class=BaseParser)
         admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
         info.set_defaults(function=super(AdminParser, AdminParser).print_info)
-        info.add_argument('--account', help='The account to print information for')
+        info.add_argument('--account', dest='self', type=dao.AdminServices, help='The account to print information for')
 
         notify = admin_subparsers.add_parser('notify', help='Send any pending email notifications')
         notify.set_defaults(function=super(AdminParser, AdminParser).send_pending_alerts)
-        notify.add_argument('--account', help='The account to process notifications for')
+        notify.add_argument('--account', dest='self', type=dao.AdminServices, help='The account to process notifications for')
 
         unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
@@ -138,7 +140,7 @@ class ProposalParser(dao.ProposalServices, BaseParser):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self) -> None:
-        super(dao.ProposalServices, self).__init__()
+        super(BaseParser, self).__init__()
         subparsers = self.add_subparsers(parser_class=BaseParser)
         proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
@@ -183,7 +185,7 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self) -> None:
-        super(dao.InvestmentServices, self).__init__()
+        super(BaseParser, self).__init__()
         subparsers = self.add_subparsers(parser_class=BaseParser)
         investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")

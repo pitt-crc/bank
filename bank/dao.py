@@ -375,7 +375,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Advanced {sus} service units for account {self._account_name}')
 
-    def renew(self, sus) -> None:
+    def renew(self) -> None:
         raise NotImplementedError()
 
 

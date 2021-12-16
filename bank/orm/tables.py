@@ -7,20 +7,16 @@ API Reference
 from __future__ import annotations
 
 from datetime import date
-from logging import getLogger
 
-from sqlalchemy import Column, Date, Enum, Integer, String
+from sqlalchemy import Column, Date, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates
 
-from .base import CustomBase, Validators
+from .base import Validators
 from .. import settings
 from ..system import SlurmAccount
 
-Base = declarative_base(cls=CustomBase)
-metadata = Base.metadata
-
-LOG = getLogger('bank.orm')
+Base = declarative_base()
 
 
 class Proposal(Base):
