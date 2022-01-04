@@ -361,8 +361,11 @@ class InvestmentServices(BaseDataAccess):
         """
 
         self._raise_invalid_sus(sus)
-        withdrawn = 0
+        requested_withdrawal = sus
+
         with Session() as session:
+            # Query all of the account's investments from the database and sort them
+            # so that younger investments (i.e., with later start dates) come first
             investments = session.query(Investor) \
                 .filter(Investor.account_name == self._account_name) \
                 .order_by(Investor.start_date.desc()) \
@@ -376,25 +379,25 @@ class InvestmentServices(BaseDataAccess):
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
-            # Go through investments, the youngest first, start withdrawing
+            # Move service units from younger investments to the oldest available investment
+            oldest_investment = investments[-1]
             for investment in investments[:-1]:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
-                investments[-1].current_sus += to_withdraw
+                oldest_investment.current_sus += to_withdraw
 
                 LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
 
                 # Determine if we are done processing investments
-                withdrawn += to_withdraw
                 sus -= to_withdraw
                 if sus <= 0:
                     break
 
             session.commit()
 
-        LOG.info(f'Advanced {withdrawn} service units for account {self._account_name}')
+        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
     def renew(self) -> None:
         raise NotImplementedError()
