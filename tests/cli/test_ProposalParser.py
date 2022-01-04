@@ -6,6 +6,7 @@ from tests.cli._utils import CLIAsserts
 
 
 class SignatureMatchesCLI(TestCase, CLIAsserts):
+    """Test the ``ProposalParser`` interface defines arguments that match the underlying DAO signatures"""
 
     @classmethod
     def setUpClass(cls) -> None:

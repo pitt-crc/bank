@@ -5,7 +5,6 @@ from typing import Type
 from sqlalchemy import Column, Integer, Text, Date
 
 from bank import settings
-from bank.orm.base import CustomBase
 from bank.orm.tables import Base
 
 
@@ -24,7 +23,7 @@ class DummyTable(Base):
 class HasDynamicColumns:
     """Test for dynamically added columns based on administered cluster names"""
 
-    db_table_class: Type[CustomBase] = None
+    db_table_class: Type[Base] = None
     columns_to_test = settings.clusters
 
     def test_hast_columns_for_each_cluster(self) -> None:
@@ -41,7 +40,7 @@ class HasDynamicColumns:
 class ServiceUnitsValidation:
     """Tests for the validation of the service units"""
 
-    db_table_class: Type[CustomBase] = None
+    db_table_class: Type[Base] = None
     columns_to_test = settings.clusters
 
     def test_negative_service_units(self) -> None:
