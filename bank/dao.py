@@ -371,8 +371,8 @@ class InvestmentServices(BaseDataAccess):
                 .order_by(Investor.start_date.desc()) \
                 .all()
 
-            if not investments:
-                raise MissingInvestmentError('Account has no valid investments.')
+            if len(investments) < 2:
+                raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
 
             # Make sure there are enough service units in the account to withdraw
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
