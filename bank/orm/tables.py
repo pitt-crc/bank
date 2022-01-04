@@ -17,6 +17,7 @@ from .. import settings
 from ..system import SlurmAccount
 
 Base = declarative_base()
+metadata = Base.metadata
 
 
 class Proposal(Base):

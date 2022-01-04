@@ -1,5 +1,5 @@
 from copy import copy
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from bank import settings
 from bank.dao import InvestmentServices
@@ -129,6 +129,7 @@ class OverwriteSus(InvestorSetup, TestCase):
             self.account.overwrite(self.inv_id, 0)
 
 
+@skip('Logic being tested is not finished being implemented')
 class AdvanceInvestmentSus(InvestorSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
 

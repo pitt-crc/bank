@@ -7,7 +7,7 @@ database.
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-from .tables import Investor, InvestorArchive, Proposal, ProposalArchive
+from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metadata
 from .. import settings
 
 engine = sqlalchemy.create_engine(settings.db_path)
