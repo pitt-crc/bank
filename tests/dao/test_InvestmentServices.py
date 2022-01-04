@@ -1,9 +1,8 @@
-from copy import copy
-from unittest import TestCase, skip
+from unittest import TestCase
 
 from bank import settings
 from bank.dao import InvestmentServices
-from bank.exceptions import MissingProposalError
+from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor, InvestorArchive
 from tests.dao._utils import InvestorSetup, ProposalSetup
 
@@ -49,6 +48,24 @@ class CreateInvestment(ProposalSetup, TestCase):
 
         with self.assertRaises(ValueError):
             self.account.create_investment(sus=-1)
+
+    def test_error_on_zero_repeat(self) -> None:
+        """Test an error is raised when creating an investment with ``repeate=0``"""
+
+        with self.assertRaises(ValueError):
+            self.account.create_investment(sus=1000, num_inv=0)
+
+    def test_investment_is_repeated(self) -> None:
+        test_sus = 2000
+        repeats = 2
+        self.account.create_investment(sus=test_sus, num_inv=repeats)
+
+        with Session() as session:
+            investments = session.query(Investor).filter(Investor.account_name == settings.test_account).all()
+            total_sus = sum(inv.current_sus for inv in investments)
+
+        self.assertEqual(repeats, len(investments), f'Expected {repeats} investments to be created but found {len(investments)}')
+        self.assertEqual(test_sus, total_sus)
 
 
 class DeleteInvestment(InvestorSetup, TestCase):
@@ -107,6 +124,12 @@ class SubtractSus(InvestorSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.subtract(self.inv_id, 0)
 
+    def test_error_on_over_subtract(self) -> None:
+        """Test for a ``ValueError`` if more service units are subtracted than available"""
+
+        with self.assertRaises(ValueError):
+            self.account.subtract(self.inv_id, self.num_inv_sus + 1)
+
 
 class OverwriteSus(InvestorSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
@@ -129,68 +152,66 @@ class OverwriteSus(InvestorSetup, TestCase):
             self.account.overwrite(self.inv_id, 0)
 
 
-@skip('Logic being tested is not finished being implemented')
-class AdvanceInvestmentSus(InvestorSetup, TestCase):
+class AdvanceInvestmentSus(ProposalSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
 
-    def test_investment_is_withdrawn(self) -> None:
-        """Test the specified number of service units are withdrawn from the investment"""
+    def setUp(self) -> None:
+        super().setUp()
+
+        # Create a series of three investments totalling 3,000 service units
+        self.account = InvestmentServices(settings.test_account)
+        self.account.create_investment(3_000, num_inv=3)
+
+    def test_investment_is_advanced(self) -> None:
+        """Test the specified number of service units are advanced from the investment"""
+
+        # Advance half the available service units
+        self.account.advance(1_500)
 
         with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
-            original_inv = copy(investment)
+            investments = session.query(Investor) \
+                .filter(Investor.account_name == settings.test_account) \
+                .order_by(Investor.start_date) \
+                .all()
 
-            sus_to_withdraw = 10
-            withdrawn = InvestmentServices(settings.test_account)._withdraw_from_investment(investment, sus_to_withdraw)
-            self.assertEqual(sus_to_withdraw, withdrawn)
+        # Oldest investment should be untouched
+        self.assertEqual(1_000, investments[0].service_units)
+        self.assertEqual(2500, investments[0].current_sus)
+        self.assertEqual(0, investments[0].withdrawn_sus)
 
-            self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
-            self.assertEqual(original_inv.withdrawn_sus + sus_to_withdraw, investment.withdrawn_sus)
-            self.assertEqual(original_inv.service_units, investment.service_units)
+        # Middle investment should be partially withdrawn
+        self.assertEqual(1_000, investments[1].service_units)
+        self.assertEqual(500, investments[1].current_sus)
+        self.assertEqual(500, investments[1].withdrawn_sus)
 
-    def test_investment_with_existing_withdrawal(self) -> None:
-        """Test the number of withdrawn service units does not exceed available balance"""
+        # Youngest (i.e., latest starting time) investment should be fully withdrawn
+        self.assertEqual(1_000, investments[2].service_units)
+        self.assertEqual(0, investments[2].current_sus)
+        self.assertEqual(1_000, investments[2].withdrawn_sus)
 
-        with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
-            service_units = investment.service_units
-            half_service_units = service_units / 2
-
-            dao = InvestmentServices(settings.test_account)
-            first_withdraw = dao._withdraw_from_investment(investment, half_service_units)
-            second_withdraw = dao._withdraw_from_investment(investment, service_units)
-            self.assertEqual(half_service_units, first_withdraw)
-            self.assertEqual(half_service_units, second_withdraw)
-
-    def test_return_zero_if_overdrawn(self) -> None:
-        """Test the number of withdrawn service units is zero if the account is already overdrawn"""
+    def test_error_if_overdrawn(self) -> None:
+        """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
 
         with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
-            investment.withdrawn_sus = investment.service_units
-            original_inv = copy(investment)
+            investments = self.account._get_investment(session)
+            available_sus = sum(inv.service_units for inv in investments)
 
-            withdrawn = InvestmentServices(settings.test_account)._withdraw_from_investment(investment, 1)
-            self.assertEqual(0, withdrawn)
-            self.assertEqual(original_inv.current_sus, investment.current_sus)
-            self.assertEqual(original_inv.withdrawn_sus, investment.withdrawn_sus)
+        with self.assertRaises(ValueError):
+            InvestmentServices(settings.test_account).advance(available_sus + 1)
 
     def test_error_on_nonpositive_argument(self) -> None:
-        """Test an error is raised for non-positive arguments"""
-
-        with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
+        """Test an ``ValueError`` is raised for non-positive arguments"""
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestmentServices(settings.test_account)._withdraw_from_investment(investment, sus)
+                InvestmentServices(settings.test_account).advance(sus)
 
     def test_error_for_missing_investments(self) -> None:
-        """Test the function fails silently if there are no investments"""
+        """Test a ``MissingInvestmentError`` is raised if there are no investments"""
 
         with Session() as session:
             session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
             session.commit()
 
-        with self.assertRaises(ValueError):
-            self.account.withdraw(10)
+        with self.assertRaises(MissingInvestmentError):
+            self.account.advance(10)
