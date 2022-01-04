@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from datetime import date, timedelta
-from math import ceil
 from typing import List, Union
+
+from math import ceil
 
 from bank.system import *
 from . import settings
@@ -232,34 +233,43 @@ class InvestmentServices(BaseDataAccess):
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, repeat=0) -> None:
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, repeat=1) -> None:
         """Add a new investor proposal for the given account
+
+        Repeating investments are created sequentially such that a new
+        investment begins as each investment ends. The ``start`` argument
+        represents the start date of the first investment in the sequence.
 
         Args:
             sus: The number of service units to add
             start: The start date of the proposal
             duration: How many days before the investment expires
-            repeat: Spread out the given service units equally across n additional investment instances
+            repeat: Spread out the given service units equally across n investment instances
         """
 
+        if repeat < 1:
+            raise ValueError('Argument ``repeat`` must be >= 1')
+
         duration = timedelta(days=duration)
-        sus_per_instance = ceil(sus / (repeat + 1))
+        sus_per_instance = ceil(sus / repeat)
         with Session() as session:
             self._get_proposal_info(session)
 
-            for _ in range(repeat, repeat + 1):
+            for i in range(repeat):
+                start_this = start + i * duration
+                end_this = start + (i + 1) * duration
+
                 new_investor = Investor(
                     account_name=self._account_name,
-                    start_date=start,
-                    end_date=start + duration,
-                    service_units=sus,
+                    start_date=start_this,
+                    end_date=end_this,
+                    service_units=sus_per_instance,
                     current_sus=sus_per_instance,
                     withdrawn_sus=0,
                     rollover_sus=0
                 )
 
                 session.add(new_investor)
-                start += duration
                 LOG.debug(f"Inserting investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
 
             session.commit()
@@ -296,6 +306,7 @@ class InvestmentServices(BaseDataAccess):
         with Session() as session:
             investment = self._get_investment(session, id)
             investment.service_units += sus
+            investment.current_sus += sus
             session.commit()
 
         LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
@@ -314,7 +325,11 @@ class InvestmentServices(BaseDataAccess):
         self._raise_invalid_sus(sus)
         with Session() as session:
             investment = self._get_investment(session, id)
+            if investment.current_sus < sus:
+                raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
+
             investment.service_units -= sus
+            investment.current_sus -= sus
             session.commit()
 
         LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
@@ -338,7 +353,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
-    def advance(self, sus: int) -> None:
+    def advance(self, sus: int) -> int:
         """Withdraw service units from future investments
 
         Args:
@@ -346,34 +361,41 @@ class InvestmentServices(BaseDataAccess):
         """
 
         self._raise_invalid_sus(sus)
+        withdrawn = 0
         with Session() as session:
             investments = session.query(Investor) \
                 .filter(Investor.account_name == self._account_name) \
-                .order_by(Investor.start_date) \
+                .order_by(Investor.start_date.desc()) \
                 .all()
+
+            if not investments:
+                raise MissingInvestmentError('Account has no valid investments.')
 
             # Make sure there are enough service units in the account to withdraw
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
-            # Go through investments in order of age and start withdrawing
-            for investment in investments:
+            # Go through investments, the youngest first, start withdrawing
+            for investment in investments[:-1]:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
-                investment.current_sus += to_withdraw
+                investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
+                investments[-1].current_sus += to_withdraw
 
                 LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
 
                 # Determine if we are done processing investments
+                withdrawn += to_withdraw
                 sus -= to_withdraw
                 if sus <= 0:
                     break
 
             session.commit()
 
-        LOG.info(f'Advanced {sus} service units for account {self._account_name}')
+        LOG.info(f'Advanced {withdrawn} service units for account {self._account_name}')
+        return withdrawn
 
     def renew(self) -> None:
         raise NotImplementedError()
