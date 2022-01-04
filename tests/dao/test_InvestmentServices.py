@@ -152,37 +152,52 @@ class OverwriteSus(InvestorSetup, TestCase):
             self.account.overwrite(self.inv_id, 0)
 
 
-class AdvanceInvestmentSus(InvestorSetup, TestCase):
+class AdvanceInvestmentSus(ProposalSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        # Create a series of three investments totalling 3,000 service units
+        self.account = InvestmentServices(settings.test_account)
+        self.account.create_investment(3_000, repeat=3)
 
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
 
-        # Create a copy of the unmodified investment to compare against later
-        with Session() as session:
-            original_inv = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
+        # Advance half the available service units
+        self.account.advance(1_500)
 
-        # Advance service units and Check various fields of the investment are modified correctly
-        sus_to_withdraw = 10
-        withdrawn = InvestmentServices(settings.test_account).advance(sus_to_withdraw)
         with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
+            investments = session.query(Investor) \
+                .filter(Investor.account_name == settings.test_account) \
+                .order_by(Investor.start_date) \
+                .all()
 
-        self.assertEqual(sus_to_withdraw, withdrawn)
-        self.assertEqual(original_inv.current_sus + sus_to_withdraw, investment.current_sus)
-        self.assertEqual(original_inv.withdrawn_sus + sus_to_withdraw, investment.withdrawn_sus)
-        self.assertEqual(original_inv.service_units, investment.service_units)
+        # Oldest investment should be untouched
+        self.assertEqual(1_000, investments[0].service_units)
+        self.assertEqual(2500, investments[0].current_sus)
+        self.assertEqual(0, investments[0].withdrawn_sus)
+
+        # Middle investment should be partially withdrawn
+        self.assertEqual(1_000, investments[1].service_units)
+        self.assertEqual(500, investments[1].current_sus)
+        self.assertEqual(500, investments[1].withdrawn_sus)
+
+        # Youngest (i.e., latest starting time) investment should be fully withdrawn
+        self.assertEqual(1_000, investments[2].service_units)
+        self.assertEqual(0, investments[2].current_sus)
+        self.assertEqual(1_000, investments[2].withdrawn_sus)
 
     def test_error_if_overdrawn(self) -> None:
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
 
         with Session() as session:
-            investment = session.query(Investor).filter(Investor.account_name == settings.test_account).first()
-            investment.withdrawn_sus = investment.service_units
-            session.commit()
+            investments = self.account._get_investment(session)
+            available_sus = sum(inv.service_units for inv in investments)
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_account).advance(1)
+            InvestmentServices(settings.test_account).advance(available_sus + 1)
 
     def test_error_on_nonpositive_argument(self) -> None:
         """Test an ``ValueError`` is raised for non-positive arguments"""
@@ -200,37 +215,3 @@ class AdvanceInvestmentSus(InvestorSetup, TestCase):
 
         with self.assertRaises(MissingInvestmentError):
             self.account.advance(10)
-
-
-class AdvanceWithMultipleInvestments(ProposalSetup, TestCase):
-    def test_investment_is_advanced(self) -> None:
-        # Create a series of three investments totalling 3,000 service units
-        self.account = InvestmentServices(settings.test_account)
-        self.account.create_investment(3_000, repeat=3)
-
-        # Advance hald the availible service units
-        self.account.advance(1_500)
-
-        with Session() as session:
-            investments = session.query(Investor) \
-                .filter(Investor.account_name == settings.test_account) \
-                .order_by(Investor.start_date) \
-                .all()
-
-        for i in investments:
-            print(i.service_units, i.current_sus, i.withdrawn_sus)
-
-        # Oldest investment should be untouched
-        self.assertEqual(1_000, investments[0].service_units)
-        self.assertEqual(2500, investments[0].current_sus)
-        self.assertEqual(0, investments[0].withdrawn_sus)
-
-        # Middle investment should be partially withdrawn
-        self.assertEqual(1_000, investments[1].service_units)
-        self.assertEqual(500, investments[1].current_sus)
-        self.assertEqual(500, investments[1].withdrawn_sus)
-
-        # Youngest (i.e., latest starting time) investment should be fully withdrawn
-        self.assertEqual(1_000, investments[2].service_units)
-        self.assertEqual(0, investments[2].current_sus)
-        self.assertEqual(1_000, investments[2].withdrawn_sus)

@@ -395,7 +395,6 @@ class InvestmentServices(BaseDataAccess):
             session.commit()
 
         LOG.info(f'Advanced {withdrawn} service units for account {self._account_name}')
-        return withdrawn
 
     def renew(self) -> None:
         raise NotImplementedError()
