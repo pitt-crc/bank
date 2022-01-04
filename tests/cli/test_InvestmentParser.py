@@ -7,6 +7,7 @@ from tests.dao._utils import InvestorSetup
 
 
 class SignatureMatchesCLI(InvestorSetup, CLIAsserts, TestCase):
+    """Test the ``InvestmentParser`` interface defines arguments that match the underlying DAO signatures"""
 
     @classmethod
     def setUpClass(cls) -> None:
