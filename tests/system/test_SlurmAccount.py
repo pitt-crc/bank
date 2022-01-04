@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from bank import settings
 from bank.exceptions import NoSuchAccountError
-from bank.system import SlurmAccount, RequireRoot
+from bank.system import SlurmAccount
 
 # Skip all tests in this module if slurm is not installed
 skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
@@ -23,30 +23,6 @@ class InitExceptions(TestCase):
 
         with patch.object(SlurmAccount, 'check_slurm_installed', return_value=False), self.assertRaises(SystemError):
             SlurmAccount('fake_account_name_123')
-
-
-@skipIf(not RequireRoot.check_user_is_root(), 'Cannot run tests that modify account locks without root permissions')
-class AccountLocking(TestCase):
-    """Test the locking and unlocking of an account"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.account = SlurmAccount(settings.test_account)
-        cls.original_lock_state = cls.account.get_locked_state()
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls.account.set_lock_state(cls.original_lock_state)
-
-    def runTest(self) -> None:
-        self.account.set_locked_state(False)
-        self.assertFalse(self.account.get_locked_state())
-
-        self.account.set_locked_state(True)
-        self.assertTrue(self.account.get_locked_state())
-
-        self.account.set_locked_state(False)
-        self.assertFalse(self.account.get_locked_state())
 
 
 class AccountUsage(TestCase):
