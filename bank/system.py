@@ -145,6 +145,7 @@ class SlurmAccount:
             return False
 
     @classmethod
+    @RequireRoot
     def create_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
         """Create a new slurm account
 
@@ -162,11 +163,13 @@ class SlurmAccount:
         ).raise_err()
         return SlurmAccount(account_name)
 
+    @RequireRoot
     def delete_account(self) -> None:
         """Delete the slurm account"""
 
         ShellCmd(f"sacctmgr -i delete account {self._account} cluster={settings.clusters_as_str}").raise_err()
 
+    @RequireRoot
     def add_user(self, user_name) -> None:
         """Add a user to the slurm account
 
@@ -176,6 +179,7 @@ class SlurmAccount:
 
         raise NotImplementedError()
 
+    @RequireRoot
     def delete_user(self, user_name) -> None:
         """Delete a user from the slurm account
 
@@ -191,7 +195,8 @@ class SlurmAccount:
         cmd = f'sacctmgr -n -P show assoc account={self._account} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    def set_locked_state(self, lock_state: bool) -> False:
+    @RequireRoot
+    def set_locked_state(self, lock_state: bool) -> None:
         """Lock or unlock the user account
 
         Args:
@@ -225,6 +230,7 @@ class SlurmAccount:
 
         return usage
 
+    @RequireRoot
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 

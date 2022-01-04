@@ -1,4 +1,4 @@
-#!/usr/bin/env /home/djperrefort/miniconda3/envs/bank/bin/python
+#!/usr/bin/env /ihome/crc/install/python/miniconda3-3.7/bin/python
 
 from bank.cli import CLIParser
 
