@@ -233,29 +233,32 @@ class InvestmentServices(BaseDataAccess):
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, repeat=1) -> None:
-        """Add a new investor proposal for the given account
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv=1) -> None:
+        """Add a new investment(s) for the given account
 
-        Repeating investments are created sequentially such that a new
-        investment begins as each investment ends. The ``start`` argument
-        represents the start date of the first investment in the sequence.
+        ``num_inv`` reflects the number of investments to create. If the argument
+        is greater than one, repeating investments are created sequentially such
+        that a new investment begins as each investment ends. The ``start``
+        argument represents the start date of the first investment in the sequence.
+        The given number of service units (``sus``) are allocated equally across
+        each investment in the series.
 
         Args:
             sus: The number of service units to add
             start: The start date of the proposal
             duration: How many days before the investment expires
-            repeat: Spread out the given service units equally across n investment instances
+            num_inv: Spread out the given service units equally across given number of instances
         """
 
-        if repeat < 1:
+        if num_inv < 1:
             raise ValueError('Argument ``repeat`` must be >= 1')
 
         duration = timedelta(days=duration)
-        sus_per_instance = ceil(sus / repeat)
+        sus_per_instance = ceil(sus / num_inv)
         with Session() as session:
             self._get_proposal_info(session)
 
-            for i in range(repeat):
+            for i in range(num_inv):
                 start_this = start + i * duration
                 end_this = start + (i + 1) * duration
 

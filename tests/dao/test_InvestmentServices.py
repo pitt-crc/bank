@@ -53,12 +53,12 @@ class CreateInvestment(ProposalSetup, TestCase):
         """Test an error is raised when creating an investment with ``repeate=0``"""
 
         with self.assertRaises(ValueError):
-            self.account.create_investment(sus=1000, repeat=0)
+            self.account.create_investment(sus=1000, num_inv=0)
 
     def test_investment_is_repeated(self) -> None:
         test_sus = 2000
         repeats = 2
-        self.account.create_investment(sus=test_sus, repeat=repeats)
+        self.account.create_investment(sus=test_sus, num_inv=repeats)
 
         with Session() as session:
             investments = session.query(Investor).filter(Investor.account_name == settings.test_account).all()
@@ -160,7 +160,7 @@ class AdvanceInvestmentSus(ProposalSetup, TestCase):
 
         # Create a series of three investments totalling 3,000 service units
         self.account = InvestmentServices(settings.test_account)
-        self.account.create_investment(3_000, repeat=3)
+        self.account.create_investment(3_000, num_inv=3)
 
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""

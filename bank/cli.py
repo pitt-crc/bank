@@ -228,6 +228,8 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
         investment_create.set_defaults(function=super(InvestmentParser, InvestmentParser).create_investment)
         investment_create.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
         investment_create.add_argument('--sus', type=int, help='The number of SUs you want to insert')
+        investment_create.add_argument('--num_inv', type=int, default=5, help='Optionally divide service units across n sequential investments')
+        investment_create.add_argument('--duration', type=int, default=365, help='The length of each investment')
 
         investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
         investment_delete.set_defaults(function=super(InvestmentParser, InvestmentParser).delete_investment)
