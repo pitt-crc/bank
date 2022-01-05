@@ -408,11 +408,8 @@ class InvestmentServices(BaseDataAccess):
         slurm = SlurmAccount(self.account_name)
         with Session() as session:
 
-            # Archive any investments which are past their end_date or have no service units left
-            investments_to_archive = session.query(Investor).filter(
-                (Investor.end_date <= date.today()) |
-                (Investor.current_sus == 0 and Investor.withdrawn_sus == Investor.service_units)
-            )
+            # Archive any investments which are past their end date
+            investments_to_archive = session.query(Investor).filter(Investor.end_date <= date.today())
             for investor_row in investments_to_archive:
                 session.add(investor_row.to_archive_object())
                 session.delete(investor_row)
