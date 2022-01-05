@@ -434,7 +434,7 @@ class InvestmentServices(BaseDataAccess):
             archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
             to_rollover = int((archived_inv_sus - effective_usage) * settings.inv_rollover_fraction)
 
-            # Add rollover service units to whatever the next availible investment
+            # Add rollover service units to whatever the next available investment
             oldest_investment = session.query(Investor) \
                 .filter(Investor.account_name == self._account_name) \
                 .order_by(Investor.start_date) \
