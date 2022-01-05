@@ -377,13 +377,15 @@ class InvestmentServices(BaseDataAccess):
             if len(investments) < 2:
                 raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
 
-            # Make sure there are enough service units in the account to withdraw
+            *young_investments, oldest_investment = investments
+            if not (oldest_investment.start_date <= date.today() or date.today() < oldest_investment.end_date):
+                raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
+
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from younger investments to the oldest available investment
-            *young_investments, oldest_investment = investments
             for investment in young_investments:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
@@ -439,7 +441,7 @@ class InvestmentServices(BaseDataAccess):
             session.add(current_proposal.to_archive_object())
             session.delete(current_proposal)
             # Todo: The transactions in this method are not tied to the current session which may cause problems
-            ProposalServices(self.account_name).create_proposal(id=current_proposal.id, **kwargs)
+            ProposalServices(self.account_name).create_proposal(**kwargs)
 
             # Set RawUsage to zero and unlock the account
             slurm.reset_raw_usage()
