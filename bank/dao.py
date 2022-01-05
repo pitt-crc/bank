@@ -408,14 +408,6 @@ class InvestmentServices(BaseDataAccess):
         slurm = SlurmAccount(self.account_name)
         with Session() as session:
 
-            # Archive the current proposal and create a new one
-            current_proposal = self._get_proposal_info(session)
-            session.add(current_proposal.to_archive_object())
-            session.delete(current_proposal)
-
-            # Todo: The transactions in this method are not tied to the current session which may cause problems
-            ProposalServices(self.account_name).create_proposal(id=current_proposal.id, **kwargs)
-
             # Archive any investments which are past their end_date or have no service units left
             investments_to_archive = session.query(Investor).filter(
                 (Investor.end_date <= date.today()) |
@@ -426,6 +418,7 @@ class InvestmentServices(BaseDataAccess):
                 session.delete(investor_row)
 
             # Get total used and allocated service units
+            current_proposal = self._get_proposal_info(session)
             total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
             total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
 
@@ -444,6 +437,12 @@ class InvestmentServices(BaseDataAccess):
             # units that would have been rolled over are lost
             if oldest_investment:
                 oldest_investment.rollover_sus += to_rollover
+
+            # Archive the current proposal and create a new one
+            session.add(current_proposal.to_archive_object())
+            session.delete(current_proposal)
+            # Todo: The transactions in this method are not tied to the current session which may cause problems
+            ProposalServices(self.account_name).create_proposal(id=current_proposal.id, **kwargs)
 
             # Set RawUsage to zero and unlock the account
             slurm.reset_raw_usage()
