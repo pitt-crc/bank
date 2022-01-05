@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from datetime import date, timedelta
-from typing import List, Union
-
 from math import ceil
+from typing import List, Union
 
 from bank.system import *
 from . import settings
@@ -71,13 +70,14 @@ class BaseDataAccess:
 
         if id:
             inv = session.query(Investor).filter(Investor.account_name == self._account_name, Investor.id == id).first()
-            if not inv:
-                raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
+            error = f'Account {self.account_name} has no investment with id {id}'
 
         else:
             inv = session.query(Investor).filter(Investor.account_name == self._account_name).all()
-            if not inv:
-                raise MissingInvestmentError(f'Account {self.account_name} has no associated investments')
+            error = f'Account {self.account_name} has no associated investments'
+
+        if not inv:
+            raise MissingInvestmentError(error)
 
         return inv
 
@@ -356,7 +356,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
-    def advance(self, sus: int) -> int:
+    def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
 
         Args:
@@ -383,17 +383,17 @@ class InvestmentServices(BaseDataAccess):
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from younger investments to the oldest available investment
-            oldest_investment = investments[-1]
-            for investment in investments[:-1]:
+            *young_investments, oldest_investment = investments
+            for investment in young_investments:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
+
+                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 oldest_investment.current_sus += to_withdraw
 
-                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
-
-                # Determine if we are done processing investments
+                # Check if we have withdrawn the requested number of service units
                 sus -= to_withdraw
                 if sus <= 0:
                     break
@@ -402,8 +402,54 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
-    def renew(self) -> None:
-        raise NotImplementedError()
+    def renew(self, **kwargs: int) -> None:
+        """Archive any expired investments and rollover unused service units"""
+
+        slurm = SlurmAccount(self.account_name)
+        with Session() as session:
+
+            # Archive the current proposal and create a new one
+            current_proposal = self._get_proposal_info(session)
+            session.add(current_proposal.to_archive_object())
+            session.delete(current_proposal)
+
+            # Todo: The transactions in this method are not tied to the current session which may cause problems
+            ProposalServices(self.account_name).create_proposal(id=current_proposal.id, **kwargs)
+
+            # Archive any investments which are past their end_date or have no service units left
+            investments_to_archive = session.query(Investor).filter(
+                (Investor.end_date <= date.today()) |
+                (Investor.current_sus == 0 and Investor.withdrawn_sus == Investor.service_units)
+            )
+            for investor_row in investments_to_archive:
+                session.add(investor_row.to_archive_object())
+                session.delete(investor_row)
+
+            # Get total used and allocated service units
+            total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
+            total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
+
+            # Calculate number of investment service to roll over after applying SUs from the primary proposal
+            effective_usage = max(0, total_usage - total_proposal_sus)
+            archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
+            to_rollover = int((archived_inv_sus - effective_usage) * settings.inv_rollover_fraction)
+
+            # Add rollover service units to whatever the next availible investment
+            oldest_investment = session.query(Investor) \
+                .filter(Investor.account_name == self._account_name) \
+                .order_by(Investor.start_date) \
+                .first()
+
+            # If this is false then there are no more investments and the service
+            # units that would have been rolled over are lost
+            if oldest_investment:
+                oldest_investment.rollover_sus += to_rollover
+
+            # Set RawUsage to zero and unlock the account
+            slurm.reset_raw_usage()
+            slurm.set_locked_state(False)
+
+            session.commit()
 
 
 class AdminServices(BaseDataAccess):
