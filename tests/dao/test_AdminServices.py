@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -7,9 +7,8 @@ import time_machine
 from bank import orm
 from bank import settings
 from bank.dao import AdminServices
+from bank.system import SlurmAccount
 from tests.dao._utils import AdminSetup
-
-TODAY = date.today()
 
 
 class CalculatePercentage(TestCase):
@@ -37,9 +36,14 @@ class PrintInfo(TestCase):
 class Renewal(AdminSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
-    def setUp(self) -> None:
+    @patch.object(SlurmAccount, "get_cluster_usage", return_value=0)
+    def setUp(self, *args) -> None:
         super().setUp()
-        with time_machine.travel(TODAY + timedelta(days=366)):
+
+        # Fast-forward in time to after the end of the first investment
+        investments = self.account._get_investment(self.session)
+        end_of_first_inv = investments[0].end_date
+        with time_machine.travel(end_of_first_inv + timedelta(days=1)):
             self.account.renew(reset_usage=False)
 
     def test_proposal_is_archived(self, *args) -> None:
@@ -48,13 +52,17 @@ class Renewal(AdminSetup, TestCase):
 
     def test_new_proposal_is_created(self, *args) -> None:
         # Compare the id of the current proposal with the id of the original proposal
-        new_proposal_id = self.account._get_proposal(self.session).id
-        self.assertNotEqual(new_proposal_id, self.proposal_id)
+        new_proposal = self.account._get_proposal(self.session)
+        self.assertNotEqual(new_proposal.id, self.proposal_id)
+        self.assertEqual(new_proposal.service_units, self.num_proposal_sus)
 
     def test_investments_are_archived(self, *args) -> None:
-        investment = self.session.query(orm.InvestorArchive).filter(orm.InvestorArchive.id == self.inv_id[0])
-        self.assertTrue(investment, 'No investment found in archive table')
+        archived_investment = self.session.query(orm.InvestorArchive).filter(orm.InvestorArchive.id == self.inv_id[0])
+        self.assertTrue(archived_investment, 'No investment found in archive table')
+
+        remaining_investments = self.account._get_investment(self.session)
+        self.assertEqual(len(self.inv_id) - 1, len(remaining_investments))
 
     def test_investments_are_rolled_over(self, *args) -> None:
-        current_investment = self.account._get_investment(self.session, self.inv_id[-1])
+        current_investment = self.account._get_investment(self.session)[0]
         self.assertEqual(self.num_inv_sus * settings.inv_rollover_fraction, current_investment.rollover_sus)

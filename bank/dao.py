@@ -13,8 +13,6 @@ from datetime import date, timedelta
 from math import ceil
 from typing import List, Union
 
-from sqlalchemy.orm import make_transient
-
 from bank.system import *
 from . import settings
 from .exceptions import *
@@ -76,7 +74,7 @@ class BaseDataAccess:
             error = f'Account {self.account_name} has no investment with id {id}'
 
         else:
-            inv = session.query(Investor).filter(Investor.account_name == self._account_name).all()
+            inv = session.query(Investor).filter(Investor.account_name == self._account_name).order_by(Investor.start_date).all()
             error = f'Account {self.account_name} has no associated investments'
 
         if not inv:
@@ -418,7 +416,7 @@ class AdminServices(BaseDataAccess):
         with Session() as session:
 
             # Archive any investments which are past their end date
-            investments_to_archive = session.query(Investor).filter(Investor.end_date <= date.today())
+            investments_to_archive = session.query(Investor).filter(Investor.end_date <= date.today()).all()
             for investor_row in investments_to_archive:
                 session.add(investor_row.to_archive_object())
                 session.delete(investor_row)
@@ -429,28 +427,24 @@ class AdminServices(BaseDataAccess):
             total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
 
             # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
-            effective_usage = max(0, total_usage - total_proposal_sus)
             archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
-            to_rollover = int((archived_inv_sus - effective_usage) * settings.inv_rollover_fraction)
+            effective_usage = max(0, total_usage - total_proposal_sus)
+            available_for_rollover = max(0, archived_inv_sus - effective_usage)
+            to_rollover = int(available_for_rollover * settings.inv_rollover_fraction)
 
             # Add rollover service units to whatever the next available investment
-            oldest_investment = session.query(Investor) \
-                .filter(Investor.account_name == self._account_name) \
-                .order_by(Investor.start_date) \
-                .first()
-
-            # If this is false then there are no more investments and the service
-            # units that would have been rolled over are lost
-            if oldest_investment:
-                oldest_investment.rollover_sus += to_rollover
+            # If the conditional false then there are no more investments and the
+            # service units that would have been rolled over are lost
+            next_investment = self._get_investment(session)[0]
+            if next_investment:
+                next_investment.rollover_sus += to_rollover
 
             # Create a new user proposal and archive the old one
             session.add(current_proposal.to_archive_object())
-            session.delete(current_proposal)
-
             new_proposal = copy(current_proposal)
             new_proposal.id = None
             session.add(new_proposal)
+            session.delete(current_proposal)
 
             session.commit()
 
