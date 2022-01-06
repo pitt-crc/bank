@@ -121,7 +121,7 @@ class AdminParser(dao.AdminServices, BaseParser):
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
         renew = admin_subparsers.add_parser('renew', help='Rollover any expired investments')
-        renew.set_defaults(function=super(InvestmentParser, InvestmentParser).renew)
+        renew.set_defaults(function=super(AdminParser, AdminParser).renew)
         renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
 
 

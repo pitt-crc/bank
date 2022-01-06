@@ -168,17 +168,17 @@ class AdvanceInvestmentSus(InvestorSetup, TestCase):
                 .all()
 
         # Oldest investment should be untouched
-        self.assertEqual(1_000, investments[0].service_units)
+        self.assertEqual(self.num_inv_sus, investments[0].service_units)
         self.assertEqual(2500, investments[0].current_sus)
         self.assertEqual(0, investments[0].withdrawn_sus)
 
         # Middle investment should be partially withdrawn
-        self.assertEqual(1_000, investments[1].service_units)
+        self.assertEqual(self.num_inv_sus, investments[1].service_units)
         self.assertEqual(500, investments[1].current_sus)
         self.assertEqual(500, investments[1].withdrawn_sus)
 
         # Youngest (i.e., latest starting time) investment should be fully withdrawn
-        self.assertEqual(1_000, investments[2].service_units)
+        self.assertEqual(self.num_inv_sus, investments[2].service_units)
         self.assertEqual(0, investments[2].current_sus)
         self.assertEqual(1_000, investments[2].withdrawn_sus)
 

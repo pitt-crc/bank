@@ -8,9 +8,12 @@ API Reference
 from __future__ import annotations
 
 from bisect import bisect_left
+from copy import copy
 from datetime import date, timedelta
 from math import ceil
 from typing import List, Union
+
+from sqlalchemy.orm import make_transient
 
 from bank.system import *
 from . import settings
@@ -38,7 +41,7 @@ class BaseDataAccess:
     def account_name(self) -> str:
         return self._account_name
 
-    def _get_proposal_info(self, session: Session) -> Proposal:
+    def _get_proposal(self, session: Session) -> Proposal:
         """Return the proposal record from the application database
 
         Args:
@@ -134,7 +137,7 @@ class ProposalServices(BaseDataAccess):
         """Delete the account's current proposal"""
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
             session.add(proposal.to_archive_object())
             session.query(Proposal).filter(Proposal.id == proposal.id).delete()
             session.commit()
@@ -152,7 +155,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -173,7 +176,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -194,7 +197,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -217,7 +220,7 @@ class InvestmentServices(BaseDataAccess):
 
         super().__init__(account_name)
         with Session() as session:
-            self._get_proposal_info(session)
+            self._get_proposal(session)
 
     @staticmethod
     def _raise_invalid_sus(sus: int) -> None:
@@ -256,7 +259,7 @@ class InvestmentServices(BaseDataAccess):
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
         with Session() as session:
-            self._get_proposal_info(session)
+            self._get_proposal(session)
 
             for i in range(num_inv):
                 start_this = start + i * duration
@@ -421,11 +424,11 @@ class AdminServices(BaseDataAccess):
                 session.delete(investor_row)
 
             # Get total used and allocated service units
-            current_proposal = self._get_proposal_info(session)
+            current_proposal = self._get_proposal(session)
             total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
             total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
 
-            # Calculate number of investment service to roll over after applying SUs from the primary proposal
+            # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
             effective_usage = max(0, total_usage - total_proposal_sus)
             archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
             to_rollover = int((archived_inv_sus - effective_usage) * settings.inv_rollover_fraction)
@@ -442,7 +445,7 @@ class AdminServices(BaseDataAccess):
                 oldest_investment.rollover_sus += to_rollover
 
             # Create a new user proposal and archive the old one
-            new_proposal = current_proposal.copy()
+            new_proposal = copy(current_proposal)
             new_proposal.id = None
 
             session.add(current_proposal.to_archive_object())
@@ -468,7 +471,7 @@ class AdminServices(BaseDataAccess):
         """Print a summary of service units allocated to and used by the account"""
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
             investments = self._get_investment(session)
 
         # Print the table header
@@ -522,7 +525,7 @@ class AdminServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self._slurm_acct.get_cluster_usage(c) for c in settings.clusters())

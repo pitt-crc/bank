@@ -30,6 +30,3 @@ class SignatureMatchesCLI(InvestorSetup, CLIAsserts, TestCase):
 
     def test_advance_sus(self) -> None:
         self.assert_parser_matches_func_signature(f'investment advance --account {settings.test_account} --sus 10')
-
-    def test_renew_investment(self) -> None:
-        self.assert_parser_matches_func_signature(f'investment renew --account {settings.test_account}')
