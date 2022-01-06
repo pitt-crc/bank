@@ -34,7 +34,7 @@ class PrintInfo(TestCase):
 
 # We patch the slurm commands because they require root permissions
 # Patching the datetime allows us to pretend we are in the future when
-# proposals/investments have expitred
+# proposals/investments have expired
 @patch('datetime.date')
 @patch('bank.system.SlurmAccount.reset_raw_usage')
 @patch('bank.system.SlurmAccount.set_locked_state')
