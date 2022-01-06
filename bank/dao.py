@@ -411,7 +411,7 @@ class InvestmentServices(BaseDataAccess):
 class AdminServices(BaseDataAccess):
     """Administration for existing bank accounts"""
 
-    def renew(self) -> None:
+    def renew(self, reset_usage=True) -> None:
         """Archive any expired investments and rollover unused service units"""
 
         slurm = SlurmAccount(self.account_name)
@@ -445,18 +445,19 @@ class AdminServices(BaseDataAccess):
                 oldest_investment.rollover_sus += to_rollover
 
             # Create a new user proposal and archive the old one
+            session.add(current_proposal.to_archive_object())
+            session.delete(current_proposal)
+
             new_proposal = copy(current_proposal)
             new_proposal.id = None
-
-            session.add(current_proposal.to_archive_object())
             session.add(new_proposal)
-            session.delete(current_proposal)
 
             session.commit()
 
         # Set RawUsage to zero and unlock the account
-        slurm.reset_raw_usage()
-        slurm.set_locked_state(False)
+        if reset_usage:
+            slurm.reset_raw_usage()
+            slurm.set_locked_state(False)
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
