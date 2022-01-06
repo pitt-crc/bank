@@ -1,3 +1,5 @@
+from typing import List
+
 from bank import settings
 from bank.dao import ProposalServices, InvestmentServices
 from bank.orm import Session, Proposal, Investor, ProposalArchive, InvestorArchive
@@ -37,13 +39,15 @@ class ProposalSetup(GenericSetup):
 class InvestorSetup(ProposalSetup):
     """Reusable setup mixin for configuring tests against user investments"""
 
-    num_inv_sus = 10_000
-    inv_id: int = None
+    num_inv_sus = 3_000
+    num_investments = 3
+    inv_id: List[int] = None  # List of ids for investments created during setup
 
     def setUp(self) -> None:
         """Ensure there exists a user proposal and investment for the test user account"""
 
+        # Create a series of three investments totalling 3,000 service units
         super().setUp()
         self.account = InvestmentServices(settings.test_account)
-        self.account.create_investment(self.num_inv_sus)
-        self.inv_id = self.account._get_investment(self.session)[0].id
+        self.account.create_investment(self.num_inv_sus * self.num_investments, num_inv=self.num_investments)
+        self.inv_id = [inv.id for inv in self.account._get_investment(self.session)]
