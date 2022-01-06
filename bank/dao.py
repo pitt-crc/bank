@@ -404,7 +404,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
-    def renew(self, **kwargs: int) -> None:
+    def renew(self) -> None:
         """Archive any expired investments and rollover unused service units"""
 
         slurm = SlurmAccount(self.account_name)
@@ -437,17 +437,19 @@ class InvestmentServices(BaseDataAccess):
             if oldest_investment:
                 oldest_investment.rollover_sus += to_rollover
 
-            # Archive the current proposal and create a new one
-            session.add(current_proposal.to_archive_object())
-            session.delete(current_proposal)
-            # Todo: The transactions in this method are not tied to the current session which may cause problems
-            ProposalServices(self.account_name).create_proposal(**kwargs)
+            # Create a new user proposal and archive the old one
+            new_proposal = current_proposal.copy()
+            new_proposal.id = None
 
-            # Set RawUsage to zero and unlock the account
-            slurm.reset_raw_usage()
-            slurm.set_locked_state(False)
+            session.add(current_proposal.to_archive_object())
+            session.add(new_proposal)
+            session.delete(current_proposal)
 
             session.commit()
+
+        # Set RawUsage to zero and unlock the account
+        slurm.reset_raw_usage()
+        slurm.set_locked_state(False)
 
 
 class AdminServices(BaseDataAccess):

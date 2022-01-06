@@ -215,3 +215,17 @@ class AdvanceInvestmentSus(ProposalSetup, TestCase):
 
         with self.assertRaises(MissingInvestmentError):
             self.account.advance(10)
+
+
+class Renewal(TestCase):
+    def test_proposal_is_archived(self) -> None:
+        self.fail()
+
+    def test_new_proposal_is_created(self) -> None:
+        self.fail()
+
+    def test_investments_are_archived(self) -> None:
+        self.fail()
+
+    def test_investments_are_rolled_over(self) -> None:
+        self.fail()
