@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from bank import settings
 from bank.dao import AdminServices
+from tests.dao._utils import InvestorSetup
 
 
 class CalculatePercentage(TestCase):
@@ -25,3 +26,19 @@ class PrintInfo(TestCase):
     def test_output_not_empty(self, mocked_print):
         AdminServices(settings.test_account).print_info()
         self.assertTrue(mocked_print.mock_calls)
+
+
+class Renewal(InvestorSetup, TestCase):
+    """Tests for the renewal of investment accounts"""
+
+    def test_proposal_is_archived(self) -> None:
+        self.fail()
+
+    def test_new_proposal_is_created(self) -> None:
+        self.fail()
+
+    def test_investments_are_archived(self) -> None:
+        self.fail()
+
+    def test_investments_are_rolled_over(self) -> None:
+        self.fail()

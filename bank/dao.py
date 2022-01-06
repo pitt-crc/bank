@@ -404,6 +404,10 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
+
+class AdminServices(BaseDataAccess):
+    """Administration for existing bank accounts"""
+
     def renew(self) -> None:
         """Archive any expired investments and rollover unused service units"""
 
@@ -450,10 +454,6 @@ class InvestmentServices(BaseDataAccess):
         # Set RawUsage to zero and unlock the account
         slurm.reset_raw_usage()
         slurm.set_locked_state(False)
-
-
-class AdminServices(BaseDataAccess):
-    """Administration for existing bank accounts"""
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
