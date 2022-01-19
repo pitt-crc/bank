@@ -6,7 +6,9 @@ API Reference
 
 from __future__ import annotations
 
+import logging
 from datetime import date
+from logging import getLogger
 
 from sqlalchemy import Column, Date, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,6 +18,7 @@ from .base import Validators
 from .. import settings
 from ..system import SlurmAccount
 
+LOG = getLogger('bank.orm.tables')
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -37,6 +40,7 @@ class Proposal(Base):
     def to_archive_object(self) -> ProposalArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""
 
+        logging.debug(f'Creating archive object for proposal {self.id}')
         archive_obj = ProposalArchive(
             id=self.id,
             account_name=self.account_name,
@@ -92,6 +96,7 @@ class Investor(Base):
     def to_archive_object(self) -> InvestorArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""
 
+        logging.debug(f'Creating archive object for Investor {self.id}')
         return InvestorArchive(
             id=self.id,
             account_name=self.account_name,
