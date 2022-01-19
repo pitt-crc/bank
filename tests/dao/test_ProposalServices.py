@@ -27,13 +27,13 @@ class CreateProposal(TestCase):
         """Test a proposal is created after the function call"""
 
         self.account.create_proposal()
-        self.assertTrue(self.account._get_proposal_info(self.session))
+        self.assertTrue(self.account._get_proposal(self.session))
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
-        proposal_info = self.account._get_proposal_info(self.session)
+        proposal_info = self.account._get_proposal(self.session)
         for cluster in settings.clusters:
             self.assertEqual(0, getattr(proposal_info, cluster))
 
@@ -41,7 +41,7 @@ class CreateProposal(TestCase):
         """Tests proposal are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{settings.test_cluster: 1000})
-        proposal_info = self.account._get_proposal_info(self.session)
+        proposal_info = self.account._get_proposal(self.session)
         self.assertEqual(1000, getattr(proposal_info, settings.test_cluster))
 
     def test_error_if_already_exists(self) -> None:
@@ -64,7 +64,7 @@ class DeleteProposal(ProposalSetup, TestCase):
     def test_proposal_is_deleted(self) -> None:
         """Test the proposal is moved from the ``Proposal`` to ``ProposalArchive`` table"""
 
-        proposal_id = self.account._get_proposal_info(self.session).id
+        proposal_id = self.account._get_proposal(self.session).id
         self.account.delete_proposal()
 
         proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account._account_name).first()
@@ -90,7 +90,7 @@ class AddSus(ProposalSetup, TestCase):
         sus_to_add = 1000
         self.account.add(**{settings.test_cluster: sus_to_add})
         with Session() as session:
-            proposal = self.account._get_proposal_info(session)
+            proposal = self.account._get_proposal(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
         self.assertEqual(self.num_proposal_sus + sus_to_add, new_sus)
@@ -128,7 +128,7 @@ class SubtractSus(ProposalSetup, TestCase):
         sus_to_subtract = 10
         self.account.subtract(**{settings.test_cluster: sus_to_subtract})
         with Session() as session:
-            proposal = self.account._get_proposal_info(session)
+            proposal = self.account._get_proposal(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
         self.assertEqual(self.num_proposal_sus - sus_to_subtract, new_sus)
@@ -164,7 +164,7 @@ class OverwriteSus(ProposalSetup, TestCase):
         """Test sus from kwargs are set in the proposal"""
 
         self.account.overwrite(**{settings.test_cluster: 12345})
-        proposal = self.account._get_proposal_info(self.session)
+        proposal = self.account._get_proposal(self.session)
         self.assertEqual(12345, getattr(proposal, settings.test_cluster))
 
     def test_error_on_bad_cluster_name(self) -> None:

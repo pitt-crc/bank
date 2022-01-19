@@ -106,16 +106,23 @@ class AdminParser(dao.AdminServices, BaseParser):
         admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
+        # Reusable definitions for argument help text
+        account_help = 'Name of a slurm user account'
+
         info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
         info.set_defaults(function=super(AdminParser, AdminParser).print_info)
-        info.add_argument('--account', dest='self', type=dao.AdminServices, help='The account to print information for')
+        info.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
 
         notify = admin_subparsers.add_parser('notify', help='Send any pending email notifications')
         notify.set_defaults(function=super(AdminParser, AdminParser).send_pending_alerts)
-        notify.add_argument('--account', dest='self', type=dao.AdminServices, help='The account to process notifications for')
+        notify.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
 
         unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
+
+        renew = admin_subparsers.add_parser('renew', help='Rollover any expired investments')
+        renew.set_defaults(function=super(AdminParser, AdminParser).renew)
+        renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
 
 
 class SlurmParser(system.SlurmAccount, BaseParser):
@@ -258,10 +265,6 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
         investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)
         investment_advance.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
         investment_advance.add_argument('--sus', type=int, help='The number of SUs you want to advance')
-
-        investment_renew = investment_subparsers.add_parser('renew', help='Rollover any expired investments')
-        investment_renew.set_defaults(function=super(InvestmentParser, InvestmentParser).renew)
-        investment_renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
 
 
 class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):

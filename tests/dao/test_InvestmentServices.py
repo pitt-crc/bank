@@ -74,12 +74,12 @@ class DeleteInvestment(InvestorSetup, TestCase):
     def test_investment_is_deleted(self) -> None:
         """Test the investment is moved from the ``Investor`` to ``InvestorArchive`` table"""
 
-        self.account.delete_investment(id=self.inv_id)
+        self.account.delete_investment(id=self.inv_id[0])
 
-        investment = self.session.query(Investor).filter(Investor.id == self.inv_id).first()
+        investment = self.session.query(Investor).filter(Investor.id == self.inv_id[0]).first()
         self.assertIsNone(investment, 'Proposal was not deleted')
 
-        archive = self.session.query(InvestorArchive).filter(InvestorArchive.id == self.inv_id).first()
+        archive = self.session.query(InvestorArchive).filter(InvestorArchive.id == self.inv_id[0]).first()
         self.assertIsNotNone(archive, 'No archive object created with matching proposal id')
 
 
@@ -90,18 +90,18 @@ class AddSus(InvestorSetup, TestCase):
         """Test SUs are added to the investment"""
 
         sus_to_add = 1000
-        self.account.add(self.inv_id, sus_to_add)
-        new_sus = self.account._get_investment(self.session, self.inv_id).service_units
+        self.account.add(self.inv_id[0], sus_to_add)
+        new_sus = self.account._get_investment(self.session, self.inv_id[0]).service_units
         self.assertEqual(self.num_inv_sus + sus_to_add, new_sus)
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.add(self.inv_id, -1)
+            self.account.add(self.inv_id[0], -1)
 
         with self.assertRaises(ValueError):
-            self.account.add(self.inv_id, 0)
+            self.account.add(self.inv_id[0], 0)
 
 
 class SubtractSus(InvestorSetup, TestCase):
@@ -111,24 +111,24 @@ class SubtractSus(InvestorSetup, TestCase):
         """Test SUs are removed from the proposal"""
 
         sus_to_subtract = 10
-        self.account.subtract(self.inv_id, sus_to_subtract)
-        new_sus = self.account._get_investment(self.session, self.inv_id).service_units
+        self.account.subtract(self.inv_id[0], sus_to_subtract)
+        new_sus = self.account._get_investment(self.session, self.inv_id[0]).service_units
         self.assertEqual(self.num_inv_sus - sus_to_subtract, new_sus)
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.subtract(self.inv_id, -1)
+            self.account.subtract(self.inv_id[0], -1)
 
         with self.assertRaises(ValueError):
-            self.account.subtract(self.inv_id, 0)
+            self.account.subtract(self.inv_id[0], 0)
 
     def test_error_on_over_subtract(self) -> None:
         """Test for a ``ValueError`` if more service units are subtracted than available"""
 
         with self.assertRaises(ValueError):
-            self.account.subtract(self.inv_id, self.num_inv_sus + 1)
+            self.account.subtract(self.inv_id[0], self.num_inv_sus + 1)
 
 
 class OverwriteSus(InvestorSetup, TestCase):
@@ -138,29 +138,22 @@ class OverwriteSus(InvestorSetup, TestCase):
         """Test sus from kwargs are set in the proposal"""
 
         sus_to_overwrite = 10
-        self.account.overwrite(self.inv_id, sus_to_overwrite)
-        new_sus = self.account._get_investment(self.session, self.inv_id).service_units
+        self.account.overwrite(self.inv_id[0], sus_to_overwrite)
+        new_sus = self.account._get_investment(self.session, self.inv_id[0]).service_units
         self.assertEqual(sus_to_overwrite, new_sus)
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.overwrite(self.inv_id, -1)
+            self.account.overwrite(self.inv_id[0], -1)
 
         with self.assertRaises(ValueError):
-            self.account.overwrite(self.inv_id, 0)
+            self.account.overwrite(self.inv_id[0], 0)
 
 
-class AdvanceInvestmentSus(ProposalSetup, TestCase):
+class AdvanceInvestmentSus(InvestorSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
-
-    def setUp(self) -> None:
-        super().setUp()
-
-        # Create a series of three investments totalling 3,000 service units
-        self.account = InvestmentServices(settings.test_account)
-        self.account.create_investment(3_000, num_inv=3)
 
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
@@ -175,17 +168,17 @@ class AdvanceInvestmentSus(ProposalSetup, TestCase):
                 .all()
 
         # Oldest investment should be untouched
-        self.assertEqual(1_000, investments[0].service_units)
+        self.assertEqual(self.num_inv_sus, investments[0].service_units)
         self.assertEqual(2500, investments[0].current_sus)
         self.assertEqual(0, investments[0].withdrawn_sus)
 
         # Middle investment should be partially withdrawn
-        self.assertEqual(1_000, investments[1].service_units)
+        self.assertEqual(self.num_inv_sus, investments[1].service_units)
         self.assertEqual(500, investments[1].current_sus)
         self.assertEqual(500, investments[1].withdrawn_sus)
 
         # Youngest (i.e., latest starting time) investment should be fully withdrawn
-        self.assertEqual(1_000, investments[2].service_units)
+        self.assertEqual(self.num_inv_sus, investments[2].service_units)
         self.assertEqual(0, investments[2].current_sus)
         self.assertEqual(1_000, investments[2].withdrawn_sus)
 

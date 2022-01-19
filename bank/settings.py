@@ -113,6 +113,8 @@ db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR 
 clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
 clusters_as_str = ','.join(clusters)
 
+inv_rollover_fraction = .5
+
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.
 email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')

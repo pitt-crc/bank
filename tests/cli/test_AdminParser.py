@@ -3,9 +3,10 @@ from unittest import TestCase
 from bank import settings
 from bank.cli import AdminParser
 from tests.cli._utils import CLIAsserts
+from tests.dao._utils import ProposalSetup
 
 
-class SignatureMatchesCLI(TestCase, CLIAsserts):
+class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     """Test the ``AdminParser`` interface defines arguments that match the underlying DAO signatures"""
 
     @classmethod
@@ -20,3 +21,6 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
 
     def test_unlocked_accounts(self) -> None:
         self.assert_parser_matches_func_signature(f'admin unlocked')
+
+    def test_renew_investment(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin renew --account {settings.test_account}')

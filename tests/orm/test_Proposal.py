@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from unittest import TestCase, skipIf
 
 from bank import settings
-from bank.orm import Proposal
+from bank.orm import Proposal, Session
 from bank.system import SlurmAccount
 from tests.orm import _utils
 
@@ -75,3 +75,10 @@ class ToArchiveObject(TestCase):
             slurm_account.get_cluster_usage(settings.test_cluster),
             getattr(self.archive_obj, f'{settings.test_cluster}_usage')
         )
+
+    def test_returned_obj_matches_target_table_schema(self) -> None:
+        """Check no errors are raised when adding the archive object to the archive table"""
+
+        with Session() as session:
+            session.add(self.archive_obj)
+            session.flush()

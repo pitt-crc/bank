@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 from unittest import TestCase
 
-from bank.orm import Investor
+from bank.orm import Investor, Session
 from tests.orm import _utils
 
 
@@ -30,19 +30,26 @@ class ToArchiveObject(TestCase):
             rollover_sus=0
         )
 
+        self.archive_obj = self.investment.to_archive_object()
+
     def test_column_values_match_original_object(self) -> None:
         """Test the attributes of the returned object match the original investment"""
 
-        archive_obj = self.investment.to_archive_object()
         col_names = ('id', 'account_name', 'start_date', 'end_date', 'service_units', 'current_sus')
         for c in col_names:
-            self.assertEqual(getattr(self.investment, c), getattr(archive_obj, c))
+            self.assertEqual(getattr(self.investment, c), getattr(self.archive_obj, c))
 
     def test_default_end_date_is_today(self) -> None:
         """Test that the default value for the ``end_date`` column is the current date"""
 
-        archive_obj = self.investment.to_archive_object()
-        self.assertEqual(archive_obj.exhaustion_date, date.today())
+        self.assertEqual(self.archive_obj.exhaustion_date, date.today())
+
+    def test_returned_obj_matches_target_table_schema(self) -> None:
+        """Check no errors are raised when adding the archive object to the archive table"""
+
+        with Session() as session:
+            session.add(self.archive_obj)
+            session.flush()
 
 
 class Expired(TestCase):

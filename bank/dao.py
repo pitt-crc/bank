@@ -39,7 +39,7 @@ class BaseDataAccess:
     def account_name(self) -> str:
         return self._account_name
 
-    def _get_proposal_info(self, session: Session) -> Proposal:
+    def _get_proposal(self, session: Session) -> Proposal:
         """Return the proposal record from the application database
 
         Args:
@@ -71,13 +71,14 @@ class BaseDataAccess:
 
         if id:
             inv = session.query(Investor).filter(Investor.account_name == self._account_name, Investor.id == id).first()
-            if not inv:
-                raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {id}')
+            error = f'Account {self.account_name} has no investment with id {id}'
 
         else:
-            inv = session.query(Investor).filter(Investor.account_name == self._account_name).all()
-            if not inv:
-                raise MissingInvestmentError(f'Account {self.account_name} has no associated investments')
+            inv = session.query(Investor).filter(Investor.account_name == self._account_name).order_by(Investor.start_date).all()
+            error = f'Account {self.account_name} has no associated investments'
+
+        if not inv:
+            raise MissingInvestmentError(error)
 
         return inv
 
@@ -134,7 +135,7 @@ class ProposalServices(BaseDataAccess):
         """Delete the account's current proposal"""
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
             session.add(proposal.to_archive_object())
             session.query(Proposal).filter(Proposal.id == proposal.id).delete()
             session.commit()
@@ -152,7 +153,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -173,7 +174,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -194,7 +195,7 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
             for key, val in kwargs.items():
@@ -217,7 +218,7 @@ class InvestmentServices(BaseDataAccess):
 
         super().__init__(account_name)
         with Session() as session:
-            self._get_proposal_info(session)
+            self._get_proposal(session)
 
     @staticmethod
     def _raise_invalid_sus(sus: int) -> None:
@@ -256,7 +257,7 @@ class InvestmentServices(BaseDataAccess):
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
         with Session() as session:
-            self._get_proposal_info(session)
+            self._get_proposal(session)
 
             for i in range(num_inv):
                 start_this = start + i * duration
@@ -356,7 +357,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
-    def advance(self, sus: int) -> int:
+    def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
 
         Args:
@@ -377,23 +378,25 @@ class InvestmentServices(BaseDataAccess):
             if len(investments) < 2:
                 raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
 
-            # Make sure there are enough service units in the account to withdraw
+            *young_investments, oldest_investment = investments
+            if not (oldest_investment.start_date <= date.today() or date.today() < oldest_investment.end_date):
+                raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
+
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from younger investments to the oldest available investment
-            oldest_investment = investments[-1]
-            for investment in investments[:-1]:
+            for investment in young_investments:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
+
+                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 oldest_investment.current_sus += to_withdraw
 
-                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
-
-                # Determine if we are done processing investments
+                # Check if we have withdrawn the requested number of service units
                 sus -= to_withdraw
                 if sus <= 0:
                     break
@@ -402,12 +405,61 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
-    def renew(self) -> None:
-        raise NotImplementedError()
-
 
 class AdminServices(BaseDataAccess):
     """Administration for existing bank accounts"""
+
+    def renew(self, reset_usage=True) -> None:
+        """Archive any expired investments and rollover unused service units"""
+
+        slurm = SlurmAccount(self.account_name)
+        with Session() as session:
+
+            # Archive any investments which are past their end date
+            investments_to_archive = session.query(Investor).filter(Investor.end_date <= date.today()).all()
+            for investor_row in investments_to_archive:
+                session.add(investor_row.to_archive_object())
+                session.delete(investor_row)
+
+            # Get total used and allocated service units
+            current_proposal = self._get_proposal(session)
+            total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
+            total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
+
+            # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
+            archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
+            effective_usage = max(0, total_usage - total_proposal_sus)
+            available_for_rollover = max(0, archived_inv_sus - effective_usage)
+            to_rollover = int(available_for_rollover * settings.inv_rollover_fraction)
+
+            # Add rollover service units to whatever the next available investment
+            # If the conditional false then there are no more investments and the
+            # service units that would have been rolled over are lost
+            next_investment = self._get_investment(session)[0]
+            if next_investment:
+                next_investment.rollover_sus += to_rollover
+
+            # Create a new user proposal and archive the old one
+            new_proposal = Proposal(
+                account_name=current_proposal.account_name,
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=365),
+                percent_notified=0
+            )
+            for cluster in settings.clusters:
+                setattr(new_proposal, cluster, getattr(current_proposal, cluster))
+
+            session.add(new_proposal)
+            arx = current_proposal.to_archive_object()
+            session.add(arx)
+            session.delete(current_proposal)
+
+            session.commit()
+
+        # Set RawUsage to zero and unlock the account
+        if reset_usage:
+            slurm.reset_raw_usage()
+            slurm.set_locked_state(False)
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
@@ -422,7 +474,7 @@ class AdminServices(BaseDataAccess):
         """Print a summary of service units allocated to and used by the account"""
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
             investments = self._get_investment(session)
 
         # Print the table header
@@ -476,7 +528,7 @@ class AdminServices(BaseDataAccess):
         """
 
         with Session() as session:
-            proposal = self._get_proposal_info(session)
+            proposal = self._get_proposal(session)
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self._slurm_acct.get_cluster_usage(c) for c in settings.clusters())
