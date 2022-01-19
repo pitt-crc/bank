@@ -44,7 +44,7 @@ from . import settings
 from .exceptions import CmdError, NoSuchAccountError
 
 ENV = environ.Env()
-LOG = getLogger('bank.utils')
+LOG = getLogger('bank.system')
 
 
 class RequireRoot:
@@ -62,6 +62,7 @@ class RequireRoot:
         @wraps(func)
         def wrapped(*args, **kwargs) -> Any:
             if not cls.check_user_is_root():
+                LOG.error('Attempted action that requires root access without appropriate permissions')
                 raise PermissionError("This action must be run with sudo privileges")
 
             return func(*args, **kwargs)  # pragma: no cover
@@ -99,6 +100,7 @@ class ShellCmd:
         """
 
         if self.err:
+            LOG.debug(f'Shell command errored out with message: {self.err} ')
             raise CmdError(self.err)
 
 
@@ -118,10 +120,12 @@ class SlurmAccount:
 
         self._account = account_name
         if not self.check_slurm_installed():
+            LOG.error('System error: Slurm is not installed')
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         account_exists = ShellCmd(f'sacctmgr -n show assoc account={self._account}').out
         if not account_exists:
+            LOG.debug(f'Could not instantiate SlurmAccount for username {account_name}. No account exists.')
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
 
     @property
@@ -155,6 +159,7 @@ class SlurmAccount:
             organization: The organization name of the account
         """
 
+        LOG.info(f'Creating Slurm account {account_name} (description="{description}" organization="{organization}")')
         ShellCmd(
             f'sacctmgr -i add account {account_name} '
             f'description={description} '
@@ -203,6 +208,7 @@ class SlurmAccount:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
         """
 
+        LOG.info(f'Updating lock state for Slurm account {self._account} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
         ShellCmd(
             f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
@@ -218,6 +224,8 @@ class SlurmAccount:
         Returns:
             The account's usage of the given cluster
         """
+
+        LOG.debug(f'Fetching cluster usage for {self._account}')
 
         # Only the second and third line are necessary from the output table
         cmd = ShellCmd(f"sshare -A {self._account} -M {cluster} -P -a")
@@ -237,6 +245,7 @@ class SlurmAccount:
         # At the time of writing, the sacctmgr utility does not support setting
         # RawUsage to any value other than zero
 
+        LOG.info(f'Resetting cluster usage for Slurm account {self._account}')
         ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set RawUsage=0')
 
 
@@ -291,6 +300,7 @@ class EmailTemplate(Formatter):
         """Raise an error if the template message has any unformatted fields"""
 
         if self.fields:
+            LOG.error('Could not send email. Missing fields found')
             raise RuntimeError(f'Message has unformatted fields: {self.fields}')
 
     def send_to(self, to: str, subject: str, ffrom: str, smtp: Optional[SMTP] = None) -> EmailMessage:
@@ -306,6 +316,7 @@ class EmailTemplate(Formatter):
             A copy of the sent email
         """
 
+        LOG.debug(f'Sending email to {to}')
         self._assert_missing_fields()
 
         # Extract the text from the email

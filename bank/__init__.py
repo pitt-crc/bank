@@ -26,6 +26,7 @@ logging.basicConfig(
 for _log_name in ('sqlalchemy.engine', 'environ.environ', 'bank.dao'):
     logging.getLogger(_log_name).setLevel(settings.log_level)
 
+# Create database if it does not exist
 if not sqlalchemy_utils.database_exists(orm.engine.url):
     sqlalchemy_utils.create_database(orm.engine.url)
     orm.metadata.create_all(orm.engine)

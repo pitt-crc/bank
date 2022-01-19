@@ -50,9 +50,12 @@ API Reference
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from logging import getLogger
 from typing import List
 
 from . import settings, dao, system
+
+LOG = getLogger('bank.cli')
 
 
 class BaseParser(ArgumentParser):
@@ -77,6 +80,9 @@ class BaseParser(ArgumentParser):
         Args:
             args: A list of command line arguments
         """
+
+        args_str = ' '.join(args)
+        LOG.debug(f'Eval CLI - {args_str}')
 
         cli_kwargs = dict(self.parse_args(args)._get_kwargs())
         cli_kwargs.pop('function', self.print_help)(**cli_kwargs)

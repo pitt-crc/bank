@@ -19,7 +19,7 @@ from .exceptions import *
 from .orm import Investor, Proposal, Session
 
 Numeric = Union[int, float, complex]
-LOG = getLogger('bank.cli')
+LOG = getLogger('bank.dao')
 
 
 class BaseDataAccess:
