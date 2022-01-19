@@ -20,20 +20,25 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Setup Python Environment
+      - name: Load Python Environment
         run: |
           # Make sure we are using the miniconda distribution installed in the custom runner
           module purge
 
           # The conda environemnt needs to be created on the test server ahead of time
           conda activate bank_test_${{ matrix.python-version }}
+          which python
 
+      - name: Install Dependencies
+        run: |
           # Install package requirements in addition to any packages required for running tests
           pip install -r requirements.txt
           pip install coverage
+          which python
 
       - name: Run tests with coverage
         run: |
+          which python
           coverage run -m unittest
           coverage report
           coverage xml -o report_${{ matrix.python-version }}.xml
