@@ -49,16 +49,21 @@ class Renewal(AdminSetup, TestCase):
     def test_proposal_is_archived(self) -> None:
         """Test the original user proposal is archived"""
 
-        self.assertIsNone(self.session.query(orm.Proposal).filter(orm.Proposal.id == self.proposal_id).first())
-        self.assertTrue(self.session.query(orm.ProposalArchive).filter(orm.Proposal.id == self.proposal_id).first())
+        original_proposal = self.session.query(orm.Proposal).filter(orm.Proposal.id == self.proposal_id).first()
+        self.assertIsNone(original_proposal, 'Original proposal was not deleted')
+
+        archived_proposal = self.session.query(orm.ProposalArchive).filter(orm.ProposalArchive.id == self.proposal_id).first()
+        self.assertTrue(archived_proposal, 'Copy of proposal was not created in the archive')
 
     def test_new_proposal_is_created(self) -> None:
         """Test a new user proposal is created"""
 
         # Compare the id of the current proposal with the id of the original proposal
         new_proposal = self.account._get_proposal(self.session)
-        self.assertNotEqual(new_proposal.id, self.proposal_id)
-        self.assertEqual(new_proposal.service_units, self.num_proposal_sus)
+        self.assertNotEqual(new_proposal.id, self.proposal_id, 'New proposal has same ID as the old one')
+        self.assertEqual(
+            getattr(new_proposal, settings.test_cluster), self.num_proposal_sus,
+            'New proposal does not have same service units as the old one')
 
     def test_investments_are_archived(self) -> None:
         """Test expired investments are archived"""

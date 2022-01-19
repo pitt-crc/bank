@@ -8,10 +8,10 @@ API Reference
 from __future__ import annotations
 
 from bisect import bisect_left
-from copy import copy
 from datetime import date, timedelta
-from math import ceil
 from typing import List, Union
+
+from math import ceil
 
 from bank.system import *
 from . import settings
@@ -440,10 +440,18 @@ class AdminServices(BaseDataAccess):
                 next_investment.rollover_sus += to_rollover
 
             # Create a new user proposal and archive the old one
-            session.add(current_proposal.to_archive_object())
-            new_proposal = copy(current_proposal)
-            new_proposal.id = None
+            new_proposal = Proposal(
+                account_name=current_proposal.account_name,
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=365),
+                percent_notified=0
+            )
+            for cluster in settings.clusters:
+                setattr(new_proposal, cluster, getattr(current_proposal, cluster))
+
             session.add(new_proposal)
+            arx = current_proposal.to_archive_object()
+            session.add(arx)
             session.delete(current_proposal)
 
             session.commit()
