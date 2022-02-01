@@ -207,6 +207,18 @@ class SlurmAccount:
 
         return usage
 
+    def get_total_usage(self, in_hours: bool = False):
+        """Return the raw account usage across all clusters defined in application settings
+
+        Args:
+            in_hours: Return usage in units of hours (Defaults to seconds)
+
+        Returns:
+            The account's usage of the given cluster
+        """
+
+        return sum(self.get_cluster_usage(cluster, in_hours) for cluster in settings.clusters)
+
     @RequireRoot
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""

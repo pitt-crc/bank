@@ -413,7 +413,6 @@ class AdminServices(BaseDataAccess):
     def renew(self, reset_usage=True) -> None:
         """Archive any expired investments and rollover unused service units"""
 
-        slurm = SlurmAccount(self.account_name)
         with Session() as session:
 
             # Archive any investments which are past their end date
@@ -425,7 +424,7 @@ class AdminServices(BaseDataAccess):
             # Get total used and allocated service units
             current_proposal = self._get_proposal(session)
             total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
-            total_usage = sum(slurm.get_cluster_usage(c) for c in settings.clusters)
+            total_usage = self._slurm_acct.get_total_usage()
 
             # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
             archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
@@ -459,8 +458,8 @@ class AdminServices(BaseDataAccess):
 
         # Set RawUsage to zero and unlock the account
         if reset_usage:
-            slurm.reset_raw_usage()
-            slurm.set_locked_state(False)
+            self._slurm_acct.reset_raw_usage()
+            self._slurm_acct.set_locked_state(False)
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
@@ -532,14 +531,14 @@ class AdminServices(BaseDataAccess):
             proposal = self._get_proposal(session)
 
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = sum(self._slurm_acct.get_cluster_usage(c) for c in settings.clusters())
+        usage = self._slurm_acct.get_total_usage()
         allocated = sum(getattr(proposal, c) for c in settings.clusters)
         usage_perc = int(usage / allocated * 100)
         next_notify_perc = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
         days_until_expire = (proposal.end_date - date.today()).days
+        end_date_str = proposal.end_date.strftime(settings.date_format)
 
         # Define content used to populate user alert emails
-        end_date_str = proposal.end_date.strftime(settings.date_format)
         email_address = f'{self._account_name}{settings.email_suffix}'
         email_args = dict(
             account=self._account_name,
