@@ -7,7 +7,7 @@ API Reference
 
 from __future__ import annotations
 
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from datetime import date, timedelta
 from logging import getLogger
 from typing import List, Union, Tuple
@@ -520,12 +520,8 @@ class AdminServices(BaseDataAccess):
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def _lock_if_expired(self, email_alert=True) -> None:
-        """Send any pending usage alerts to the account
-
-        Returns:
-            If an alert is sent, returns a copy of the email alert
-        """
+    def _lock_if_expired(self) -> None:
+        """Send any pending usage alerts to the account"""
 
         with Session() as session:
             proposal = self._get_proposal(session)
@@ -533,8 +529,8 @@ class AdminServices(BaseDataAccess):
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = self._slurm_acct.get_total_usage()
         allocated = sum(getattr(proposal, c) for c in settings.clusters)
-        usage_perc = int(usage / allocated * 100)
-        next_notify_perc = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
+        usage_perc = min(int(usage / allocated * 100), 100)
+        next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
         days_until_expire = (proposal.end_date - date.today()).days
         end_date_str = proposal.end_date.strftime(settings.date_format)
 
@@ -566,11 +562,11 @@ class AdminServices(BaseDataAccess):
             email.send_to(email_address, subject=f"Your account {self._account_name} has exceeded a proposal threshold")
 
     @classmethod
-    def lock_expired_accounts(cls, email_alert=True) -> None:
+    def lock_expired_accounts(cls) -> None:
         """Lock any expired accounts"""
 
         for account in cls.find_unlocked():
-            cls(account)._lock_if_expired(email_alert=email_alert)
+            cls(account)._lock_if_expired()
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:

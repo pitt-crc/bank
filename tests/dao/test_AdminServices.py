@@ -79,3 +79,23 @@ class Renewal(AdminSetup, TestCase):
 
         current_investment = self.account._get_investment(self.session)[0]
         self.assertEqual(self.num_inv_sus * settings.inv_rollover_fraction, current_investment.rollover_sus)
+
+
+@patch('smtplib.SMTP')
+class LockIfExpired(AdminSetup, TestCase):
+    """Test for emails sent when locking accounts"""
+
+    def test_email_sent_for_expired(self, mock_smtp) -> None:
+        proposal = self.account._get_proposal(self.session)
+        with time_machine.travel(proposal.end_date):
+            self.account._lock_if_expired()
+
+    def test_email_sent_for_warning_day(self, mock_smtp) -> None:
+        proposal = self.account._get_proposal(self.session)
+        with patch.object(settings, "warning_days", (10,)), time_machine.travel(proposal.end_date - timedelta(days=10)):
+            self.account._lock_if_expired()
+
+    def test_email_sent_for_percent_notified(self, mock_smtp) -> None:
+        proposal = self.account._get_proposal(self.session)
+        with time_machine.travel(proposal.end_date):
+            self.account._lock_if_expired()
