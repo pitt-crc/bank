@@ -537,6 +537,7 @@ class AdminServices(BaseDataAccess):
         """Print a summary of service units allocated to and used by the account"""
 
         print(self._build_usage_str())
+        print(self._build_investment_str())
 
     def _lock_if_expired(self) -> None:
         """Send any pending usage alerts to the account"""

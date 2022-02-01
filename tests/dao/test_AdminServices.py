@@ -25,12 +25,17 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AdminServices._calculate_percentage(1, 2))
 
 
-class PrintInfo(TestCase):
+class PrintInfo(AdminSetup, TestCase):
+    """Tests for the printing of account usage/info"""
 
     @patch('builtins.print')
-    def test_output_not_empty(self, mocked_print):
-        AdminServices(settings.test_account).print_info()
-        self.assertTrue(mocked_print.mock_calls)
+    def test_usage_included_in_print(self, mocked_print):
+        self.account.print_info()
+        first_print = mocked_print.mock_calls[0].args[0]
+        self.assertIn(self.account._build_usage_str(), first_print)
+
+        second_print = mocked_print.mock_calls[1].args[0]
+        self.assertIn(self.account._build_investment_str(), second_print)
 
 
 class Renewal(AdminSetup, TestCase):
