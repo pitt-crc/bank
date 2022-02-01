@@ -7,7 +7,6 @@ API Reference
 
 from __future__ import annotations
 
-from bisect import bisect_left, bisect_right
 from datetime import date, timedelta
 from logging import getLogger
 from typing import List, Union, Tuple
@@ -470,16 +469,16 @@ class AdminServices(BaseDataAccess):
 
         return 0
 
-    def print_info(self) -> None:
-        """Print a summary of service units allocated to and used by the account"""
+    def _build_usage_str(self):
 
         with Session() as session:
             proposal = self._get_proposal(session)
             investments = self._get_investment(session)
 
-        # Print the table header
-        print(f"|{'-' * 82}|")
-        print(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
+        # The table header
+        output_lines = []
+        output_lines.append(f"|{'-' * 82}|")
+        output_lines.append(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
 
         # Print usage information for the primary proposal
         usage_total = 0
@@ -488,14 +487,14 @@ class AdminServices(BaseDataAccess):
             usage = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
             allocation = getattr(proposal, cluster)
             percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
-            print(f"|{'-' * 82}|\n"
-                  f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-                  f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|\n"
-                  f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'-' * 82}|")
+            output_lines.append(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
 
             usage_total += usage
             allocation_total += allocation
@@ -505,20 +504,39 @@ class AdminServices(BaseDataAccess):
         investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
         # Print usage information concerning investments
-        print(f"|{'Aggregate':^82}|")
-        print("|{'-' * 40:^40}|{'-' * 41:^41}|")
+        output_lines.append(f"|{'Aggregate':^82}|")
+        output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
 
         if investment_total == 0:
-            print(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
-            print(f"|{'-' * 82}|")
+            output_lines.append(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
+            output_lines.append(f"|{'-' * 82}|")
 
         else:
-            print(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n"
-                  f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n"
-                  f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n"
-                  f"|{'-' * 40:^40}|{'-' * 41:^41}|\n"
-                  f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
-                  f"|{'-' * 82}|")
+            output_lines.append(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|")
+            output_lines.append(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|")
+            output_lines.append(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|")
+            output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
+            output_lines.append(f"|{'^a Investment SUs can be used across any cluster':^82}|")
+            output_lines.append(f"|{'-' * 82}|")
+
+        return '\n'.join(output_lines)
+
+    def _build_investment_str(self) -> str:
+        output_lines = []
+        output_lines.append('|--------------------------------------------------------------------------------|')
+        output_lines.append('| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |')
+        output_lines.append('|--------------------------------------------------------------------------------|')
+        with Session() as session:
+            for inv in self._get_investment(session):
+                output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
+
+        output_lines.append('|--------------------------------------------------------------------------------|')
+        return '\n'.join(output_lines)
+
+    def print_info(self) -> None:
+        """Print a summary of service units allocated to and used by the account"""
+
+        print(self._build_usage_str())
 
     def _lock_if_expired(self) -> None:
         """Send any pending usage alerts to the account"""
@@ -534,32 +552,35 @@ class AdminServices(BaseDataAccess):
         days_until_expire = (proposal.end_date - date.today()).days
         end_date_str = proposal.end_date.strftime(settings.date_format)
 
-        # Define content used to populate user alert emails
-        email_address = f'{self._account_name}{settings.email_suffix}'
-        email_args = dict(
-            account=self._account_name,
-            start_date=proposal.start_date.strftime(settings.date_format),
-            end_date=proposal.end_date,
-            perc=usage_perc,
-            exp_in_days=days_until_expire)
-
+        email = None
         if days_until_expire == 0:
-            email = settings.expired_proposal_notice.format(**email_args)
-            email.send_to(email_address, f'The account for {self._account_name} has reached the end date {end_date_str}')
+            email = settings.expired_proposal_notice
+            subject = f'The account for {self._account_name} has reached the end date {end_date_str}'
             self._slurm_acct.set_locked_state(True)
 
         elif days_until_expire in settings.warning_days:
-            email = settings.expiration_warning.format(**email_args)
-            email.send_to(email_address, subject=f'Your proposal expiry reminder for account: {self._account_name}')
+            email = settings.expiration_warning
+            subject = f'Your proposal expiry reminder for account: {self._account_name}'
 
-        if proposal.percent_notified < next_notify_perc <= usage_perc:
+        elif proposal.percent_notified < next_notify_perc <= usage_perc:
             with Session() as session:
                 db_entry = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
                 db_entry.percent_notified = next_notify_perc
                 session.commit()
 
-            email = settings.usage_warning.format(**email_args)
-            email.send_to(email_address, subject=f"Your account {self._account_name} has exceeded a proposal threshold")
+            email = settings.usage_warning
+            subject = f"Your account {self._account_name} has exceeded a proposal threshold"
+
+        if email:
+            email.format(
+                start_date=proposal.start_date.strftime(settings.date_format),
+                perc=usage_perc,
+                usage=self._build_usage_str(),
+                investment=self._build_investment_str()
+            ).send_to(
+                to=f'{self._account_name}{settings.email_suffix}',
+                ffrom=settings.from_address,
+                subject=subject)
 
     @classmethod
     def lock_expired_accounts(cls) -> None:

@@ -88,10 +88,11 @@ during execution will not be recognized by the application.
 from __future__ import annotations
 
 from pathlib import Path
+from textwrap import dedent
 
 from environ import environ
 
-from bank.system.smtp import EmailMessage
+from bank.system.smtp import EmailTemplate
 
 _ENV = environ.Env()
 _CUR_DIR = Path(__file__).resolve().parent
@@ -124,10 +125,8 @@ from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pit
 
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
-usage_warning = _ENV.get_value(
-    _APP_PREFIX + 'USAGE_WARNING',
-    cast=EmailMessage,
-    default="""
+usage_warning = EmailTemplate(dedent(_ENV.get_value(
+    _APP_PREFIX + 'USAGE_WARNING', default="""
     <html>
     <head></head>
     <body>
@@ -150,13 +149,12 @@ usage_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)
+    """)))
 
 # An email to send when a user is  nearing the end of their proposal
 warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
-expiration_warning = _ENV.get_value(
+expiration_warning = EmailTemplate(dedent(_ENV.get_value(
     _APP_PREFIX + 'EXPIRATION_WARNING',
-    cast=EmailMessage,
     default="""
     <html>
     <head></head>
@@ -176,12 +174,11 @@ expiration_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)
+    """)))
 
 # An email to send when the proposal has expired
-expired_proposal_notice = _ENV.get_value(
+expired_proposal_notice = EmailTemplate(dedent(_ENV.get_value(
     _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
-    cast=EmailMessage,
     default="""
     <html>
     <head></head>
@@ -199,4 +196,4 @@ expired_proposal_notice = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)
+    """)))
