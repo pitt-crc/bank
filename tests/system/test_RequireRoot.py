@@ -1,6 +1,6 @@
 from unittest import TestCase, skipIf
 
-from bank.system import RequireRoot
+from bank.system.slurm import RequireRoot
 
 
 class FailsWithoutRoot(TestCase):

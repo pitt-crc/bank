@@ -91,6 +91,8 @@ from pathlib import Path
 
 from environ import environ
 
+from bank.system.smtp import EmailMessage
+
 _ENV = environ.Env()
 _CUR_DIR = Path(__file__).resolve().parent
 _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
@@ -122,7 +124,10 @@ from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pit
 
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
-usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', default="""
+usage_warning = _ENV.get_value(
+    _APP_PREFIX + 'USAGE_WARNING',
+    cast=EmailMessage,
+    default="""
     <html>
     <head></head>
     <body>
@@ -149,7 +154,10 @@ usage_warning = _ENV.get_value(_APP_PREFIX + 'USAGE_WARNING', default="""
 
 # An email to send when a user is  nearing the end of their proposal
 warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
-expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', default="""
+expiration_warning = _ENV.get_value(
+    _APP_PREFIX + 'EXPIRATION_WARNING',
+    cast=EmailMessage,
+    default="""
     <html>
     <head></head>
     <body>
@@ -171,7 +179,10 @@ expiration_warning = _ENV.get_value(_APP_PREFIX + 'EXPIRATION_WARNING', default=
     """)
 
 # An email to send when the proposal has expired
-expired_proposal_notice = _ENV.get_value(_APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING', default="""
+expired_proposal_notice = _ENV.get_value(
+    _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
+    cast=EmailMessage,
+    default="""
     <html>
     <head></head>
     <body>

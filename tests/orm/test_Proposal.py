@@ -3,7 +3,7 @@ from unittest import TestCase, skipIf
 
 from bank import settings
 from bank.orm import Proposal, Session
-from bank.system import SlurmAccount
+from bank.system.slurm import SlurmAccount
 from tests.orm import _utils
 
 

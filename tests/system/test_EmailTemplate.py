@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch, call
 
-from bank.system import EmailTemplate
+from bank.system.smtp import EmailTemplate
 
 
 class Formatting(TestCase):

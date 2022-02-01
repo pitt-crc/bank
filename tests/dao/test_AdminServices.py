@@ -7,7 +7,7 @@ import time_machine
 from bank import orm
 from bank import settings
 from bank.dao import AdminServices
-from bank.system import SlurmAccount
+from bank.system.slurm import SlurmAccount
 from tests.dao._utils import AdminSetup
 
 

@@ -9,14 +9,15 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from datetime import date, timedelta
-from typing import List, Union
+from logging import getLogger
+from typing import List, Union, Tuple
 
 from math import ceil
 
-from bank.system import *
 from . import settings
 from .exceptions import *
 from .orm import Investor, Proposal, Session
+from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.dao')
@@ -520,7 +521,7 @@ class AdminServices(BaseDataAccess):
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def lock_if_expired(self, email_alert=True) -> Optional[EmailMessage]:
+    def _lock_if_expired(self, email_alert=True) -> None:
         """Send any pending usage alerts to the account
 
         Returns:
@@ -532,47 +533,45 @@ class AdminServices(BaseDataAccess):
 
         # Determine the next usage percentage that an email is scheduled to be sent out
         usage = sum(self._slurm_acct.get_cluster_usage(c) for c in settings.clusters())
-        allocated = sum(proposal[c] for c in settings.clusters)
+        allocated = sum(getattr(proposal, c) for c in settings.clusters)
         usage_perc = int(usage / allocated * 100)
-        next_notify = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
-
-        end_date = proposal.end_date.strftime(settings.date_format)
+        next_notify_perc = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
         days_until_expire = (proposal.end_date - date.today()).days
 
-        email = None
-        if days_until_expire in settings.warning_days:
-            email = EmailTemplate(settings.expiration_warning)
-            subject = f'Your proposal expiry reminder for account: {self._account_name}'
+        # Define content used to populate user alert emails
+        end_date_str = proposal.end_date.strftime(settings.date_format)
+        email_address = f'{self._account_name}{settings.email_suffix}'
+        email_args = dict(
+            account=self._account_name,
+            start_date=proposal.start_date.strftime(settings.date_format),
+            end_date=proposal.end_date,
+            perc=usage_perc,
+            exp_in_days=days_until_expire)
 
-        elif days_until_expire == 0:
-            email = EmailTemplate(settings.expired_proposal_notice)
-            subject = f'The account for {self._account_name} was locked because it reached the end date {end_date}'
+        if days_until_expire == 0:
+            email = settings.expired_proposal_notice.format(**email_args)
+            email.send_to(email_address, f'The account for {self._account_name} has reached the end date {end_date_str}')
+            self._slurm_acct.set_locked_state(True)
 
-        elif proposal.percent_notified < next_notify <= usage_perc:
+        elif days_until_expire in settings.warning_days:
+            email = settings.expiration_warning.format(**email_args)
+            email.send_to(email_address, subject=f'Your proposal expiry reminder for account: {self._account_name}')
+
+        if proposal.percent_notified < next_notify_perc <= usage_perc:
             with Session() as session:
                 db_entry = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
-                db_entry.percent_notified = next_notify
+                db_entry.percent_notified = next_notify_perc
                 session.commit()
 
-            email = EmailTemplate(settings.usage_warning.format(perc=usage_perc))
-            subject = f"Your account {self._account_name} has exceeded a proposal threshold"
-
-        if email_alert and email:
-            formatted = email.format(
-                account=self._account_name,
-                start_date=proposal.start_date.strftime(settings.date_format),
-                end_date=end_date,
-                perc=usage_perc,
-                exp_in_days=days_until_expire
-            )
-            return formatted.send_to(f'{self._account_name}{settings.email_suffix}', subject=subject)
+            email = settings.usage_warning.format(**email_args)
+            email.send_to(email_address, subject=f"Your account {self._account_name} has exceeded a proposal threshold")
 
     @classmethod
     def lock_expired_accounts(cls, email_alert=True) -> None:
         """Lock any expired accounts"""
 
         for account in cls.find_unlocked():
-            cls(account).lock_if_expired(email_alert=email_alert)
+            cls(account)._lock_if_expired(email_alert=email_alert)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:
