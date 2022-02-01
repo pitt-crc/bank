@@ -520,7 +520,7 @@ class AdminServices(BaseDataAccess):
                   f"|{'^a Investment SUs can be used across any cluster':^82}|\n"
                   f"|{'-' * 82}|")
 
-    def send_pending_alerts(self) -> Optional[EmailMessage]:
+    def lock_if_expired(self, email_alert=True) -> Optional[EmailMessage]:
         """Send any pending usage alerts to the account
 
         Returns:
@@ -536,9 +536,10 @@ class AdminServices(BaseDataAccess):
         usage_perc = int(usage / allocated * 100)
         next_notify = settings.notify_levels[bisect_left(settings.notify_levels, usage_perc)]
 
-        email = None
         end_date = proposal.end_date.strftime(settings.date_format)
         days_until_expire = (proposal.end_date - date.today()).days
+
+        email = None
         if days_until_expire in settings.warning_days:
             email = EmailTemplate(settings.expiration_warning)
             subject = f'Your proposal expiry reminder for account: {self._account_name}'
@@ -556,7 +557,7 @@ class AdminServices(BaseDataAccess):
             email = EmailTemplate(settings.usage_warning.format(perc=usage_perc))
             subject = f"Your account {self._account_name} has exceeded a proposal threshold"
 
-        if email:
+        if email_alert and email:
             formatted = email.format(
                 account=self._account_name,
                 start_date=proposal.start_date.strftime(settings.date_format),
@@ -565,6 +566,13 @@ class AdminServices(BaseDataAccess):
                 exp_in_days=days_until_expire
             )
             return formatted.send_to(f'{self._account_name}{settings.email_suffix}', subject=subject)
+
+    @classmethod
+    def lock_expired_accounts(cls, email_alert=True) -> None:
+        """Lock any expired accounts"""
+
+        for account in cls.find_unlocked():
+            cls(account).lock_if_expired(email_alert=email_alert)
 
     @staticmethod
     def find_unlocked() -> Tuple[str]:

@@ -120,8 +120,11 @@ class AdminParser(dao.AdminServices, BaseParser):
         info.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
 
         notify = admin_subparsers.add_parser('notify', help='Send any pending email notifications')
-        notify.set_defaults(function=super(AdminParser, AdminParser).send_pending_alerts)
+        notify.set_defaults(function=super(AdminParser, AdminParser).lock_if_expired)
         notify.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
+
+        unlocked = admin_subparsers.add_parser('lock_expired', help='Lock any expired or overdrawn accounts')
+        unlocked.set_defaults(function=super(AdminParser, AdminParser).lock_expired_accounts)
 
         unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
