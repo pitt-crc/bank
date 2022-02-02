@@ -4,6 +4,7 @@ from email.message import EmailMessage
 from smtplib import SMTP
 from string import Formatter
 from typing import Tuple, cast, Optional
+from warnings import warn
 
 from bs4 import BeautifulSoup
 
@@ -49,11 +50,6 @@ class EmailTemplate(Formatter):
         Args:
             kwargs: Values used to format each field in the template
         """
-
-        keys = set(kwargs.keys())
-        incorrect_keys = keys - set(self.fields)
-        if incorrect_keys:
-            raise ValueError(f'Keys not found in email template: {incorrect_keys}')
 
         return EmailTemplate(self._msg.format(**kwargs))
 

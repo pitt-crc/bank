@@ -186,7 +186,7 @@ expired_proposal_notice = EmailTemplate(dedent(_ENV.get_value(
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account} on H2P has expired. The one year allocation started on {start_date}. 
+    {account_name} on H2P has expired. The one year allocation started on {start_date}. 
     You will still be able to login and retrieve your data, but you will be unable
     to run new compute  jobs until you submit a new proposal or request a 
     supplemental allocation. To do so, please visit

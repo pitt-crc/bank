@@ -86,21 +86,41 @@ class Renewal(AdminSetup, TestCase):
         self.assertEqual(self.num_inv_sus * settings.inv_rollover_fraction, current_investment.rollover_sus)
 
 
-@patch('smtplib.SMTP')
+@patch('smtplib.SMTP.send_message')
 class LockIfExpired(AdminSetup, TestCase):
     """Test for emails sent when locking accounts"""
 
-    def test_email_sent_for_expired(self, mock_smtp) -> None:
-        proposal = self.account._get_proposal(self.session)
-        with time_machine.travel(proposal.end_date):
-            self.account._lock_if_expired()
+    @patch('bank.system.SlurmAccount.set_locked_state')
+    def test_email_sent_for_expired(self, mock_locked_state, mock_send_message) -> None:
+        """Test an expiration email is sent if the account is expired"""
 
-    def test_email_sent_for_warning_day(self, mock_smtp) -> None:
         proposal = self.account._get_proposal(self.session)
-        with patch.object(settings, "warning_days", (10,)), time_machine.travel(proposal.end_date - timedelta(days=10)):
-            self.account._lock_if_expired()
+        with time_machine.travel(proposal.end_date + timedelta(days=1)):
+            self.account.notify_account()
 
-    def test_email_sent_for_percent_notified(self, mock_smtp) -> None:
+        # Make sure the account was notified
+        mock_send_message.assert_called_once()
+        sent_email = mock_send_message.call_args.args[0]
+        self.assertEqual(f'The account for {self.account.account_name} has reached its end date', sent_email['subject'])
+
+        # Make sure account was locked
+        mock_locked_state.assert_called_once()
+        lock_state = mock_locked_state.call_args.args[0]
+        self.assertTrue(lock_state, 'Account was not locked')
+
+    @patch.object(settings, "warning_days", (10,))
+    def test_email_sent_for_warning_day(self, mock_send_message) -> None:
+        """Test a warning email is sent if the account has reached an expiration warning limit"""
+
         proposal = self.account._get_proposal(self.session)
-        with time_machine.travel(proposal.end_date):
-            self.account._lock_if_expired()
+        with time_machine.travel(proposal.end_date - timedelta(days=9)):
+            self.account.notify_account()
+
+        mock_send_message.assert_called_once()
+        sent_email = mock_send_message.call_args.args[0]
+        self.assertEqual(f'Your proposal expiry reminder for account: {self.account.account_name}', sent_email['subject'])
+
+    def test_email_sent_for_percent_notified(self, mock_send_message) -> None:
+        """Test a usage email is sent if the account has reached a usage limit"""
+
+        self.fail()
