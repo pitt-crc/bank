@@ -12,18 +12,6 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
     def setUpClass(cls) -> None:
         cls.parser = SlurmParser()
 
-    def test_add_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'slurm add_acc --account {settings.test_account}')
-
-    def test_delete_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'slurm delete_acc --account {settings.test_account}')
-
-    def test_add_user(self) -> None:
-        self.assert_parser_matches_func_signature(f'slurm add_user --account {settings.test_account} --user fake_user')
-
-    def test_delete_user(self) -> None:
-        self.assert_parser_matches_func_signature(f'slurm delete_user --account {settings.test_account} --user fake_user')
-
     def test_lock(self) -> None:
         self.assert_parser_matches_func_signature(f'slurm lock --account {settings.test_account}')
 

@@ -142,27 +142,6 @@ class SlurmParser(system.SlurmAccount, BaseParser):
 
         # Reusable definitions for argument help text
         account_help = 'The slurm account to administrate'
-        user_help = 'Optionally create a user under the parent slurm account'
-
-        slurm_create = slurm_subparsers.add_parser('add_acc', help='Create a new slurm account')
-        slurm_create.set_defaults(function=super(SlurmParser, SlurmParser).create_account)
-        slurm_create.add_argument('--account', dest='account_name', type=system.SlurmAccount, help=account_help)
-        slurm_create.add_argument('--desc', dest='description', type=system.SlurmAccount, help='The description of the account')
-        slurm_create.add_argument('--org', dest='organization', type=system.SlurmAccount, help='The parent organization of the account')
-
-        slurm_delete = slurm_subparsers.add_parser('delete_acc', help='Delete an existing slurm account')
-        slurm_delete.set_defaults(function=super(SlurmParser, SlurmParser).delete_account)
-        slurm_delete.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
-
-        slurm_add_user = slurm_subparsers.add_parser('add_user', help='Add a user to an existing slurm account')
-        slurm_add_user.set_defaults(function=super(SlurmParser, SlurmParser).add_user)
-        slurm_add_user.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
-        slurm_add_user.add_argument('--user', dest='user_name', help=user_help)
-
-        slurm_delete_user = slurm_subparsers.add_parser('delete_user', help='Remove a user to an existing slurm account')
-        slurm_delete_user.set_defaults(function=super(SlurmParser, SlurmParser).delete_user)
-        slurm_delete_user.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
-        slurm_delete_user.add_argument('--user', dest='user_name', help=user_help)
 
         slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=True)
