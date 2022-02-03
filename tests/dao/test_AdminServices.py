@@ -25,19 +25,6 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AdminServices._calculate_percentage(1, 2))
 
 
-class PrintInfo(AdminSetup, TestCase):
-    """Tests for the printing of account usage/info"""
-
-    @patch('builtins.print')
-    def test_usage_included_in_print(self, mocked_print):
-        self.account.print_info()
-        first_print = mocked_print.mock_calls[0].args[0]
-        self.assertIn(self.account._build_usage_str(), first_print)
-
-        second_print = mocked_print.mock_calls[1].args[0]
-        self.assertIn(self.account._build_investment_str(), second_print)
-
-
 class Renewal(AdminSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
@@ -100,7 +87,7 @@ class LockIfExpired(AdminSetup, TestCase):
 
         # Make sure the account was notified
         mock_send_message.assert_called_once()
-        sent_email = mock_send_message.call_args.args[0]
+        sent_email = mock_send_message.call_args[0][0]
         self.assertEqual(f'The account for {self.account.account_name} has reached its end date', sent_email['subject'])
 
         # Make sure account was locked
@@ -117,5 +104,5 @@ class LockIfExpired(AdminSetup, TestCase):
             self.account.notify_account()
 
         mock_send_message.assert_called_once()
-        sent_email = mock_send_message.call_args.args[0]
+        sent_email = mock_send_message.call_args[0][0]
         self.assertEqual(f'Your proposal expiry reminder for account: {self.account.account_name}', sent_email['subject'])
