@@ -117,52 +117,6 @@ class SlurmAccount:
         except (CmdError, FileNotFoundError, Exception):
             return False
 
-    @classmethod
-    @RequireRoot
-    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
-        """Create a new slurm account
-
-        Args:
-            account_name: The name of the slurm account
-            description: The description of the account
-            organization: The organization name of the account
-        """
-
-        LOG.info(f'Creating Slurm account {account_name} (description="{description}" organization="{organization}")')
-        ShellCmd(
-            f'sacctmgr -i add account {account_name} '
-            f'description={description} '
-            f'organization="{organization}" '
-            f'clusters={settings.clusters_as_str}'
-        ).raise_err()
-        return SlurmAccount(account_name)
-
-    @RequireRoot
-    def delete_account(self) -> None:
-        """Delete the slurm account"""
-
-        ShellCmd(f"sacctmgr -i delete account {self._account} cluster={settings.clusters_as_str}").raise_err()
-
-    @RequireRoot
-    def add_user(self, user_name) -> None:
-        """Add a user to the slurm account
-
-        Args:
-            user_name: The name of the user to add to the account
-        """
-
-        raise NotImplementedError()
-
-    @RequireRoot
-    def delete_user(self, user_name) -> None:
-        """Delete a user from the slurm account
-
-        Args:
-            user_name: The name of the user to remove from the account
-        """
-
-        raise NotImplementedError()
-
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked"""
 
