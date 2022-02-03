@@ -37,6 +37,10 @@ class Proposal(Base):
     _validate_service_units = validates(*settings.clusters)(Validators.validate_service_units)
     _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
 
+    @property
+    def total_allocated(self) -> int:
+        return sum(getattr(self, c) for c in settings.clusters)
+
     def to_archive_object(self) -> ProposalArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""
 

@@ -119,8 +119,3 @@ class LockIfExpired(AdminSetup, TestCase):
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args.args[0]
         self.assertEqual(f'Your proposal expiry reminder for account: {self.account.account_name}', sent_email['subject'])
-
-    def test_email_sent_for_percent_notified(self, mock_send_message) -> None:
-        """Test a usage email is sent if the account has reached a usage limit"""
-
-        self.fail()
