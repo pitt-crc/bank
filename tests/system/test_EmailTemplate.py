@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch, call
 
-from bank.system import EmailTemplate
+from bank.system.smtp import EmailTemplate
 
 
 class Formatting(TestCase):
@@ -20,11 +20,11 @@ class Formatting(TestCase):
         formatted_template = EmailTemplate('Value: {x}').format(x=1)
         self.assertEqual('Value: 1', formatted_template.msg)
 
-    def test_error_for_incorrect_keys(self) -> None:
-        """Test a ``ValueError`` is raised for argument names that don't match fields"""
+    def test_no_error_for_incorrect_keys(self) -> None:
+        """Test argument names that don't match fields are ignored"""
 
-        with self.assertRaises(ValueError):
-            EmailTemplate('Value: {x}').format(y=1)
+        template = EmailTemplate('Value: {x}').format(x=0, y=1)
+        self.assertEqual('Value: 0', template.msg)
 
 
 class FieldIdentification(TestCase):
