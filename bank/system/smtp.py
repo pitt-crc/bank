@@ -4,7 +4,6 @@ from email.message import EmailMessage
 from smtplib import SMTP
 from string import Formatter
 from typing import Tuple, cast, Optional
-from warnings import warn
 
 from bs4 import BeautifulSoup
 
