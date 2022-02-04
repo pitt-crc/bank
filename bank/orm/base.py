@@ -22,4 +22,4 @@ class Validators:
         if 0 <= value <= 100:
             return value
 
-        raise ValueError(f'Value for {key} must be between 0 and 100 (get {value})')
+        raise ValueError(f'Value for {key} must be between 0 and 100 (get {value}).')

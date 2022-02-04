@@ -38,6 +38,12 @@ class Proposal(Base):
     _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
 
     @property
+    def expired(self) -> bool:
+        """Return whether the investment is past its end date"""
+
+        return self.end_date <= date.today()
+
+    @property
     def total_allocated(self) -> int:
         return sum(getattr(self, c) for c in settings.clusters)
 
@@ -52,6 +58,7 @@ class Proposal(Base):
             end_date=self.end_date,
         )
 
+        # Add the usage and allocation for each cluster to the archive object
         slurm_acct = SlurmAccount(self.account_name)
         for cluster in settings.clusters:
             setattr(archive_obj, cluster, getattr(self, cluster))
@@ -95,7 +102,7 @@ class Investor(Base):
     def expired(self) -> bool:
         """Return whether the investment is past its end date or is fully withdrawn with no remaining service units."""
 
-        return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus == self.service_units)
+        return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus >= self.service_units)
 
     def to_archive_object(self) -> InvestorArchive:
         """Return data from the current row as an ``InvestorArchive`` instance"""

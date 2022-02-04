@@ -5,10 +5,9 @@ database.
 """
 
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker
 
-from .tables import Investor, InvestorArchive, Proposal, ProposalArchive, metadata
+from .tables import *
 from .. import settings
 
 engine = sqlalchemy.create_engine(settings.db_path)
-Session = sessionmaker(bind=engine, expire_on_commit=False)
+Session = sqlalchemy.orm.sessionmaker(bind=engine, expire_on_commit=False)
