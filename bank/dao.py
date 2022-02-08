@@ -602,7 +602,7 @@ class AdminServices(BaseDataAccess):
                     usage=self._build_usage_str(),
                     investment=self._build_investment_str()
                 ).send_to(
-                    to=f'{self._account_name}{settings.email_suffix}',
+                    to=f'{self._account_name}{settings.user_email_suffix}',
                     ffrom=settings.from_address,
                     subject=subject)
 
