@@ -5,18 +5,8 @@ This can make tracebacks and error messages confusing at first glance. To
 improve clarity when things go wrong, we take a liberal approach to the
 creation of custom exceptions.
 
-Summary of Exceptions
----------------------
-
-.. autosummary::
-   :nosignatures:
-
-   bank.exceptions.CmdError
-   bank.exceptions.MissingProposalError
-   bank.exceptions.MissingInvestmentError
-   bank.exceptions.ProposalExistsError
-   bank.exceptions.TableOverwriteError
-   bank.exceptions.NoSuchAccountError
+API Reference
+-------------
 """
 
 
