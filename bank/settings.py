@@ -35,7 +35,7 @@ Application Settings
    * - clusters
      - CRC_BANK_CLUSTERS
      - A list of cluster names to track usage on
-   * - email_suffix
+   * - user_email_suffix
      - CRC_BANK_EMAIL_SUFFIX
      - The email suffix for user accounts. We assume the ``Description`` field of each account in ``sacctmgr`` contains the prefix.
    * - from_address
@@ -102,25 +102,28 @@ _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as sett
 test_account = _ENV.get_value(_APP_PREFIX + 'TEST_ACCOUNT', default='sam')
 test_cluster = _ENV.get_value(_APP_PREFIX + 'TEST_CLUSTER', default='smp')
 
+# Define how dates should be displayed as strings (in errors, emails, and STDOUT messages)
 date_format = _ENV.get_value(_APP_PREFIX + 'DATE_FORMAT', default='%m/%d/%y')
 
-# Where and how to write log files to
+# Where and how to write log files
 log_path = _ENV.get_value(_APP_PREFIX + 'LOG_PATH', default=_CUR_DIR / 'crc_bank.log')
 log_format = _ENV.get_value(_APP_PREFIX + 'LOG_FORMAT', default='[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
 log_level = _ENV.get_value(_APP_PREFIX + 'LOG_LEVEL', default='INFO')
 
-# Path to the application SQLite backend
+# Path to the application database
 db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR / 'crc_bank.db'}")
 
 # A list of cluster names to track usage on
 clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
 clusters_as_str = ','.join(clusters)
 
-inv_rollover_fraction = .5
+# Fraction of service units to carry over when rolling over investments
+# Should be a float between 0 and 1
+inv_rollover_fraction = 0.5
 
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.
-email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
+user_email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
 from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
 
 # An email to send when a user has exceeded a proposal usage threshold
