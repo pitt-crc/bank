@@ -1,22 +1,12 @@
 """The ``exceptions`` module defines custom exceptions raised by the parent application.
 
-The parent application is designed to interface with several external systems.
-This can make tracebacks and error messages confusing at first glance. To
-improve clarity when things go wrong, we take a liberal approach to the
-creation of custom exceptions.
+The parent application interfaces with several external systems.
+This can make tracebacks and error messages confusing at first glance.
+For the sake of clarity, we take a liberal approach to the
+definition of custom exceptions.
 
-Summary of Exceptions
----------------------
-
-.. autosummary::
-   :nosignatures:
-
-   bank.exceptions.CmdError
-   bank.exceptions.MissingProposalError
-   bank.exceptions.MissingInvestmentError
-   bank.exceptions.ProposalExistsError
-   bank.exceptions.TableOverwriteError
-   bank.exceptions.NoSuchAccountError
+API Reference
+-------------
 """
 
 
