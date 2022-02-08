@@ -1,4 +1,8 @@
-"""Custom logic for the creation, formatting, and sending of email templates."""
+"""Custom logic for the creation, formatting, and sending of email templates.
+
+API Reference
+-------------
+"""
 
 from __future__ import annotations
 

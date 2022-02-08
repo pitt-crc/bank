@@ -1,4 +1,8 @@
-"""Wrappers around the underlying runtime shell."""
+"""Wrappers around the underlying runtime shell.
+
+API Reference
+-------------
+"""
 
 from functools import wraps
 from logging import getLogger

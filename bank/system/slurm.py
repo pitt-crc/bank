@@ -1,4 +1,8 @@
-"""Wrappers around the ``slurm`` command line utility."""
+"""Wrappers around the ``slurm`` command line utility.
+
+API Reference
+-------------
+"""
 
 from __future__ import annotations
 
