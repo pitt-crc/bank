@@ -1,13 +1,16 @@
+"""Custom logic for the creation, formatting, and sending of email templates."""
+
 from __future__ import annotations
 
 from email.message import EmailMessage
+from logging import getLogger
 from smtplib import SMTP
 from string import Formatter
 from typing import Tuple, cast, Optional
 
 from bs4 import BeautifulSoup
 
-from bank.system.slurm import LOG
+LOG = getLogger('bank.system.smtp')
 
 
 class EmailTemplate(Formatter):

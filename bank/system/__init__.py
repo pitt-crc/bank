@@ -1,28 +1,18 @@
-"""The ``system`` module acts as an interface for the underlying runtime
-environment and provides an object-oriented interface for interacting with
-the parent system. It includes wrappers around various command line utilities
-(e.g., ``sacctmgr``) and system services (e.g., ``smtp``).
+"""The ``system`` module acts as an interface provides an object-oriented
+interface for various command line utilities (e.g., ``sacctmgr``)
+and system services (e.g., ``smtp``) installed on the parent system.
 
-Usage Example
--------------
+SubModules
+----------
 
-.. doctest:: python
+.. autosummary::
+   :nosignatures:
 
-   >>> from bank import system
-   >>>
-   >>> # Run a shell command
-   >>> cmd = system.ShellCmd("echo 'Hello World'")
-   >>> print(cmd.out)
-   Hello World
-
-   >>> # Require root permissions for a function
-   >>> @system.RequireRoot
-   ... def foo():
-   ...     print('This function requires root access')
-
-API Reference
--------------
+   bank.system.shell
+   bank.system.slurm
+   bank.system.smtp
 """
 
+from .shell import *
 from .slurm import *
 from .smtp import *
