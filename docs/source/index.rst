@@ -59,5 +59,5 @@ based on:
    api/dao.rst
    api/orm/orm.rst
    api/settings.rst
-   api/system.rst
+   api/system/system.rst
    api/exceptions.rst
