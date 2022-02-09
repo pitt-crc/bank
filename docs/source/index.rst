@@ -6,9 +6,7 @@ is a useful tool for managing the allocation of computational resources
 between users. However, the association based limits used by Slurm may not
 provide enough control for certain groups' needs. The **CRC Bank Utility**
 is a wrapper around the Slurm command line tool that provides additional
-functionality for managing user allocations.
-
-The ``crc_bank`` application extends the existing functionality of `slurm` by providing:
+functionality for managing user allocations. THis functionality includes:
 
  - Streamlined utilities for managing Slurm user accounts across multiple clusters
  - Fine grained control over resource allocations per Slurm account/cluster
@@ -42,8 +40,6 @@ based on:
 
 .. toctree::
    :hidden:
-   :maxdepth: 0
-   :titlesonly:
 
    Overview<self>
    overview/install.rst
@@ -52,7 +48,6 @@ based on:
 
 .. toctree::
    :hidden:
-   :maxdepth: 0
    :caption: API Reference
 
    api/cli.rst
