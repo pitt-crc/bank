@@ -14,7 +14,7 @@ from sqlalchemy import Column, Date, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates
 
-from .base import Validators
+from .validators import Validators
 from .. import settings
 from ..system import SlurmAccount
 
