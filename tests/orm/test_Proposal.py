@@ -34,12 +34,6 @@ class PercentNotifiedValidation(TestCase):
         Proposal(percent_notified=0)
         Proposal(percent_notified=100)
 
-    def test_percent_notified_in_range(self) -> None:
-        """Test no error is raised when ``percent_notified`` is not between 0 and 100"""
-
-        proposal = Proposal(percent_notified=50)
-        self.assertEqual(50, proposal.percent_notified)
-
 
 @skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 class ToArchiveObject(TestCase):

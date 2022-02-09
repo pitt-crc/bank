@@ -69,7 +69,7 @@ class Expired(TestCase):
         )
 
     def test_expired_if_past_end_date(self) -> None:
-        """Test the investment is expired if it is past it's end date"""
+        """Test the investment is expired if it is past its end date"""
 
         self.assertFalse(self.investment.expired)
 
