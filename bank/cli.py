@@ -49,9 +49,8 @@ API Reference
 
 from __future__ import annotations
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
 from logging import getLogger
-from typing import List
 
 from . import settings, dao, system
 
@@ -61,7 +60,7 @@ LOG = getLogger('bank.cli')
 class BaseParser(ArgumentParser):
     """Used to extend functionality of the builtin ``ArgumentParser`` class"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Handles the parsing of command line arguments"""
 
         # If parent init has already been called, there is no need to call it again
@@ -70,7 +69,7 @@ class BaseParser(ArgumentParser):
 
         super(BaseParser, self).__init__(**kwargs)
 
-    def execute(self, args: List[str] = None) -> None:
+    def execute(self, args=None) -> None:
         """Method used to evaluate the command line parser
 
         Parse command line arguments and evaluate the corresponding function.
@@ -81,13 +80,18 @@ class BaseParser(ArgumentParser):
             args: A list of command line arguments
         """
 
-        args_str = ' '.join(args)
+        if args is None:
+            args_str = ' '
+
+        else:
+            args_str = ' '.join(args)
+
         LOG.debug(f'Eval CLI - {args_str}')
 
         cli_kwargs = dict(self.parse_args(args)._get_kwargs())
         cli_kwargs.pop('function', self.print_help)(**cli_kwargs)
 
-    def add_subparsers(self, **kwargs):
+    def add_subparsers(self, **kwargs) -> Action:
         """Return a subparser for the parent parser class
 
         Parser instances are only allowed to have a single subparser. If a
@@ -254,7 +258,7 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
 class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
     """Command line parser used as the primary entry point for the parent application"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         AdminParser.__init__(self, **kwargs)
         SlurmParser.__init__(self, **kwargs)
         ProposalParser.__init__(self, **kwargs)
