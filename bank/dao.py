@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from logging import getLogger
-from typing import List, Union, Tuple
-
 from math import ceil
+from typing import List, Union, Tuple
 
 from . import settings
 from .exceptions import *
@@ -96,7 +95,11 @@ class BaseDataAccess:
 
         with Session() as session:
             proposal = self._get_proposal(session)
-            investments = self._get_investment(session)
+            try:
+                investments = self._get_investment(session)
+
+            except MissingInvestmentError:
+                investments = []
 
         # The table header
         output_lines = []
@@ -156,16 +159,16 @@ class BaseDataAccess:
             except MissingInvestmentError:
                 return ''
 
-            output_lines = [
-                '|--------------------------------------------------------------------------------|',
-                '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |',
-                '|--------------------------------------------------------------------------------|',
-            ]
-            for inv in investments:
-                output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
+        output_lines = [
+            '|--------------------------------------------------------------------------------|',
+            '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |',
+            '|--------------------------------------------------------------------------------|',
+        ]
+        for inv in investments:
+            output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
 
-            output_lines.append('|--------------------------------------------------------------------------------|')
-            return '\n'.join(output_lines)
+        output_lines.append('|--------------------------------------------------------------------------------|')
+        return '\n'.join(output_lines)
 
     def print_info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
