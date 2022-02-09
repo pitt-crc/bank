@@ -35,6 +35,9 @@ Application Settings
    * - clusters
      - CRC_BANK_CLUSTERS
      - A list of cluster names to track usage on
+   * - inv_rollover_fraction
+     - INV_ROLLOVER_FRACTION
+     - Fraction of service units to carry over when rolling over investments
    * - user_email_suffix
      - CRC_BANK_EMAIL_SUFFIX
      - The email suffix for user accounts. We assume the ``Description`` field of each account in ``sacctmgr`` contains the prefix.
