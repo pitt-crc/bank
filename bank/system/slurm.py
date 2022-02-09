@@ -78,8 +78,9 @@ class SlurmAccount:
 
         LOG.info(f'Updating lock state for Slurm account {self._account} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
+        clusters_as_str = ','.join(settings.clusters)
         ShellCmd(
-            f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
+            f'sacctmgr -i modify account where account={self._account} cluster={clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
@@ -126,4 +127,5 @@ class SlurmAccount:
         # RawUsage to any value other than zero
 
         LOG.info(f'Resetting cluster usage for Slurm account {self._account}')
-        ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={settings.clusters_as_str} set RawUsage=0')
+        clusters_as_str = ','.join(settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={clusters_as_str} set RawUsage=0')

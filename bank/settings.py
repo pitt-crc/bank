@@ -35,6 +35,9 @@ Application Settings
    * - clusters
      - CRC_BANK_CLUSTERS
      - A list of cluster names to track usage on
+   * - inv_rollover_fraction
+     - INV_ROLLOVER_FRACTION
+     - Fraction of service units to carry over when rolling over investments
    * - user_email_suffix
      - CRC_BANK_EMAIL_SUFFIX
      - The email suffix for user accounts. We assume the ``Description`` field of each account in ``sacctmgr`` contains the prefix.
@@ -115,11 +118,10 @@ db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR 
 
 # A list of cluster names to track usage on
 clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
-clusters_as_str = ','.join(clusters)
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1
-inv_rollover_fraction = 0.5
+inv_rollover_fraction = _ENV.get_value(_APP_PREFIX + 'INV_ROLLOVER_FRACTION', cast=float, default=0.5)
 
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.
