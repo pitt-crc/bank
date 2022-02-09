@@ -1,4 +1,4 @@
-"""Object oriented definitions for the underlying database schema
+"""Object-oriented definitions for the underlying database schema
 
 API Reference
 -------------
@@ -24,7 +24,15 @@ metadata = Base.metadata
 
 
 class Proposal(Base):
-    """Class representation of the ``proposal`` table"""
+    """Class representation of the ``proposal`` table
+
+    Table Fields:
+      - id: Integer
+      - account_name: String
+      - start_date: Date
+      - end_date: Date
+      - percent_notified: Integer
+    """
 
     __tablename__ = 'proposal'
 
@@ -68,7 +76,14 @@ class Proposal(Base):
 
 
 class ProposalArchive(Base):
-    """Class representation of the ``proposal_archive`` table"""
+    """Class representation of the ``proposal_archive`` table
+
+    Table Fields:
+      - id: Integer
+      - account_name: String
+      - start_date: Date
+      - end_date: Date
+    """
 
     __tablename__ = 'proposal_archive'
 
@@ -83,7 +98,18 @@ class ProposalArchive(Base):
 
 
 class Investor(Base):
-    """Class representation of the ``investor`` table"""
+    """Class representation of the ``investor`` table
+
+    Table Fields:
+      - id: Integer
+      - account_name: String
+      - start_date: Date
+      - end_date: Date
+      - service_units: Integer
+      - current_sus: Integer
+      - withdrawn_sus: Integer
+      - rollover_sus: Integer
+    """
 
     __tablename__ = 'investor'
 
@@ -120,7 +146,17 @@ class Investor(Base):
 
 
 class InvestorArchive(Base):
-    """Class representation of the ``investor_archive`` table"""
+    """Class representation of the ``investor_archive`` table
+
+    Table Fields:
+      - id: Integer
+      - account_name: String
+      - start_date: Date
+      - end_date: Date
+      - exhaustion_date: Date
+      - service_units: Integer
+      - current_sus: Integer
+    """
 
     __tablename__ = 'investor_archive'
 
