@@ -181,7 +181,7 @@ class ProposalServices(BaseDataAccess):
     """Account logic for primary account proposals"""
 
     @staticmethod
-    def _raise_cluster_kwargs(kwargs: dict, nonzero=True, positive_sum=False) -> None:
+    def _raise_cluster_kwargs(**kwargs: int) -> None:
         """Check whether keyword arguments are valid service unit values
 
         Args:
@@ -196,8 +196,8 @@ class ProposalServices(BaseDataAccess):
             if k not in settings.clusters:
                 raise ValueError(f'Cluster {k} is not defined in the application settings')
 
-            if v <= 0:
-                raise ValueError('Service unit values must be greater than zero')
+            if v < 0:
+                raise ValueError(f'Service unit values cannot be negative (got value: {v})')
 
     def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
         """Create a new proposal for the given account
@@ -212,6 +212,7 @@ class ProposalServices(BaseDataAccess):
             if session.query(Proposal).filter(Proposal.account_name == self._account_name).first():
                 raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
 
+            self._raise_cluster_kwargs(**kwargs)
             new_proposal = Proposal(
                 account_name=self._account_name,
                 percent_notified=0,
@@ -317,6 +318,7 @@ class InvestmentServices(BaseDataAccess):
 
         super().__init__(account_name)
         with Session() as session:
+            # Raise an error if there is no user proposal
             self._get_proposal(session)
 
     @staticmethod
@@ -353,8 +355,11 @@ class InvestmentServices(BaseDataAccess):
         if num_inv < 1:
             raise ValueError('Argument ``repeat`` must be >= 1')
 
+        # Calculate number of service units per each investment
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
+        self._raise_invalid_sus(sus_per_instance)
+
         with Session() as session:
             self._get_proposal(session)
 
