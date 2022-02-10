@@ -38,7 +38,7 @@ class BaseDataAccess:
     def account_name(self) -> str:
         return self._account_name
 
-    def _get_proposal(self, session: Session) -> Proposal:
+    def _get_proposal(self, session: Session = None) -> Proposal:
         """Return the proposal record from the application database
 
         Args:
@@ -80,6 +80,350 @@ class BaseDataAccess:
             raise MissingInvestmentError(error)
 
         return inv
+
+
+class ProposalServices(BaseDataAccess):
+    """Account logic for primary account proposals"""
+
+    @staticmethod
+    def _raise_cluster_kwargs(**kwargs: int) -> None:
+        """Check whether keyword arguments are valid service unit values
+
+        Args:
+            **kwargs: Keyword arguments to check
+
+        Raises:
+            ValueError: For an invalid cluster name
+            ValueError: For negative service units
+        """
+
+        for k, v in kwargs.items():
+            if k not in settings.clusters:
+                raise ValueError(f'Cluster {k} is not defined in the application settings')
+
+            if v < 0:
+                raise ValueError(f'Service unit values cannot be negative (got value: {v})')
+
+    def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
+        """Create a new proposal for the given account
+
+        Args:
+            start: The start date of the proposal
+            duration: How many days before the proposal expires
+            **kwargs: Service units to add on to each cluster
+        """
+
+        with Session() as session:
+            if session.query(Proposal).filter(Proposal.account_name == self._account_name).first():
+                raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
+
+            self._raise_cluster_kwargs(**kwargs)
+            new_proposal = Proposal(
+                account_name=self._account_name,
+                percent_notified=0,
+                start_date=start,
+                end_date=start + timedelta(days=duration),
+                **kwargs
+            )
+
+            session.add(new_proposal)
+            session.commit()
+
+        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+
+    def delete_proposal(self) -> None:
+        """Delete the account's current proposal"""
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+            session.add(proposal.to_archive_object())
+            session.query(Proposal).filter(Proposal.id == proposal.id).delete()
+            session.commit()
+
+        LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
+
+    def add(self, **kwargs: int) -> None:
+        """Add service units to the account's current allocation
+
+        Args:
+            **kwargs: Service units to add for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+
+            self._raise_cluster_kwargs(**kwargs)
+            for key, val in kwargs.items():
+                setattr(proposal, key, getattr(proposal, key) + val)
+
+            session.commit()
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
+
+    def subtract(self, **kwargs: int) -> None:
+        """Subtract service units from the account's current allocation
+
+        Args:
+            **kwargs: Service units to subtract from each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+
+            self._raise_cluster_kwargs(**kwargs)
+            for key, val in kwargs.items():
+                setattr(proposal, key, getattr(proposal, key) - val)
+
+            session.commit()
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
+
+    def overwrite(self, start_date: date = None, end_date: date = None, **kwargs) -> None:
+        """Replace the number of service units allocated to a given cluster
+
+        Args:
+            start_date: Optionally set a new start date for the proposal
+            end_date: Optionally set a new end date for the proposal
+            **kwargs: New service unit values to assign for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+
+            self._raise_cluster_kwargs(**kwargs)
+            kwargs['start_date'] = start_date or proposal.start_date
+            kwargs['end_date'] = end_date or proposal.end_date
+
+            for key, val in kwargs.items():
+                setattr(proposal, key, val)
+
+            session.commit()
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
+
+
+class InvestmentServices(BaseDataAccess):
+    """Data access for investment information associated with a given account"""
+
+    def __init__(self, account_name: str) -> None:
+        """An existing account in the bank
+
+        Args:
+            account_name: The name of the account
+        """
+
+        super().__init__(account_name)
+        with Session() as session:
+            # Raise an error if there is no user proposal
+            self._get_proposal(session)
+
+    @staticmethod
+    def _raise_invalid_sus(sus: int) -> None:
+        """Check whether the given value is a valid service unit
+
+        Args:
+            sus: The value to check
+
+        Raises:
+            ValueError: If the given value is not greater than zero
+        """
+
+        if sus <= 0:
+            raise ValueError('Service units must be greater than zero.')
+
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv=1) -> None:
+        """Add a new investment(s) for the given account
+
+        ``num_inv`` reflects the number of investments to create. If the argument
+        is greater than one, repeating investments are created sequentially such
+        that a new investment begins as each investment ends. The ``start``
+        argument represents the start date of the first investment in the sequence.
+        The given number of service units (``sus``) are allocated equally across
+        each investment in the series.
+
+        Args:
+            sus: The number of service units to add
+            start: The start date of the proposal
+            duration: How many days before the investment expires
+            num_inv: Spread out the given service units equally across given number of instances
+        """
+
+        if num_inv < 1:
+            raise ValueError('Argument ``repeat`` must be >= 1')
+
+        # Calculate number of service units per each investment
+        duration = timedelta(days=duration)
+        sus_per_instance = ceil(sus / num_inv)
+        self._raise_invalid_sus(sus_per_instance)
+
+        with Session() as session:
+            self._get_proposal(session)
+
+            for i in range(num_inv):
+                start_this = start + i * duration
+                end_this = start + (i + 1) * duration
+
+                new_investor = Investor(
+                    account_name=self._account_name,
+                    start_date=start_this,
+                    end_date=end_this,
+                    service_units=sus_per_instance,
+                    current_sus=sus_per_instance,
+                    withdrawn_sus=0,
+                    rollover_sus=0
+                )
+
+                session.add(new_investor)
+                LOG.debug(f"Inserting investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
+
+            session.commit()
+
+        LOG.info(f"Invested {sus} service units for account {self._account_name}")
+
+    def delete_investment(self, id: int) -> None:
+        """Delete one of the account's associated investments
+
+        Args:
+            id: The id of the investment to delete
+        """
+
+        with Session() as session:
+            investment = self._get_investment(session, id)
+            session.add(investment.to_archive_object())
+            session.query(Investor).filter(Investor.id == investment.id).delete()
+            session.commit()
+
+        LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
+
+    def add(self, id: int, sus: int) -> None:
+        """Add service units to the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: Number of service units to add
+
+        Raises:
+            MissingInvestmentError: If the account does not have a proposal
+        """
+
+        self._raise_invalid_sus(sus)
+        with Session() as session:
+            investment = self._get_investment(session, id)
+            investment.service_units += sus
+            investment.current_sus += sus
+            session.commit()
+
+        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+
+    def subtract(self, id: int, sus: int) -> None:
+        """Subtract service units from the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: Number of service units to remove
+
+        Raises:
+            MissingInvestmentError: If the account does not have a proposal
+        """
+
+        self._raise_invalid_sus(sus)
+        with Session() as session:
+            investment = self._get_investment(session, id)
+            if investment.current_sus < sus:
+                raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
+
+            investment.service_units -= sus
+            investment.current_sus -= sus
+            session.commit()
+
+        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
+
+    def overwrite(self, id: int, sus: int, start_date: date = None, end_date: date = None, ) -> None:
+        """Overwrite service units allocated to the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: New number of service units to assign to the investment
+
+        Raises:
+            MissingInvestmentError: If the account does not have a proposal
+        """
+
+        self._raise_invalid_sus(sus)
+        with Session() as session:
+            investment = self._get_investment(session, id)
+            investment.service_units = sus
+
+            if start_date:
+                investment.start_date = start_date
+
+            if end_date:
+                investment.start_date = end_date
+
+            session.commit()
+
+        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
+
+    def advance(self, sus: int) -> None:
+        """Withdraw service units from future investments
+
+        Args:
+            sus: The number of service units to withdraw
+        """
+
+        self._raise_invalid_sus(sus)
+        requested_withdrawal = sus
+
+        with Session() as session:
+            # Query all of the account's investments from the database and sort them
+            # so that younger investments (i.e., with later start dates) come first
+            investments = session.query(Investor) \
+                .filter(Investor.account_name == self._account_name) \
+                .order_by(Investor.start_date.desc()) \
+                .all()
+
+            if len(investments) < 2:
+                raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
+
+            *young_investments, oldest_investment = investments
+            if not (oldest_investment.start_date <= date.today() or date.today() < oldest_investment.end_date):
+                raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
+
+            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
+            if sus > available_sus:
+                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
+
+            # Move service units from younger investments to the oldest available investment
+            for investment in young_investments:
+                maximum_withdrawal = investment.service_units - investment.withdrawn_sus
+                to_withdraw = min(sus, maximum_withdrawal)
+
+                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
+                investment.current_sus -= to_withdraw
+                investment.withdrawn_sus += to_withdraw
+                oldest_investment.current_sus += to_withdraw
+
+                # Check if we have withdrawn the requested number of service units
+                sus -= to_withdraw
+                if sus <= 0:
+                    break
+
+            session.commit()
+
+        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+
+
+class AdminServices(BaseDataAccess):
+    """Administration for existing bank accounts"""
 
     @staticmethod
     def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
@@ -176,332 +520,69 @@ class BaseDataAccess:
         print(self._build_usage_str())
         print(self._build_investment_str())
 
+    def notify_account(self) -> None:
+        """Send any pending usage alerts to the account"""
 
-class ProposalServices(BaseDataAccess):
-    """Account logic for primary account proposals"""
+        with Session() as session:
+            proposal = self._get_proposal(session)
+
+            # Determine the next usage percentage that an email is scheduled to be sent out
+            usage = self._slurm_acct.get_total_usage()
+            allocated = proposal.total_allocated
+            usage_perc = min(int(usage / allocated * 100), 100)
+            next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
+
+            email = None
+            days_until_expire = (proposal.end_date - date.today()).days
+            if days_until_expire == 0:
+                email = settings.expired_proposal_notice
+                subject = f'The account for {self._account_name} has reached its end date'
+                self._slurm_acct.set_locked_state(True)
+
+            elif days_until_expire in settings.warning_days:
+                email = settings.expiration_warning
+                subject = f'Your proposal expiry reminder for account: {self._account_name}'
+
+            elif proposal.percent_notified < next_notify_perc <= usage_perc:
+                proposal.percent_notified = next_notify_perc
+                email = settings.usage_warning
+                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
+
+            if email:
+                email.format(
+                    account_name=self.account_name,
+                    start_date=proposal.start_date.strftime(settings.date_format),
+                    end_date=proposal.end_date.strftime(settings.date_format),
+                    exp_in_days=days_until_expire,
+                    perc=usage_perc,
+                    usage=self._build_usage_str(),
+                    investment=self._build_investment_str()
+                ).send_to(
+                    to=f'{self._account_name}{settings.user_email_suffix}',
+                    ffrom=settings.from_address,
+                    subject=subject)
+
+            session.commit()
 
     @staticmethod
-    def _raise_cluster_kwargs(**kwargs: int) -> None:
-        """Check whether keyword arguments are valid service unit values
+    def find_unlocked() -> Tuple[str]:
+        """Return the names for all unexpired proposals with unlocked accounts
 
-        Args:
-            **kwargs: Keyword arguments to check
-
-        Raises:
-            ValueError: For an invalid cluster name
-            ValueError: For negative service units
+        Returns:
+            A tuple of account names
         """
 
-        for k, v in kwargs.items():
-            if k not in settings.clusters:
-                raise ValueError(f'Cluster {k} is not defined in the application settings')
-
-            if v <= 0:
-                raise ValueError('Service unit values must be greater than zero')
-
-    def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
-        """Create a new proposal for the given account
-
-        Args:
-            start: The start date of the proposal
-            duration: How many days before the proposal expires
-            **kwargs: Service units to add on to each cluster
-        """
-
+        # Query database for accounts that are unlocked and expired
         with Session() as session:
-            if session.query(Proposal).filter(Proposal.account_name == self._account_name).first():
-                raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
-
-            new_proposal = Proposal(
-                account_name=self._account_name,
-                percent_notified=0,
-                start_date=start,
-                end_date=start + timedelta(days=duration),
-                **kwargs
-            )
-
-            session.add(new_proposal)
-            session.commit()
-
-        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
-
-    def delete_proposal(self) -> None:
-        """Delete the account's current proposal"""
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-            session.add(proposal.to_archive_object())
-            session.query(Proposal).filter(Proposal.id == proposal.id).delete()
-            session.commit()
-
-        LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
-
-    def add(self, **kwargs: int) -> None:
-        """Add service units to the account's current allocation
-
-        Args:
-            **kwargs: Service units to add for each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-
-            self._raise_cluster_kwargs(**kwargs)
-            for key, val in kwargs.items():
-                setattr(proposal, key, getattr(proposal, key) + val)
-
-            session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
-
-    def subtract(self, **kwargs: int) -> None:
-        """Subtract service units from the account's current allocation
-
-        Args:
-            **kwargs: Service units to subtract from each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-
-            self._raise_cluster_kwargs(**kwargs)
-            for key, val in kwargs.items():
-                setattr(proposal, key, getattr(proposal, key) - val)
-
-            session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
-
-    def overwrite(self, **kwargs) -> None:
-        """Replace the number of service units allocated to a given cluster
-
-        Args:
-            **kwargs: New service unit values to assign for each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-
-            self._raise_cluster_kwargs(**kwargs)
-            for key, val in kwargs.items():
-                setattr(proposal, key, val)
-
-            session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
-
-
-class InvestmentServices(BaseDataAccess):
-    """Data access for investment information associated with a given account"""
-
-    def __init__(self, account_name: str) -> None:
-        """An existing account in the bank
-
-        Args:
-            account_name: The name of the account
-        """
-
-        super().__init__(account_name)
-        with Session() as session:
-            self._get_proposal(session)
-
-    @staticmethod
-    def _raise_invalid_sus(sus: int) -> None:
-        """Check whether the given value is a valid service unit
-
-        Args:
-            sus: The value to check
-
-        Raises:
-            ValueError: If the given value is not greater than zero
-        """
-
-        if sus <= 0:
-            raise ValueError('Service units must be greater than zero.')
-
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv=1) -> None:
-        """Add a new investment(s) for the given account
-
-        ``num_inv`` reflects the number of investments to create. If the argument
-        is greater than one, repeating investments are created sequentially such
-        that a new investment begins as each investment ends. The ``start``
-        argument represents the start date of the first investment in the sequence.
-        The given number of service units (``sus``) are allocated equally across
-        each investment in the series.
-
-        Args:
-            sus: The number of service units to add
-            start: The start date of the proposal
-            duration: How many days before the investment expires
-            num_inv: Spread out the given service units equally across given number of instances
-        """
-
-        if num_inv < 1:
-            raise ValueError('Argument ``repeat`` must be >= 1')
-
-        duration = timedelta(days=duration)
-        sus_per_instance = ceil(sus / num_inv)
-        with Session() as session:
-            self._get_proposal(session)
-
-            for i in range(num_inv):
-                start_this = start + i * duration
-                end_this = start + (i + 1) * duration
-
-                new_investor = Investor(
-                    account_name=self._account_name,
-                    start_date=start_this,
-                    end_date=end_this,
-                    service_units=sus_per_instance,
-                    current_sus=sus_per_instance,
-                    withdrawn_sus=0,
-                    rollover_sus=0
-                )
-
-                session.add(new_investor)
-                LOG.debug(f"Inserting investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
-
-            session.commit()
-
-        LOG.info(f"Invested {sus} service units for account {self._account_name}")
-
-    def delete_investment(self, id: int) -> None:
-        """Delete one of the account's associated investments
-
-        Args:
-            id: The id of the investment to delete
-        """
-
-        with Session() as session:
-            investment = self._get_investment(session, id)
-            session.add(investment.to_archive_object())
-            session.query(Investor).filter(Investor.id == investment.id).delete()
-            session.commit()
-
-        LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
-
-    def add(self, id: int, sus: int) -> None:
-        """Add service units to the given investment
-
-        Args:
-            id: The id of the investment to change
-            sus: Number of service units to add
-
-        Raises:
-            MissingInvestmentError: If the account does not have a proposal
-        """
-
-        self._raise_invalid_sus(sus)
-        with Session() as session:
-            investment = self._get_investment(session, id)
-            investment.service_units += sus
-            investment.current_sus += sus
-            session.commit()
-
-        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
-
-    def subtract(self, id: int, sus: int) -> None:
-        """Subtract service units from the given investment
-
-        Args:
-            id: The id of the investment to change
-            sus: Number of service units to remove
-
-        Raises:
-            MissingInvestmentError: If the account does not have a proposal
-        """
-
-        self._raise_invalid_sus(sus)
-        with Session() as session:
-            investment = self._get_investment(session, id)
-            if investment.current_sus < sus:
-                raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
-
-            investment.service_units -= sus
-            investment.current_sus -= sus
-            session.commit()
-
-        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
-
-    def overwrite(self, id: int, sus: int) -> None:
-        """Overwrite service units allocated to the given investment
-
-        Args:
-            id: The id of the investment to change
-            sus: New number of service units to assign to the investment
-
-        Raises:
-            MissingInvestmentError: If the account does not have a proposal
-        """
-
-        self._raise_invalid_sus(sus)
-        with Session() as session:
-            investment = self._get_investment(session, id)
-            investment.service_units = sus
-            session.commit()
-
-        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
-
-    def advance(self, sus: int) -> None:
-        """Withdraw service units from future investments
-
-        Args:
-            sus: The number of service units to withdraw
-        """
-
-        self._raise_invalid_sus(sus)
-        requested_withdrawal = sus
-
-        with Session() as session:
-            # Query all of the account's investments from the database and sort them
-            # so that younger investments (i.e., with later start dates) come first
-            investments = session.query(Investor) \
-                .filter(Investor.account_name == self._account_name) \
-                .order_by(Investor.start_date.desc()) \
-                .all()
-
-            if len(investments) < 2:
-                raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
-
-            *young_investments, oldest_investment = investments
-            if not (oldest_investment.start_date <= date.today() or date.today() < oldest_investment.end_date):
-                raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
-
-            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
-            if sus > available_sus:
-                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
-
-            # Move service units from younger investments to the oldest available investment
-            for investment in young_investments:
-                maximum_withdrawal = investment.service_units - investment.withdrawn_sus
-                to_withdraw = min(sus, maximum_withdrawal)
-
-                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
-                investment.current_sus -= to_withdraw
-                investment.withdrawn_sus += to_withdraw
-                oldest_investment.current_sus += to_withdraw
-
-                # Check if we have withdrawn the requested number of service units
-                sus -= to_withdraw
-                if sus <= 0:
-                    break
-
-            session.commit()
-
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
-
-
-class AdminServices(BaseDataAccess):
-    """Administration for existing bank accounts"""
+            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
+            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
+
+    @classmethod
+    def notify_unlocked(cls) -> None:
+        """Lock any expired accounts"""
+
+        for account in cls.find_unlocked():
+            cls(account).notify_account()
 
     def renew(self, reset_usage=True) -> None:
         """Archive any expired investments and rollover unused service units"""
@@ -553,67 +634,3 @@ class AdminServices(BaseDataAccess):
         if reset_usage:
             self._slurm_acct.reset_raw_usage()
             self._slurm_acct.set_locked_state(False)
-
-    @staticmethod
-    def find_unlocked() -> Tuple[str]:
-        """Return the names for all unexpired proposals with unlocked accounts
-
-        Returns:
-            A tuple of account names
-        """
-
-        # Query database for accounts that are unlocked and expired
-        with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
-            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
-
-    def notify_account(self) -> None:
-        """Send any pending usage alerts to the account"""
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-
-            # Determine the next usage percentage that an email is scheduled to be sent out
-            usage = self._slurm_acct.get_total_usage()
-            allocated = proposal.total_allocated
-            usage_perc = min(int(usage / allocated * 100), 100)
-            next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
-
-            email = None
-            days_until_expire = (proposal.end_date - date.today()).days
-            if days_until_expire == 0:
-                email = settings.expired_proposal_notice
-                subject = f'The account for {self._account_name} has reached its end date'
-                self._slurm_acct.set_locked_state(True)
-
-            elif days_until_expire in settings.warning_days:
-                email = settings.expiration_warning
-                subject = f'Your proposal expiry reminder for account: {self._account_name}'
-
-            elif proposal.percent_notified < next_notify_perc <= usage_perc:
-                proposal.percent_notified = next_notify_perc
-                email = settings.usage_warning
-                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
-
-            if email:
-                email.format(
-                    account_name=self.account_name,
-                    start_date=proposal.start_date.strftime(settings.date_format),
-                    end_date=proposal.end_date.strftime(settings.date_format),
-                    exp_in_days=days_until_expire,
-                    perc=usage_perc,
-                    usage=self._build_usage_str(),
-                    investment=self._build_investment_str()
-                ).send_to(
-                    to=f'{self._account_name}{settings.user_email_suffix}',
-                    ffrom=settings.from_address,
-                    subject=subject)
-
-            session.commit()
-
-    @classmethod
-    def notify_unlocked(cls) -> None:
-        """Lock any expired accounts"""
-
-        for account in cls.find_unlocked():
-            cls(account).notify_account()
