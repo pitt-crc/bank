@@ -68,6 +68,7 @@ class BaseParser(ArgumentParser):
             return
 
         super(BaseParser, self).__init__(**kwargs)
+        self.set_defaults(function=self.print_help)
 
     def execute(self, args=None) -> None:
         """Method used to evaluate the command line parser
@@ -80,14 +81,7 @@ class BaseParser(ArgumentParser):
             args: A list of command line arguments
         """
 
-        if args is None:
-            args_str = ' '
-
-        else:
-            args_str = ' '.join(args)
-
-        LOG.debug(f'Eval CLI - {args_str}')
-
+        LOG.debug(f'Evaluate CLI with args: {args}')
         cli_kwargs = dict(self.parse_args(args)._get_kwargs())
         cli_kwargs.pop('function', self.print_help)(**cli_kwargs)
 
