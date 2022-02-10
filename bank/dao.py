@@ -81,101 +81,6 @@ class BaseDataAccess:
 
         return inv
 
-    @staticmethod
-    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
-        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer is infinity"""
-
-        if total > 0:
-            return 100 * usage / total
-
-        return 0
-
-    def _build_usage_str(self):
-        """Return a human-readable summary of the accounts allocations"""
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-            try:
-                investments = self._get_investment(session)
-
-            except MissingInvestmentError:
-                investments = []
-
-        # The table header
-        output_lines = []
-        output_lines.append(f"|{'-' * 82}|")
-        output_lines.append(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
-
-        # Print usage information for the primary proposal
-        usage_total = 0
-        allocation_total = 0
-        for cluster in settings.clusters:
-            usage = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
-            allocation = getattr(proposal, cluster)
-            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
-            output_lines.append(f"|{'-' * 82}|")
-            output_lines.append(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-
-            usage_total += usage
-            allocation_total += allocation
-
-        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv.service_units for inv in investments)
-        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
-
-        # Print usage information concerning investments
-        output_lines.append(f"|{'Aggregate':^82}|")
-        output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
-
-        if investment_total == 0:
-            output_lines.append(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
-            output_lines.append(f"|{'-' * 82}|")
-
-        else:
-            output_lines.append(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|")
-            output_lines.append(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|")
-            output_lines.append(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|")
-            output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
-            output_lines.append(f"|{'^a Investment SUs can be used across any cluster':^82}|")
-            output_lines.append(f"|{'-' * 82}|")
-
-        return '\n'.join(output_lines)
-
-    def _build_investment_str(self) -> str:
-        """Return a human-readable summary of the account's investments
-
-        The returned string is empty if there are no investments
-        """
-        with Session() as session:
-            try:
-                investments = self._get_investment(session)
-
-            except MissingInvestmentError:
-                return ''
-
-        output_lines = [
-            '|--------------------------------------------------------------------------------|',
-            '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |',
-            '|--------------------------------------------------------------------------------|',
-        ]
-        for inv in investments:
-            output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
-
-        output_lines.append('|--------------------------------------------------------------------------------|')
-        return '\n'.join(output_lines)
-
-    def print_info(self) -> None:
-        """Print a summary of service units allocated to and used by the account"""
-
-        print(self._build_usage_str())
-        print(self._build_investment_str())
-
 
 class ProposalServices(BaseDataAccess):
     """Account logic for primary account proposals"""
@@ -513,6 +418,165 @@ class InvestmentServices(BaseDataAccess):
 class AdminServices(BaseDataAccess):
     """Administration for existing bank accounts"""
 
+    @staticmethod
+    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
+        """Calculate the percentage ``100 * usage / total`` and return 0 if the answer is infinity"""
+
+        if total > 0:
+            return 100 * usage / total
+
+        return 0
+
+    def _build_usage_str(self):
+        """Return a human-readable summary of the accounts allocations"""
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+            try:
+                investments = self._get_investment(session)
+
+            except MissingInvestmentError:
+                investments = []
+
+        # The table header
+        output_lines = []
+        output_lines.append(f"|{'-' * 82}|")
+        output_lines.append(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
+
+        # Print usage information for the primary proposal
+        usage_total = 0
+        allocation_total = 0
+        for cluster in settings.clusters:
+            usage = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
+            allocation = getattr(proposal, cluster)
+            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
+            output_lines.append(f"|{'-' * 82}|")
+            output_lines.append(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            output_lines.append(f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|")
+            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+
+            usage_total += usage
+            allocation_total += allocation
+
+        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
+        investment_total = sum(inv.service_units for inv in investments)
+        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+
+        # Print usage information concerning investments
+        output_lines.append(f"|{'Aggregate':^82}|")
+        output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
+
+        if investment_total == 0:
+            output_lines.append(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
+            output_lines.append(f"|{'-' * 82}|")
+
+        else:
+            output_lines.append(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|")
+            output_lines.append(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|")
+            output_lines.append(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|")
+            output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
+            output_lines.append(f"|{'^a Investment SUs can be used across any cluster':^82}|")
+            output_lines.append(f"|{'-' * 82}|")
+
+        return '\n'.join(output_lines)
+
+    def _build_investment_str(self) -> str:
+        """Return a human-readable summary of the account's investments
+
+        The returned string is empty if there are no investments
+        """
+        with Session() as session:
+            try:
+                investments = self._get_investment(session)
+
+            except MissingInvestmentError:
+                return ''
+
+        output_lines = [
+            '|--------------------------------------------------------------------------------|',
+            '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |',
+            '|--------------------------------------------------------------------------------|',
+        ]
+        for inv in investments:
+            output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
+
+        output_lines.append('|--------------------------------------------------------------------------------|')
+        return '\n'.join(output_lines)
+
+    def print_info(self) -> None:
+        """Print a summary of service units allocated to and used by the account"""
+
+        print(self._build_usage_str())
+        print(self._build_investment_str())
+
+    def notify_account(self) -> None:
+        """Send any pending usage alerts to the account"""
+
+        with Session() as session:
+            proposal = self._get_proposal(session)
+
+            # Determine the next usage percentage that an email is scheduled to be sent out
+            usage = self._slurm_acct.get_total_usage()
+            allocated = proposal.total_allocated
+            usage_perc = min(int(usage / allocated * 100), 100)
+            next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
+
+            email = None
+            days_until_expire = (proposal.end_date - date.today()).days
+            if days_until_expire == 0:
+                email = settings.expired_proposal_notice
+                subject = f'The account for {self._account_name} has reached its end date'
+                self._slurm_acct.set_locked_state(True)
+
+            elif days_until_expire in settings.warning_days:
+                email = settings.expiration_warning
+                subject = f'Your proposal expiry reminder for account: {self._account_name}'
+
+            elif proposal.percent_notified < next_notify_perc <= usage_perc:
+                proposal.percent_notified = next_notify_perc
+                email = settings.usage_warning
+                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
+
+            if email:
+                email.format(
+                    account_name=self.account_name,
+                    start_date=proposal.start_date.strftime(settings.date_format),
+                    end_date=proposal.end_date.strftime(settings.date_format),
+                    exp_in_days=days_until_expire,
+                    perc=usage_perc,
+                    usage=self._build_usage_str(),
+                    investment=self._build_investment_str()
+                ).send_to(
+                    to=f'{self._account_name}{settings.user_email_suffix}',
+                    ffrom=settings.from_address,
+                    subject=subject)
+
+            session.commit()
+
+    @staticmethod
+    def find_unlocked() -> Tuple[str]:
+        """Return the names for all unexpired proposals with unlocked accounts
+
+        Returns:
+            A tuple of account names
+        """
+
+        # Query database for accounts that are unlocked and expired
+        with Session() as session:
+            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
+            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
+
+    @classmethod
+    def notify_unlocked(cls) -> None:
+        """Lock any expired accounts"""
+
+        for account in cls.find_unlocked():
+            cls(account).notify_account()
+
     def renew(self, reset_usage=True) -> None:
         """Archive any expired investments and rollover unused service units"""
 
@@ -563,67 +627,3 @@ class AdminServices(BaseDataAccess):
         if reset_usage:
             self._slurm_acct.reset_raw_usage()
             self._slurm_acct.set_locked_state(False)
-
-    @staticmethod
-    def find_unlocked() -> Tuple[str]:
-        """Return the names for all unexpired proposals with unlocked accounts
-
-        Returns:
-            A tuple of account names
-        """
-
-        # Query database for accounts that are unlocked and expired
-        with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
-            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
-
-    def notify_account(self) -> None:
-        """Send any pending usage alerts to the account"""
-
-        with Session() as session:
-            proposal = self._get_proposal(session)
-
-            # Determine the next usage percentage that an email is scheduled to be sent out
-            usage = self._slurm_acct.get_total_usage()
-            allocated = proposal.total_allocated
-            usage_perc = min(int(usage / allocated * 100), 100)
-            next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
-
-            email = None
-            days_until_expire = (proposal.end_date - date.today()).days
-            if days_until_expire == 0:
-                email = settings.expired_proposal_notice
-                subject = f'The account for {self._account_name} has reached its end date'
-                self._slurm_acct.set_locked_state(True)
-
-            elif days_until_expire in settings.warning_days:
-                email = settings.expiration_warning
-                subject = f'Your proposal expiry reminder for account: {self._account_name}'
-
-            elif proposal.percent_notified < next_notify_perc <= usage_perc:
-                proposal.percent_notified = next_notify_perc
-                email = settings.usage_warning
-                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
-
-            if email:
-                email.format(
-                    account_name=self.account_name,
-                    start_date=proposal.start_date.strftime(settings.date_format),
-                    end_date=proposal.end_date.strftime(settings.date_format),
-                    exp_in_days=days_until_expire,
-                    perc=usage_perc,
-                    usage=self._build_usage_str(),
-                    investment=self._build_investment_str()
-                ).send_to(
-                    to=f'{self._account_name}{settings.user_email_suffix}',
-                    ffrom=settings.from_address,
-                    subject=subject)
-
-            session.commit()
-
-    @classmethod
-    def notify_unlocked(cls) -> None:
-        """Lock any expired accounts"""
-
-        for account in cls.find_unlocked():
-            cls(account).notify_account()
