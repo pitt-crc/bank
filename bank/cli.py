@@ -157,8 +157,8 @@ class ProposalParser(dao.ProposalServices, BaseParser):
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
         proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
         proposal_overwrite.add_argument('--account', **account_definition)
-        proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='The new proposal start date')
-        proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='The new proposal end date')
+        proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
+        proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
         self._add_cluster_args(proposal_overwrite)
 
     @staticmethod
@@ -217,6 +217,8 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
         investment_overwrite.add_argument('--account', **account_definition)
         investment_overwrite.add_argument('--id', **proposal_id_definition)
         investment_overwrite.add_argument('--sus', **service_unit_definition)
+        investment_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
+        investment_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
         investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)

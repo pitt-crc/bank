@@ -184,7 +184,7 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, start_date=None, end_date=None, **kwargs) -> None:
+    def overwrite(self, start_date: date = None, end_date: date = None, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
@@ -347,7 +347,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def overwrite(self, id: int, sus: int) -> None:
+    def overwrite(self, id: int, sus: int, start_date: date = None, end_date: date = None, ) -> None:
         """Overwrite service units allocated to the given investment
 
         Args:
@@ -362,6 +362,13 @@ class InvestmentServices(BaseDataAccess):
         with Session() as session:
             investment = self._get_investment(session, id)
             investment.service_units = sus
+
+            if start_date:
+                investment.start_date = start_date
+
+            if end_date:
+                investment.start_date = end_date
+
             session.commit()
 
         LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
