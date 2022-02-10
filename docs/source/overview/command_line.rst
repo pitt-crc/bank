@@ -9,22 +9,13 @@ together by the service being administered:
 
    crc_bank.py <service> <action> --arguments
 
-General Administrative Tasks
-----------------------------
+General Account Management
+--------------------------
 
 .. argparse::
    :module: bank.cli
    :func: CLIParser
    :path: admin
-
-Slrum Account Management
-------------------------
-
-.. argparse::
-   :module: bank.cli
-   :func: CLIParser
-   :path: slurm
-
 
 User Proposals
 --------------

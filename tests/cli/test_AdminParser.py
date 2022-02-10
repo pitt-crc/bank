@@ -16,6 +16,12 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     def test_account_info(self) -> None:
         self.assert_parser_matches_func_signature(f'admin info --account {settings.test_account}')
 
+    def test_lock(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin lock --account {settings.test_account}')
+
+    def test_unlock(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin unlock --account {settings.test_account}')
+
     def test_notify_account(self) -> None:
         self.assert_parser_matches_func_signature(f'admin lock_expired')
 
