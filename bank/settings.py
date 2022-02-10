@@ -130,8 +130,9 @@ from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pit
 
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
-usage_warning = EmailTemplate(dedent(_ENV.get_value(
-    _APP_PREFIX + 'USAGE_WARNING', default="""
+usage_warning = _ENV.get_value(
+    _APP_PREFIX + 'USAGE_WARNING',
+    default=EmailTemplate(dedent("""
     <html>
     <head></head>
     <body>
@@ -158,9 +159,9 @@ usage_warning = EmailTemplate(dedent(_ENV.get_value(
 
 # An email to send when a user is  nearing the end of their proposal
 warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
-expiration_warning = EmailTemplate(dedent(_ENV.get_value(
+expiration_warning = _ENV.get_value(
     _APP_PREFIX + 'EXPIRATION_WARNING',
-    default="""
+    default=EmailTemplate(dedent("""
     <html>
     <head></head>
     <body>
@@ -182,9 +183,9 @@ expiration_warning = EmailTemplate(dedent(_ENV.get_value(
     """)))
 
 # An email to send when the proposal has expired
-expired_proposal_notice = EmailTemplate(dedent(_ENV.get_value(
+expired_proposal_notice = _ENV.get_value(
     _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
-    default="""
+    default=EmailTemplate(dedent("""
     <html>
     <head></head>
     <body>
