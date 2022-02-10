@@ -85,7 +85,7 @@ class BaseParser(ArgumentParser):
             return super().add_subparsers(parser_class=BaseParser)
 
 
-class AdminParser(dao.AdminServices, BaseParser):
+class AdminParser(dao.AdminServices, system.SlurmAccount, BaseParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -102,6 +102,14 @@ class AdminParser(dao.AdminServices, BaseParser):
         info.set_defaults(function=super(AdminParser, AdminParser).print_info)
         info.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
 
+        slurm_lock = admin_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        slurm_lock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=True)
+        slurm_lock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
+
+        slurm_unlock = admin_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
+        slurm_unlock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=False)
+        slurm_unlock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
+
         unlocked = admin_subparsers.add_parser('lock_expired', help='Notify and lock all expired or overdrawn accounts')
         unlocked.set_defaults(function=super(AdminParser, AdminParser).notify_unlocked)
 
@@ -111,28 +119,6 @@ class AdminParser(dao.AdminServices, BaseParser):
         renew = admin_subparsers.add_parser('renew', help='Rollover any expired investments')
         renew.set_defaults(function=super(AdminParser, AdminParser).renew)
         renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
-
-
-class SlurmParser(system.SlurmAccount, BaseParser):
-    """Command line parser for the ``slurm`` service"""
-
-    def __init__(self, **kwargs) -> None:
-        BaseParser.__init__(self, **kwargs)
-
-        subparsers = self.add_subparsers(parser_class=BaseParser)
-        slurm_parser = subparsers.add_parser('slurm', help='Administrative tools for slurm accounts')
-        slurm_subparsers = slurm_parser.add_subparsers(title="slurm actions")
-
-        # Reusable definitions for argument help text
-        account_help = 'The slurm account to administrate'
-
-        slurm_lock = slurm_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=True)
-        slurm_lock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
-
-        slurm_unlock = slurm_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
-        slurm_unlock.set_defaults(function=super(SlurmParser, SlurmParser).set_locked_state, lock_state=False)
-        slurm_unlock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
 
 
 class ProposalParser(dao.ProposalServices, BaseParser):
@@ -234,12 +220,11 @@ class InvestmentParser(dao.InvestmentServices, BaseParser):
         investment_advance.add_argument('--sus', type=int, help='The number of SUs you want to advance')
 
 
-class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
+class CLIParser(AdminParser, ProposalParser, InvestmentParser):
     """Command line parser used as the primary entry point for the parent application"""
 
     def __init__(self, **kwargs) -> None:
         AdminParser.__init__(self, **kwargs)
-        SlurmParser.__init__(self, **kwargs)
         ProposalParser.__init__(self, **kwargs)
         InvestmentParser.__init__(self, **kwargs)
 
