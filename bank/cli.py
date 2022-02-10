@@ -70,21 +70,6 @@ class BaseParser(ArgumentParser):
         super(BaseParser, self).__init__(**kwargs)
         self.set_defaults(function=self.print_help)
 
-    def execute(self, args=None) -> None:
-        """Method used to evaluate the command line parser
-
-        Parse command line arguments and evaluate the corresponding function.
-        If arguments are not explicitly passed to this function, they are
-        retrieved from the command line.
-
-        Args:
-            args: A list of command line arguments
-        """
-
-        LOG.debug(f'Evaluate CLI with args: {args}')
-        cli_kwargs = dict(self.parse_args(args)._get_kwargs())
-        cli_kwargs.pop('function', self.print_help)(**cli_kwargs)
-
     def add_subparsers(self, **kwargs) -> Action:
         """Return a subparser for the parent parser class
 
@@ -257,3 +242,24 @@ class CLIParser(AdminParser, SlurmParser, ProposalParser, InvestmentParser):
         SlurmParser.__init__(self, **kwargs)
         ProposalParser.__init__(self, **kwargs)
         InvestmentParser.__init__(self, **kwargs)
+
+    def execute(self, args=None) -> None:
+        """Method used to evaluate the command line parser
+
+        Parse command line arguments and evaluate the corresponding function.
+        If arguments are not explicitly passed to this function, they are
+        retrieved from the command line.
+
+        Args:
+            args: A list of command line arguments
+        """
+
+        LOG.debug(f'Evaluate CLI with args: {args}')
+        cli_kwargs = dict(self.parse_args(args)._get_kwargs())
+        function = cli_kwargs.pop('function', self.print_help)
+
+        try:
+            function(**cli_kwargs)
+
+        except Exception as err:
+            self.error(err)
