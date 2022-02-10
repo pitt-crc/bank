@@ -38,7 +38,7 @@ class BaseDataAccess:
     def account_name(self) -> str:
         return self._account_name
 
-    def _get_proposal(self, session: Session) -> Proposal:
+    def _get_proposal(self, session: Session = None) -> Proposal:
         """Return the proposal record from the application database
 
         Args:
@@ -181,7 +181,7 @@ class ProposalServices(BaseDataAccess):
     """Account logic for primary account proposals"""
 
     @staticmethod
-    def _raise_cluster_kwargs(**kwargs: int) -> None:
+    def _raise_cluster_kwargs(kwargs: dict, nonzero=True, positive_sum=False) -> None:
         """Check whether keyword arguments are valid service unit values
 
         Args:
@@ -278,10 +278,12 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, **kwargs) -> None:
+    def overwrite(self, start_date=None, end_date=None, **kwargs) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
+            start_date: Optionally set a new start date for the proposal
+            end_date: Optionally set a new end date for the proposal
             **kwargs: New service unit values to assign for each cluster
 
         Raises:
@@ -292,6 +294,9 @@ class ProposalServices(BaseDataAccess):
             proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
+            kwargs['start_date'] = start_date or proposal.start_date
+            kwargs['end_date'] = end_date or proposal.end_date
+
             for key, val in kwargs.items():
                 setattr(proposal, key, val)
 

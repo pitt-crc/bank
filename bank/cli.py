@@ -50,6 +50,7 @@ API Reference
 from __future__ import annotations
 
 from argparse import ArgumentParser, Action
+from datetime import datetime
 from logging import getLogger
 
 from . import settings, dao, system
@@ -156,6 +157,8 @@ class ProposalParser(dao.ProposalServices, BaseParser):
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
         proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
         proposal_overwrite.add_argument('--account', **account_definition)
+        proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='The new proposal start date')
+        proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='The new proposal end date')
         self._add_cluster_args(proposal_overwrite)
 
     @staticmethod
