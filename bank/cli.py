@@ -92,13 +92,13 @@ class AdminParser(dao.AdminServices, system.SlurmAccount, BaseParser):
         BaseParser.__init__(self, **kwargs)
 
         subparsers = self.add_subparsers()
-        admin_parser = subparsers.add_parser('admin', help='Tools for general system status')
+        admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
         # Reusable definitions for argument help text
         account_help = 'Name of a slurm user account'
 
-        info = admin_subparsers.add_parser('info', help='Print usage and allocation information')
+        info = admin_subparsers.add_parser('info', help='Print account usage and allocation information')
         info.set_defaults(function=super(AdminParser, AdminParser).print_info)
         info.add_argument('--account', dest='self', type=dao.AdminServices, help=account_help)
 
@@ -106,7 +106,7 @@ class AdminParser(dao.AdminServices, system.SlurmAccount, BaseParser):
         slurm_lock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=True)
         slurm_lock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
 
-        slurm_unlock = admin_subparsers.add_parser('unlock', help='Allow a slurm account to submit jobs')
+        slurm_unlock = admin_subparsers.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
         slurm_unlock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=False)
         slurm_unlock.add_argument('--account', dest='self', type=system.SlurmAccount, help=account_help)
 
@@ -116,7 +116,7 @@ class AdminParser(dao.AdminServices, system.SlurmAccount, BaseParser):
         unlocked = admin_subparsers.add_parser('unlocked', help='List all unlocked user accounts')
         unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
-        renew = admin_subparsers.add_parser('renew', help='Rollover any expired investments')
+        renew = admin_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any expired investments')
         renew.set_defaults(function=super(AdminParser, AdminParser).renew)
         renew.add_argument('--account', dest='self', type=dao.InvestmentServices, help=account_help)
 
