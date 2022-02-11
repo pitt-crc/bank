@@ -6,9 +6,9 @@ import time_machine
 
 from bank import orm
 from bank import settings
-from bank.dao import AdminServices
+from bank.account_services import AdminServices
 from bank.system.slurm import SlurmAccount
-from tests.dao._utils import AdminSetup
+from tests.account_services._utils import AdminSetup
 
 
 class CalculatePercentage(TestCase):

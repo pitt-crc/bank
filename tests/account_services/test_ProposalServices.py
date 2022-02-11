@@ -2,10 +2,10 @@ from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.dao import ProposalServices
+from bank.account_services import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal, ProposalArchive
-from tests.dao._utils import ProposalSetup
+from tests.account_services._utils import ProposalSetup
 
 
 class CreateProposal(TestCase):

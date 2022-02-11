@@ -51,7 +51,7 @@ based on:
    :caption: API Reference
 
    api/cli.rst
-   api/dao.rst
+   api/account_services.rst
    api/orm/orm.rst
    api/settings.rst
    api/system/system.rst
