@@ -347,27 +347,31 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def overwrite(self, id: int, sus: int, start_date: date = None, end_date: date = None, ) -> None:
+    def overwrite(self, id: int, sus: int = None, start_date: date = None, end_date: date = None, ) -> None:
         """Overwrite service units allocated to the given investment
 
         Args:
             id: The id of the investment to change
             sus: New number of service units to assign to the investment
+            start_date: Optionally set a new start date for the investment
+            end_date: Optionally set a new end date for the investment
 
         Raises:
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        self._raise_invalid_sus(sus)
         with Session() as session:
             investment = self._get_investment(session, id)
-            investment.service_units = sus
+
+            if sus is not None:
+                self._raise_invalid_sus(sus)
+                investment.service_units = sus
 
             if start_date:
                 investment.start_date = start_date
 
             if end_date:
-                investment.start_date = end_date
+                investment.end_date = end_date
 
             session.commit()
 
