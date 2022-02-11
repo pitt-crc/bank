@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
@@ -56,6 +57,8 @@ class CreateInvestment(ProposalSetup, TestCase):
             self.account.create_investment(sus=1000, num_inv=0)
 
     def test_investment_is_repeated(self) -> None:
+        """Test the given number of investments are created successively"""
+
         test_sus = 2000
         repeats = 2
         self.account.create_investment(sus=test_sus, num_inv=repeats)
@@ -135,12 +138,36 @@ class OverwriteSus(InvestorSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
 
     def test_sus_are_modified(self) -> None:
-        """Test sus from kwargs are set in the proposal"""
+        """Test sus are overwritten in the investment"""
+
+        with Session() as session:
+            old_investment = self.account._get_investment(session, self.inv_id[0])
 
         sus_to_overwrite = 10
         self.account.overwrite(self.inv_id[0], sus_to_overwrite)
-        new_sus = self.account._get_investment(self.session, self.inv_id[0]).service_units
-        self.assertEqual(sus_to_overwrite, new_sus)
+        with Session() as session:
+            new_investment = self.account._get_investment(session, self.inv_id[0])
+
+        self.assertEqual(sus_to_overwrite, new_investment.service_units)
+        self.assertEqual(old_investment.start_date, old_investment.start_date)
+        self.assertEqual(old_investment.end_date, old_investment.end_date)
+
+    def test_dates_are_modified(self) -> None:
+        """Test start and end dates are overwritten in the investment"""
+
+        with Session() as session:
+            old_investment = self.account._get_investment(session, self.inv_id[0])
+
+        new_start_date = old_investment.start_date + timedelta(days=5)
+        new_end_date = old_investment.end_date + timedelta(days=10)
+        self.account.overwrite(self.inv_id[0], start_date=new_start_date, end_date=new_end_date)
+
+        with Session() as session:
+            new_investment = self.account._get_investment(session, self.inv_id[0])
+
+        self.assertEqual(old_investment.service_units, new_investment.service_units)
+        self.assertEqual(new_start_date, new_investment.start_date, 'Start date not overwritten with expected value')
+        self.assertEqual(new_end_date, new_investment.end_date, 'End date not overwritten with expected value')
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""

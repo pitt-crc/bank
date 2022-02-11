@@ -74,7 +74,7 @@ class Renewal(AdminSetup, TestCase):
 
 
 @patch('smtplib.SMTP.send_message')
-class LockIfExpired(AdminSetup, TestCase):
+class NotifyAccount(AdminSetup, TestCase):
     """Test for emails sent when locking accounts"""
 
     @patch('bank.system.SlurmAccount.set_locked_state')
@@ -100,9 +100,30 @@ class LockIfExpired(AdminSetup, TestCase):
         """Test a warning email is sent if the account has reached an expiration warning limit"""
 
         proposal = self.account._get_proposal(self.session)
+
+        # Note: time_machine.travel travels to just before the given point in time
         with time_machine.travel(proposal.end_date - timedelta(days=9)):
             self.account.notify_account()
 
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
         self.assertEqual(f'Your proposal expiry reminder for account: {self.account.account_name}', sent_email['subject'])
+
+    @patch.object(settings, "notify_levels", (1,))  # Ensure a notification is sent after small usage percentage
+    @patch.object(SlurmAccount, "get_total_usage", lambda self: 100)  # Ensure account usage is a reproducible value for testing
+    def test_email_sent_for_warning_day(self, mock_send_message) -> None:
+        """Test a warning email is sent if the account exceeds a certain usage percantage"""
+
+        self.account.notify_account()
+        mock_send_message.assert_called_once()
+        sent_email = mock_send_message.call_args[0][0]
+        self.assertEqual(f'Your account {self.account.account_name} has exceeded a proposal threshold', sent_email['subject'])
+
+        # Ensure the percent notified is updated in the database
+        proposal = self.account._get_proposal(self.session)
+        self.assertEqual(1, proposal.percent_notified)
+
+        # Make sure a second alert is not sent during successive calls
+        # Note: ``assert_called_once`` includes earlier calls in the test
+        self.account.notify_account()
+        mock_send_message.assert_called_once()
