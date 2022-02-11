@@ -2,10 +2,10 @@ from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.dao import InvestmentServices
+from bank.account_services import InvestmentServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Proposal, Investor, InvestorArchive
-from tests.dao._utils import InvestorSetup, ProposalSetup
+from tests.account_services._utils import InvestorSetup, ProposalSetup
 
 
 class CreateInvestment(ProposalSetup, TestCase):

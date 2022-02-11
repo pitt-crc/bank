@@ -1,7 +1,7 @@
 from typing import List
 
 from bank import settings
-from bank.dao import ProposalServices, InvestmentServices, AdminServices
+from bank.account_services import ProposalServices, InvestmentServices, AdminServices
 from bank.orm import Session, Proposal, Investor, ProposalArchive, InvestorArchive
 
 

@@ -23,7 +23,7 @@ logging.basicConfig(
     filemode='a')
 
 # Set logging level for third part packages
-for _log_name in ('sqlalchemy.engine', 'environ.environ', 'bank.dao'):
+for _log_name in ('sqlalchemy.engine', 'environ.environ', 'bank.account_services'):
     logging.getLogger(_log_name).setLevel(settings.log_level)
 
 # Create database if it does not exist

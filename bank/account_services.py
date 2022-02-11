@@ -1,4 +1,4 @@
-"""The ``dao`` module acts as the primary data access layer for the parent
+"""The ``account_services`` module acts as the primary data access layer for the parent
 application and defines the bulk of the account management logic.
 
 API Reference
@@ -18,7 +18,7 @@ from .orm import Investor, Proposal, Session
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
-LOG = getLogger('bank.dao')
+LOG = getLogger('bank.account_services')
 
 
 class BaseDataAccess:
