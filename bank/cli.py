@@ -52,6 +52,7 @@ from __future__ import annotations
 from argparse import ArgumentParser, Action
 from datetime import datetime
 from logging import getLogger
+from typing import List, Optional
 
 from . import settings, dao, system
 
@@ -234,7 +235,7 @@ class CLIParser(AdminParser, ProposalParser, InvestmentParser):
         ProposalParser.__init__(self, **kwargs)
         InvestmentParser.__init__(self, **kwargs)
 
-    def execute(self, args=None) -> None:
+    def execute(self, args: Optional[List[str]] = None) -> None:
         """Method used to evaluate the command line parser
 
         Parse command line arguments and evaluate the corresponding function.
