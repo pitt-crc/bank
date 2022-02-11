@@ -107,7 +107,7 @@ class SlurmAccount:
 
         return usage
 
-    def get_total_usage(self, in_hours: bool = False):
+    def get_total_usage(self, in_hours: bool = False) -> int:
         """Return the raw account usage across all clusters defined in application settings
 
         Args:
