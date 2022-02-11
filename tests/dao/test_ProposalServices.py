@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
@@ -161,11 +162,37 @@ class OverwriteSus(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
 
     def test_sus_are_modified(self) -> None:
-        """Test sus from kwargs are set in the proposal"""
+        """Test sus are overwritten in the proposal"""
+
+        with Session() as session:
+            old_proposal = self.account._get_proposal(session)
 
         self.account.overwrite(**{settings.test_cluster: 12345})
-        proposal = self.account._get_proposal(self.session)
-        self.assertEqual(12345, getattr(proposal, settings.test_cluster))
+        with Session() as session:
+            new_proposal = self.account._get_proposal(session)
+
+        # Check service units are overwritten but dates are not
+        self.assertEqual(12345, getattr(new_proposal, settings.test_cluster))
+        self.assertEqual(old_proposal.start_date, new_proposal.start_date)
+        self.assertEqual(old_proposal.end_date, new_proposal.end_date)
+
+    def test_dates_are_modified(self) -> None:
+        """Test start and end dates are overwritten in the proposal"""
+
+        with Session() as session:
+            old_proposal = self.account._get_proposal(session)
+
+        new_start_date = old_proposal.start_date + timedelta(days=5)
+        new_end_date = old_proposal.end_date + timedelta(days=10)
+        self.account.overwrite(start_date=new_start_date, end_date=new_end_date)
+
+        with Session() as session:
+            new_proposal = self.account._get_proposal(session)
+
+        # Check service units are overwritten but dates are not
+        self.assertEqual(getattr(old_proposal, settings.test_cluster), getattr(new_proposal, settings.test_cluster))
+        self.assertEqual(new_start_date, new_proposal.start_date)
+        self.assertEqual(new_end_date, new_proposal.end_date)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
