@@ -32,3 +32,7 @@ class TableOverwriteError(Exception):
 
 class NoSuchAccountError(Exception):
     """Raised when a Slurm user account does not exist"""
+
+
+class MissingFieldsError(Exception):
+    """Raised when trying to send an incomplete email template"""
