@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 from . import settings
 from .exceptions import *
@@ -38,7 +38,7 @@ class BaseDataAccess:
     def account_name(self) -> str:
         return self._account_name
 
-    def _get_proposal(self, session: Session = None) -> Proposal:
+    def _get_proposal(self, session: Session) -> Proposal:
         """Return the proposal record from the application database
 
         Args:
@@ -57,7 +57,7 @@ class BaseDataAccess:
 
         return proposal
 
-    def _get_investment(self, session: Session, id: int = None) -> Union[Investor, List[Investor]]:
+    def _get_investment(self, session: Session, id: Optional[int] = None) -> Union[Investor, List[Investor]]:
         """Return any investments associated with the account from the application database
 
         Args:
@@ -184,7 +184,7 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, start_date: date = None, end_date: date = None, **kwargs) -> None:
+    def overwrite(self, start_date: Optional[date] = None, end_date: Optional[date] = None, **kwargs:int) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
@@ -240,7 +240,7 @@ class InvestmentServices(BaseDataAccess):
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv=1) -> None:
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv:int =1) -> None:
         """Add a new investment(s) for the given account
 
         ``num_inv`` reflects the number of investments to create. If the argument
@@ -347,7 +347,7 @@ class InvestmentServices(BaseDataAccess):
 
         LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def overwrite(self, id: int, sus: int = None, start_date: date = None, end_date: date = None, ) -> None:
+    def overwrite(self, id: int, sus: Optional[int] = None, start_date: Optional[date] = None, end_date: Optional[date] = None) -> None:
         """Overwrite service units allocated to the given investment
 
         Args:
@@ -438,8 +438,8 @@ class AdminServices(BaseDataAccess):
 
         return 0
 
-    def _build_usage_str(self):
-        """Return a human-readable summary of the accounts allocations"""
+    def _build_usage_str(self) -> str:
+        """Return a human-readable summary of the account ussage and allocation"""
 
         with Session() as session:
             proposal = self._get_proposal(session)
@@ -588,7 +588,7 @@ class AdminServices(BaseDataAccess):
         for account in cls.find_unlocked():
             cls(account).notify_account()
 
-    def renew(self, reset_usage=True) -> None:
+    def renew(self, reset_usage: bool = True) -> None:
         """Archive any expired investments and rollover unused service units"""
 
         with Session() as session:
