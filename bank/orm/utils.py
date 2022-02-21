@@ -8,7 +8,7 @@ import enum
 
 
 class ProposalEnum(enum.Enum):
-    Unknown = 0
+    Unknown = 99
     Proposal = 1
     Class = 2
 
