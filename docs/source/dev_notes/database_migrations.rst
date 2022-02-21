@@ -16,9 +16,7 @@ the existing database against the schema used by the banking application.
 .. code-block:: bash
 
    cd migrations
-   $ alembic revision --autogenerate -m "Added account table"
-   INFO [alembic.context] Detected added table 'account'
-   Generating /path/to/foo/alembic/versions/27c6a30d7c24.py...done
+   alembic revision --autogenerate -m "A description of applied changes"
 
 Once the new migration has been created, open the generated file and
 make any necessary modifications to the automatically generated code.
