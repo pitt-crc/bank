@@ -6,7 +6,8 @@ database.
 
 import sqlalchemy
 
-from .tables import *
+from .tables import Proposal, ProposalArchive, Investor, InvestorArchive
+from .utils import *
 from .. import settings
 
 engine = sqlalchemy.create_engine(settings.db_path)
