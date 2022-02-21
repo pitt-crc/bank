@@ -16,6 +16,7 @@ General Account Management
    :module: bank.cli
    :func: CLIParser
    :path: admin
+   :prog: crc_bank.py
 
 User Proposals
 --------------
@@ -24,6 +25,7 @@ User Proposals
    :module: bank.cli
    :func: CLIParser
    :path: proposal
+   :prog: crc_bank.py
 
 User Investments
 ----------------
@@ -32,3 +34,4 @@ User Investments
    :module: bank.cli
    :func: CLIParser
    :path: investment
+   :prog: crc_bank.py
