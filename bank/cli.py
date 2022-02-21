@@ -55,6 +55,7 @@ from logging import getLogger
 from typing import List, Optional
 
 from . import settings, account_services, system
+from .orm import ProposalEnum
 
 LOG = getLogger('bank.cli')
 
@@ -135,10 +136,12 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
 
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', type=account_services.ProposalServices, help='The parent slurm account')
+        type_definition = dict(type=ProposalEnum.from_string, help='', choices=list(ProposalEnum))
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
         proposal_create.set_defaults(function=super(ProposalParser, ProposalParser).create_proposal)
         proposal_create.add_argument('--account', **account_definition)
+        proposal_create.add_argument('--type', **type_definition)
         self._add_cluster_args(proposal_create)
 
         proposal_delete = proposal_subparsers.add_parser('delete', help='Delete an existing account proposal')
@@ -158,6 +161,7 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
         proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
         proposal_overwrite.add_argument('--account', **account_definition)
+        proposal_overwrite.add_argument('--type', **type_definition)
         proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
         proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
         self._add_cluster_args(proposal_overwrite)

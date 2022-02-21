@@ -105,14 +105,14 @@ class ProposalServices(BaseDataAccess):
                 raise ValueError(f'Service unit values cannot be negative (got value: {v})')
 
     def create_proposal(
-            self, ptype: ProposalEnum = ProposalEnum.Proposal,
+            self, type: ProposalEnum = ProposalEnum.Proposal,
             start: date = date.today(),
             duration: int = 365, **kwargs: int
     ) -> None:
         """Create a new proposal for the given account
 
         Args:
-            ptype: The type of the proposal
+            type: The type of the proposal
             start: The start date of the proposal
             duration: How many days before the proposal expires
             **kwargs: Service units to add on to each cluster
@@ -125,7 +125,7 @@ class ProposalServices(BaseDataAccess):
             self._raise_cluster_kwargs(**kwargs)
             new_proposal = Proposal(
                 account_name=self._account_name,
-                proposal_type=ptype,
+                proposal_type=type,
                 percent_notified=0,
                 start_date=start,
                 end_date=start + timedelta(days=duration),
