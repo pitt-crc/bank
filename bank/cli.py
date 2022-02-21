@@ -221,7 +221,7 @@ class InvestmentParser(account_services.InvestmentServices, BaseParser):
         investment_overwrite.set_defaults(function=super(InvestmentParser, InvestmentParser).overwrite)
         investment_overwrite.add_argument('--account', **account_definition)
         investment_overwrite.add_argument('--id', **proposal_id_definition)
-        investment_overwrite.add_argument('--sus', **service_unit_definition)
+        investment_overwrite.add_argument('--sus', type=int, help='The new number of SUs in the investment')
         investment_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
         investment_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
 

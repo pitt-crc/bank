@@ -190,10 +190,16 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, start_date: Optional[date] = None, end_date: Optional[date] = None, **kwargs: int) -> None:
+    def overwrite(
+            self, type: ProposalEnum = ProposalEnum.Proposal,
+            start_date: Optional[date] = None,
+            end_date: Optional[date] = None,
+            **kwargs: Union[int, date]
+    ) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
+            type: Optionally change the type of the proposal
             start_date: Optionally set a new start date for the proposal
             end_date: Optionally set a new end date for the proposal
             **kwargs: New service unit values to assign for each cluster
@@ -206,6 +212,7 @@ class ProposalServices(BaseDataAccess):
             proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
+            kwargs['proposal_type'] = type or proposal.proposal_type
             kwargs['start_date'] = start_date or proposal.start_date
             kwargs['end_date'] = end_date or proposal.end_date
 
@@ -626,6 +633,7 @@ class AdminServices(BaseDataAccess):
             # Create a new user proposal and archive the old one
             new_proposal = Proposal(
                 account_name=current_proposal.account_name,
+                proposal_type=current_proposal.proposal_type,
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=365),
                 percent_notified=0
