@@ -7,6 +7,7 @@ import time_machine
 from bank import orm
 from bank import settings
 from bank.account_services import AdminServices
+from bank.orm import ProposalEnum
 from bank.system.slurm import SlurmAccount
 from tests.account_services._utils import AdminSetup
 
@@ -54,8 +55,10 @@ class Renewal(AdminSetup, TestCase):
         new_proposal = self.account._get_proposal(self.session)
         self.assertNotEqual(new_proposal.id, self.proposal_id, 'New proposal has same ID as the old one')
         self.assertEqual(
-            getattr(new_proposal, settings.test_cluster), self.num_proposal_sus,
+            self.num_proposal_sus, getattr(new_proposal, settings.test_cluster),
             'New proposal does not have same service units as the old one')
+
+        self.assertEqual(new_proposal.proposal_type, ProposalEnum.Proposal)
 
     def test_investments_are_archived(self) -> None:
         """Test expired investments are archived"""
