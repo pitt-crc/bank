@@ -4,6 +4,13 @@ API Reference
 -------------
 """
 
+from enum import Enum
+
+
+class ProposalEnum(Enum):
+    Proposal = 0
+    Class = 1
+
 
 class Validators:
     """Methods for validating column values before interacting with the database"""
