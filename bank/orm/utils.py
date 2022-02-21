@@ -8,8 +8,9 @@ import enum
 
 
 class ProposalEnum(enum.Enum):
-    Proposal = 0
-    Class = 1
+    Unknown = 0
+    Proposal = 1
+    Class = 2
 
     def __str__(self):
         return self.name
