@@ -68,42 +68,8 @@ def upgrade():
 
 
 def downgrade():
-    op.alter_column('proposal', 'account_name', new_column_name='account', existing_type=sa.String(), type_=sa.TEXT(), nullable=True)
-    op.alter_column('proposal', 'start_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('proposal', 'proposal_type', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal', 'percent_notified', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal', 'end_date', existing_type=sa.DATE(), nullable=True)
-
-    op.alter_column('proposal_archive', 'account_name', new_column_name='account', existing_type=sa.String(), type_=sa.TEXT(), nullable=True)
-    op.alter_column('proposal_archive', 'start_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('proposal_archive', 'smp_usage', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'smp', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'mpi_usage', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'mpi', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'htc_usage', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'htc', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'gpu_usage', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'gpu', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('proposal_archive', 'end_date', existing_type=sa.DATE(), nullable=True)
-    op.drop_column('proposal_archive', 'proposal_type')
-
-    op.add_column('investor', sa.Column('proposal_type', sa.INTEGER(), nullable=True, default=2))
-    op.alter_column('investor', 'account_name', new_column_name='account', existing_type=sa.String(), type_=sa.TEXT(), nullable=True)
-    op.alter_column('investor', 'withdrawn_sus', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('investor', 'start_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('investor', 'service_units', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('investor', 'rollover_sus', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('investor', 'end_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('investor', 'current_sus', existing_type=sa.INTEGER(), nullable=True)
-
-    # Important: Data for these two columns is not tracked in the upgraded database
-    # If you are rolling back, you will need to rely on a database backup for this data
-    op.add_column('investor_archive', sa.Column('investor_id', sa.INTEGER(), nullable=True))
-    op.add_column('investor_archive', sa.Column('proposal_id', sa.INTEGER(), nullable=True))
-
-    op.alter_column('investor_archive', 'account_name', new_column_name='account', existing_type=sa.String(), type_=sa.TEXT(), nullable=True)
-    op.alter_column('investor_archive', 'start_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('investor_archive', 'service_units', existing_type=sa.INTEGER(), nullable=True)
-    op.alter_column('investor_archive', 'exhaustion_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('investor_archive', 'end_date', existing_type=sa.DATE(), nullable=True)
-    op.alter_column('investor_archive', 'current_sus', existing_type=sa.INTEGER(), nullable=True)
+    raise NotImplementedError(
+        'Rollbacks for this version are not supported. '
+        'Data has been dropped in the upgrade that cannot be recovered. '
+        'Restore a file system snapshot instead.'
+    )
