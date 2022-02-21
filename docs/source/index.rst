@@ -42,9 +42,14 @@ based on:
    :hidden:
 
    Overview<self>
-   overview/install.rst
-   overview/command_line.rst
+   install.rst
+   command_line.rst
 
+.. toctree::
+   :hidden:
+   :caption: Developer Notes
+
+   dev_notes/database_migrations.rst
 
 .. toctree::
    :hidden:
