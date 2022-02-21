@@ -3,7 +3,6 @@
 Revision ID: a6c26a203bd1
 Revises: 
 Create Date: 2022-02-21 15:01:03.939907
-
 """
 
 import sqlalchemy as sa
@@ -15,9 +14,18 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+# New enum value introduced for unknown proposal types
+UNKNOWN_PROPOSAL_TYPE_INT = 99
 
-# TODO: Check casting of enum types
-# Todo: Check casting of percent notified
+# Map old percent notified enum values to their new int representations
+PERCENT_NOTIFIED_MAPPER = {
+    0: 0,
+    1: 25,
+    2: 50,
+    3: 75,
+    4: 90,
+    5: 100}
+
 
 def upgrade():
     with op.batch_alter_table("proposal", recreate='always') as proposal_table:
@@ -26,6 +34,17 @@ def upgrade():
         proposal_table.alter_column('percent_notified', existing_type=sa.INTEGER(), nullable=False)
         proposal_table.alter_column('proposal_type', existing_type=sa.INTEGER(), nullable=False)
         proposal_table.alter_column('start_date', existing_type=sa.DATE(), nullable=False)
+
+    # Change percent notified values from enum type values to actual notification percentage
+    op.execute(
+        'UPDATE proposal SET percent_notified = (CASE '
+        f'WHEN percent_notified = 0 THEN {PERCENT_NOTIFIED_MAPPER[0]} '
+        f'WHEN percent_notified = 1 THEN {PERCENT_NOTIFIED_MAPPER[1]} '
+        f'WHEN percent_notified = 2 THEN {PERCENT_NOTIFIED_MAPPER[2]} '
+        f'WHEN percent_notified = 3 THEN {PERCENT_NOTIFIED_MAPPER[3]} '
+        f'WHEN percent_notified = 4 THEN {PERCENT_NOTIFIED_MAPPER[4]} '
+        f'WHEN percent_notified = 5 THEN {PERCENT_NOTIFIED_MAPPER[5]} '
+        'END)')
 
     with op.batch_alter_table("proposal_archive", recreate='always') as p_archive_table:
         p_archive_table.alter_column('account', new_column_name='account_name', existing_type=sa.TEXT(), type_=sa.String(), nullable=False)
@@ -42,7 +61,7 @@ def upgrade():
         p_archive_table.add_column(sa.Column('proposal_type', sa.Enum('Unknown', 'Proposal', 'Class', name='proposalenum'), nullable=True))
 
     # The original table does not track the proposal type, so we fill in missing values before settings nullable=False
-    op.execute("UPDATE proposal_archive SET proposal_type = 99")
+    op.execute(f'UPDATE proposal_archive SET proposal_type = {UNKNOWN_PROPOSAL_TYPE_INT}')
     with op.batch_alter_table("proposal_archive", recreate='always') as p_archive_table:
         p_archive_table.alter_column('proposal_type', nullable=False)
 
