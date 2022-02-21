@@ -6,7 +6,7 @@ database.
 
 import sqlalchemy
 
-from .tables import Proposal, ProposalArchive, Investor, InvestorArchive
+from .tables import *
 from .utils import *
 from .. import settings
 
