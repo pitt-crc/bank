@@ -7,6 +7,7 @@ database.
 import sqlalchemy
 
 from .tables import *
+from .utils import *
 from .. import settings
 
 engine = sqlalchemy.create_engine(settings.db_path)

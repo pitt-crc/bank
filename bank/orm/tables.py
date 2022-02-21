@@ -10,11 +10,11 @@ import logging
 from datetime import date
 from logging import getLogger
 
-from sqlalchemy import Column, Date, Integer, String
+from sqlalchemy import Column, Date, Integer, String, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates
 
-from .validators import Validators
+from .utils import Validators, ProposalEnum
 from .. import settings
 from ..system import SlurmAccount
 
@@ -29,6 +29,7 @@ class Proposal(Base):
     Table Fields:
       - id: Integer
       - account_name: String
+      - proposal_type: ProposalEnum
       - start_date: Date
       - end_date: Date
       - percent_notified: Integer
@@ -38,6 +39,7 @@ class Proposal(Base):
 
     id = Column(Integer, primary_key=True)
     account_name = Column(String, nullable=False)
+    proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False)
@@ -61,6 +63,7 @@ class Proposal(Base):
         logging.debug(f'Creating archive object for proposal {self.id}')
         archive_obj = ProposalArchive(
             id=self.id,
+            proposal_type=self.proposal_type,
             account_name=self.account_name,
             start_date=self.start_date,
             end_date=self.end_date,
@@ -81,6 +84,7 @@ class ProposalArchive(Base):
     Table Fields:
       - id: Integer
       - account_name: String
+      - proposal_type: ProposalEnum
       - start_date: Date
       - end_date: Date
     """
@@ -89,6 +93,7 @@ class ProposalArchive(Base):
 
     id = Column(Integer, primary_key=True)
     account_name = Column(String, nullable=False)
+    proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 

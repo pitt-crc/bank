@@ -14,7 +14,7 @@ from typing import List, Union, Tuple, Optional
 
 from . import settings
 from .exceptions import *
-from .orm import Investor, Proposal, Session
+from .orm import Investor, Proposal, Session, ProposalEnum
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -104,10 +104,15 @@ class ProposalServices(BaseDataAccess):
             if v < 0:
                 raise ValueError(f'Service unit values cannot be negative (got value: {v})')
 
-    def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
+    def create_proposal(
+            self, type: ProposalEnum = ProposalEnum.Proposal,
+            start: date = date.today(),
+            duration: int = 365, **kwargs: int
+    ) -> None:
         """Create a new proposal for the given account
 
         Args:
+            type: The type of the proposal
             start: The start date of the proposal
             duration: How many days before the proposal expires
             **kwargs: Service units to add on to each cluster
@@ -120,6 +125,7 @@ class ProposalServices(BaseDataAccess):
             self._raise_cluster_kwargs(**kwargs)
             new_proposal = Proposal(
                 account_name=self._account_name,
+                proposal_type=type,
                 percent_notified=0,
                 start_date=start,
                 end_date=start + timedelta(days=duration),
@@ -184,10 +190,16 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, start_date: Optional[date] = None, end_date: Optional[date] = None, **kwargs:int) -> None:
+    def overwrite(
+            self, type: ProposalEnum = ProposalEnum.Proposal,
+            start_date: Optional[date] = None,
+            end_date: Optional[date] = None,
+            **kwargs: Union[int, date]
+    ) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
+            type: Optionally change the type of the proposal
             start_date: Optionally set a new start date for the proposal
             end_date: Optionally set a new end date for the proposal
             **kwargs: New service unit values to assign for each cluster
@@ -200,6 +212,7 @@ class ProposalServices(BaseDataAccess):
             proposal = self._get_proposal(session)
 
             self._raise_cluster_kwargs(**kwargs)
+            kwargs['proposal_type'] = type or proposal.proposal_type
             kwargs['start_date'] = start_date or proposal.start_date
             kwargs['end_date'] = end_date or proposal.end_date
 
@@ -224,7 +237,10 @@ class InvestmentServices(BaseDataAccess):
         super().__init__(account_name)
         with Session() as session:
             # Raise an error if there is no user proposal
-            self._get_proposal(session)
+            proposal = self._get_proposal(session)
+
+        if proposal.proposal_type == ProposalEnum.Class:
+            raise ValueError('Investments cannot be added/managed for class accounts')
 
     @staticmethod
     def _raise_invalid_sus(sus: int) -> None:
@@ -240,7 +256,7 @@ class InvestmentServices(BaseDataAccess):
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv:int =1) -> None:
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
         """Add a new investment(s) for the given account
 
         ``num_inv`` reflects the number of investments to create. If the argument
@@ -620,6 +636,7 @@ class AdminServices(BaseDataAccess):
             # Create a new user proposal and archive the old one
             new_proposal = Proposal(
                 account_name=current_proposal.account_name,
+                proposal_type=current_proposal.proposal_type,
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=365),
                 percent_notified=0

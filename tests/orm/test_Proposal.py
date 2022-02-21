@@ -44,6 +44,7 @@ class ToArchiveObject(TestCase):
 
         self.proposal = Proposal(
             account_name=settings.test_account,
+            proposal_type='Proposal',
             start_date=date.today(),
             end_date=date.today() + timedelta(days=1),
             percent_notified=10
