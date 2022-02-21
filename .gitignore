@@ -21,6 +21,5 @@ docs/build
 
 # Project files
 *.log
-crc_bank.db
-test.db
+*.db
 *.json
