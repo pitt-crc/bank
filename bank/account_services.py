@@ -14,7 +14,7 @@ from typing import List, Union, Tuple, Optional
 
 from . import settings
 from .exceptions import *
-from .orm import Investor, Proposal, Session
+from .orm import Investor, Proposal, Session, ProposalEnum
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -104,10 +104,15 @@ class ProposalServices(BaseDataAccess):
             if v < 0:
                 raise ValueError(f'Service unit values cannot be negative (got value: {v})')
 
-    def create_proposal(self, start: date = date.today(), duration: int = 365, **kwargs: int) -> None:
+    def create_proposal(
+            self, ptype: ProposalEnum = ProposalEnum.Proposal,
+            start: date = date.today(),
+            duration: int = 365, **kwargs: int
+    ) -> None:
         """Create a new proposal for the given account
 
         Args:
+            ptype: The type of the proposal
             start: The start date of the proposal
             duration: How many days before the proposal expires
             **kwargs: Service units to add on to each cluster
@@ -120,6 +125,7 @@ class ProposalServices(BaseDataAccess):
             self._raise_cluster_kwargs(**kwargs)
             new_proposal = Proposal(
                 account_name=self._account_name,
+                proposal_type=ptype,
                 percent_notified=0,
                 start_date=start,
                 end_date=start + timedelta(days=duration),
@@ -184,7 +190,7 @@ class ProposalServices(BaseDataAccess):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-    def overwrite(self, start_date: Optional[date] = None, end_date: Optional[date] = None, **kwargs:int) -> None:
+    def overwrite(self, start_date: Optional[date] = None, end_date: Optional[date] = None, **kwargs: int) -> None:
         """Replace the number of service units allocated to a given cluster
 
         Args:
@@ -240,7 +246,7 @@ class InvestmentServices(BaseDataAccess):
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv:int =1) -> None:
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
         """Add a new investment(s) for the given account
 
         ``num_inv`` reflects the number of investments to create. If the argument

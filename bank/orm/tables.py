@@ -93,7 +93,7 @@ class ProposalArchive(Base):
 
     id = Column(Integer, primary_key=True)
     account_name = Column(String, nullable=False)
-    proposal_type = Column(ProposalEnum, nullable=False)
+    proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 

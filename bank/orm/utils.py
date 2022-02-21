@@ -4,10 +4,10 @@ API Reference
 -------------
 """
 
-from enum import Enum
+import enum
 
 
-class ProposalEnum(Enum):
+class ProposalEnum(enum.Enum):
     Proposal = 0
     Class = 1
 
