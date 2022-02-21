@@ -237,7 +237,10 @@ class InvestmentServices(BaseDataAccess):
         super().__init__(account_name)
         with Session() as session:
             # Raise an error if there is no user proposal
-            self._get_proposal(session)
+            proposal = self._get_proposal(session)
+
+        if proposal.proposal_type == ProposalEnum.Class:
+            raise ValueError('Investments cannot be added/managed for class accounts')
 
     @staticmethod
     def _raise_invalid_sus(sus: int) -> None:

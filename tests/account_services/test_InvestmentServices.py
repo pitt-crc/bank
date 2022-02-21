@@ -2,10 +2,32 @@ from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.account_services import InvestmentServices
+from bank.account_services import InvestmentServices, ProposalServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
-from bank.orm import Session, Proposal, Investor, InvestorArchive
+from bank.orm import Session, Investor, InvestorArchive, Proposal, ProposalEnum
 from tests.account_services._utils import InvestorSetup, ProposalSetup
+
+
+class InitExceptions(TestCase):
+
+    def setUp(self) -> None:
+        with Session() as session:
+            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
+            session.commit()
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""
+
+        with self.assertRaises(MissingProposalError):
+            InvestmentServices(account_name=settings.test_account)
+
+    def test_error_proposal_is_class(self) -> None:
+        """Test a ``ValueError`` is raised when managing investments for accounts with Class proposals"""
+
+        account = ProposalServices(settings.test_account)
+        account.create_proposal(type=ProposalEnum.Class)
+        with self.assertRaisesRegex(ValueError, 'Investments cannot be added/managed for class accounts'):
+            InvestmentServices(account_name=settings.test_account)
 
 
 class CreateInvestment(ProposalSetup, TestCase):
@@ -33,16 +55,6 @@ class CreateInvestment(ProposalSetup, TestCase):
         test_sus = 12345
         self.account.create_investment(sus=test_sus)
         self.assertEqual(test_sus, self.account._get_investment(self.session)[0].service_units)
-
-    def test_error_on_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` exception is raised"""
-
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
-        with self.assertRaises(MissingProposalError):
-            self.account.create_investment(1000)
 
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when creating an investment with negative sus"""
