@@ -14,8 +14,11 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-# New enum value introduced for unknown proposal types
-UNKNOWN_PROPOSAL_TYPE_INT = 99
+# New enum value introduced for proposal types
+PROPOSAL_TYPE_ENUM_NAME = 'proposalenum'
+PROPOSAL_TYPE = 'Proposal'
+CLASS_TYPE = 'Class'
+UNKNOWN_TYPE = 'Unknown'
 
 # Map old percent notified enum values to their new int representations
 PERCENT_NOTIFIED_MAPPER = {
@@ -28,12 +31,20 @@ PERCENT_NOTIFIED_MAPPER = {
 
 
 def upgrade():
+    proposal_type_col_type = sa.Enum(UNKNOWN_TYPE, PROPOSAL_TYPE, CLASS_TYPE, name=PROPOSAL_TYPE_ENUM_NAME)
     with op.batch_alter_table("proposal", recreate='always') as proposal_table:
         proposal_table.alter_column('account', new_column_name='account_name', existing_type=sa.TEXT(), type_=sa.String(), nullable=False)
+        proposal_table.alter_column('start_date', existing_type=sa.DATE(), nullable=False)
         proposal_table.alter_column('end_date', existing_type=sa.DATE(), nullable=False)
         proposal_table.alter_column('percent_notified', existing_type=sa.INTEGER(), nullable=False)
-        proposal_table.alter_column('proposal_type', existing_type=sa.INTEGER(), nullable=False)
-        proposal_table.alter_column('start_date', existing_type=sa.DATE(), nullable=False)
+        proposal_table.alter_column('proposal_type', existing_type=sa.INTEGER(), type_=proposal_type_col_type, nullable=True)
+
+    # Change percent notified values from enum type values to actual notification percentage
+    op.execute(
+        'UPDATE proposal SET proposal_type = (CASE '
+        f'WHEN proposal_type = 0 THEN "{PROPOSAL_TYPE}" '
+        f'WHEN proposal_type = 1 THEN "{CLASS_TYPE}" '
+        'END)')
 
     # Change percent notified values from enum type values to actual notification percentage
     op.execute(
@@ -58,10 +69,10 @@ def upgrade():
         p_archive_table.alter_column('smp', existing_type=sa.INTEGER(), nullable=False)
         p_archive_table.alter_column('smp_usage', existing_type=sa.INTEGER(), nullable=False)
         p_archive_table.alter_column('start_date', existing_type=sa.DATE(), nullable=False)
-        p_archive_table.add_column(sa.Column('proposal_type', sa.Enum('Unknown', 'Proposal', 'Class', name='proposalenum'), nullable=True))
+        p_archive_table.add_column(sa.Column('proposal_type', proposal_type_col_type, nullable=True))
 
     # The original table does not track the proposal type, so we fill in missing values before settings nullable=False
-    op.execute(f'UPDATE proposal_archive SET proposal_type = {UNKNOWN_PROPOSAL_TYPE_INT}')
+    op.execute(f'UPDATE proposal_archive SET proposal_type = "{UNKNOWN_TYPE}"')
     with op.batch_alter_table("proposal_archive", recreate='always') as p_archive_table:
         p_archive_table.alter_column('proposal_type', nullable=False)
 
