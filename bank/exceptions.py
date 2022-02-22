@@ -36,3 +36,7 @@ class NoSuchAccountError(Exception):
 
 class MissingFieldsError(Exception):
     """Raised when trying to send an incomplete email template"""
+
+
+class LdapUserNotFound(Exception):
+    """Raised when an LDAP user is referenced that does not exist"""
