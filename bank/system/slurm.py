@@ -11,7 +11,7 @@ from logging import getLogger
 from environ import environ
 
 from bank import settings
-from bank.exceptions import CmdError, NoSuchAccountError, AccountExistsError
+from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmAccountExistsError
 from .ldap import check_ldap_user
 from .shell import ShellCmd, RequireRoot
 
@@ -30,7 +30,7 @@ class SlurmAccount:
 
         Raises:
             SystemError: When the ``sacctmgr`` utility is not installed
-            NoSuchAccountError: If the given account name does not exist
+            SlurmAccountNotFoundError: If the given account name does not exist
         """
 
         self._account = account_name
@@ -40,7 +40,7 @@ class SlurmAccount:
 
         if not self.check_account_exists(account_name):
             LOG.debug(f'Could not instantiate SlurmAccount for username {account_name}. No account exists.')
-            raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+            raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     def __repr__(self) -> str:
         return self._account
@@ -80,7 +80,7 @@ class SlurmAccount:
         return bool(cmd.out)
 
     @classmethod
-    def create_new_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
+    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
         """Create a new slurm account
 
         Args:
@@ -94,7 +94,7 @@ class SlurmAccount:
 
         check_ldap_user(description)
         if cls.check_account_exists(account_name):
-            raise AccountExistsError(f'Account {account_name} already exists')
+            raise SlurmAccountExistsError(f'Account {account_name} already exists')
 
         clus_str = ','.join(settings.clusters)
         ShellCmd(
