@@ -34,6 +34,10 @@ class NoSuchAccountError(Exception):
     """Raised when a Slurm user account does not exist"""
 
 
+class AccountExistsError(Exception):
+    """Raised when a Slurm user account already exists"""
+
+
 class MissingFieldsError(Exception):
     """Raised when trying to send an incomplete email template"""
 

@@ -11,7 +11,8 @@ from logging import getLogger
 from environ import environ
 
 from bank import settings
-from bank.exceptions import CmdError, NoSuchAccountError
+from bank.exceptions import CmdError, NoSuchAccountError, AccountExistsError
+from .ldap import check_ldap_user
 from .shell import ShellCmd, RequireRoot
 
 ENV = environ.Env()
@@ -37,10 +38,12 @@ class SlurmAccount:
             LOG.error('System error: Slurm is not installed')
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
-        account_exists = ShellCmd(f'sacctmgr -n show assoc account={self._account}').out
-        if not account_exists:
+        if not self.check_account_exists(account_name):
             LOG.debug(f'Could not instantiate SlurmAccount for username {account_name}. No account exists.')
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
+
+    def __repr__(self) -> str:
+        return self._account
 
     @property
     def account_name(self) -> str:
@@ -62,10 +65,67 @@ class SlurmAccount:
         except (CmdError, FileNotFoundError, Exception):
             return False
 
+    @staticmethod
+    def check_account_exists(account_name: str) -> bool:
+        """Return whether the given slurm account exists
+
+        Args:
+            account_name: The name of the slurm account
+
+        Returns:
+            Whether the account exists
+        """
+
+        cmd = ShellCmd(f'sacctmgr -n show assoc account={account_name}')
+        return bool(cmd.out)
+
+    @classmethod
+    def create_new_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
+        """Create a new slurm account
+
+        Args:
+            account_name: The name of the new Slurm account
+            description: Description of the new slurm user account
+            organization: Internal organization or department of the slurm user account
+
+        Returns:
+            An instance of the parent class for the new user account
+        """
+
+        check_ldap_user(description)
+        if cls.check_account_exists(account_name):
+            raise AccountExistsError(f'Account {account_name} already exists')
+
+        clus_str = ','.join(settings.clusters)
+        ShellCmd(
+            f'sacctmgr -i add account {account_name} description="{description}" organization="{organization}" clusters={clus_str}'
+        ).raise_err()
+
+        return SlurmAccount(account_name)
+
+    @RequireRoot
+    def delete_account(self) -> None:
+        """Delete the current Slurm account"""
+
+        clus_str = ','.join(settings.clusters)
+        ShellCmd(f"sacctmgr -i delete account {self} cluster={clus_str}").raise_err()
+
+    def add_user(self, *args, **kwargs) -> None:
+        """Add a new user to the current slurm account"""
+
+        raise NotImplementedError
+
+    def remove_user(self, user_name: str) -> None:
+        """Remove an existing user from the current Slurm account"""
+
+        check_ldap_user(user_name)
+        clus_str = ','.join(settings.clusters)
+        ShellCmd(f"sacctmgr -i delete user {user_name} account={self} cluster={clus_str}").raise_err()
+
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked"""
 
-        cmd = f'sacctmgr -n -P show assoc account={self._account} format=grptresrunmins'
+        cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
     @RequireRoot
@@ -76,11 +136,11 @@ class SlurmAccount:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
         """
 
-        LOG.info(f'Updating lock state for Slurm account {self._account} to {lock_state}')
+        LOG.info(f'Updating lock state for Slurm account {self} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
         clusters_as_str = ','.join(settings.clusters)
         ShellCmd(
-            f'sacctmgr -i modify account where account={self._account} cluster={clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
+            f'sacctmgr -i modify account where account={self} cluster={clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
@@ -94,10 +154,10 @@ class SlurmAccount:
             The account's usage of the given cluster
         """
 
-        LOG.debug(f'Fetching cluster usage for {self._account}')
+        LOG.debug(f'Fetching cluster usage for {self}')
 
         # Only the second and third line are necessary from the output table
-        cmd = ShellCmd(f"sshare -A {self._account} -M {cluster} -P -a")
+        cmd = ShellCmd(f"sshare -A {self} -M {cluster} -P -a")
         header, data = cmd.out.split('\n')[1:3]
         raw_usage_index = header.split('|').index("RawUsage")
         usage = int(data.split('|')[raw_usage_index])
@@ -126,36 +186,6 @@ class SlurmAccount:
         # At the time of writing, the sacctmgr utility does not support setting
         # RawUsage to any value other than zero
 
-        LOG.info(f'Resetting cluster usage for Slurm account {self._account}')
+        LOG.info(f'Resetting cluster usage for Slurm account {self}')
         clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={clusters_as_str} set RawUsage=0')
-
-    @staticmethod
-    def create_new_account(account_name: str, *args, **kwargs) -> SlurmAccount:
-        """Create a new slurm account
-
-        Args:
-            account_name: The name of the new Slurm account
-
-        Returns:
-            An instance of the parent class for the new user account
-        """
-
-        raise NotImplementedError
-
-    @RequireRoot
-    def delete_account(self) -> None:
-        """Delete the current Slurm account"""
-
-        clus_str = ','.join(settings.clusters)
-        ShellCmd(f"sacctmgr -i delete account {self.account_name} cluster={clus_str}").raise_err()
-
-    def add_user(self, *args, **kwargs) -> None:
-        """Add a new user to the current slurm account"""
-
-        raise NotImplementedError
-
-    def remove_user(self, *args, **kwargs) -> None:
-        """Remove an existing user from the current Slurm account"""
-
-        raise NotImplementedError
+        ShellCmd(f'sacctmgr -i modify account where account={self} cluster={clusters_as_str} set RawUsage=0')
