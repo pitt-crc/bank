@@ -43,7 +43,7 @@ class SlurmAccount:
             raise NoSuchAccountError(f'No Slurm account for username {account_name}')
 
     @property
-    def account(self) -> str:
+    def account_name(self) -> str:
         """The name of the slurm account being administered"""
 
         return self._account
@@ -129,3 +129,31 @@ class SlurmAccount:
         LOG.info(f'Resetting cluster usage for Slurm account {self._account}')
         clusters_as_str = ','.join(settings.clusters)
         ShellCmd(f'sacctmgr -i modify account where account={self._account} cluster={clusters_as_str} set RawUsage=0')
+
+    @staticmethod
+    def create_new_account(account_name: str, *args, **kwargs) -> SlurmAccount:
+        """Create a new slurm account
+
+        Args:
+            account_name: The name of the new Slurm account
+
+        Returns:
+            An instance of the parent class for the new user account
+        """
+
+        raise NotImplementedError
+
+    def delete_account(self) -> None:
+        """Delete the current Slurm account"""
+
+        raise NotImplementedError
+
+    def add_user(self, *args, **kwargs) -> None:
+        """Add a new user to the current slurm account"""
+
+        raise NotImplementedError
+
+    def remove_user(self, *args, **kwargs) -> None:
+        """Remove an existing user from the current Slurm account"""
+
+        raise NotImplementedError
