@@ -143,10 +143,12 @@ class SlurmAccount:
 
         raise NotImplementedError
 
+    @RequireRoot
     def delete_account(self) -> None:
         """Delete the current Slurm account"""
 
-        raise NotImplementedError
+        clus_str = ','.join(settings.clusters)
+        ShellCmd(f"sacctmgr -i delete account {self.account_name} cluster={clus_str}").raise_err()
 
     def add_user(self, *args, **kwargs) -> None:
         """Add a new user to the current slurm account"""
