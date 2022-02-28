@@ -38,9 +38,13 @@ class SlurmAccountExistsError(Exception):
     """Raised when a Slurm user account already exists"""
 
 
-class MissingFieldsError(Exception):
-    """Raised when trying to send an incomplete email template"""
-
-
 class LdapUserNotFound(Exception):
     """Raised when an LDAP user is referenced that does not exist"""
+
+
+class LDAPGroupNotFound(Exception):
+    """Raised when an LDAP group is referenced that does not exist"""
+
+
+class MissingFieldsError(Exception):
+    """Raised when trying to send an incomplete email template"""

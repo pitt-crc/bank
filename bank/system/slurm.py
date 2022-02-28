@@ -12,7 +12,7 @@ from environ import environ
 
 from bank import settings
 from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmAccountExistsError
-from .ldap import check_ldap_user
+from . import ldap
 from .shell import ShellCmd, RequireRoot
 
 ENV = environ.Env()
@@ -92,7 +92,7 @@ class SlurmAccount:
             An instance of the parent class for the new user account
         """
 
-        check_ldap_user(description)
+        ldap.check_ldap_user(description)
         if cls.check_account_exists(account_name):
             raise SlurmAccountExistsError(f'Account {account_name} already exists')
 
@@ -110,15 +110,28 @@ class SlurmAccount:
         clus_str = ','.join(settings.clusters)
         ShellCmd(f"sacctmgr -i delete account {self} cluster={clus_str}").raise_err()
 
-    def add_user(self, *args, **kwargs) -> None:
-        """Add a new user to the current slurm account"""
+    def add_user(self, user: str) -> None:
+        """Add a new user to the current slurm account
 
+        Args:
+            user: Name of the user to add to the current account
+
+        Raises:
+            LdapUserNotFound: If the given user does not exist in LDAP
+            LdapUserNotFound: If the current account is not a group in LDAP
+        """
+
+        ldap.check_ldap_user(user, raise_if_false=True)
+        ldap.check_ldap_group(self.account_name, raise_if_false=True)
+        ShellCmd(f"sacctmgr -i add user {user} account={self} cluster=smp,gpu,mpi,htc").raise_err()
+
+    def add_user_default(self, user: str) -> None:
         raise NotImplementedError
 
     def remove_user(self, user_name: str) -> None:
         """Remove an existing user from the current Slurm account"""
 
-        check_ldap_user(user_name)
+        ldap.check_ldap_user(user_name, raise_if_false=True)
         clus_str = ','.join(settings.clusters)
         ShellCmd(f"sacctmgr -i delete user {user_name} account={self} cluster={clus_str}").raise_err()
 
