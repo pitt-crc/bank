@@ -7,6 +7,16 @@ from bank.system import ShellCmd
 
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:
+    """
+
+    Args:
+        account: The name of the account to check for
+        raise_if_false: Raise an error if the return value is false
+
+    Raises:
+        LDAPGroupNotFound: If ``raise_if_false`` is True and the account does not exist
+    """
+
     cmd = ShellCmd("getent group {0}".format(account))
     return_val = bool(cmd.out)
 
@@ -17,6 +27,16 @@ def check_ldap_group(account: str, raise_if_false=False) -> bool:
 
 
 def check_ldap_user(username: str, raise_if_false=False) -> bool:
+    """Return whether the given LDAP user exists
+
+    Args:
+        username: The username to check for
+        raise_if_false: Raise an error if the return value is false
+
+    Raises:
+        LdapUserNotFound: If ``raise_if_false`` is True and the user is not found
+    """
+
     ldap_username = "crcquery"
     with open("/ihome/crc/scripts/crcquery.txt", "r") as f:
         ldap_password = f.readline().strip()
@@ -42,6 +62,16 @@ def check_ldap_user(username: str, raise_if_false=False) -> bool:
 
 
 def check_crc_user(username: str, raise_if_false=False) -> bool:
+    """Return whether the given username is a CRC user account
+
+    Args:
+        username: The username to check for
+        raise_if_false: Raise an error if the return value is false
+
+    Raises:
+        CRCUserNotFound: If ``raise_if_false`` is True and the user is not found
+    """
+
     ldap_username = "crcquery"
     with open("/ihome/crc/scripts/crcquery.txt", "r") as f:
         ldap_password = f.readline().strip()
