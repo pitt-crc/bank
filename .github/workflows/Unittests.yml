@@ -21,7 +21,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Create python env
+      - name: Create Python environment
         run: conda create -n bank_test_${{ matrix.python-version }} python=${{ matrix.python-version }} -y
 
       - name: Update Python environment
