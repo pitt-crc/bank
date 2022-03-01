@@ -9,6 +9,10 @@ on:
 jobs:
   Test-Build-Succeeds:
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+
     steps:
       - uses: actions/checkout@v2
 
@@ -26,6 +30,10 @@ jobs:
 
   Test-Examples:
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+
     steps:
       - uses: actions/checkout@v2
 
