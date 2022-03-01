@@ -8,7 +8,7 @@ on:
 
 jobs:
   Test-Build-Succeeds:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
 
@@ -27,7 +27,7 @@ jobs:
         run: make html SPHINXOPTS="-W --keep-going"  # Raise warnings as errors, but keep building anyways.
 
   Test-Examples:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
 
