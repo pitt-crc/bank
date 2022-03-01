@@ -16,13 +16,13 @@ jobs:
       with:
         fetch-depth: 0 # Otherwise, you will fail to push refs to destination repo
       
-    - name: Install Dependencies
+    - name: Install dependencies
       run: |
-        pip install -U pip
+        conda activate bank_docs
         pip install -r requirements.txt
         pip install -r docs/requirements.txt
    
-    - name: Build and Commit
+    - name: Build and commit
       uses: sphinx-notes/pages@master
       with:
         documentation_path: docs/source # Relative path under repository to documentation source files
