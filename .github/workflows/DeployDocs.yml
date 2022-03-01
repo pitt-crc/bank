@@ -1,10 +1,9 @@
 name: Deploy Documentation
 
 on:
+  workflow_dispatch:
   push:
     branches: [ development ]
-
-  workflow_dispatch:
 
 jobs:
   Build:
