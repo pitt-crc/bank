@@ -9,7 +9,12 @@ on:
 jobs:
   Set-Up-Environment:
     runs-on: self-hosted
+
     steps:
+      - name: Create Environemnt
+        shell: bash -leo pipefail {0}
+        run: conda create -n bank_docs python=3.9 -y
+
       - name: Checkout source
         uses: actions/checkout@v2
 
@@ -19,7 +24,6 @@ jobs:
           conda activate bank_docs
           pip install -r requirements.txt
           pip install -r docs/requirements.txt
-  
 
   Test-Build-Succeeds:
     runs-on: self-hosted
