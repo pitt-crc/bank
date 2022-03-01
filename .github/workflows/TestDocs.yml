@@ -11,7 +11,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Create Environemnt
+      - name: Create environemnt
         shell: bash -leo pipefail {0}
         run: conda create -n bank_docs python=3.9 -y
 
@@ -32,7 +32,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Build Documentation
+      - name: Build documentation
         shell: bash -leo pipefail {0}
         working-directory: ./docs
         run: |
