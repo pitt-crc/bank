@@ -12,31 +12,31 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Python Path Check
-        run: which python
-
       - name: Install dependencies
         run: |
+          conda activate bank_docs
           pip install -r requirements.txt
           pip install -r docs/requirements.txt
 
       - name: Build Documentation
         working-directory: ./docs
-        run: make html SPHINXOPTS="-W --keep-going"  # Raise warnings as errors, but keep building anyways.
+        run: |
+          conda activate bank_docs
+          make html SPHINXOPTS="-W --keep-going"  # Raise warnings as errors, but keep building anyway.
 
   Test-Examples:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
 
-      - name: Python Path Check
-        run: which python
-
       - name: Install dependencies
         run: |
+          conda activate bank_docs
           pip install -r requirements.txt
           pip install -r docs/requirements.txt
 
       - name: Run doctest
         working-directory: ./docs
-        run: make doctest
+        run: |
+          conda activate bank_docs
+          make doctest
