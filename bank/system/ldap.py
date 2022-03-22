@@ -7,7 +7,7 @@ from bank.system import ShellCmd
 
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:
-    """
+    """Return Whether the given ldap group exists
 
     Args:
         account: The name of the account to check for
