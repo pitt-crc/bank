@@ -1,5 +1,7 @@
-SQLAlchemy~=1.4.23
-sqlalchemy-utils==0.37.8
-beautifulsoup4~=4.9.1
-python-environ==0.4.54
-time-machine==2.6.0
+beautifulsoup4
+ldap3
+python-environ
+python-ldap
+SQLAlchemy
+sqlalchemy-utils
+time-machine

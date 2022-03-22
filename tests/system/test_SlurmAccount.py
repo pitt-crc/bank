@@ -2,7 +2,7 @@ from unittest import TestCase, skipIf
 from unittest.mock import patch
 
 from bank import settings
-from bank.exceptions import NoSuchAccountError
+from bank.exceptions import SlurmAccountNotFoundError
 from bank.system.slurm import SlurmAccount
 
 # Skip all tests in this module if slurm is not installed
@@ -13,9 +13,9 @@ class InitExceptions(TestCase):
     """Tests related to exceptions raised during instantiation"""
 
     def test_error_on_missing_account(self) -> None:
-        """Test a ``NoSuchAccountError`` error is raised if the specified user account does not exist"""
+        """Test a ``SlurmAccountNotFoundError`` error is raised if the specified user account does not exist"""
 
-        with self.assertRaises(NoSuchAccountError):
+        with self.assertRaises(SlurmAccountNotFoundError):
             SlurmAccount('fake_account_name_123')
 
     def test_error_if_slurm_not_installed(self) -> None:

@@ -1,12 +1,13 @@
 name: Run Tests
 
 on:
-  push:
   workflow_dispatch:
+  push:
 
 jobs:
   python_tests:
-    runs-on: [self-hosted]
+    name: Run Python tests
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
@@ -20,7 +21,10 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Update Python Environment
+      - name: Create Python environment
+        run: conda create -n bank_test_${{ matrix.python-version }} python=${{ matrix.python-version }} -y
+
+      - name: Update Python environment
         run: |
           conda activate bank_test_${{ matrix.python-version }}
           pip install -r requirements.txt
@@ -41,8 +45,8 @@ jobs:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
   codacy-coverage-reporter:
-    runs-on: [self-hosted]
     name: Report code coverage
+    runs-on: [self-hosted]
     needs: python_tests
     steps:
 

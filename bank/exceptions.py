@@ -30,8 +30,24 @@ class TableOverwriteError(Exception):
     """Raised when database entries are about to be overwritten"""
 
 
-class NoSuchAccountError(Exception):
+class SlurmAccountNotFoundError(Exception):
     """Raised when a Slurm user account does not exist"""
+
+
+class SlurmAccountExistsError(Exception):
+    """Raised when a Slurm user account already exists"""
+
+
+class LdapUserNotFound(Exception):
+    """Raised when an LDAP user is referenced that does not exist"""
+
+
+class LDAPGroupNotFound(Exception):
+    """Raised when an LDAP group is referenced that does not exist"""
+
+
+class CRCUserNotFound(Exception):
+    """Raised when an LDAP group is referenced that does not exist"""
 
 
 class MissingFieldsError(Exception):
