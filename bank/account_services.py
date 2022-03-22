@@ -7,14 +7,14 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from logging import getLogger
 from math import ceil
 from typing import List, Union, Tuple, Optional
 
 from . import settings
 from .exceptions import *
-from .orm import Investor, Proposal, Session, ProposalEnum
+from .orm import Investor, Proposal, Session, ProposalEnum, Allocation
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -51,7 +51,11 @@ class BaseDataAccess:
             MissingProposalError: If the account has no associated proposal
         """
 
-        proposal = session.query(Proposal).filter(Proposal.account_name == self._account_name).first()
+        proposal = session.query(Proposal) \
+            .filter(Proposal.account_name == self._account_name) \
+            .filter(Proposal.end_date > datetime.now().date()) \
+            .first()
+
         if proposal is None:
             raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
 
@@ -105,7 +109,8 @@ class ProposalServices(BaseDataAccess):
                 raise ValueError(f'Service unit values cannot be negative (got value: {v})')
 
     def create_proposal(
-            self, type: ProposalEnum = ProposalEnum.Proposal,
+            self,
+            type: ProposalEnum = ProposalEnum.Proposal,
             start: date = date.today(),
             duration: int = 365, **kwargs: int
     ) -> None:
@@ -119,7 +124,13 @@ class ProposalServices(BaseDataAccess):
         """
 
         with Session() as session:
-            if session.query(Proposal).filter(Proposal.account_name == self._account_name).first():
+            try:
+                self._get_proposal(session)
+
+            except MissingProposalError:
+                pass
+
+            else:
                 raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
 
             self._raise_cluster_kwargs(**kwargs)
@@ -128,9 +139,12 @@ class ProposalServices(BaseDataAccess):
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration),
-                **kwargs
+                end_date=start + timedelta(days=duration)
             )
+
+            for cluster, sus in kwargs.items():
+                allocation = Allocation(cluster_name=cluster, service_units=sus)
+                new_proposal.allocations.add(allocation)
 
             session.add(new_proposal)
             session.commit()
@@ -142,7 +156,6 @@ class ProposalServices(BaseDataAccess):
 
         with Session() as session:
             proposal = self._get_proposal(session)
-            session.add(proposal.to_archive_object())
             session.query(Proposal).filter(Proposal.id == proposal.id).delete()
             session.commit()
 
@@ -158,12 +171,11 @@ class ProposalServices(BaseDataAccess):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self._get_proposal(session)
-
-            self._raise_cluster_kwargs(**kwargs)
-            for key, val in kwargs.items():
-                setattr(proposal, key, getattr(proposal, key) + val)
+            for allocation in proposal.allocations:
+                allocation.service_units += kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
 
@@ -179,12 +191,11 @@ class ProposalServices(BaseDataAccess):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self._get_proposal(session)
-
-            self._raise_cluster_kwargs(**kwargs)
-            for key, val in kwargs.items():
-                setattr(proposal, key, getattr(proposal, key) - val)
+            for allocation in proposal.allocations:
+                allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
 
@@ -208,16 +219,15 @@ class ProposalServices(BaseDataAccess):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self._get_proposal(session)
+            proposal.proposal_type = type or proposal.proposal_type
+            proposal.start_date = start_date or proposal.start_date
+            proposal.end_date = end_date or proposal.end_date
 
-            self._raise_cluster_kwargs(**kwargs)
-            kwargs['proposal_type'] = type or proposal.proposal_type
-            kwargs['start_date'] = start_date or proposal.start_date
-            kwargs['end_date'] = end_date or proposal.end_date
-
-            for key, val in kwargs.items():
-                setattr(proposal, key, val)
+            for allocation in proposal.allocations:
+                allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
 
             session.commit()
 
