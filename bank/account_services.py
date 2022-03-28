@@ -25,25 +25,6 @@ LOG = getLogger('bank.account_services')
 class ProposalServices(DataAccessObject):
     """Account logic for primary account proposals"""
 
-    @staticmethod
-    def _raise_cluster_kwargs(**kwargs: int) -> None:
-        """Check whether keyword arguments are valid service unit values
-
-        Args:
-            **kwargs: Keyword arguments to check
-
-        Raises:
-            ValueError: For an invalid cluster name
-            ValueError: For negative service units
-        """
-
-        for k, v in kwargs.items():
-            if k not in settings.clusters:
-                raise ValueError(f'Cluster {k} is not defined in the application settings')
-
-            if v < 0:
-                raise ValueError(f'Service unit values cannot be negative (got value: {v})')
-
     def create_proposal(
             self,
             type: ProposalEnum = ProposalEnum.Proposal,
@@ -60,13 +41,11 @@ class ProposalServices(DataAccessObject):
             **kwargs: Service units to add on to each cluster
         """
 
-        self._raise_cluster_kwargs(**kwargs)
-        end_date = start + timedelta(days=duration)
-
         with Session() as session:
             # Check for any overlapping proposals
-            existing_proposal = self.get_overlapping_proposals(session, start, end_date)
-            if existing_proposal:
+            end_date = start + timedelta(days=duration)
+            existing_proposals = self.get_overlapping_proposals(session, start, end_date)
+            if existing_proposals:
                 raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
 
             # Create the new proposal and allocations
@@ -75,7 +54,7 @@ class ProposalServices(DataAccessObject):
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration)
+                end_date=end_date
             )
 
             for cluster, sus in kwargs.items():
@@ -108,9 +87,6 @@ class ProposalServices(DataAccessObject):
             MissingProposalError: If the account does not have a proposal
         """
 
-        # Build a query for finding the proposal needing deletion
-
-        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
@@ -130,7 +106,6 @@ class ProposalServices(DataAccessObject):
             MissingProposalError: If the account does not have a proposal
         """
 
-        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
@@ -162,7 +137,6 @@ class ProposalServices(DataAccessObject):
 
         # Build a query for finding the proposal needing deletion
 
-        self._raise_cluster_kwargs(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             proposal.proposal_type = type or proposal.proposal_type
@@ -188,26 +162,13 @@ class InvestmentServices(DataAccessObject):
         """
 
         super().__init__(account_name)
+
+        # Raise an error if there is no active user proposal
         with Session() as session:
-            # Raise an error if there is no user proposal
             proposal = self.get_proposal(session)
 
-        if proposal.proposal_type == ProposalEnum.Class:
+        if proposal.proposal_type is not ProposalEnum.Proposal:
             raise ValueError('Investments cannot be added/managed for class accounts')
-
-    @staticmethod
-    def _raise_invalid_sus(sus: int) -> None:
-        """Check whether the given value is a valid service unit
-
-        Args:
-            sus: The value to check
-
-        Raises:
-            ValueError: If the given value is not greater than zero
-        """
-
-        if sus <= 0:
-            raise ValueError('Service units must be greater than zero.')
 
     def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
         """Add a new investment(s) for the given account
@@ -232,7 +193,6 @@ class InvestmentServices(DataAccessObject):
         # Calculate number of service units per each investment
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
-        self._raise_invalid_sus(sus_per_instance)
 
         with Session() as session:
             self.get_proposal(session)
@@ -242,7 +202,7 @@ class InvestmentServices(DataAccessObject):
                 end_this = start + (i + 1) * duration
 
                 new_investor = Investor(
-                    account_name=self._account_name,
+                    account_name=self.account_name,
                     start_date=start_this,
                     end_date=end_this,
                     service_units=sus_per_instance,
@@ -252,11 +212,11 @@ class InvestmentServices(DataAccessObject):
                 )
 
                 session.add(new_investor)
-                LOG.debug(f"Inserting investment {new_investor.id} for {self._account_name} with allocation of `{sus}`")
+                LOG.debug(f"Inserting investment {new_investor.id} for {self.account_name} with allocation of `{sus}`")
 
             session.commit()
 
-        LOG.info(f"Invested {sus} service units for account {self._account_name}")
+        LOG.info(f"Invested {sus} service units for account {self.account_name}")
 
     def delete_investment(self, id: int) -> None:
         """Delete one of the account's associated investments
@@ -271,7 +231,7 @@ class InvestmentServices(DataAccessObject):
             session.query(Investor).filter(Investor.id == investment.id).delete()
             session.commit()
 
-        LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
+        LOG.info(f'Archived investment {investment.id} for account {self.account_name}')
 
     def add(self, id: int, sus: int) -> None:
         """Add service units to the given investment
@@ -284,14 +244,13 @@ class InvestmentServices(DataAccessObject):
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        self._raise_invalid_sus(sus)
         with Session() as session:
             investment = self._get_investment(session, id)
             investment.service_units += sus
             investment.current_sus += sus
             session.commit()
 
-        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self.account_name}')
 
     def subtract(self, id: int, sus: int) -> None:
         """Subtract service units from the given investment
@@ -304,7 +263,6 @@ class InvestmentServices(DataAccessObject):
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        self._raise_invalid_sus(sus)
         with Session() as session:
             investment = self._get_investment(session, id)
             if investment.current_sus < sus:
@@ -314,7 +272,7 @@ class InvestmentServices(DataAccessObject):
             investment.current_sus -= sus
             session.commit()
 
-        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
+        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self.account_name}')
 
     def overwrite(self, id: int, sus: Optional[int] = None, start_date: Optional[date] = None, end_date: Optional[date] = None) -> None:
         """Overwrite service units allocated to the given investment
@@ -333,7 +291,6 @@ class InvestmentServices(DataAccessObject):
             investment = self._get_investment(session, id)
 
             if sus is not None:
-                self._raise_invalid_sus(sus)
                 investment.service_units = sus
 
             if start_date:
@@ -344,7 +301,7 @@ class InvestmentServices(DataAccessObject):
 
             session.commit()
 
-        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
+        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self.account_name}')
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
@@ -353,14 +310,13 @@ class InvestmentServices(DataAccessObject):
             sus: The number of service units to withdraw
         """
 
-        self._raise_invalid_sus(sus)
         requested_withdrawal = sus
 
         with Session() as session:
             # Query all of the account's investments from the database and sort them
             # so that younger investments (i.e., with later start dates) come first
             investments = session.query(Investor) \
-                .filter(Investor.account_name == self._account_name) \
+                .filter(Investor.account_name == self.account_name) \
                 .order_by(Investor.start_date.desc()) \
                 .all()
 
@@ -392,7 +348,7 @@ class InvestmentServices(DataAccessObject):
 
             session.commit()
 
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self.account_name}')
 
 
 class AdminServices(DataAccessObject):
@@ -509,17 +465,17 @@ class AdminServices(DataAccessObject):
             days_until_expire = (proposal.end_date - date.today()).days
             if days_until_expire == 0:
                 email = settings.expired_proposal_notice
-                subject = f'The account for {self._account_name} has reached its end date'
+                subject = f'The account for {self.account_name} has reached its end date'
                 self._slurm_acct.set_locked_state(True)
 
             elif days_until_expire in settings.warning_days:
                 email = settings.expiration_warning
-                subject = f'Your proposal expiry reminder for account: {self._account_name}'
+                subject = f'Your proposal expiry reminder for account: {self.account_name}'
 
             elif proposal.percent_notified < next_notify_perc <= usage_perc:
                 proposal.percent_notified = next_notify_perc
                 email = settings.usage_warning
-                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
+                subject = f"Your account {self.account_name} has exceeded a proposal threshold"
 
             if email:
                 email.format(
@@ -531,7 +487,7 @@ class AdminServices(DataAccessObject):
                     usage=self._build_usage_str(),
                     investment=self._build_investment_str()
                 ).send_to(
-                    to=f'{self._account_name}{settings.user_email_suffix}',
+                    to=f'{self.account_name}{settings.user_email_suffix}',
                     ffrom=settings.from_address,
                     subject=subject)
 
