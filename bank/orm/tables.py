@@ -14,7 +14,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import validates, relationship
 
 from .utils import Validators, ProposalEnum
-from .. import settings
 
 LOG = getLogger('bank.orm.tables')
 Base = declarative_base()
@@ -22,15 +21,15 @@ metadata = Base.metadata
 
 
 class Proposal(Base, Validators):
-    """Meta data for user proposals
+    """Metadata for user proposals
 
     Table Fields:
-      - id: Integer
-      - account_name: String
-      - proposal_type: ProposalEnum
-      - start_date: Date
-      - end_date: Date
-      - percent_notified: Integer
+      - id                 (Integer): Primary key
+      - account_name        (String): Account name of the proposal holder
+      - proposal_type (ProposalEnum): The proposal type
+      - start_date            (Date): The date when the proposal goes into effect
+      - end_date              (Date): The proposal's expiration date
+      - percent_notified   (Integer): Percent usage when account holder was last notified
     """
 
     __tablename__ = 'proposal'
@@ -71,13 +70,18 @@ class Proposal(Base, Validators):
 class Allocation(Base, Validators):
     """Service unit allocations on individual clusters
 
+    Values for the ``final_usage`` may column exceed the ``service_units``
+    column in situations where system administrators have bypassed the banking
+    system and manually enabled continued usage of a cluster after an allocation
+    has run out.
+
     Table Fields:
-      - id: Integer
-      - proposal_id: Integer
-      - cluster_name: String
-      - service_units: Integer
-      - final_usage: Integer
-      """
+      - id             (Integer): Primary key
+      - proposal_id (ForeignKey): Primary key for the associated ``proposal`` entry
+      - cluster_name    (String): Name of the allocated cluster
+      - service_units  (Integer): Number of allocated service units
+      - final_usage    (Integer): Total service units utilized at proposal expiration
+    """
 
     __tablename__ = 'allocation'
 
@@ -96,14 +100,15 @@ class Investor(Base, Validators):
     """Service unit allocations granted in exchange for user investment
 
     Table Fields:
-      - id: Integer
-      - account_name: String
-      - start_date: Date
-      - end_date: Date
-      - service_units: Integer
-      - current_sus: Integer
-      - withdrawn_sus: Integer
-      - rollover_sus: Integer
+      - id            (Integer): Primary key
+      - account_name   (String): Account name of the investment holder
+      - start_date       (Date): Date the investment goes into effect
+      - end_date         (Date): Expiration date of the investment
+      - service_units (Integer): Total service units granted by an investment
+      - rollover_sus  (Integer): Service units carried over from a previous investment
+      - withdrawn_sus (Integer): Service units removed from this investment and into another
+      - current_sus   (Integer): Total service units available in the investment
+      - exhaustion_date  (Date): Date the investment expired or reached full utilization
     """
 
     __tablename__ = 'investor'
@@ -113,9 +118,9 @@ class Investor(Base, Validators):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     service_units = Column(Integer, nullable=False)
-    current_sus = Column(Integer, nullable=False)
-    withdrawn_sus = Column(Integer, nullable=False)
     rollover_sus = Column(Integer, nullable=False)
+    withdrawn_sus = Column(Integer, nullable=False)
+    current_sus = Column(Integer, nullable=False)
     exhaustion_date = Column(Date, nullable=True)
 
     @validates('service_units')
