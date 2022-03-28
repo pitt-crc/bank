@@ -11,6 +11,7 @@ from logging import getLogger
 
 from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates, relationship
 
 from .utils import Validators, ProposalEnum
@@ -46,25 +47,18 @@ class Proposal(Base, Validators):
     def _validate_percent_notified(self, key: str, value: int) -> None:
         super()._validate_percent_notified(key, value)
 
-    @property
-    def expired(self) -> bool:
-        """Return whether the investment is past its end date"""
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Return whether the proposal is past its end date"""
 
         return self.end_date <= date.today()
 
-    def allocated(self, cluster: str) -> int:
-        """Return the service units allocated under the proposal for a given cluster
+    @hybrid_property
+    def is_active(self) -> bool:
+        """Return whether the proposal is currently being utilized by the account"""
 
-        Args:
-            cluster: The name of the cluster
-        """
-
-        raise NotImplementedError
-
-    def total_allocated(self) -> int:
-        """Return the total service units allocated under the proposal"""
-
-        return sum(getattr(self, c) for c in settings.clusters)
+        today = date.today()
+        return (self.start_date <= today) and (today < self.end_date)
 
 
 class Allocation(Base, Validators):
@@ -108,7 +102,7 @@ class Investor(Base, Validators):
       - rollover_sus  (Integer): Service units carried over from a previous investment
       - withdrawn_sus (Integer): Service units removed from this investment and into another
       - current_sus   (Integer): Total service units available in the investment
-      - exhaustion_date  (Date): Date the investment expired or reached full utilization
+      - exhaustion_date  (Date): Date the investment is_expired or reached full utilization
     """
 
     __tablename__ = 'investor'
@@ -132,3 +126,10 @@ class Investor(Base, Validators):
         """Return whether the investment is past its end date or is fully withdrawn with no remaining service units"""
 
         return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus >= self.service_units)
+
+    @hybrid_property
+    def is_active(self) -> bool:
+        """Return whether the investment is currently being utilized by the account"""
+
+        today = date.today()
+        return (self.start_date <= today) and (today < self.end_date)

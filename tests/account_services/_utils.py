@@ -32,7 +32,7 @@ class ProposalSetup(GenericSetup):
         self.account = ProposalServices(settings.test_account)
         self.account.create_proposal(**{settings.test_cluster: self.num_proposal_sus})
         self.session = Session()
-        self.proposal_id = self.account._get_proposal(self.session).id
+        self.proposal_id = self.account.get_proposal(self.session).id
 
     def tearDown(self) -> None:
         self.session.close()

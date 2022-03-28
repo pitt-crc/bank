@@ -52,7 +52,7 @@ class Renewal(AdminSetup, TestCase):
         """Test a new user proposal is created"""
 
         # Compare the id of the current proposal with the id of the original proposal
-        new_proposal = self.account._get_proposal(self.session)
+        new_proposal = self.account.get_proposal(self.session)
         self.assertNotEqual(new_proposal.id, self.proposal_id, 'New proposal has same ID as the old one')
         self.assertEqual(
             self.num_proposal_sus, getattr(new_proposal, settings.test_cluster),
@@ -61,7 +61,7 @@ class Renewal(AdminSetup, TestCase):
         self.assertEqual(new_proposal.proposal_type, ProposalEnum.Proposal)
 
     def test_investments_are_archived(self) -> None:
-        """Test expired investments are archived"""
+        """Test is_expired investments are archived"""
 
         archived_investment = self.session.query(orm.InvestorArchive).filter(orm.InvestorArchive.id == self.inv_id[0])
         self.assertTrue(archived_investment, 'No investment found in archive table')
@@ -82,9 +82,9 @@ class NotifyAccount(AdminSetup, TestCase):
 
     @patch('bank.system.SlurmAccount.set_locked_state')
     def test_email_sent_for_expired(self, mock_locked_state, mock_send_message) -> None:
-        """Test an expiration email is sent if the account is expired"""
+        """Test an expiration email is sent if the account is is_expired"""
 
-        proposal = self.account._get_proposal(self.session)
+        proposal = self.account.get_proposal(self.session)
         with time_machine.travel(proposal.end_date + timedelta(days=1)):
             self.account.notify_account()
 
@@ -102,7 +102,7 @@ class NotifyAccount(AdminSetup, TestCase):
     def test_email_sent_for_warning_day(self, mock_send_message) -> None:
         """Test a warning email is sent if the account has reached an expiration warning limit"""
 
-        proposal = self.account._get_proposal(self.session)
+        proposal = self.account.get_proposal(self.session)
 
         # Note: time_machine.travel travels to just before the given point in time
         with time_machine.travel(proposal.end_date - timedelta(days=9)):
@@ -123,7 +123,7 @@ class NotifyAccount(AdminSetup, TestCase):
         self.assertEqual(f'Your account {self.account.account_name} has exceeded a proposal threshold', sent_email['subject'])
 
         # Ensure the percent notified is updated in the database
-        proposal = self.account._get_proposal(self.session)
+        proposal = self.account.get_proposal(self.session)
         self.assertEqual(1, proposal.percent_notified)
 
         # Make sure a second alert is not sent during successive calls

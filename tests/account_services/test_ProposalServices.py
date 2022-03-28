@@ -28,13 +28,13 @@ class CreateProposal(TestCase):
         """Test a proposal is created after the function call"""
 
         self.account.create_proposal()
-        self.assertTrue(self.account._get_proposal(self.session))
+        self.assertTrue(self.account.get_proposal(self.session))
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
-        proposal_info = self.account._get_proposal(self.session)
+        proposal_info = self.account.get_proposal(self.session)
         for cluster in settings.clusters:
             self.assertEqual(0, getattr(proposal_info, cluster))
 
@@ -42,7 +42,7 @@ class CreateProposal(TestCase):
         """Tests proposal are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{settings.test_cluster: 1000})
-        proposal_info = self.account._get_proposal(self.session)
+        proposal_info = self.account.get_proposal(self.session)
         self.assertEqual(1000, getattr(proposal_info, settings.test_cluster))
 
     def test_error_if_already_exists(self) -> None:
@@ -65,10 +65,10 @@ class DeleteProposal(ProposalSetup, TestCase):
     def test_proposal_is_deleted(self) -> None:
         """Test the proposal is moved from the ``Proposal`` to ``ProposalArchive`` table"""
 
-        proposal_id = self.account._get_proposal(self.session).id
+        proposal_id = self.account.get_proposal(self.session).id
         self.account.delete_proposal()
 
-        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account._account_name).first()
+        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account.account_name).first()
         self.assertIsNone(proposal, 'Proposal was not deleted')
 
         archive = self.session.query(ProposalArchive).filter(ProposalArchive.id == proposal_id).first()
@@ -91,7 +91,7 @@ class AddSus(ProposalSetup, TestCase):
         sus_to_add = 1000
         self.account.add(**{settings.test_cluster: sus_to_add})
         with Session() as session:
-            proposal = self.account._get_proposal(session)
+            proposal = self.account.get_proposal(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
         self.assertEqual(self.num_proposal_sus + sus_to_add, new_sus)
@@ -129,7 +129,7 @@ class SubtractSus(ProposalSetup, TestCase):
         sus_to_subtract = 10
         self.account.subtract(**{settings.test_cluster: sus_to_subtract})
         with Session() as session:
-            proposal = self.account._get_proposal(session)
+            proposal = self.account.get_proposal(session)
             new_sus = getattr(proposal, settings.test_cluster)
 
         self.assertEqual(self.num_proposal_sus - sus_to_subtract, new_sus)
@@ -165,11 +165,11 @@ class OverwriteSus(ProposalSetup, TestCase):
         """Test sus are overwritten in the proposal"""
 
         with Session() as session:
-            old_proposal = self.account._get_proposal(session)
+            old_proposal = self.account.get_proposal(session)
 
         self.account.overwrite(**{settings.test_cluster: 12345})
         with Session() as session:
-            new_proposal = self.account._get_proposal(session)
+            new_proposal = self.account.get_proposal(session)
 
         # Check service units are overwritten but dates are not
         self.assertEqual(12345, getattr(new_proposal, settings.test_cluster))
@@ -180,14 +180,14 @@ class OverwriteSus(ProposalSetup, TestCase):
         """Test start and end dates are overwritten in the proposal"""
 
         with Session() as session:
-            old_proposal = self.account._get_proposal(session)
+            old_proposal = self.account.get_proposal(session)
 
         new_start_date = old_proposal.start_date + timedelta(days=5)
         new_end_date = old_proposal.end_date + timedelta(days=10)
         self.account.overwrite(start_date=new_start_date, end_date=new_end_date)
 
         with Session() as session:
-            new_proposal = self.account._get_proposal(session)
+            new_proposal = self.account.get_proposal(session)
 
         # Check service units are overwritten but dates are not
         self.assertEqual(getattr(old_proposal, settings.test_cluster), getattr(new_proposal, settings.test_cluster))

@@ -15,7 +15,7 @@ class ServiceUnitsValidation(TestCase, _utils.ServiceUnitsValidation):
 
 
 class Expired(TestCase):
-    """Tests for the ``expired`` property"""
+    """Tests for the ``is_expired`` property"""
 
     def setUp(self) -> None:
         """Create a ``Investor`` instance for testing"""
@@ -31,7 +31,7 @@ class Expired(TestCase):
         )
 
     def test_expired_if_past_end_date(self) -> None:
-        """Test the investment is expired if it is past its end date"""
+        """Test the investment is is_expired if it is past its end date"""
 
         self.assertFalse(self.investment.expired)
 
@@ -39,7 +39,7 @@ class Expired(TestCase):
         self.assertTrue(self.investment.expired)
 
     def test_expired_if_no_more_service_units(self) -> None:
-        """Test the investment is expired if it has no more service units"""
+        """Test the investment is is_expired if it has no more service units"""
 
         self.assertFalse(self.investment.expired)
 
