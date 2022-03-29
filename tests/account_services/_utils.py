@@ -2,7 +2,7 @@ from typing import List
 
 from bank import settings
 from bank.account_services import ProposalServices, InvestmentServices, AdminServices
-from bank.orm import Session, Proposal, Investor, ProposalArchive, InvestorArchive
+from bank.orm import Session, Proposal, Investment, ProposalArchive, InvestorArchive
 
 
 class GenericSetup:
@@ -14,7 +14,7 @@ class GenericSetup:
         with Session() as session:
             session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
             session.query(ProposalArchive).filter(ProposalArchive.account_name == settings.test_account).delete()
-            session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
+            session.query(Investment).filter(Investment.account_name == settings.test_account).delete()
             session.query(InvestorArchive).filter(InvestorArchive.account_name == settings.test_account).delete()
             session.commit()
 

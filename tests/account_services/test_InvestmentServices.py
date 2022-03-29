@@ -4,7 +4,7 @@ from unittest import TestCase
 from bank import settings
 from bank.account_services import InvestmentServices, ProposalServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
-from bank.orm import Session, Investor, InvestorArchive, Proposal, ProposalEnum
+from bank.orm import Session, Investment, InvestorArchive, Proposal, ProposalEnum
 from tests.account_services._utils import InvestorSetup, ProposalSetup
 
 
@@ -38,7 +38,7 @@ class CreateInvestment(ProposalSetup, TestCase):
 
         super().setUp()
         with Session() as session:
-            session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
+            session.query(Investment).filter(Investment.account_name == settings.test_account).delete()
             session.commit()
 
         self.account = InvestmentServices(settings.test_account)
@@ -76,7 +76,7 @@ class CreateInvestment(ProposalSetup, TestCase):
         self.account.create_investment(sus=test_sus, num_inv=repeats)
 
         with Session() as session:
-            investments = session.query(Investor).filter(Investor.account_name == settings.test_account).all()
+            investments = session.query(Investment).filter(Investment.account_name == settings.test_account).all()
             total_sus = sum(inv.current_sus for inv in investments)
 
         self.assertEqual(repeats, len(investments), f'Expected {repeats} investments to be created but found {len(investments)}')
@@ -91,7 +91,7 @@ class DeleteInvestment(InvestorSetup, TestCase):
 
         self.account.delete_investment(id=self.inv_id[0])
 
-        investment = self.session.query(Investor).filter(Investor.id == self.inv_id[0]).first()
+        investment = self.session.query(Investment).filter(Investment.id == self.inv_id[0]).first()
         self.assertIsNone(investment, 'Proposal was not deleted')
 
         archive = self.session.query(InvestorArchive).filter(InvestorArchive.id == self.inv_id[0]).first()
@@ -201,9 +201,9 @@ class AdvanceInvestmentSus(InvestorSetup, TestCase):
         self.account.advance(1_500)
 
         with Session() as session:
-            investments = session.query(Investor) \
-                .filter(Investor.account_name == settings.test_account) \
-                .order_by(Investor.start_date) \
+            investments = session.query(Investment) \
+                .filter(Investment.account_name == settings.test_account) \
+                .order_by(Investment.start_date) \
                 .all()
 
         # Oldest investment should be untouched
@@ -242,7 +242,7 @@ class AdvanceInvestmentSus(InvestorSetup, TestCase):
         """Test a ``MissingInvestmentError`` is raised if there are no investments"""
 
         with Session() as session:
-            session.query(Investor).filter(Investor.account_name == settings.test_account).delete()
+            session.query(Investment).filter(Investment.account_name == settings.test_account).delete()
             session.commit()
 
         with self.assertRaises(MissingInvestmentError):

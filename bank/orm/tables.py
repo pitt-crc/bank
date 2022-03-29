@@ -90,7 +90,7 @@ class Allocation(Base, Validators):
         super()._validate_service_units(key, value)
 
 
-class Investor(Base, Validators):
+class Investment(Base, Validators):
     """Service unit allocations granted in exchange for user investment
 
     Table Fields:
@@ -105,7 +105,7 @@ class Investor(Base, Validators):
       - exhaustion_date  (Date): Date the investment is_expired or reached full utilization
     """
 
-    __tablename__ = 'investor'
+    __tablename__ = 'investment'
 
     id = Column(Integer, primary_key=True)
     account_name = Column(String, nullable=False)
@@ -122,7 +122,7 @@ class Investor(Base, Validators):
         super()._validate_service_units(key, value)
 
     @property
-    def expired(self) -> bool:
+    def is_expired(self) -> bool:
         """Return whether the investment is past its end date or is fully withdrawn with no remaining service units"""
 
         return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus >= self.service_units)

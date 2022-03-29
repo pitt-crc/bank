@@ -5,7 +5,7 @@ from typing import List, Union, Optional
 from sqlalchemy import select, between, or_
 
 from .exceptions import *
-from .orm import Investor, Proposal, Session
+from .orm import Investment, Proposal, Session
 
 
 class DataAccessObject:
@@ -99,7 +99,7 @@ class DataAccessObject:
     def get_investment(self, session: Session, inv_id: Optional[int]):
         raise NotImplementedError()
 
-    def get_primary_investment(self, session: Session) -> Union[Investor, List[Investor]]:
+    def get_primary_investment(self, session: Session) -> Union[Investment, List[Investment]]:
         """Return any investments associated with the account from the application database
 
         Args:
@@ -110,13 +110,13 @@ class DataAccessObject:
             One or more entries in the Investment Database
         """
 
-        inv = session.query(Investor).filter(Investor.account_name == self.account_name).order_by(Investor.start_date).all()
+        inv = session.query(Investment).filter(Investment.account_name == self.account_name).order_by(Investment.start_date).all()
         if not inv:
             raise MissingInvestmentError(f'Account {self.account_name} has no associated investments')
 
         return inv
 
-    def get_investment_by_id(self, session: Session, inv_id: int) -> Investor:
+    def get_investment_by_id(self, session: Session, inv_id: int) -> Investment:
         """Return any investments associated with the account from the application database
 
         Args:
@@ -127,12 +127,12 @@ class DataAccessObject:
             One or more entries in the Investment Database
         """
 
-        inv = session.query(Investor).filter(Investor.account_name == self.account_name, Investor.id == inv_id).first()
+        inv = session.query(Investment).filter(Investment.account_name == self.account_name, Investment.id == inv_id).first()
         if inv is None:
             raise MissingInvestmentError(f'Account {self.account_name} has no investment with id {inv_id}')
 
         return inv
 
     def get_all_investments(self, session: Session):
-        query = select(Investor).where(Investor.account_name == self.account_name)
+        query = select(Investment).where(Investment.account_name == self.account_name)
         return session.execute(query).scalars().all()

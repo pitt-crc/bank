@@ -15,7 +15,7 @@ from typing import List, Union, Tuple, Optional
 from . import settings
 from .dao import DataAccessObject
 from .exceptions import *
-from .orm import Investor, Proposal, Session, ProposalEnum, Allocation
+from .orm import Investment, Proposal, Session, ProposalEnum, Allocation
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -201,7 +201,7 @@ class InvestmentServices(DataAccessObject):
                 start_this = start + i * duration
                 end_this = start + (i + 1) * duration
 
-                new_investor = Investor(
+                new_investor = Investment(
                     account_name=self.account_name,
                     start_date=start_this,
                     end_date=end_this,
@@ -228,7 +228,7 @@ class InvestmentServices(DataAccessObject):
         with Session() as session:
             investment = self._get_investment(session, id)
             session.add(investment.to_archive_object())
-            session.query(Investor).filter(Investor.id == investment.id).delete()
+            session.query(Investment).filter(Investment.id == investment.id).delete()
             session.commit()
 
         LOG.info(f'Archived investment {investment.id} for account {self.account_name}')
@@ -315,9 +315,9 @@ class InvestmentServices(DataAccessObject):
         with Session() as session:
             # Query all of the account's investments from the database and sort them
             # so that younger investments (i.e., with later start dates) come first
-            investments = session.query(Investor) \
-                .filter(Investor.account_name == self.account_name) \
-                .order_by(Investor.start_date.desc()) \
+            investments = session.query(Investment) \
+                .filter(Investment.account_name == self.account_name) \
+                .order_by(Investment.start_date.desc()) \
                 .all()
 
             if len(investments) < 2:
@@ -519,7 +519,7 @@ class AdminServices(DataAccessObject):
         with Session() as session:
 
             # Archive any investments which are past their end date
-            investments_to_archive = session.query(Investor).filter(Investor.end_date <= date.today()).all()
+            investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()
             for investor_row in investments_to_archive:
                 session.add(investor_row.to_archive_object())
                 session.delete(investor_row)

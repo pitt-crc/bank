@@ -113,13 +113,13 @@ class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParse
         slurm_unlock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=False)
         slurm_unlock.add_argument('--account', type=system.SlurmAccount, **account_definition)
 
-        lock_expired = admin_subparsers.add_parser('lock_expired', help='Notify and lock all expired or overdrawn accounts')
+        lock_expired = admin_subparsers.add_parser('lock_expired', help='Notify and lock all is_expired or overdrawn accounts')
         lock_expired.set_defaults(function=super(AdminParser, AdminParser).notify_unlocked)
 
         find_unlocked = admin_subparsers.add_parser('find_unlocked', help='List all unlocked user accounts')
         find_unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
 
-        renew = admin_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any expired investments')
+        renew = admin_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
         renew.set_defaults(function=super(AdminParser, AdminParser).renew)
         renew.add_argument('--account', type=account_services.InvestmentServices, **account_definition)
 

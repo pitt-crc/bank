@@ -58,7 +58,7 @@ Application Settings
      - The email template to use when a user's propsal is a given number of days from expiring
    * - expired_proposal_notice
      - CRC_BANK_EXPIRED_PROPOSAL_NOTICE
-     - The email template to use when a user's propsal has expired
+     - The email template to use when a user's propsal has is_expired
 
 Usage Example
 -------------
@@ -182,7 +182,7 @@ expiration_warning = _ENV.get_value(
     </html>
     """)))
 
-# An email to send when the proposal has expired
+# An email to send when the proposal has is_expired
 expired_proposal_notice = _ENV.get_value(
     _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
     default=EmailTemplate(dedent("""
@@ -192,7 +192,7 @@ expired_proposal_notice = _ENV.get_value(
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account_name} on H2P has expired. The one year allocation started on {start_date}. 
+    {account_name} on H2P has is_expired. The one year allocation started on {start_date}. 
     You will still be able to login and retrieve your data, but you will be unable
     to run new compute  jobs until you submit a new proposal or request a 
     supplemental allocation. To do so, please visit
