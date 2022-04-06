@@ -13,17 +13,20 @@ from math import ceil
 from typing import List, Union, Tuple, Optional
 
 from . import settings
-from .dao import DataAccessObject
+from .data_access import AccountDBAccess
 from .exceptions import *
-from .orm import Investment, Proposal, Session, ProposalEnum, Allocation
+from .orm import Investment, Proposal, ProposalEnum, Allocation
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
 LOG = getLogger('bank.account_services')
 
 
-class ProposalServices(DataAccessObject):
+class ProposalServices:
     """Account logic for primary account proposals"""
+
+    def __init__(self, account_name) -> None:
+        self.account_name = account_name
 
     def create_proposal(
             self,
@@ -41,11 +44,10 @@ class ProposalServices(DataAccessObject):
             **kwargs: Service units to add on to each cluster
         """
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             # Check for any overlapping proposals
             end_date = start + timedelta(days=duration)
-            existing_proposals = self.get_overlapping_proposals(session, start, end_date)
-            if existing_proposals:
+            if session.get_overlapping_proposals(session, start, end_date):
                 raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
 
             # Create the new proposal and allocations
@@ -54,14 +56,17 @@ class ProposalServices(DataAccessObject):
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
-                end_date=end_date
+                end_date=end_date,
+                allocations=[
+                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
+                ]
             )
 
-            for cluster, sus in kwargs.items():
-                allocation = Allocation(cluster_name=cluster, service_units=sus)
-                new_proposal.allocations.add(allocation)
+            # Assign the proposal to user account
+            account = session.get_account()
+            account.proposals.append(new_proposal)
 
-            session.add(new_proposal)
+            session.add(account)
             session.commit()
 
         LOG.info(f"Created proposal {new_proposal.id} for {self.account_name}")
@@ -69,53 +74,14 @@ class ProposalServices(DataAccessObject):
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete the account's current proposal"""
 
-        with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            delete_query = Proposal.delete().where(Proposal.id == proposal.id)
-            session.execute(delete_query)
+        with AccountDBAccess(self.account_name) as session:
+            proposal = session.get_proposal(pid=pid)
+            session.execute(Proposal.delete().where(Proposal.id == proposal.id))
             session.commit()
 
         LOG.info(f"Deleted proposal {proposal.id} for {self.account_name}")
 
-    def add(self, pid: Optional[int] = None, **kwargs: int) -> None:
-        """Add service units to the account's current allocation
-
-        Args:
-            **kwargs: Service units to add for each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            for allocation in proposal.allocations:
-                allocation.service_units += kwargs.get(allocation.cluster_name, 0)
-
-            session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Added {kwargs}")
-
-    def subtract(self, pid: Optional[int] = None, **kwargs: int) -> None:
-        """Subtract service units from the account's current allocation
-
-        Args:
-            **kwargs: Service units to subtract from each cluster
-
-        Raises:
-            MissingProposalError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            for allocation in proposal.allocations:
-                allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
-
-            session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Removed {kwargs}")
-
-    def overwrite(
+    def modify_proposal(
             self,
             pid: Optional[int] = None,
             type: ProposalEnum = ProposalEnum.Proposal,
@@ -137,8 +103,8 @@ class ProposalServices(DataAccessObject):
 
         # Build a query for finding the proposal needing deletion
 
-        with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
+        with AccountDBAccess(self.account_name) as session:
+            proposal = session.get_proposal(session, pid=pid)
             proposal.proposal_type = type or proposal.proposal_type
             proposal.start_date = start_date or proposal.start_date
             proposal.end_date = end_date or proposal.end_date
@@ -150,8 +116,46 @@ class ProposalServices(DataAccessObject):
 
         LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Overwrote {kwargs}")
 
+    def add_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
+        """Add service units to the account's current allocation
 
-class InvestmentServices(DataAccessObject):
+        Args:
+            **kwargs: Service units to add for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with AccountDBAccess(self.account_name) as session:
+            proposal = session.get_proposal(session, pid=pid)
+            for allocation in proposal.allocations:
+                allocation.service_units += kwargs.get(allocation.cluster_name, 0)
+
+            session.commit()
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Added {kwargs}")
+
+    def subtract_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
+        """Subtract service units from the account's current allocation
+
+        Args:
+            **kwargs: Service units to subtract from each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        with AccountDBAccess(self.account_name) as session:
+            proposal = session.get_proposal(session, pid=pid)
+            for allocation in proposal.allocations:
+                allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
+
+            session.commit()
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Removed {kwargs}")
+
+
+class InvestmentServices(AccountDBAccess):
     """Data access for investment information associated with a given account"""
 
     def __init__(self, account_name: str) -> None:
@@ -164,7 +168,7 @@ class InvestmentServices(DataAccessObject):
         super().__init__(account_name)
 
         # Raise an error if there is no active user proposal
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             proposal = self.get_proposal(session)
 
         if proposal.proposal_type is not ProposalEnum.Proposal:
@@ -194,7 +198,7 @@ class InvestmentServices(DataAccessObject):
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             self.get_proposal(session)
 
             for i in range(num_inv):
@@ -225,7 +229,7 @@ class InvestmentServices(DataAccessObject):
             id: The id of the investment to delete
         """
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             investment = self._get_investment(session, id)
             session.add(investment.to_archive_object())
             session.query(Investment).filter(Investment.id == investment.id).delete()
@@ -244,7 +248,7 @@ class InvestmentServices(DataAccessObject):
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             investment = self._get_investment(session, id)
             investment.service_units += sus
             investment.current_sus += sus
@@ -263,7 +267,7 @@ class InvestmentServices(DataAccessObject):
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             investment = self._get_investment(session, id)
             if investment.current_sus < sus:
                 raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
@@ -287,7 +291,7 @@ class InvestmentServices(DataAccessObject):
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             investment = self._get_investment(session, id)
 
             if sus is not None:
@@ -312,7 +316,7 @@ class InvestmentServices(DataAccessObject):
 
         requested_withdrawal = sus
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             # Query all of the account's investments from the database and sort them
             # so that younger investments (i.e., with later start dates) come first
             investments = session.query(Investment) \
@@ -351,7 +355,7 @@ class InvestmentServices(DataAccessObject):
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self.account_name}')
 
 
-class AdminServices(DataAccessObject):
+class AdminServices(AccountDBAccess):
     """Administration for existing bank accounts"""
 
     @staticmethod
@@ -366,7 +370,7 @@ class AdminServices(DataAccessObject):
     def _build_usage_str(self) -> str:
         """Return a human-readable summary of the account ussage and allocation"""
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             proposal = self.get_proposal(session)
             try:
                 investments = self._get_investment(session)
@@ -425,7 +429,7 @@ class AdminServices(DataAccessObject):
 
         The returned string is empty if there are no investments
         """
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             try:
                 investments = self._get_investment(session)
 
@@ -452,7 +456,7 @@ class AdminServices(DataAccessObject):
     def notify_account(self) -> None:
         """Send any pending usage alerts to the account"""
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             proposal = self.get_proposal(session)
 
             # Determine the next usage percentage that an email is scheduled to be sent out
@@ -502,7 +506,7 @@ class AdminServices(DataAccessObject):
         """
 
         # Query database for accounts that are unlocked and is_expired
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
             proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
             return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
 
@@ -516,7 +520,7 @@ class AdminServices(DataAccessObject):
     def renew(self, reset_usage: bool = True) -> None:
         """Archive any is_expired investments and rollover unused service units"""
 
-        with Session() as session:
+        with AccountDBAccess(self.account_name) as session:
 
             # Archive any investments which are past their end date
             investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()

@@ -11,4 +11,4 @@ from .enum import *
 from .. import settings
 
 engine = sqlalchemy.create_engine(settings.db_path)
-Session = sqlalchemy.orm.sessionmaker(bind=engine, expire_on_commit=False)
+Session = sqlalchemy.orm.sessionmaker(bind=engine)
