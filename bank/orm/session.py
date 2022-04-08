@@ -2,18 +2,13 @@ from __future__ import annotations
 
 from typing import Optional, Union, List
 
-import sqlalchemy
 from sqlalchemy import select, or_, between
 
 from .tables import Account, Proposal, Investment
-from .. import settings
 from ..exceptions import *
 
-engine = sqlalchemy.create_engine(settings.db_path)
-Session = sqlalchemy.orm.sessionmaker(bind=engine)
 
-
-class ExtendedSession(Session):
+class ExtendedSession:
     """Encapsulates SQL queries for common data retrieval tasks"""
 
     def __init__(self, account_name: str) -> None:
@@ -27,7 +22,7 @@ class ExtendedSession(Session):
         self._account_name = account_name
 
     def get_account(self):
-        query = select(Account).where(Account.account_name == self._account_name)
+        return self.execute(select(Account).where(Account.account_name == self._account_name))
 
     def get_proposal(self, pid: Optional[int] = None) -> Proposal:
         if pid is None:

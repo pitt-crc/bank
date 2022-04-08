@@ -4,8 +4,8 @@ from datetime import date, timedelta
 from logging import getLogger
 from typing import Optional, Union
 
-from bank.dao import ExtendedSession
 from bank.exceptions import ProposalExistsError
+from bank.orm import ExtendedSession
 from bank.orm import ProposalEnum, Proposal, Allocation
 
 LOG = getLogger('bank.dao.account_data')

@@ -2,7 +2,7 @@ from datetime import date
 from unittest import TestCase, skip
 
 from bank.orm import Investment
-from .constants import *
+from tests.orm.tables.constants import *
 
 
 class ServiceUnitsValidation(TestCase):
