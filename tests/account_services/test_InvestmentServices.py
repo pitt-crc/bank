@@ -46,34 +46,34 @@ class CreateInvestment(ProposalSetup, TestCase):
     def test_investment_is_created(self) -> None:
         """Test a new investment is added to the account after the function call"""
 
-        self.account.create_investment(sus=1000)
+        create_investment(sus=1000)
         self.assertEqual(1, len(self.account._get_investment(self.session)))
 
     def test_investment_has_assigned_number_of_sus(self) -> None:
         """Test the number of assigned sus in the new investment matches kwargs in the function call"""
 
         test_sus = 12345
-        self.account.create_investment(sus=test_sus)
+        create_investment(sus=test_sus)
         self.assertEqual(test_sus, self.account._get_investment(self.session)[0].service_units)
 
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when creating an investment with negative sus"""
 
         with self.assertRaises(ValueError):
-            self.account.create_investment(sus=-1)
+            create_investment(sus=-1)
 
     def test_error_on_zero_repeat(self) -> None:
         """Test an error is raised when creating an investment with ``repeate=0``"""
 
         with self.assertRaises(ValueError):
-            self.account.create_investment(sus=1000, num_inv=0)
+            create_investment(sus=1000, num_inv=0)
 
     def test_investment_is_repeated(self) -> None:
         """Test the given number of investments are created successively"""
 
         test_sus = 2000
         repeats = 2
-        self.account.create_investment(sus=test_sus, num_inv=repeats)
+        create_investment(sus=test_sus, num_inv=repeats)
 
         with Session() as session:
             investments = session.query(Investment).filter(Investment.account_name == settings.test_account).all()

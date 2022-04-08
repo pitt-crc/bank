@@ -1,4 +1,4 @@
-"""Reusable values are defined for reference by the test suite."""
+"""Reusable values are defined purly for convenience."""
 
 from datetime import datetime, timedelta
 

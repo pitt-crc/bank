@@ -25,7 +25,7 @@ class Account(Base):
 
     Table Fields:
       - id  (Integer): Primary key for this table
-      - name (String): Account name of the proposal holder
+      - name (String): Unique account name
 
     Relationships:
       - proposals     (Proposal): One to many
@@ -35,7 +35,7 @@ class Account(Base):
     __tablename__ = 'account'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     proposals = relationship('Proposal', back_populates='account')
     investments = relationship('Investment', back_populates='account')
 
@@ -45,7 +45,7 @@ class Proposal(Base):
 
     Table Fields:
       - id                 (Integer): Primary key for this table
-      - account_id         (Integer): Primary key for this table for the ``account`` table
+      - account_id         (Integer): Primary key for the ``account`` table
       - proposal_type (ProposalEnum): The proposal type
       - start_date            (Date): The date when the proposal goes into effect
       - end_date              (Date): The proposal's expiration date
@@ -227,9 +227,9 @@ class Investment(Base):
     def is_expired(self) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
 
-        is_exhausted = self.exhaustion_date = None
+        is_exhausted = self.exhaustion_date is not None
         past_end = self.end_date <= date.today()
-        spent_service_units = self.current_sus == 0 and self.withdrawn_sus >= self.service_units
+        spent_service_units = self.current_sus <= 0 and self.withdrawn_sus >= self.service_units
         return is_exhausted or past_end or spent_service_units
 
     @hybrid_property

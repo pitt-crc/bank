@@ -51,7 +51,7 @@ class InvestorSetup(ProposalSetup):
         # Create a series of three investments totalling 3,000 service units
         super().setUp()
         self.account = InvestmentServices(settings.test_account)
-        self.account.create_investment(self.num_inv_sus * self.num_investments, num_inv=self.num_investments)
+        create_investment(self.num_inv_sus * self.num_investments, num_inv=self.num_investments)
         self.inv_id = [inv.id for inv in self.account._get_investment(self.session)]
 
 
