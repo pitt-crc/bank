@@ -2,16 +2,20 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from logging import getLogger
+from math import ceil
 from typing import Optional, Union
 
-from bank.exceptions import ProposalExistsError
-from bank.orm import ExtendedSession
+from bank.dao.base import AccountQueryBase
+from bank.exceptions import *
+from bank.orm import Investment
 from bank.orm import ProposalEnum, Proposal, Allocation
 
 LOG = getLogger('bank.dao.account_data')
 
 
-class ProposalData:
+class ProposalData(AccountQueryBase):
+    """Data access for a single account's proposal information"""
+
     def __init__(self, account_name) -> None:
         self.account_name = account_name
 
@@ -34,7 +38,7 @@ class ProposalData:
         with ExtendedSession(self.account_name) as session:
             # Check for any overlapping proposals
             end_date = start + timedelta(days=duration)
-            if session.get_overlapping_proposals(session, start, end_date):
+            if self.get_overlapping_proposals(session, start, end_date):
                 raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
 
             # Create the new proposal and allocations
@@ -50,7 +54,7 @@ class ProposalData:
             )
 
             # Assign the proposal to user account
-            account = session.get_account()
+            account = self.get_account()
             account.proposals.append(new_proposal)
 
             session.add(account)
@@ -62,7 +66,7 @@ class ProposalData:
         """Delete the account's current proposal"""
 
         with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal(pid=pid)
+            proposal = self.get_proposal(pid=pid)
             session.execute(Proposal.delete().where(Proposal.id == proposal.id))
             session.commit()
 
@@ -91,7 +95,7 @@ class ProposalData:
         # Build a query for finding the proposal needing deletion
 
         with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal(session, pid=pid)
+            proposal = self.get_proposal(session, pid=pid)
             proposal.proposal_type = type or proposal.proposal_type
             proposal.start_date = start_date or proposal.start_date
             proposal.end_date = end_date or proposal.end_date
@@ -114,7 +118,7 @@ class ProposalData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal(session, pid=pid)
+            proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
                 allocation.service_units += kwargs.get(allocation.cluster_name, 0)
 
@@ -133,16 +137,17 @@ class ProposalData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal(session, pid=pid)
+            proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
                 allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
 
-            session.commit()
+            self.commit()
 
         LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Removed {kwargs}")
 
 
 class InvestmentData:
+    """Data access for a single account's investment information"""
 
     def __init__(self, account_name: str) -> None:
         """An existing account in the bank
@@ -155,7 +160,7 @@ class InvestmentData:
 
         # Raise an error if there is no active user proposal
         with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal()
+            proposal = self.get_proposal()
 
         if proposal.proposal_type is not ProposalEnum.Proposal:
             raise ValueError('Investments cannot be added/managed for class accounts')
@@ -172,10 +177,10 @@ class InvestmentData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            investment = session.get_investment(session, id)
+            investment = self.get_investment(session, id)
             investment.service_units += sus
             investment.current_sus += sus
-            session.commit()
+            self.commit()
 
         LOG.info(f'Added {sus} service units to investment {investment.id} for account {self.account_name}')
 
@@ -204,7 +209,7 @@ class InvestmentData:
         sus_per_instance = ceil(sus / num_inv)
 
         with ExtendedSession(self.account_name) as session:
-            session.get_proposal()
+            self.get_proposal()
 
             for i in range(num_inv):
                 start_this = start + i * duration
@@ -219,12 +224,12 @@ class InvestmentData:
                     rollover_sus=0
                 )
 
-                account = session.get_account()
+                account = self.get_account()
                 account.investments.add(new_investment)
-                session.add(account)
+                self.add(account)
                 LOG.debug(f"Inserting investment {new_investment.id} for {self.account_name} with allocation of `{sus}`")
 
-            session.commit()
+            self.commit()
 
         LOG.info(f"Invested {sus} service units for account {self.account_name}")
 
@@ -236,10 +241,10 @@ class InvestmentData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            investment = session.get_investment(id)
-            session.add(investment.to_archive_object())
-            session.query(Investment).filter(Investment.id == investment.id).delete()
-            session.commit()
+            investment = self.get_investment(id)
+            self.add(investment.to_archive_object())
+            self.query(Investment).filter(Investment.id == investment.id).delete()
+            self.commit()
 
         LOG.info(f'Archived investment {investment.id} for account {self.account_name}')
 
@@ -255,13 +260,13 @@ class InvestmentData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            investment = session.get_investment(session, id)
+            investment = self.get_investment(session, id)
             if investment.current_sus < sus:
                 raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
             investment.current_sus -= sus
-            session.commit()
+            self.commit()
 
         LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self.account_name}')
 
@@ -279,7 +284,7 @@ class InvestmentData:
         """
 
         with ExtendedSession(self.account_name) as session:
-            investment = session.get_investment(session, id)
+            investment = self.get_investment(session, id)
 
             if sus is not None:
                 investment.service_units = sus
@@ -290,6 +295,6 @@ class InvestmentData:
             if end_date:
                 investment.end_date = end_date
 
-            session.commit()
+            self.commit()
 
         LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self.account_name}')

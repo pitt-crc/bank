@@ -2,10 +2,10 @@ from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.business_logic import ProposalServices
+from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
-from tests.account_services._utils import ProposalSetup
+from tests.dao._utils import ProposalSetup
 
 
 class CreateProposal(TestCase):
@@ -19,7 +19,7 @@ class CreateProposal(TestCase):
             session.commit()
 
         self.session = Session()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalData(settings.test_account)
 
     def tearDown(self) -> None:
         self.session.close()

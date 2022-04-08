@@ -7,8 +7,7 @@ database.
 import sqlalchemy
 
 from .enum import *
-from .session import ExtendedSession
 from .tables import *
 
 engine = sqlalchemy.create_engine(settings.db_path)
-Session = sqlalchemy.orm.sessionmaker(bind=engine, class_=ExtendedSession)
+Session = sqlalchemy.orm.sessionmaker(bind=engine)
