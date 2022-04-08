@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from typing import List, Union, Optional
+from typing import Optional, Union, List
 
-from sqlalchemy import select, between, or_
+import sqlalchemy
+from sqlalchemy import select, or_, between
 
-from .exceptions import *
-from .orm import Investment, Proposal, Session, Account
+from .tables import Account, Proposal, Investment
+from .. import settings
+from ..exceptions import *
+
+engine = sqlalchemy.create_engine(settings.db_path)
+Session = sqlalchemy.orm.sessionmaker(bind=engine)
 
 
-class AccountDBAccess(Session):
+class ExtendedSession(Session):
     """Encapsulates SQL queries for common data retrieval tasks"""
 
     def __init__(self, account_name: str) -> None:
@@ -18,7 +23,7 @@ class AccountDBAccess(Session):
             account_name: The name of the account
         """
 
-        super(AccountDBAccess, self).__init__()
+        super(ExtendedSession, self).__init__()
         self._account_name = account_name
 
     def get_account(self):

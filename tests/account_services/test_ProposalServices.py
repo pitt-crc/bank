@@ -2,9 +2,9 @@ from datetime import timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.account_services import ProposalServices
+from bank.business_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
-from bank.orm import Session, Proposal, ProposalArchive
+from bank.orm import Session, Proposal
 from tests.account_services._utils import ProposalSetup
 
 
@@ -70,9 +70,6 @@ class DeleteProposal(ProposalSetup, TestCase):
 
         proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account.account_name).first()
         self.assertIsNone(proposal, 'Proposal was not deleted')
-
-        archive = self.session.query(ProposalArchive).filter(ProposalArchive.id == proposal_id).first()
-        self.assertIsNotNone(archive, 'No archive object created with matching proposal id')
 
     def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal"""
