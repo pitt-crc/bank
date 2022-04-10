@@ -4,7 +4,7 @@ from ldap3 import Server, Connection
 
 from bank.exceptions import LdapUserNotFound, LDAPGroupNotFound, CRCUserNotFound
 from bank.system import ShellCmd
-
+from bank.settings import xxx
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:
     """Return Whether the given ldap group exists
