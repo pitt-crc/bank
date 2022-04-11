@@ -59,6 +59,19 @@ Application Settings
    * - expired_proposal_notice
      - CRC_BANK_EXPIRED_PROPOSAL_NOTICE
      - The email template to use when a user's propsal has expired
+   * - ldap_userid
+     - CRC_BANK_LDAP_USERID
+     - Description
+   * - ldap_path
+     - CRC_BANK_LDAP_PATH
+     - Description
+   * - ad_server
+     - CRC_BANK_AD_SERVER
+     - Description
+   * - ldap_object
+     - CRC_BANK_LDAP_OBJECT
+     - Description
+
 
 Usage Example
 -------------
@@ -127,6 +140,12 @@ inv_rollover_fraction = _ENV.get_value(_APP_PREFIX + 'INV_ROLLOVER_FRACTION', ca
 # field of each account in ``sacctmgr`` contains the prefix.
 user_email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
 from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
+
+# LDAP variables
+ldap_userid = _ENV.get_value(_APP_PREFIX + 'LDAP_USERID', default='crcquery')
+ldap_path = _ENV.get_value(_APP_PREFIX + 'LDAP_PATH', default='/ihome/crc/scripts/crcquery.txt')
+ldap_object = _ENV.get_value(_APP_PREFIX + 'LDAP_OBJECT', default='ldap://sam-ldap-prod-01.cssd.pitt.edu')
+ad_server = _ENV.get_value(_APP_PREFIX + 'AD_SERVER', default='pittad.univ.pitt.edu')
 
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
