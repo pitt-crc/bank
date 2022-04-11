@@ -5,7 +5,7 @@ from bank import settings
 from bank.account_services import InvestmentServices, ProposalServices
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, Investment, InvestorArchive, Proposal, ProposalEnum
-from tests.dao._utils import InvestorSetup, ProposalSetup
+from tests._utils import InvestorSetup, ProposalSetup
 
 
 class InitExceptions(TestCase):

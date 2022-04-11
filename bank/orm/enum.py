@@ -1,4 +1,4 @@
-"""Enumerated data types used to represent data in the application database.
+"""Enumerated data types used to represent values in the application database.
 
 API Reference
 -------------

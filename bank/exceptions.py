@@ -14,6 +14,10 @@ class CmdError(Exception):
     """Raised when a piped command writes to STDERR in the underlying shell."""
 
 
+class BankAccountNotFoundError(Exception):
+    """Raised when an account name is not found in the applicatiuon database"""
+
+
 class MissingProposalError(Exception):
     """Raised when an account is missing a proposal in the bank database."""
 
@@ -24,10 +28,6 @@ class MissingInvestmentError(Exception):
 
 class ProposalExistsError(Exception):
     """Raised when trying to create a proposal that already exists"""
-
-
-class TableOverwriteError(Exception):
-    """Raised when database entries are about to be overwritten"""
 
 
 class SlurmAccountNotFoundError(Exception):

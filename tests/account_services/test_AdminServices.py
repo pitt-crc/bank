@@ -9,7 +9,7 @@ from bank import settings
 from bank.account_services import AdminServices
 from bank.orm import ProposalEnum
 from bank.system.slurm import SlurmAccount
-from tests.dao._utils import AdminSetup
+from tests._utils import AdminSetup
 
 
 class CalculatePercentage(TestCase):

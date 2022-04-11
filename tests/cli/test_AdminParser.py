@@ -3,7 +3,7 @@ from unittest import TestCase
 from bank import settings
 from bank.cli import AdminParser
 from tests.cli._utils import CLIAsserts
-from tests.dao._utils import ProposalSetup
+from tests._utils import ProposalSetup
 
 
 class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):

@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 from bank.dao.base import AccountQueryBase
 from bank.exceptions import *
-from bank.orm import Investment
+from bank.orm import Investment, Session
 from bank.orm import ProposalEnum, Proposal, Allocation
 
 LOG = getLogger('bank.dao.account_data')
@@ -15,9 +15,6 @@ LOG = getLogger('bank.dao.account_data')
 
 class ProposalData(AccountQueryBase):
     """Data access for a single account's proposal information"""
-
-    def __init__(self, account_name) -> None:
-        self.account_name = account_name
 
     def create_proposal(
             self,
@@ -35,15 +32,15 @@ class ProposalData(AccountQueryBase):
             **kwargs: Service units to add on to each cluster
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             # Check for any overlapping proposals
             end_date = start + timedelta(days=duration)
             if self.get_overlapping_proposals(session, start, end_date):
-                raise ProposalExistsError(f'Proposal already exists for account: {self.account_name}')
+                raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
-                account_name=self.account_name,
+                account_name=self._account_name,
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
@@ -54,23 +51,23 @@ class ProposalData(AccountQueryBase):
             )
 
             # Assign the proposal to user account
-            account = self.get_account()
+            account = self.get_account(session)
             account.proposals.append(new_proposal)
 
             session.add(account)
             session.commit()
 
-        LOG.info(f"Created proposal {new_proposal.id} for {self.account_name}")
+        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete the account's current proposal"""
 
-        with ExtendedSession(self.account_name) as session:
-            proposal = self.get_proposal(pid=pid)
+        with Session() as session:
+            proposal = self.get_proposal(session, pid=pid)
             session.execute(Proposal.delete().where(Proposal.id == proposal.id))
             session.commit()
 
-        LOG.info(f"Deleted proposal {proposal.id} for {self.account_name}")
+        LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
 
     def modify_proposal(
             self,
@@ -83,6 +80,7 @@ class ProposalData(AccountQueryBase):
         """Replace the number of service units allocated to a given cluster
 
         Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
             type: Optionally change the type of the proposal
             start_date: Optionally set a new start date for the proposal
             end_date: Optionally set a new end date for the proposal
@@ -94,7 +92,7 @@ class ProposalData(AccountQueryBase):
 
         # Build a query for finding the proposal needing deletion
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             proposal.proposal_type = type or proposal.proposal_type
             proposal.start_date = start_date or proposal.start_date
@@ -105,45 +103,47 @@ class ProposalData(AccountQueryBase):
 
             session.commit()
 
-        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Overwrote {kwargs}")
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
     def add_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
         """Add service units to the account's current allocation
 
         Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
             **kwargs: Service units to add for each cluster
 
         Raises:
             MissingProposalError: If the account does not have a proposal
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
                 allocation.service_units += kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
 
-        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Added {kwargs}")
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
 
     def subtract_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
         """Subtract service units from the account's current allocation
 
         Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
             **kwargs: Service units to subtract from each cluster
 
         Raises:
             MissingProposalError: If the account does not have a proposal
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
                 allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
 
-            self.commit()
+            session.commit()
 
-        LOG.info(f"Modified proposal {proposal.id} for account {self.account_name}. Removed {kwargs}")
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
 
 class InvestmentData:
@@ -159,7 +159,7 @@ class InvestmentData:
         self.account_name = account_name
 
         # Raise an error if there is no active user proposal
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             proposal = self.get_proposal()
 
         if proposal.proposal_type is not ProposalEnum.Proposal:
@@ -176,7 +176,7 @@ class InvestmentData:
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             investment = self.get_investment(session, id)
             investment.service_units += sus
             investment.current_sus += sus
@@ -208,7 +208,7 @@ class InvestmentData:
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             self.get_proposal()
 
             for i in range(num_inv):
@@ -240,7 +240,7 @@ class InvestmentData:
             id: The id of the investment to delete
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             investment = self.get_investment(id)
             self.add(investment.to_archive_object())
             self.query(Investment).filter(Investment.id == investment.id).delete()
@@ -259,7 +259,7 @@ class InvestmentData:
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             investment = self.get_investment(session, id)
             if investment.current_sus < sus:
                 raise ValueError(f'Cannot subtract {sus}. Investment {id} only has {investment.current_sus} available.')
@@ -283,7 +283,7 @@ class InvestmentData:
             MissingInvestmentError: If the account does not have a proposal
         """
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             investment = self.get_investment(session, id)
 
             if sus is not None:

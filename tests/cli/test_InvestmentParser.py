@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from bank import settings
 from bank.cli import InvestmentParser
-from tests.dao._utils import InvestorSetup
+from tests._utils import InvestorSetup
 from tests.cli._utils import CLIAsserts
 
 

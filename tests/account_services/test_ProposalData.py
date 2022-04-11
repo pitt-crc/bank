@@ -5,7 +5,7 @@ from bank import settings
 from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
-from tests.dao._utils import ProposalSetup
+from tests._utils import ProposalSetup
 
 
 class CreateProposal(TestCase):
@@ -68,7 +68,7 @@ class DeleteProposal(ProposalSetup, TestCase):
         proposal_id = self.account.get_proposal(self.session).id
         self.account.delete_proposal()
 
-        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account.account_name).first()
+        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account._account_name).first()
         self.assertIsNone(proposal, 'Proposal was not deleted')
 
     def test_error_if_missing_proposal(self) -> None:

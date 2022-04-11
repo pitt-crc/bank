@@ -5,12 +5,12 @@ from typing import Optional, List
 
 from sqlalchemy import select, or_, between
 
-from bank.exceptions import MissingProposalError, MissingInvestmentError
+from bank.exceptions import MissingProposalError, MissingInvestmentError, BankAccountNotFoundError
 from bank.orm import Session, Account, Proposal, Investment
 
 
 class AccountQueryBase:
-    """Wraps up common DB queries as methods for use by child classes"""
+    """Encapsulates common DB queries as methods for use by child classes"""
 
     def __init__(self, account_name: str) -> None:
         """Retrieve data for an existing bank account
@@ -31,7 +31,12 @@ class AccountQueryBase:
             Entry from the ``account`` table as an ``Account`` instance
         """
 
-        return session.execute(select(Account).where(Account.account.name == self._account_name))
+        stmt = select(Account).where(Account.name == self._account_name)
+        result = session.execute(stmt).scalars().first()
+        if result is None:
+            raise BankAccountNotFoundError(f'No account found for {self._account_name}')
+
+        return result
 
     def get_proposal(self, session: Session, pid: Optional[int] = None) -> Optional[Proposal]:
         """Convenience function for combining the ``get_primary_proposal`` and ``get_proposal_by_id``
@@ -62,7 +67,7 @@ class AccountQueryBase:
             MissingProposalError: If the account doesn't have an active proposal
         """
 
-        query = select(Proposal).where(Proposal.account.name == self._account_name).where(Proposal.is_active == True)
+        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.is_active == True)
         proposal = session.execute(query).scalars().first()
         if proposal is None:
             raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
@@ -80,7 +85,7 @@ class AccountQueryBase:
             MissingProposalError: If the account has no associated proposal with the given ID
         """
 
-        query = select(Proposal).where(Proposal.account.name == self._account_name).where(Proposal.id == pid)
+        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
         proposal = session.execute(query).scalars().first()
         if proposal is None:
             raise MissingProposalError(f'Account `{self._account_name}` does not have an associated proposal.')
@@ -99,8 +104,8 @@ class AccountQueryBase:
             A list of ``Proposal`` instances from the ``proposal`` database
         """
 
-        query = select(Proposal) \
-            .where(Proposal.account.name == self._account_name) \
+        query = select(Proposal).join(Account) \
+            .where(Account.name == self._account_name) \
             .where(
             or_(
                 between(start, Proposal.start_date, Proposal.end_date),
@@ -122,7 +127,7 @@ class AccountQueryBase:
             A list of ``Proposal`` instances from the ``proposal`` database
         """
 
-        query = select(Proposal).where(Proposal.account.name == self._account_name)
+        query = select(Proposal).join(Account).where(Account.name == self._account_name)
         return session.execute(query).scalars().all()
 
     def get_investment(self, session: Session, inv_id: Optional[int]) -> Investment:

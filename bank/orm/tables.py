@@ -36,8 +36,8 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
-    proposals = relationship('Proposal', back_populates='account')
-    investments = relationship('Investment', back_populates='account')
+    proposals = relationship('Proposal', back_populates='account', cascade="all,delete")
+    investments = relationship('Investment', back_populates='account', cascade="all,delete")
 
 
 class Proposal(Base):
@@ -66,7 +66,7 @@ class Proposal(Base):
     percent_notified = Column(Integer, nullable=False, default=0)
 
     account = relationship('Account', back_populates='proposals')
-    allocations = relationship('Allocation', back_populates='proposal')
+    allocations = relationship('Allocation', back_populates='proposal', cascade="all,delete")
 
     @validates('percent_notified')
     def _validate_percent_notified(self, key: str, value: int) -> int:
