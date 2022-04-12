@@ -5,45 +5,43 @@ from bank import settings
 from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal
-from tests._utils import ProposalSetup
+from tests._utils import ProposalSetup, EmptyAccountSetup
 
 
-class CreateProposal(TestCase):
-    """Tests for the creation of proposals via the ``create_proposal`` method"""
+class CreateProposal(EmptyAccountSetup, TestCase):
+    """Test the creation of proposals via the ``create_proposal`` method"""
 
     def setUp(self) -> None:
         """Delete any proposals that may already exist for the test account"""
 
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
-        self.session = Session()
+        super().setUp()
         self.account = ProposalData(settings.test_account)
-
-    def tearDown(self) -> None:
-        self.session.close()
 
     def test_proposal_is_created(self) -> None:
         """Test a proposal is created after the function call"""
 
         self.account.create_proposal()
-        self.assertTrue(self.account.get_proposal(self.session))
+        with Session() as session:
+            self.assertTrue(self.account.get_primary_proposal(session))
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
-        proposal_info = self.account.get_proposal(self.session)
-        for cluster in settings.clusters:
-            self.assertEqual(0, getattr(proposal_info, cluster))
+        with Session() as session:
+            allocations = self.account.get_proposal(session).allocations
+            self.assertTrue(allocations)
+            for alloc in allocations:
+                self.assertEqual(0, alloc.service_units)
 
     def test_non_default_sus_are_set(self) -> None:
-        """Tests proposal are assigned the number of sus specified by kwargs"""
+        """Test proposals are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{settings.test_cluster: 1000})
-        proposal_info = self.account.get_proposal(self.session)
-        self.assertEqual(1000, getattr(proposal_info, settings.test_cluster))
+        with Session() as session:
+            allocation = self.account.get_proposal(session).allocations[0]
+            self.assertEqual(settings.test_cluster, allocation.cluster_name)
+            self.assertEqual(1000, allocation.service_units)
 
     def test_error_if_already_exists(self) -> None:
         """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
@@ -62,21 +60,34 @@ class CreateProposal(TestCase):
 class DeleteProposal(ProposalSetup, TestCase):
     """Tests for the deletion of proposals via the ``delete_proposal`` method"""
 
-    def test_proposal_is_deleted(self) -> None:
-        """Test the proposal is moved from the ``Proposal`` to ``ProposalArchive`` table"""
+    def test_primary_proposal_is_deleted(self) -> None:
+        # Make sure a primary proposal exists
+        account = ProposalData(settings.test_account)
+        account.delete_proposal()
+        with self.assertRaises(MissingProposalError, 'Primary proposal was not deleted'), Session() as session:
+            account.get_proposal(session)
 
-        proposal_id = self.account.get_proposal(self.session).id
-        self.account.delete_proposal()
+    def test_proposal_is_deleted_by_id(self) -> None:
+        account = ProposalData(settings.test_account)
+        with Session() as session:
+            for p in account.get_all_proposals(session):
+                account.delete_proposal(pid=p.id)
 
-        proposal = self.session.query(Proposal).filter(Proposal.account_name == self.account._account_name).first()
-        self.assertIsNone(proposal, 'Proposal was not deleted')
+        with Session() as session:
+            self.assertFalse(account.get_all_proposals(session), 'Not all proposals were deleted by their ID')
 
-    def test_error_if_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised if there is no proposal"""
+    def test_error_if_missing_primary_proposal(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if there is no primary proposal"""
 
-        self.account.delete_proposal()
+        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingProposalError):
-            self.account.delete_proposal()
+            ProposalData(settings.test_account).delete_proposal()
+
+    def test_error_if_missing_proposal_id(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
+
+        with self.assertRaises(MissingProposalError):
+            ProposalData(settings.test_account).delete_proposal(pid=1000)
 
 
 class AddSus(ProposalSetup, TestCase):
