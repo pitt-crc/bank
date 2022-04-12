@@ -159,8 +159,8 @@ class AccountQueryBase:
             MissingInvestmentError: If the account doesn't have an active investment
         """
 
-        query = select(Investment).where(Investment.account.name == self._account_name).where(Investment.is_active == True)
-        inv = session.execute(query)
+        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.is_active == True)
+        inv = session.execute(query).scalars().first()
         if not inv:
             raise MissingInvestmentError(f'Account {self._account_name} has no associated investments')
 
@@ -177,8 +177,8 @@ class AccountQueryBase:
             MissingInvestmentError: If the account has no associated investment with the given ID
         """
 
-        query = select(Investment).where(Investment.account.name == self._account_name).where(Investment.id == id)
-        inv = session.execute(query)
+        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.id == inv_id)
+        inv = session.execute(query).scalars().first()
         if inv is None:
             raise MissingInvestmentError(f'Account {self._account_name} has no investment with id {inv_id}')
 
@@ -194,5 +194,5 @@ class AccountQueryBase:
             A list of ``Investment`` instances from the ``investment`` database
         """
 
-        query = select(Investment).where(Investment.account.name == self._account_name)
+        query = select(Investment).join(Account).where(Account.name == self._account_name)
         return session.execute(query).scalars().all()

@@ -54,7 +54,7 @@ class ProposalSetup(EmptyAccountSetup):
             session.commit()
 
 
-class InvestorSetup(ProposalSetup):
+class InvestmentSetup(ProposalSetup):
     """Reusable setup mixin for configuring tests against user investments"""
 
     inv_id: List[int] = None  # List of ids for investments created during setup
@@ -80,6 +80,7 @@ class InvestorSetup(ProposalSetup):
             investments.append(inv)
 
         with Session() as session:
-            account = session.execute(select(Account).where(Account.name == settings.test_account))
+            result = session.execute(select(Account).where(Account.name == settings.test_account))
+            account = result.scalars().first()
             account.investments.extend(investments)
             session.commit()
