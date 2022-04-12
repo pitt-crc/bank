@@ -40,7 +40,6 @@ class ProposalData(AccountQueryBase):
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
-                account_name=self._account_name,
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
@@ -56,8 +55,7 @@ class ProposalData(AccountQueryBase):
 
             session.add(account)
             session.commit()
-
-        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete the account's current proposal"""
@@ -66,8 +64,7 @@ class ProposalData(AccountQueryBase):
             proposal = self.get_proposal(session, pid=pid)
             session.execute(Proposal.delete().where(Proposal.id == proposal.id))
             session.commit()
-
-        LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
+            LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
 
     def modify_proposal(
             self,
@@ -102,8 +99,7 @@ class ProposalData(AccountQueryBase):
                 allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
 
             session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
     def add_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
         """Add service units to the account's current allocation
@@ -122,8 +118,7 @@ class ProposalData(AccountQueryBase):
                 allocation.service_units += kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
-
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
 
     def subtract_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
         """Subtract service units from the account's current allocation
@@ -142,11 +137,10 @@ class ProposalData(AccountQueryBase):
                 allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
 
-
-class InvestmentData:
+class InvestmentData(AccountQueryBase):
     """Data access for a single account's investment information"""
 
     def __init__(self, account_name: str) -> None:
@@ -156,11 +150,11 @@ class InvestmentData:
             account_name: The name of the account
         """
 
-        self.account_name = account_name
+        super().__init__(account_name)
 
         # Raise an error if there is no active user proposal
         with Session() as session:
-            proposal = self.get_proposal()
+            proposal = self.get_proposal(session)
 
         if proposal.proposal_type is not ProposalEnum.Proposal:
             raise ValueError('Investments cannot be added/managed for class accounts')
@@ -180,9 +174,9 @@ class InvestmentData:
             investment = self.get_investment(session, id)
             investment.service_units += sus
             investment.current_sus += sus
-            self.commit()
 
-        LOG.info(f'Added {sus} service units to investment {investment.id} for account {self.account_name}')
+            session.commit()
+            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
         """Add a new investment(s) for the given account
@@ -209,7 +203,7 @@ class InvestmentData:
         sus_per_instance = ceil(sus / num_inv)
 
         with Session() as session:
-            self.get_proposal()
+            self.get_proposal(session)
 
             for i in range(num_inv):
                 start_this = start + i * duration
@@ -224,14 +218,14 @@ class InvestmentData:
                     rollover_sus=0
                 )
 
-                account = self.get_account()
+                account = self.get_account(session)
                 account.investments.add(new_investment)
-                self.add(account)
-                LOG.debug(f"Inserting investment {new_investment.id} for {self.account_name} with allocation of `{sus}`")
+                session.add(account)
+                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with allocation of `{sus}`")
 
-            self.commit()
+                session.commit()
 
-        LOG.info(f"Invested {sus} service units for account {self.account_name}")
+            LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
     def delete_investment(self, id: int) -> None:
         """Delete one of the account's associated investments
@@ -241,12 +235,11 @@ class InvestmentData:
         """
 
         with Session() as session:
-            investment = self.get_investment(id)
-            self.add(investment.to_archive_object())
-            self.query(Investment).filter(Investment.id == investment.id).delete()
-            self.commit()
+            investment = self.get_investment(session, id)
+            session.query(Investment).filter(Investment.id == investment.id).delete()
 
-        LOG.info(f'Archived investment {investment.id} for account {self.account_name}')
+            session.commit()
+            LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
 
     def subtract(self, id: int, sus: int) -> None:
         """Subtract service units from the given investment
@@ -266,9 +259,9 @@ class InvestmentData:
 
             investment.service_units -= sus
             investment.current_sus -= sus
-            self.commit()
 
-        LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self.account_name}')
+            session.commit()
+            LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def overwrite(self, id: int, sus: Optional[int] = None, start_date: Optional[date] = None, end_date: Optional[date] = None) -> None:
         """Overwrite service units allocated to the given investment
@@ -295,6 +288,5 @@ class InvestmentData:
             if end_date:
                 investment.end_date = end_date
 
-            self.commit()
-
-        LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self.account_name}')
+            session.commit()
+            LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
