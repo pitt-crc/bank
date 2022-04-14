@@ -1,10 +1,12 @@
 from datetime import timedelta
 from unittest import TestCase
 
+from sqlalchemy import select
+
 from bank import settings
 from bank.dao import ProposalData
 from bank.exceptions import MissingProposalError, ProposalExistsError
-from bank.orm import Session, Proposal
+from bank.orm import Session, Proposal, Account
 from tests._utils import ProposalSetup, EmptyAccountSetup
 
 
@@ -17,21 +19,16 @@ class CreateProposal(EmptyAccountSetup, TestCase):
         super().setUp()
         self.account = ProposalData(settings.test_account)
 
-    def test_proposal_is_created(self) -> None:
-        """Test a proposal is created after the function call"""
-
-        self.account.create_proposal()
-        with Session() as session:
-            self.assertTrue(self.account.get_primary_proposal(session))
-
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
         with Session() as session:
-            allocations = self.account.get_proposal(session).allocations
-            self.assertTrue(allocations)
-            for alloc in allocations:
+            query = select(Proposal).join(Account).where(Account.name == settings.test_account)
+            proposal = session.execute(query).scalars().first()
+
+            self.assertTrue(proposal)
+            for alloc in proposal.allocations:
                 self.assertEqual(0, alloc.service_units)
 
     def test_non_default_sus_are_set(self) -> None:
@@ -61,20 +58,23 @@ class DeleteProposal(ProposalSetup, TestCase):
     """Tests for the deletion of proposals via the ``delete_proposal`` method"""
 
     def test_primary_proposal_is_deleted(self) -> None:
-        # Make sure a primary proposal exists
+        """Test the primary proposal is deleted by default"""
+
         account = ProposalData(settings.test_account)
         account.delete_proposal()
-        with self.assertRaises(MissingProposalError, 'Primary proposal was not deleted'), Session() as session:
+        with self.assertRaises(MissingProposalError), Session() as session:
             account.get_proposal(session)
 
     def test_proposal_is_deleted_by_id(self) -> None:
+        """Test a specific proposal is deleted when an id is given"""
+
         account = ProposalData(settings.test_account)
-        with Session() as session:
-            for p in account.get_all_proposals(session):
-                account.delete_proposal(pid=p.id)
+        account.delete_proposal(pid=1)
 
         with Session() as session:
-            self.assertFalse(account.get_all_proposals(session), 'Not all proposals were deleted by their ID')
+            self.assertTrue(account.get_proposal(session), 'Primary proposal does not exist')
+            with self.assertRaises(MissingProposalError, msg='Not all proposals were deleted by their ID'):
+                account.get_proposal(session, pid=1)
 
     def test_error_if_missing_primary_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no primary proposal"""
@@ -93,11 +93,17 @@ class DeleteProposal(ProposalSetup, TestCase):
 class AddSus(ProposalSetup, TestCase):
     """Tests for the addition of sus via the ``add`` method"""
 
+    def setUp(self) -> None:
+        """Delete any proposals that may already exist for the test account"""
+
+        super().setUp()
+        self.account = ProposalData(settings.test_account)
+
     def test_sus_are_added(self) -> None:
         """Test SUs are added to the proposal"""
 
         sus_to_add = 1000
-        self.account.add(**{settings.test_cluster: sus_to_add})
+        self.account.add_sus(**{settings.test_cluster: sus_to_add})
         with Session() as session:
             proposal = self.account.get_proposal(session)
             new_sus = getattr(proposal, settings.test_cluster)
@@ -108,26 +114,24 @@ class AddSus(ProposalSetup, TestCase):
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
 
         fake_cluster_name = 'fake_cluster'
-        with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined*'):
-            self.account.add(**{fake_cluster_name: 1000})
+        with self.assertRaises(ValueError):
+            self.account.add_sus(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.add(**{settings.test_cluster: -1})
+            self.account.add_sus(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
+        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingProposalError):
-            self.account.add(**{settings.test_cluster: -1})
+            self.account.add_sus(**{settings.test_cluster: 1})
 
 
+# Todo: Test final sus cannot be negative
 class SubtractSus(ProposalSetup, TestCase):
     """Tests for the subtraction of sus via the ``subtract`` method"""
 

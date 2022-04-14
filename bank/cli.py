@@ -54,7 +54,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import List, Optional
 
-from . import settings, account_services, system
+from . import settings, system, business_logic
 from .orm import ProposalEnum
 
 LOG = getLogger('bank.cli')
@@ -88,7 +88,7 @@ class BaseParser(ArgumentParser):
             return super().add_subparsers(parser_class=BaseParser)
 
 
-class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParser):
+class AdminParser(business_logic.AdminServices, system.SlurmAccount, BaseParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -103,7 +103,7 @@ class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParse
 
         info = admin_subparsers.add_parser('info', help='Print account usage and allocation information')
         info.set_defaults(function=super(AdminParser, AdminParser).print_info)
-        info.add_argument('--account', type=account_services.AdminServices, **account_definition)
+        info.add_argument('--account', type=business_logic.AdminServices, **account_definition)
 
         slurm_lock = admin_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         slurm_lock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=True)
@@ -121,10 +121,10 @@ class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParse
 
         renew = admin_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
         renew.set_defaults(function=super(AdminParser, AdminParser).renew)
-        renew.add_argument('--account', type=account_services.InvestmentServices, **account_definition)
+        renew.add_argument('--account', type=business_logic.InvestmentServices, **account_definition)
 
 
-class ProposalParser(account_services.ProposalServices, BaseParser):
+class ProposalParser(business_logic.ProposalServices, BaseParser):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -135,7 +135,7 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', type=account_services.ProposalServices, help='The parent slurm account')
+        account_definition = dict(dest='self', metavar='acc', type=business_logic.ProposalServices, help='The parent slurm account')
         type_definition = dict(type=ProposalEnum.from_string, help='', choices=list(ProposalEnum))
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
@@ -178,7 +178,7 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(account_services.InvestmentServices, BaseParser):
+class InvestmentParser(business_logic.InvestmentServices, BaseParser):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -189,7 +189,7 @@ class InvestmentParser(account_services.InvestmentServices, BaseParser):
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', type=account_services.InvestmentServices, help='The parent slurm account')
+        account_definition = dict(dest='self', metavar='acc', type=business_logic.InvestmentServices, help='The parent slurm account')
         proposal_id_definition = dict(type=int, required=True, help='The investment proposal id')
         service_unit_definition = dict(type=int, help='The number of SUs you want to process', required=True)
 

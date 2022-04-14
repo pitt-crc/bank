@@ -5,6 +5,9 @@ from logging import getLogger
 from math import ceil
 from typing import Optional, Union
 
+from sqlalchemy import delete
+
+from bank import settings
 from bank.dao.base import AccountQueryBase
 from bank.exceptions import *
 from bank.orm import Investment, Session
@@ -62,9 +65,18 @@ class ProposalData(AccountQueryBase):
 
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
-            session.execute(Proposal.delete().where(Proposal.id == proposal.id))
+            session.execute(delete(Proposal).where(Proposal.id == proposal.id))
+            session.execute(delete(Allocation).where(Allocation.proposal_id == proposal.id))
             session.commit()
             LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
+
+    def _verify_cluster_values(self, **kwargs):
+        for cluster, sus in kwargs.items():
+            if cluster not in settings.clusters:
+                raise ValueError(f'{cluster} is not a valid cluster name.')
+
+            if sus < 0:
+                raise ValueError('Service units cannot be negative.')
 
     def modify_proposal(
             self,
@@ -112,6 +124,7 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._verify_cluster_values(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:
