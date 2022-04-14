@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey
+from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates, relationship
+from sqlalchemy.sql import Select
 
 from .enum import ProposalEnum
 from .. import settings
@@ -108,6 +109,16 @@ class Proposal(Base):
         in_date_range = (self.start_date <= today) and (today < self.end_date)
         has_allocations = any(alloc.final_usage is None for alloc in self.allocations)
         return in_date_range and has_allocations
+
+    @is_active.expression
+    def is_active(cls) -> bool:
+        today = date.today()
+        subquery = select(Proposal.id).join(Allocation) \
+            .where(Proposal.start_date <= today) \
+            .where(today < Proposal.end_date) \
+            .where(Allocation.final_usage == None)
+
+        return cls.id.in_(subquery)
 
 
 class Allocation(Base):
@@ -237,6 +248,6 @@ class Investment(Base):
         """Return if the investment is within its active date range and has available service units"""
 
         today = date.today()
-        in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_service_units = self.current_sus > 0 and self.withdrawn_sus < self.service_units
-        return in_date_range and has_service_units
+        in_date_range = (self.start_date <= today) & (today < self.end_date)
+        has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
+        return in_date_range & has_service_units

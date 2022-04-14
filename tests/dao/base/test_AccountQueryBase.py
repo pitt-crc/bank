@@ -33,8 +33,7 @@ class GetPrimaryProposal(ProposalSetup, TestCase):
 
         with Session() as session:
             proposal = AccountQueryBase(settings.test_account).get_primary_proposal(session)
-
-        self.assertTrue(proposal.is_active)
+            self.assertTrue(proposal.is_active)
 
     def test_error_no_active_proposal(self) -> None:
         """Test for a ``MissingProposalError`` if there is no active proposal"""
@@ -112,26 +111,19 @@ class GetPrimaryInvestment(InvestmentSetup, TestCase):
             inv = AccountQueryBase(settings.test_account).get_primary_investment(session)
             self.assertTrue(inv.is_active)
 
-    def test_error_no_investment_found(self) -> None:
-        """Test for a ``MissingInvestmentError`` error when proposal id does not exist"""
-
-        qb = AccountQueryBase(settings.test_account)
-        with self.assertRaises(MissingInvestmentError), Session() as session:
-            qb.get_primary_investment(session)
-
     def test_error_no_account_investments(self) -> None:
-        """Test for a ``MissingInvestmentError`` error when given proposal id for another account"""
+        """Test for a ``MissingInvestmentError`` error when account has no primary investment"""
 
-        qb = AccountQueryBase('fake_account')
+        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingInvestmentError), Session() as session:
-            qb.get_primary_investment(session)
+            AccountQueryBase(settings.test_account).get_primary_investment(session)
 
 
 class GetInvestmentById(InvestmentSetup, TestCase):
     """Test the retrieval of investments by ID"""
 
     def test_returned_investment_matches_id(self) -> None:
-        """Test returned proposals match the requested id(s)"""
+        """Test returned investments match the requested id(s)"""
 
         qb = AccountQueryBase(settings.test_account)
         with Session() as session:
@@ -142,14 +134,14 @@ class GetInvestmentById(InvestmentSetup, TestCase):
         self.assertEqual(2, investment2.id)
 
     def test_error_no_investment_found(self) -> None:
-        """Test for a ``MissingInvestmentError`` error when proposal id does not exist"""
+        """Test for a ``MissingInvestmentError`` error when investment id does not exist"""
 
         qb = AccountQueryBase(settings.test_account)
         with self.assertRaises(MissingInvestmentError), Session() as session:
             qb.get_investment_by_id(session, 1000)
 
     def test_error_no_investment_for_account(self) -> None:
-        """Test for a ``MissingInvestmentError`` error when given proposal id for another account"""
+        """Test for a ``MissingInvestmentError`` error when given investment id for another account"""
 
         qb = AccountQueryBase('fake_account')
         with self.assertRaises(MissingInvestmentError), Session() as session:

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List
 
 from sqlalchemy import select
@@ -6,7 +6,7 @@ from sqlalchemy import select
 from bank import settings
 from bank.orm import Session, Proposal, Investment, Account, Allocation, ProposalEnum
 
-TODAY = datetime.now().date()
+TODAY = date.today()
 TOMORROW = TODAY + timedelta(days=1)
 YESTERDAY = TODAY - timedelta(days=1)
 DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
