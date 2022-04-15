@@ -14,7 +14,7 @@ from typing import List, Union, Tuple
 from . import settings
 from .dao import ProposalData, InvestmentData
 from .exceptions import *
-from .orm import Investment, Proposal, Session, ExtendedSession
+from .orm import Investment, Proposal, Session
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -37,10 +37,10 @@ class InvestmentServices(InvestmentData):
 
         requested_withdrawal = sus
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             # Query all of the account's investments from the database and sort them
             # so that younger investments (i.e., with later start dates) come first
-            investments = session.get_all_investments(expired=False)
+            investments = self.get_all_investments(session, expired=False)
             if len(investments) < 2:
                 raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
 
@@ -89,10 +89,10 @@ class AdminServices:
         return 0
 
     def _build_usage_str(self) -> str:
-        """Return a human-readable summary of the account ussage and allocation"""
+        """Return a human-readable summary of the account usage and allocation"""
 
-        with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal
+        with Session() as session:
+            proposal = self.get_proposal(session)
             try:
                 investments = session.get_investment()
 
@@ -150,9 +150,9 @@ class AdminServices:
 
         The returned string is empty if there are no investments
         """
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
             try:
-                investments = session.get_investment()
+                investments = self.get_investment(session, expired=True)
 
             except MissingInvestmentError:
                 return ''
@@ -177,8 +177,8 @@ class AdminServices:
     def notify_account(self) -> None:
         """Send any pending usage alerts to the account"""
 
-        with ExtendedSession(self.account_name) as session:
-            proposal = session.get_proposal(session)
+        with Session() as session:
+            proposal = self.get_proposal(session)
 
             # Determine the next usage percentage that an email is scheduled to be sent out
             usage = self._slurm_acct.get_total_usage()
@@ -241,7 +241,7 @@ class AdminServices:
     def renew(self, reset_usage: bool = True) -> None:
         """Archive any is_expired investments and rollover unused service units"""
 
-        with ExtendedSession(self.account_name) as session:
+        with Session() as session:
 
             # Archive any investments which are past their end date
             investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()
@@ -263,7 +263,7 @@ class AdminServices:
             # Add rollover service units to whatever the next available investment
             # If the conditional false then there are no more investments and the
             # service units that would have been rolled over are lost
-            next_investment = session.get_investment(session)
+            next_investment = self.get_investment(session)
             if next_investment:
                 next_investment.rollover_sus += to_rollover
 

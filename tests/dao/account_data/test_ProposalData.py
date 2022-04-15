@@ -10,6 +10,7 @@ from bank.orm import Session, Proposal, Account
 from tests._utils import ProposalSetup, EmptyAccountSetup
 
 
+# Todo: Test overlapping proposal
 class CreateProposal(EmptyAccountSetup, TestCase):
     """Test the creation of proposals via the ``create_proposal`` method"""
 
@@ -55,7 +56,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 
 
 class DeleteProposal(ProposalSetup, TestCase):
-    """Tests for the deletion of proposals via the ``delete_proposal`` method"""
+    """Test the deletion of proposals via the ``delete_proposal`` method"""
 
     def test_primary_proposal_is_deleted(self) -> None:
         """Test the primary proposal is deleted by default"""
@@ -76,10 +77,13 @@ class DeleteProposal(ProposalSetup, TestCase):
             with self.assertRaises(MissingProposalError, msg='Not all proposals were deleted by their ID'):
                 account.get_proposal(session, pid=1)
 
+
+class DeleteMissingProposal(EmptyAccountSetup, TestCase):
+    """Test errors when deleting proposals that do not exist"""
+
     def test_error_if_missing_primary_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no primary proposal"""
 
-        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingProposalError):
             ProposalData(settings.test_account).delete_proposal()
 
@@ -91,7 +95,7 @@ class DeleteProposal(ProposalSetup, TestCase):
 
 
 class AddSus(ProposalSetup, TestCase):
-    """Tests for the addition of sus via the ``add`` method"""
+    """Test the addition of sus via the ``add`` method"""
 
     def setUp(self) -> None:
         """Delete any proposals that may already exist for the test account"""
@@ -121,16 +125,25 @@ class AddSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.add_sus(**{settings.test_cluster: -1})
 
-    def test_error_on_missing_proposal(self) -> None:
+
+class AddToMissingProposal(EmptyAccountSetup, TestCase):
+    """Test errors for addition of service units to proposals that don't exist"""
+
+    def test_error_if_missing_primary_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
-        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingProposalError):
-            self.account.add_sus(**{settings.test_cluster: 1})
+            ProposalData(settings.test_account).add_sus(**{settings.test_cluster: 1})
+
+    def test_error_if_missing_proposal_id(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
+
+        with self.assertRaises(MissingProposalError):
+            ProposalData(settings.test_account).add_sus(**{settings.test_cluster: 1, 'pid': 1000})
 
 
 class SubtractSus(ProposalSetup, TestCase):
-    """Tests for the subtraction of sus via the ``subtract`` method"""
+    """Test the subtraction of sus via the ``subtract`` method"""
 
     def setUp(self) -> None:
         """Delete any proposals that may already exist for the test account"""
@@ -159,13 +172,6 @@ class SubtractSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.subtract_sus(**{settings.test_cluster: -1})
 
-    def test_error_on_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
-
-        EmptyAccountSetup.setUp(self)
-        with self.assertRaises(MissingProposalError):
-            self.account.subtract_sus(**{settings.test_cluster: 1})
-
     def test_error_on_over_subtraction(self) -> None:
         """Test a value error is raised for subtraction resulting in negative sus"""
 
@@ -173,7 +179,23 @@ class SubtractSus(ProposalSetup, TestCase):
             self.account.subtract_sus(**{settings.test_cluster: self.num_proposal_sus + 100})
 
 
-class OverwriteSus(ProposalSetup, TestCase):
+class SubtractFromMissingProposal(EmptyAccountSetup, TestCase):
+    """Test errors for subtraction of service units to proposals that don't exist"""
+
+    def test_error_on_missing_proposal(self) -> None:
+        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
+
+        with self.assertRaises(MissingProposalError):
+            ProposalData(settings.test_account).subtract_sus(**{settings.test_cluster: 1})
+
+    def test_error_if_missing_proposal_id(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
+
+        with self.assertRaises(MissingProposalError):
+            ProposalData(settings.test_account).subtract_sus(**{settings.test_cluster: 1, 'pid': 1000})
+
+
+class ModifyProposal(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
 
     def setUp(self) -> None:
@@ -187,39 +209,42 @@ class OverwriteSus(ProposalSetup, TestCase):
 
         with Session() as session:
             old_proposal = self.account.get_proposal(session)
+            old_type = old_proposal.proposal_type
+            old_start = old_proposal.start_date
+            old_end = old_proposal.end_date
 
         self.account.modify_proposal(**{settings.test_cluster: 12345})
         with Session() as session:
             new_proposal = self.account.get_proposal(session)
+            new_sus = self.account.get_allocation(session, settings.test_cluster).service_units
 
-        # Check service units are overwritten but dates are not
-        self.assertEqual(12345, getattr(new_proposal, settings.test_cluster))
-        self.assertEqual(old_proposal.start_date, new_proposal.start_date)
-        self.assertEqual(old_proposal.end_date, new_proposal.end_date)
+            # Check only service units are overwritten
+            self.assertEqual(12345, new_sus)
+            self.assertEqual(old_start, new_proposal.start_date)
+            self.assertEqual(old_end, new_proposal.end_date)
+            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
 
         with Session() as session:
             old_proposal = self.account.get_proposal(session)
+            new_start_date = old_proposal.start_date - timedelta(days=5)
+            new_end_date = old_proposal.end_date + timedelta(days=10)
+            old_type = old_proposal.proposal_type
 
-        new_start_date = old_proposal.start_date + timedelta(days=5)
-        new_end_date = old_proposal.end_date + timedelta(days=10)
         self.account.modify_proposal(start_date=new_start_date, end_date=new_end_date)
-
         with Session() as session:
             new_proposal = self.account.get_proposal(session)
-
-        # Check service units are overwritten but dates are not
-        self.assertEqual(getattr(old_proposal, settings.test_cluster), getattr(new_proposal, settings.test_cluster))
-        self.assertEqual(new_start_date, new_proposal.start_date)
-        self.assertEqual(new_end_date, new_proposal.end_date)
+            self.assertEqual(new_start_date, new_proposal.start_date)
+            self.assertEqual(new_end_date, new_proposal.end_date)
+            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
 
         fake_cluster_name = 'fake_cluster'
-        with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined*'):
+        with self.assertRaises(ValueError):
             self.account.modify_proposal(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
@@ -228,12 +253,18 @@ class OverwriteSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.modify_proposal(**{settings.test_cluster: -1})
 
+
+class ModifyMissingProposal(EmptyAccountSetup, TestCase):
+    """Test errors for subtraction of service units to proposals that don't exist"""
+
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
+        with self.assertRaises(MissingProposalError):
+            ProposalData(settings.test_account).modify_proposal(**{settings.test_cluster: 1})
+
+    def test_error_if_missing_proposal_id(self) -> None:
+        """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.modify_proposal(**{settings.test_cluster: 1})
+            ProposalData(settings.test_account).modify_proposal(**{settings.test_cluster: 1, 'pid': 1000})

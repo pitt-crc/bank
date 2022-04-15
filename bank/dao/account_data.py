@@ -19,6 +19,14 @@ LOG = getLogger('bank.dao.account_data')
 class ProposalData(AccountQueryBase):
     """Data access for a single account's proposal information"""
 
+    def _verify_cluster_values(self, **kwargs):
+        for cluster, sus in kwargs.items():
+            if cluster not in settings.clusters:
+                raise ValueError(f'{cluster} is not a valid cluster name.')
+
+            if sus < 0:
+                raise ValueError('Service units cannot be negative.')
+
     def create_proposal(
             self,
             type: ProposalEnum = ProposalEnum.Proposal,
@@ -70,18 +78,10 @@ class ProposalData(AccountQueryBase):
             session.commit()
             LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
 
-    def _verify_cluster_values(self, **kwargs):
-        for cluster, sus in kwargs.items():
-            if cluster not in settings.clusters:
-                raise ValueError(f'{cluster} is not a valid cluster name.')
-
-            if sus < 0:
-                raise ValueError('Service units cannot be negative.')
-
     def modify_proposal(
             self,
             pid: Optional[int] = None,
-            type: ProposalEnum = ProposalEnum.Proposal,
+            type: ProposalEnum = None,
             start_date: Optional[date] = None,
             end_date: Optional[date] = None,
             **kwargs: Union[int, date]
@@ -99,8 +99,7 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
-        # Build a query for finding the proposal needing deletion
-
+        self._verify_cluster_values(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             proposal.proposal_type = type or proposal.proposal_type
