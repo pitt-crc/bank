@@ -144,6 +144,7 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._verify_cluster_values(**kwargs)
         with Session() as session:
             proposal = self.get_proposal(session, pid=pid)
             for allocation in proposal.allocations:

@@ -105,10 +105,8 @@ class AddSus(ProposalSetup, TestCase):
         sus_to_add = 1000
         self.account.add_sus(**{settings.test_cluster: sus_to_add})
         with Session() as session:
-            proposal = self.account.get_proposal(session)
-            new_sus = getattr(proposal, settings.test_cluster)
-
-        self.assertEqual(self.num_proposal_sus + sus_to_add, new_sus)
+            new_sus = self.account.get_allocation(session, settings.test_cluster).service_units
+            self.assertEqual(self.num_proposal_sus + sus_to_add, new_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -131,47 +129,58 @@ class AddSus(ProposalSetup, TestCase):
             self.account.add_sus(**{settings.test_cluster: 1})
 
 
-# Todo: Test final sus cannot be negative
 class SubtractSus(ProposalSetup, TestCase):
     """Tests for the subtraction of sus via the ``subtract`` method"""
+
+    def setUp(self) -> None:
+        """Delete any proposals that may already exist for the test account"""
+
+        super().setUp()
+        self.account = ProposalData(settings.test_account)
 
     def test_sus_are_subtracted(self) -> None:
         """Test SUs are removed from the proposal"""
 
-        sus_to_subtract = 10
-        self.account.subtract(**{settings.test_cluster: sus_to_subtract})
+        sus_to_subtract = 1000
+        self.account.subtract_sus(**{settings.test_cluster: sus_to_subtract})
         with Session() as session:
-            proposal = self.account.get_proposal(session)
-            new_sus = getattr(proposal, settings.test_cluster)
-
-        self.assertEqual(self.num_proposal_sus - sus_to_subtract, new_sus)
+            new_sus = self.account.get_allocation(session, settings.test_cluster).service_units
+            self.assertEqual(self.num_proposal_sus - sus_to_subtract, new_sus)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
 
-        fake_cluster_name = 'fake_cluster'
-        with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined*'):
-            self.account.subtract(**{fake_cluster_name: 1000})
+        with self.assertRaises(ValueError):
+            self.account.subtract_sus(fake_cluster_name=1000)
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.subtract(**{settings.test_cluster: -1})
+            self.account.subtract_sus(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised when account has no proposal"""
 
-        with Session() as session:
-            session.query(Proposal).filter(Proposal.account_name == settings.test_account).delete()
-            session.commit()
-
+        EmptyAccountSetup.setUp(self)
         with self.assertRaises(MissingProposalError):
-            self.account.subtract(**{settings.test_cluster: -1})
+            self.account.subtract_sus(**{settings.test_cluster: 1})
+
+    def test_error_on_over_subtraction(self) -> None:
+        """Test a value error is raised for subtraction resulting in negative sus"""
+
+        with self.assertRaises(ValueError):
+            self.account.subtract_sus(**{settings.test_cluster: self.num_proposal_sus + 100})
 
 
 class OverwriteSus(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
+
+    def setUp(self) -> None:
+        """Delete any proposals that may already exist for the test account"""
+
+        super().setUp()
+        self.account = ProposalData(settings.test_account)
 
     def test_sus_are_modified(self) -> None:
         """Test sus are overwritten in the proposal"""
@@ -179,7 +188,7 @@ class OverwriteSus(ProposalSetup, TestCase):
         with Session() as session:
             old_proposal = self.account.get_proposal(session)
 
-        self.account.overwrite(**{settings.test_cluster: 12345})
+        self.account.modify_proposal(**{settings.test_cluster: 12345})
         with Session() as session:
             new_proposal = self.account.get_proposal(session)
 
@@ -196,7 +205,7 @@ class OverwriteSus(ProposalSetup, TestCase):
 
         new_start_date = old_proposal.start_date + timedelta(days=5)
         new_end_date = old_proposal.end_date + timedelta(days=10)
-        self.account.overwrite(start_date=new_start_date, end_date=new_end_date)
+        self.account.modify_proposal(start_date=new_start_date, end_date=new_end_date)
 
         with Session() as session:
             new_proposal = self.account.get_proposal(session)
@@ -211,13 +220,13 @@ class OverwriteSus(ProposalSetup, TestCase):
 
         fake_cluster_name = 'fake_cluster'
         with self.assertRaisesRegex(ValueError, f'Cluster {fake_cluster_name} is not defined*'):
-            self.account.overwrite(**{fake_cluster_name: 1000})
+            self.account.modify_proposal(**{fake_cluster_name: 1000})
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.overwrite(**{settings.test_cluster: -1})
+            self.account.modify_proposal(**{settings.test_cluster: -1})
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised when account has no proposal"""
@@ -227,4 +236,4 @@ class OverwriteSus(ProposalSetup, TestCase):
             session.commit()
 
         with self.assertRaises(MissingProposalError):
-            self.account.overwrite(**{settings.test_cluster: 1})
+            self.account.modify_proposal(**{settings.test_cluster: 1})

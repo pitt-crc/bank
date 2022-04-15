@@ -6,7 +6,7 @@ from typing import Optional, List
 from sqlalchemy import select, or_, between
 
 from bank.exceptions import MissingProposalError, MissingInvestmentError, BankAccountNotFoundError
-from bank.orm import Session, Account, Proposal, Investment
+from bank.orm import Session, Account, Proposal, Investment, Allocation
 
 
 class AccountQueryBase:
@@ -116,6 +116,14 @@ class AccountQueryBase:
         )
 
         return session.execute(query).scalars().all()
+
+    def get_allocation(self, session: Session, cluster: str, pid: Optional[int] = None) -> Allocation:
+        proposal = self.get_proposal(session, pid=pid)
+        query = select(Allocation) \
+            .where(Allocation.proposal_id == proposal.id) \
+            .where(Allocation.cluster_name == cluster)
+
+        return session.execute(query).scalars().first()
 
     def get_all_proposals(self, session: Session) -> List[Proposal]:
         """Return all proposals tied to the current account
