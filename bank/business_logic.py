@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from logging import getLogger
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 from . import settings
 from .dao import ProposalData, InvestmentData
@@ -17,12 +17,53 @@ from .exceptions import *
 from .orm import Investment, Proposal, Session, ProposalEnum
 from .system import SlurmAccount
 
-Numeric = Union[int, float, complex]
+Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
 
 
 class ProposalServices(ProposalData):
     """Account logic for primary account proposals"""
+
+    def __int__(self, account_name):
+        super().__init__(account_name)
+        SlurmAccount.check_account_exists(account_name)
+
+    def create_proposal(
+            self,
+            type: ProposalEnum = ProposalEnum.Proposal,
+            start: date = date.today(),
+            duration: int = 365,
+            **kwargs: int
+    ) -> None:
+
+        end = start + timedelta(days=duration)
+        with Session() as session:
+            if self.get_overlapping_proposals(session, start, end):
+                raise ProposalExistsError('Proposals for a given account cannot overlap with existing proposals.')
+
+        super().create_proposal(type=type, start=start, duration=duration, **kwargs)
+
+    def modify_proposal(
+            self,
+            pid: Optional[int] = None,
+            type: ProposalEnum = None,
+            start_date: Optional[date] = None,
+            end_date: Optional[date] = None,
+            **kwargs: Union[int, date]
+    ) -> None:
+
+        with Session() as session:
+            proposal = self.get_proposal(session, pid)
+            start_date = start_date or proposal.start_date
+            end_date = end_date or proposal.end_date
+
+            overlapping_proposals = self.get_overlapping_proposals(session, start_date, end_date)
+            overlapping_proposals.remove(proposal)
+
+            if overlapping_proposals:
+                raise ProposalExistsError('New proposals cannot overlap with existing proposals.')
+
+        super().modify_proposal(pid=pid, type=type, start_date=start_date, end_date=end_date, **kwargs)
 
 
 class InvestmentServices(InvestmentData):
@@ -33,10 +74,8 @@ class InvestmentServices(InvestmentData):
 
         # Raise an error if there is no active user proposal
         with Session() as session:
-            proposal = self.get_proposal(session)
-
-        if proposal.proposal_type is not ProposalEnum.Proposal:
-            raise ValueError('Investments cannot be added/managed for class accounts')
+            if self.get_proposal(session).proposal_type is not ProposalEnum.Proposal:
+                raise ValueError('Investments cannot be added/managed for class accounts')
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
@@ -162,7 +201,7 @@ class AdminServices:
         """
         with Session() as session:
             try:
-                investments = self.get_investment(session, expired=True)
+                investments = self.get_all_investments(session, expired=True)
 
             except MissingInvestmentError:
                 return ''
