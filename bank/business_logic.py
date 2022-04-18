@@ -14,7 +14,7 @@ from typing import List, Union, Tuple
 from . import settings
 from .dao import ProposalData, InvestmentData
 from .exceptions import *
-from .orm import Investment, Proposal, Session
+from .orm import Investment, Proposal, Session, ProposalEnum
 from .system import SlurmAccount
 
 Numeric = Union[int, float, complex]
@@ -27,6 +27,16 @@ class ProposalServices(ProposalData):
 
 class InvestmentServices(InvestmentData):
     """Data access for investment information associated with a given account"""
+
+    def __init__(self, account_name):
+        super().__init__(account_name)
+
+        # Raise an error if there is no active user proposal
+        with Session() as session:
+            proposal = self.get_proposal(session)
+
+        if proposal.proposal_type is not ProposalEnum.Proposal:
+            raise ValueError('Investments cannot be added/managed for class accounts')
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments

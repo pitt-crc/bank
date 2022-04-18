@@ -165,31 +165,10 @@ class InvestmentData(AccountQueryBase):
 
         super().__init__(account_name)
 
-        # Raise an error if there is no active user proposal
-        with Session() as session:
-            proposal = self.get_proposal(session)
+    def _verify_service_units(self, sus):
 
-        if proposal.proposal_type is not ProposalEnum.Proposal:
-            raise ValueError('Investments cannot be added/managed for class accounts')
-
-    def add(self, id: int, sus: int) -> None:
-        """Add service units to the given investment
-
-        Args:
-            id: The id of the investment to change
-            sus: Number of service units to add
-
-        Raises:
-            MissingInvestmentError: If the account does not have a proposal
-        """
-
-        with Session() as session:
-            investment = self.get_investment(session, id)
-            investment.service_units += sus
-            investment.current_sus += sus
-
-            session.commit()
-            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+        if sus <= 0:
+            raise ValueError('Service units must be greater than zero.')
 
     def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
         """Add a new investment(s) for the given account
@@ -232,7 +211,7 @@ class InvestmentData(AccountQueryBase):
                 )
 
                 account = self.get_account(session)
-                account.investments.add(new_investment)
+                account.investments.append(new_investment)
                 session.add(account)
                 LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with allocation of `{sus}`")
 
@@ -254,6 +233,26 @@ class InvestmentData(AccountQueryBase):
             session.commit()
             LOG.info(f'Archived investment {investment.id} for account {self._account_name}')
 
+    def add_sus(self, id: int, sus: int) -> None:
+        """Add service units to the given investment
+
+        Args:
+            id: The id of the investment to change
+            sus: Number of service units to add
+
+        Raises:
+            MissingInvestmentError: If the account does not have a proposal
+        """
+
+        self._verify_service_units(sus)
+        with Session() as session:
+            investment = self.get_investment(session, id)
+            investment.service_units += sus
+            investment.current_sus += sus
+
+            session.commit()
+            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+
     def subtract(self, id: int, sus: int) -> None:
         """Subtract service units from the given investment
 
@@ -265,6 +264,7 @@ class InvestmentData(AccountQueryBase):
             MissingInvestmentError: If the account does not have a proposal
         """
 
+        self._verify_service_units(sus)
         with Session() as session:
             investment = self.get_investment(session, id)
             if investment.current_sus < sus:
@@ -293,6 +293,7 @@ class InvestmentData(AccountQueryBase):
             investment = self.get_investment(session, id)
 
             if sus is not None:
+                self._verify_service_units(sus)
                 investment.service_units = sus
 
             if start_date:

@@ -54,17 +54,15 @@ class ProposalSetup(EmptyAccountSetup):
             session.commit()
 
 
-class InvestmentSetup(ProposalSetup):
+class InvestmentSetup(EmptyAccountSetup):
     """Reusable setup mixin for configuring tests against user investments"""
 
-    inv_id: List[int] = None  # List of ids for investments created during setup
     num_inv_sus = 1_000  # Number of service units PER INVESTMENT
 
     def setUp(self) -> None:
-        """Ensure there exists a user proposal and investment for the test user account"""
+        """Ensure there exists a user investment for the test user account"""
 
         super().setUp()
-
         investments = []
         for i in range(3):
             start = TODAY + ((i - 1) * timedelta(days=365))
@@ -72,7 +70,7 @@ class InvestmentSetup(ProposalSetup):
             inv = Investment(
                 start_date=start,
                 end_date=end,
-                service_units=10_000,
+                service_units=self.num_inv_sus,
                 current_sus=5_000,
                 withdrawn_sus=1_000,
                 rollover_sus=0
