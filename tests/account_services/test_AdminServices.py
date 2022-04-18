@@ -6,7 +6,7 @@ import time_machine
 
 from bank import orm
 from bank import settings
-from bank.account_services import AdminServices
+from bank.business_logic import AdminServices
 from bank.orm import ProposalEnum
 from bank.system.slurm import SlurmAccount
 from tests._utils import AdminSetup

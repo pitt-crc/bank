@@ -3,11 +3,11 @@ from unittest import TestCase
 
 from bank import settings
 from bank.cli import InvestmentParser
-from tests._utils import InvestorSetup
+from tests._utils import InvestmentSetup
 from tests.cli._utils import CLIAsserts
 
 
-class SignatureMatchesCLI(InvestorSetup, CLIAsserts, TestCase):
+class SignatureMatchesCLI(InvestmentSetup, CLIAsserts, TestCase):
     """Test the ``InvestmentParser`` interface defines arguments that match the underlying DAO signatures"""
 
     @classmethod

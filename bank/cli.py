@@ -149,17 +149,17 @@ class ProposalParser(business_logic.ProposalServices, BaseParser):
         proposal_delete.add_argument('--account', **account_definition)
 
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
-        proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add)
+        proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add_sus)
         proposal_add.add_argument('--account', **account_definition)
         self._add_cluster_args(proposal_add)
 
         proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
-        proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract)
+        proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract_sus)
         proposal_subtract.add_argument('--account', **account_definition)
         self._add_cluster_args(proposal_subtract)
 
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
+        proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).modify_proposal)
         proposal_overwrite.add_argument('--account', **account_definition)
         proposal_overwrite.add_argument('--type', **type_definition)
         proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
@@ -206,7 +206,7 @@ class InvestmentParser(business_logic.InvestmentServices, BaseParser):
         investment_delete.add_argument('--id', **proposal_id_definition)
 
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
-        investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add)
+        investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add_sus)
         investment_add.add_argument('--account', **account_definition)
         investment_add.add_argument('--id', **proposal_id_definition)
         investment_add.add_argument('--sus', **service_unit_definition)

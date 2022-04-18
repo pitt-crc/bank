@@ -1,3 +1,8 @@
+from unittest import TestCase
+
+from tests._utils import InvestmentSetup
+
+
 class InitExceptions(InvestmentSetup, TestCase):
 
     def test_error_on_missing_proposal(self) -> None:

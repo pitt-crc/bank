@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta, date
-from typing import List
+from datetime import timedelta, date
 
 from sqlalchemy import select
 
@@ -82,3 +81,8 @@ class InvestmentSetup(EmptyAccountSetup):
             account = result.scalars().first()
             account.investments.extend(investments)
             session.commit()
+
+
+class AdminSetup(ProposalSetup, InvestmentSetup):
+    def setup(self):
+        pass
