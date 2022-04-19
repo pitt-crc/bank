@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import time_machine
 
-from bank import orm
 from bank import settings
 from bank.business_logic import AdminServices
 from bank.orm import ProposalEnum
@@ -39,15 +38,6 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
         with time_machine.travel(end_of_first_inv + timedelta(days=1)):
             self.account.renew(reset_usage=False)
 
-    def test_proposal_is_archived(self) -> None:
-        """Test the original user proposal is archived"""
-
-        original_proposal = self.session.query(orm.Proposal).filter(orm.Proposal.id == self.proposal_id).first()
-        self.assertIsNone(original_proposal, 'Original proposal was not deleted')
-
-        archived_proposal = self.session.query(orm.ProposalArchive).filter(orm.ProposalArchive.id == self.proposal_id).first()
-        self.assertTrue(archived_proposal, 'Copy of proposal was not created in the archive')
-
     def test_new_proposal_is_created(self) -> None:
         """Test a new user proposal is created"""
 
@@ -60,15 +50,6 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
 
         self.assertEqual(new_proposal.proposal_type, ProposalEnum.Proposal)
 
-    def test_investments_are_archived(self) -> None:
-        """Test is_expired investments are archived"""
-
-        archived_investment = self.session.query(orm.InvestorArchive).filter(orm.InvestorArchive.id == self.inv_id[0])
-        self.assertTrue(archived_investment, 'No investment found in archive table')
-
-        remaining_investments = self.account._get_investment(self.session)
-        self.assertEqual(len(self.inv_id) - 1, len(remaining_investments))
-
     def test_investments_are_rolled_over(self) -> None:
         """Test unused investment service units are rolled over"""
 
@@ -79,6 +60,9 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
 @patch('smtplib.SMTP.send_message')
 class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     """Test for emails sent when locking accounts"""
+
+    def setUpClass(cls) -> None:
+        cls.account = AdminServices(settings.test_account)
 
     @patch('bank.system.SlurmAccount.set_locked_state')
     def test_email_sent_for_expired(self, mock_locked_state, mock_send_message) -> None:
