@@ -71,7 +71,7 @@ class InvestmentSetup(EmptyAccountSetup):
                 end_date=end,
                 service_units=self.num_inv_sus,
                 current_sus=5_000,
-                withdrawn_sus=1_000,
+                withdrawn_sus=100,
                 rollover_sus=0
             )
             investments.append(inv)

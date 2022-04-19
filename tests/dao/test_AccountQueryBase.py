@@ -74,11 +74,6 @@ class GetMissingProposal(EmptyAccountSetup, TestCase):
     def test_error_no_proposal_for_account(self) -> None:
         """Test for a ``MissingProposalError`` error when given proposal id for another account"""
 
-        # Ensure the proposal id used in testing does exist
-        with Session() as session:
-            qb = AccountQueryBase(settings.test_account)
-            qb.get_proposal_by_id(session, 1)
-
         # Check for error when trying to access proposal id from a different account
         qb = AccountQueryBase('fake_account')
         with self.assertRaises(MissingProposalError), Session() as session:

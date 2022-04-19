@@ -1,5 +1,10 @@
 from unittest import TestCase
 
+from bank import settings
+from bank.business_logic import InvestmentServices
+from bank.dao import InvestmentData, ProposalData
+from bank.exceptions import MissingProposalError, MissingInvestmentError
+from bank.orm import Session, ProposalEnum, Investment
 from tests._utils import InvestmentSetup
 
 
@@ -22,6 +27,9 @@ class InitExceptions(InvestmentSetup, TestCase):
 
 class AdvanceInvestmentSus(InvestmentSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
+
+    def setUpClass(cls) -> None:
+        cls.account = InvestmentServices(settings.test_account)
 
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
@@ -54,7 +62,7 @@ class AdvanceInvestmentSus(InvestmentSetup, TestCase):
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
 
         with Session() as session:
-            investments = self.account._get_investment(session)
+            investments = self.account.get_all_investments(session)
             available_sus = sum(inv.service_units for inv in investments)
 
         with self.assertRaises(ValueError):
