@@ -72,7 +72,7 @@ class AccountQueryBase:
             MissingProposalError: If the account doesn't have an active proposal
         """
 
-        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.is_active == True)
+        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.is_active)
         proposal = session.execute(query).scalars().first()
         if proposal is None:
             raise MissingProposalError(f'Account `{self._account_name}` does not have an active proposal.')
@@ -172,7 +172,7 @@ class AccountQueryBase:
             MissingInvestmentError: If the account doesn't have an active investment
         """
 
-        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.is_active == True)
+        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.is_active)
         inv = session.execute(query).scalars().first()
         if not inv:
             raise MissingInvestmentError(f'Account {self._account_name} has no active investment')

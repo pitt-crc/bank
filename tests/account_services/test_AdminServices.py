@@ -9,7 +9,7 @@ from bank import settings
 from bank.business_logic import AdminServices
 from bank.orm import ProposalEnum
 from bank.system.slurm import SlurmAccount
-from tests._utils import AdminSetup
+from tests._utils import ProposalSetup, InvestmentSetup
 
 
 class CalculatePercentage(TestCase):
@@ -26,7 +26,7 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AdminServices._calculate_percentage(1, 2))
 
 
-class Renewal(AdminSetup, TestCase):
+class Renewal(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
     @patch.object(SlurmAccount, "get_cluster_usage", return_value=0)
@@ -77,7 +77,7 @@ class Renewal(AdminSetup, TestCase):
 
 
 @patch('smtplib.SMTP.send_message')
-class NotifyAccount(AdminSetup, TestCase):
+class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     """Test for emails sent when locking accounts"""
 
     @patch('bank.system.SlurmAccount.set_locked_state')

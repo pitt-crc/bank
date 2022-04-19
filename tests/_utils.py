@@ -37,7 +37,7 @@ class ProposalSetup(EmptyAccountSetup):
     def setUp(self) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
-        super().setUp()
+        super(ProposalSetup, self).setUp()
 
         proposals = []
         for i in range(3):
@@ -81,8 +81,3 @@ class InvestmentSetup(EmptyAccountSetup):
             account = result.scalars().first()
             account.investments.extend(investments)
             session.commit()
-
-
-class AdminSetup(ProposalSetup, InvestmentSetup):
-    def setup(self):
-        pass
