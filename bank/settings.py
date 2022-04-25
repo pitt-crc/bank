@@ -144,7 +144,7 @@ from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pit
 # LDAP variables
 ldap_username = _ENV.get_value(_APP_PREFIX + 'LDAP_USERNAME', default='crcquery')
 ldap_password_path = _ENV.get_value(_APP_PREFIX + 'LDAP_PASSWORD_PATH', default='/ihome/crc/scripts/crcquery.txt')
-ldap_hostname = _ENV.get_value(_APP_PREFIX + 'LDAP_OBJECT', default='ldap://sam-ldap-prod-01.cssd.pitt.edu')
+ldap_hostname = _ENV.get_value(_APP_PREFIX + 'LDAP_HOSTNAME', default='ldap://sam-ldap-prod-01.cssd.pitt.edu')
 ad_server = _ENV.get_value(_APP_PREFIX + 'AD_SERVER', default='pittad.univ.pitt.edu')
 
 # An email to send when a user has exceeded a proposal usage threshold
