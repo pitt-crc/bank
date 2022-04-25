@@ -59,6 +59,19 @@ Application Settings
    * - expired_proposal_notice
      - CRC_BANK_EXPIRED_PROPOSAL_NOTICE
      - The email template to use when a user's propsal has expired
+   * - ldap_username
+     - CRC_BANK_LDAP_USERNAME
+     - Username to use when running LDAP queries
+   * - ldap_password_path
+     - CRC_BANK_LDAP_PASSWORD_PATH
+     - Plain text password corresponding to the configured LDAP userid
+   * - ad_server
+     - CRC_BANK_AD_SERVER
+     - Microsoft's Active Directory (AD) for user authentication and authorization
+   * - ldap_hostname
+     - CRC_BANK_LDAP_HOSTNAME
+     - Fully resolved LDAP hostname
+
 
 Usage Example
 -------------
@@ -95,8 +108,6 @@ from textwrap import dedent
 
 from environ import environ
 
-from bank.system.smtp import EmailTemplate
-
 _ENV = environ.Env()
 _CUR_DIR = Path(__file__).resolve().parent
 _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
@@ -128,11 +139,17 @@ inv_rollover_fraction = _ENV.get_value(_APP_PREFIX + 'INV_ROLLOVER_FRACTION', ca
 user_email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
 from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
 
+# LDAP variables
+ldap_username = _ENV.get_value(_APP_PREFIX + 'LDAP_USERNAME', default='crcquery')
+ldap_password_path = _ENV.get_value(_APP_PREFIX + 'LDAP_PASSWORD_PATH', default='/ihome/crc/scripts/crcquery.txt')
+ldap_hostname = _ENV.get_value(_APP_PREFIX + 'LDAP_HOSTNAME', default='ldap://sam-ldap-prod-01.cssd.pitt.edu')
+ad_server = _ENV.get_value(_APP_PREFIX + 'AD_SERVER', default='pittad.univ.pitt.edu')
+
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
 usage_warning = _ENV.get_value(
     _APP_PREFIX + 'USAGE_WARNING',
-    default=EmailTemplate(dedent("""
+    default=dedent("""
     <html>
     <head></head>
     <body>
@@ -155,14 +172,14 @@ usage_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))
 
 # An email to send when a user is  nearing the end of their proposal
 warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
 expiration_warning = _ENV.get_value(
     _APP_PREFIX + 'EXPIRATION_WARNING',
-    default=EmailTemplate(dedent("""
-    <html>
+    default=dedent("""
+    <html
     <head></head>
     <body>
     <p>
@@ -180,12 +197,12 @@ expiration_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))
 
 # An email to send when the proposal has expired
 expired_proposal_notice = _ENV.get_value(
     _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
-    default=EmailTemplate(dedent("""
+    default=dedent("""
     <html>
     <head></head>
     <body>
@@ -202,4 +219,4 @@ expired_proposal_notice = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))

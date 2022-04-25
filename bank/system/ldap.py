@@ -4,6 +4,7 @@ from ldap3 import Server, Connection
 
 from bank.exceptions import LdapUserNotFound, LDAPGroupNotFound, CRCUserNotFound
 from bank.system import ShellCmd
+from bank.settings import ldap_username, ldap_password_path, ldap_hostname, ad_server
 
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:
@@ -21,7 +22,7 @@ def check_ldap_group(account: str, raise_if_false=False) -> bool:
     return_val = bool(cmd.out)
 
     if raise_if_false and not return_val:
-        raise LDAPGroupNotFound(f"ERROR: The LDAP group {account} can't be found!")
+        raise LDAPGroupNotFound("ERROR: The LDAP group {} can't be found!".format(account))
 
     return return_val
 
@@ -37,11 +38,10 @@ def check_ldap_user(username: str, raise_if_false=False) -> bool:
         LdapUserNotFound: If ``raise_if_false`` is True and the user is not found
     """
 
-    ldap_username = "crcquery"
-    with open("/ihome/crc/scripts/crcquery.txt", "r") as f:
+    with open(ldap_password_path, "r") as f:
         ldap_password = f.readline().strip()
 
-    pitt_ad_server = Server("pittad.univ.pitt.edu", port=389)
+    pitt_ad_server = Server(ad_server, port=389)
     pitt_ad_connection = Connection(
         pitt_ad_server,
         user="cn={0},ou=Accounts,dc=univ,dc=pitt,dc=edu".format(ldap_username),
@@ -72,11 +72,10 @@ def check_crc_user(username: str, raise_if_false=False) -> bool:
         CRCUserNotFound: If ``raise_if_false`` is True and the user is not found
     """
 
-    ldap_username = "crcquery"
-    with open("/ihome/crc/scripts/crcquery.txt", "r") as f:
+    with open(ldap_password_path, "r") as f:
         ldap_password = f.readline().strip()
 
-    crc_ldap_object = ldap.initialize("ldap://sam-ldap-prod-01.cssd.pitt.edu")
+    crc_ldap_object = ldap.initialize(ldap_hostname)
     crc_ldap_object.start_tls_s()
 
     auth = ldap.sasl.sasl(
