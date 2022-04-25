@@ -2,7 +2,8 @@ from unittest import TestCase
 
 from bank import settings
 from bank.business_logic import InvestmentServices
-from bank.dao import InvestmentData, ProposalData
+from bank.dao import InvestmentData
+from bank.dao.proposal import ProposalData
 from bank.exceptions import MissingProposalError, MissingInvestmentError
 from bank.orm import Session, ProposalEnum, Investment
 from tests._utils import InvestmentSetup

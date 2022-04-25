@@ -1,5 +1,6 @@
 beautifulsoup4
 ldap3
+pandas
 python-environ
 python-ldap
 SQLAlchemy

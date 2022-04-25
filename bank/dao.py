@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Optional, List, Union
+from typing import Optional, Union
 
-from sqlalchemy import delete, select, or_, between
+import pandas as pd
+from sqlalchemy import delete, select
 
 from bank import settings
 from bank.exceptions import *
@@ -14,8 +15,7 @@ from bank.orm import ProposalEnum, Session, Account, Proposal, Investment, Alloc
 LOG = getLogger('bank.dao.account_data')
 
 
-class AccountQueryBase:
-    """Encapsulates common DB queries as methods for use by child classes"""
+class ProposalData:
 
     def __init__(self, account_name: str) -> None:
         """Retrieve data for an existing bank account
@@ -26,201 +26,47 @@ class AccountQueryBase:
 
         self._account_name = account_name
 
-    def get_account(self, session: Session) -> Account:
-        """Return entry from ``account`` table corresponding to the current account
-
-        Args:
-            session: Database session to use when executing the query
-
-        Returns:
-            Entry from the ``account`` table as an ``Account`` instance
-        """
-
-        stmt = select(Account).where(Account.name == self._account_name)
-        result = session.execute(stmt).scalars().first()
-        if result is None:
-            raise BankAccountNotFoundError(f'No account found for {self._account_name}')
-
-        return result
-
-    def get_proposal(self, session: Session, pid: Optional[int] = None) -> Optional[Proposal]:
-        """Convenience function for combining the ``get_primary_proposal`` and ``get_proposal_by_id``
-
-        Return the account's currently active proposal. Optionally, specify
-        ``pid`` to return a specific proposal tied to the current account.
-
-        Args:
-            session: Database session to use when executing the query
-            pid: Optional return the proposal with the given ID
-
-        Raises:
-            MissingProposalError: If ``pid`` is ``None`` and the account has no currently active proposal
-        """
-
-        if pid is None:
-            return self.get_primary_proposal(session)
-
-        return self.get_proposal_by_id(session, pid)
-
-    def get_primary_proposal(self, session: Session) -> Proposal:
-        """Return the account's currently active proposal
-
-        Args:
-            session: Database session to use when executing the query
-
-        Raises:
-            MissingProposalError: If the account doesn't have an active proposal
-        """
-
-        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.is_active)
-        proposal = session.execute(query).scalars().first()
-        if proposal is None:
-            raise MissingProposalError(f'Account `{self._account_name}` does not have an active proposal.')
-
-        return proposal
-
-    def get_proposal_by_id(self, session: Session, pid: int) -> Proposal:
-        """Return a specific proposal tied to the current account.
-
-        Args:
-            session: Database session to use when executing the query
-            pid: The ID of the proposal to return
-
-        Raises:
-            MissingProposalError: If the account has no associated proposal with the given ID
-        """
-
-        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
-        proposal = session.execute(query).scalars().first()
-        if proposal is None:
-            raise MissingProposalError(f'Account `{self._account_name}` has no proposal with {pid}.')
-
-        return proposal
-
-    def get_overlapping_proposals(self, session: Session, start: date, end_date: date) -> List[Proposal]:
-        """Return any proposals tied to the current account that overlap the given date range
-
-        Args:
-            session: Database session to use when executing the query
-            start: Starting date to search after
-            end_date: Ending date to search before
-
-        Returns:
-            A list of ``Proposal`` instances from the ``proposal`` database
-        """
-
-        query = select(Proposal).join(Account) \
-            .where(Account.name == self._account_name) \
-            .where(
-            or_(
-                between(start, Proposal.start_date, Proposal.end_date),
-                between(end_date, Proposal.start_date, Proposal.end_date),
-                between(Proposal.start_date, start, end_date),
-                between(Proposal.end_date, start, end_date)
-            )
-        )
-
-        return session.execute(query).scalars().all()
-
-    def get_allocation(self, session: Session, cluster: str, pid: Optional[int] = None) -> Allocation:
-        proposal = self.get_proposal(session, pid=pid)
-        query = select(Allocation) \
-            .where(Allocation.proposal_id == proposal.id) \
-            .where(Allocation.cluster_name == cluster)
-
-        return session.execute(query).scalars().first()
-
-    def get_all_proposals(self, session: Session) -> List[Proposal]:
-        """Return all proposals tied to the current account
-
-        Args:
-            session: Database session to use when executing the query
-
-        Returns:
-            A list of ``Proposal`` instances from the ``proposal`` database
-        """
-
-        query = select(Proposal).join(Account).where(Account.name == self._account_name)
-        return session.execute(query).scalars().all()
-
-    def get_investment(self, session: Session, inv_id: Optional[int]) -> Investment:
-        """Convenience function combining the ``get_primary_investment`` and ``get_investment_by_id``
-
-        Return the account's currently active investment. Optionally, specify
-        ``inv_id`` to return a specific investment tied to the current account.
-
-        Args:
-            session: Database session to use when executing the query
-            inv_id: Optional return the investment with the given ID
-
-        Raises:
-            MissingInvestmentError: If ``inv_id`` is ``None`` and the account has no currently active investment
-        """
-
-        if inv_id is None:
-            return self.get_primary_investment(session)
-
-        return self.get_investment_by_id(session, inv_id)
-
-    def get_primary_investment(self, session: Session) -> Investment:
-        """Return the account's currently active investment
-
-        Args:
-            session: Database session to use when executing the query
-
-        Raises:
-            MissingInvestmentError: If the account doesn't have an active investment
-        """
-
-        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.is_active)
-        inv = session.execute(query).scalars().first()
-        if not inv:
-            raise MissingInvestmentError(f'Account {self._account_name} has no active investment')
-
-        return inv
-
-    def get_investment_by_id(self, session: Session, inv_id: int) -> Investment:
-        """Return a specific investment tied to the current account.
-
-        Args:
-            session: Database session to use when executing the query
-            inv_id: The ID of the investment to return
-
-        Raises:
-            MissingInvestmentError: If the account has no associated investment with the given ID
-        """
-
-        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.id == inv_id)
-        inv = session.execute(query).scalars().first()
-        if inv is None:
-            raise MissingInvestmentError(f'Account {self._account_name} has no investment with id {inv_id}')
-
-        return inv
-
-    def get_all_investments(self, session: Session) -> List[Investment]:
-        """Return all investments tied to the current account
-
-        Args:
-            session: Database session to use when executing the query
-
-        Returns:
-            A list of ``Investment`` instances from the ``investment`` database
-        """
-
-        query = select(Investment).join(Account).where(Account.name == self._account_name)
-        return session.execute(query).scalars().all()
-
-
-class ProposalData(AccountQueryBase):
-    """Data access for a single account's proposal information"""
-
-    def _verify_cluster_values(self, **kwargs):
+    @staticmethod
+    def _verify_cluster_values(**kwargs: int) -> None:
         for cluster, sus in kwargs.items():
             if cluster not in settings.clusters:
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
             if sus < 0:
                 raise ValueError('Service units cannot be negative.')
+
+    def _verify_proposal_id(self, pid: int) -> None:
+        if not self.check_id_matches_account(pid):
+            raise MissingProposalError(f'Account `{self._account_name}` has no proposal with {pid}.')
+
+    def check_id_matches_account(self, pid: int) -> bool:
+        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
+        with Session() as session:
+            return session.execute(query).scalars().first() is not None
+
+    def get_current_proposal_data(self, active_only: bool = True) -> pd.DataFrame:
+        query = select(Proposal).join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Proposal.start_date <= date.today()) \
+            .where(Proposal.end_date > date.today())
+
+        if active_only:
+            query = query.where(Proposal.is_active)
+
+        with Session() as session:
+            return pd.read_sql_query(query, session.connection())
+
+    def get_proposal_data_in_range(self, start: date, end: date, active_only: bool = True) -> pd.DataFrame:
+        query = select(Proposal).join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Proposal.start_date >= start) \
+            .where(Proposal.end_date < end)
+
+        if active_only:
+            query = query.where(Proposal.is_active)
+
+        with Session() as session:
+            return pd.read_sql_query(query, session.connection())
 
     def create_proposal(
             self,
@@ -239,43 +85,39 @@ class ProposalData(AccountQueryBase):
         """
 
         with Session() as session:
-            # Check for any overlapping proposals
-            end_date = start + timedelta(days=duration)
-            if self.get_overlapping_proposals(session, start, end_date):
-                raise ProposalExistsError(f'Proposal already exists for account: {self._account_name}')
-
             # Create the new proposal and allocations
             new_proposal = Proposal(
                 proposal_type=type,
                 percent_notified=0,
                 start_date=start,
-                end_date=end_date,
+                end_date=start + timedelta(days=duration),
                 allocations=[
                     Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
                 ]
             )
 
             # Assign the proposal to user account
-            account = self.get_account(session)
+            account_query = select(Account).where(Account.name == self._account_name)
+            account = session.execute(account_query).scalars().first()
             account.proposals.append(new_proposal)
 
             session.add(account)
             session.commit()
             LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
-    def delete_proposal(self, pid: Optional[int] = None) -> None:
+    def delete_proposal(self, pid: int = None) -> None:
         """Delete the account's current proposal"""
 
+        self._verify_proposal_id(pid)
         with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            session.execute(delete(Proposal).where(Proposal.id == proposal.id))
-            session.execute(delete(Allocation).where(Allocation.proposal_id == proposal.id))
+            session.execute(delete(Proposal).where(Proposal.id == pid))
+            session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
-            LOG.info(f"Deleted proposal {proposal.id} for {self._account_name}")
+            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
 
     def modify_proposal(
             self,
-            pid: Optional[int] = None,
+            pid: int,
             type: ProposalEnum = None,
             start_date: Optional[date] = None,
             end_date: Optional[date] = None,
@@ -294,9 +136,12 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._verify_proposal_id(pid)
         self._verify_cluster_values(**kwargs)
+
+        query = select(Proposal).where(Proposal.id == pid)
         with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
+            proposal = session.execute(query).scalars().first()
             proposal.proposal_type = type or proposal.proposal_type
             proposal.start_date = start_date or proposal.start_date
             proposal.end_date = end_date or proposal.end_date
@@ -307,7 +152,7 @@ class ProposalData(AccountQueryBase):
             session.commit()
             LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
-    def add_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
+    def add_sus(self, pid: int, **kwargs: int) -> None:
         """Add service units to the account's current allocation
 
         Args:
@@ -318,16 +163,19 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._verify_proposal_id(pid)
         self._verify_cluster_values(**kwargs)
+
+        query = select(Allocation).join(Proposal).where(Proposal.id == pid)
         with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            for allocation in proposal.allocations:
+            allocations = session.execute(query).scalars().all()
+            for allocation in allocations:
                 allocation.service_units += kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Added {kwargs}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {kwargs}")
 
-    def subtract_sus(self, pid: Optional[int] = None, **kwargs: int) -> None:
+    def subtract_sus(self, pid: int, **kwargs: int) -> None:
         """Subtract service units from the account's current allocation
 
         Args:
@@ -338,17 +186,20 @@ class ProposalData(AccountQueryBase):
             MissingProposalError: If the account does not have a proposal
         """
 
+        self._verify_proposal_id(pid)
         self._verify_cluster_values(**kwargs)
+
+        query = select(Allocation).join(Proposal).where(Proposal.id == pid)
         with Session() as session:
-            proposal = self.get_proposal(session, pid=pid)
-            for allocation in proposal.allocations:
+            allocations = session.execute(query).scalars().all()
+            for allocation in allocations:
                 allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Removed {kwargs}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {kwargs}")
 
 
-class InvestmentData(AccountQueryBase):
+class InvestmentData:
     """Data access for a single account's investment information"""
 
     def __init__(self, account_name: str) -> None:

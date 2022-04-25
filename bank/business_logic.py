@@ -21,12 +21,22 @@ Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
 
 
-class ProposalServices(ProposalData):
+class ProposalServices:
     """Account logic for primary account proposals"""
 
-    def __int__(self, account_name):
-        super().__init__(account_name)
-        SlurmAccount.check_account_exists(account_name)
+    def __init__(self, account_name):
+        self._account_name = account_name
+        self._pdata = ProposalData(account_name)
+
+    def _default_pid(self, pid):
+        if pid is not None:
+            return pid
+
+        proposal_df = self._pdata.get_current_proposal_data()
+        if proposal_df.empty:
+            raise MissingProposalError(f'Could not find active proposal for account {self._account_name}')
+
+        return proposal_df.id[0]
 
     def create_proposal(
             self,
@@ -37,11 +47,13 @@ class ProposalServices(ProposalData):
     ) -> None:
 
         end = start + timedelta(days=duration)
-        with Session() as session:
-            if self.get_overlapping_proposals(session, start, end):
-                raise ProposalExistsError('Proposals for a given account cannot overlap with existing proposals.')
+        if self._pdata.get_proposal_data_in_range(start, end):
+            raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
-        super().create_proposal(type=type, start=start, duration=duration, **kwargs)
+        self._pdata.create_proposal(type=type, start=start, duration=duration, **kwargs)
+
+    def delete_proposal(self, pid):
+        self._pdata.delete_proposal(self._default_pid(pid))
 
     def modify_proposal(
             self,
@@ -51,19 +63,19 @@ class ProposalServices(ProposalData):
             end_date: Optional[date] = None,
             **kwargs: Union[int, date]
     ) -> None:
+        pid = self._default_pid(pid)
+        overlapping_proposals = self._pdata.get_proposal_data_in_range(start_date, end_date)
+        conflicting_proposal_ids = set(overlapping_proposals.pid) - {pid}
+        if conflicting_proposal_ids:
+            raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
-        with Session() as session:
-            proposal = self.get_proposal(session, pid)
-            start_date = start_date or proposal.start_date
-            end_date = end_date or proposal.end_date
+        self._pdata.modify_proposal(self._default_pid(pid), type, start_date, end_date, **kwargs)
 
-            overlapping_proposals = self.get_overlapping_proposals(session, start_date, end_date)
-            overlapping_proposals.remove(proposal)
+    def add_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+        self._pdata.add_sus(self._default_pid(pid), **kwargs)
 
-            if overlapping_proposals:
-                raise ProposalExistsError('New proposals cannot overlap with existing proposals.')
-
-        super().modify_proposal(pid=pid, type=type, start_date=start_date, end_date=end_date, **kwargs)
+    def subtract_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+        self._pdata.subtract_sus(self._default_pid(pid), **kwargs)
 
 
 class InvestmentServices(InvestmentData):

@@ -10,7 +10,6 @@ from bank.orm import Session, Proposal, Account
 from tests._utils import ProposalSetup, EmptyAccountSetup
 
 
-# Todo: Test overlapping proposal
 class CreateProposal(EmptyAccountSetup, TestCase):
     """Test the creation of proposals via the ``create_proposal`` method"""
 
@@ -58,15 +57,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 class DeleteProposal(ProposalSetup, TestCase):
     """Test the deletion of proposals via the ``delete_proposal`` method"""
 
-    def test_primary_proposal_is_deleted(self) -> None:
-        """Test the primary proposal is deleted by default"""
-
-        account = ProposalData(settings.test_account)
-        account.delete_proposal()
-        with self.assertRaises(MissingProposalError), Session() as session:
-            account.get_proposal(session)
-
-    def test_proposal_is_deleted_by_id(self) -> None:
+    def test_proposal_is_deleted(self) -> None:
         """Test a specific proposal is deleted when an id is given"""
 
         account = ProposalData(settings.test_account)
@@ -77,17 +68,7 @@ class DeleteProposal(ProposalSetup, TestCase):
             with self.assertRaises(MissingProposalError, msg='Not all proposals were deleted by their ID'):
                 account.get_proposal(session, pid=1)
 
-
-class DeleteMissingProposal(EmptyAccountSetup, TestCase):
-    """Test errors when deleting proposals that do not exist"""
-
-    def test_error_if_missing_primary_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised if there is no primary proposal"""
-
-        with self.assertRaises(MissingProposalError):
-            ProposalData(settings.test_account).delete_proposal()
-
-    def test_error_if_missing_proposal_id(self) -> None:
+    def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
 
         with self.assertRaises(MissingProposalError):
@@ -125,17 +106,7 @@ class AddSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.add_sus(**{settings.test_cluster: -1})
 
-
-class AddToMissingProposal(EmptyAccountSetup, TestCase):
-    """Test errors for addition of service units to proposals that don't exist"""
-
-    def test_error_if_missing_primary_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
-
-        with self.assertRaises(MissingProposalError):
-            ProposalData(settings.test_account).add_sus(**{settings.test_cluster: 1})
-
-    def test_error_if_missing_proposal_id(self) -> None:
+    def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
 
         with self.assertRaises(MissingProposalError):
@@ -178,17 +149,7 @@ class SubtractSus(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.subtract_sus(**{settings.test_cluster: self.num_proposal_sus + 100})
 
-
-class SubtractFromMissingProposal(EmptyAccountSetup, TestCase):
-    """Test errors for subtraction of service units to proposals that don't exist"""
-
-    def test_error_on_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
-
-        with self.assertRaises(MissingProposalError):
-            ProposalData(settings.test_account).subtract_sus(**{settings.test_cluster: 1})
-
-    def test_error_if_missing_proposal_id(self) -> None:
+    def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
 
         with self.assertRaises(MissingProposalError):
@@ -253,17 +214,7 @@ class ModifyProposal(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.modify_proposal(**{settings.test_cluster: -1})
 
-
-class ModifyMissingProposal(EmptyAccountSetup, TestCase):
-    """Test errors for subtraction of service units to proposals that don't exist"""
-
-    def test_error_on_missing_proposal(self) -> None:
-        """Test a ``MissingProposalError`` error is raised when account has no proposal"""
-
-        with self.assertRaises(MissingProposalError):
-            ProposalData(settings.test_account).modify_proposal(**{settings.test_cluster: 1})
-
-    def test_error_if_missing_proposal_id(self) -> None:
+    def test_error_if_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` error is raised if there is no proposal with a given ID"""
 
         with self.assertRaises(MissingProposalError):
