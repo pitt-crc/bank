@@ -108,8 +108,6 @@ from textwrap import dedent
 
 from environ import environ
 
-from bank.system.smtp import EmailTemplate
-
 _ENV = environ.Env()
 _CUR_DIR = Path(__file__).resolve().parent
 _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
@@ -151,7 +149,7 @@ ad_server = _ENV.get_value(_APP_PREFIX + 'AD_SERVER', default='pittad.univ.pitt.
 notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
 usage_warning = _ENV.get_value(
     _APP_PREFIX + 'USAGE_WARNING',
-    default=EmailTemplate(dedent("""
+    default=dedent("""
     <html>
     <head></head>
     <body>
@@ -174,14 +172,14 @@ usage_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))
 
 # An email to send when a user is  nearing the end of their proposal
 warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
 expiration_warning = _ENV.get_value(
     _APP_PREFIX + 'EXPIRATION_WARNING',
-    default=EmailTemplate(dedent("""
-    <html>
+    default=dedent("""
+    <html
     <head></head>
     <body>
     <p>
@@ -199,12 +197,12 @@ expiration_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))
 
 # An email to send when the proposal has expired
 expired_proposal_notice = _ENV.get_value(
     _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
-    default=EmailTemplate(dedent("""
+    default=dedent("""
     <html>
     <head></head>
     <body>
@@ -221,4 +219,4 @@ expired_proposal_notice = _ENV.get_value(
     </p>
     </body>
     </html>
-    """)))
+    """))
