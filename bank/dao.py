@@ -6,7 +6,7 @@ from math import ceil
 from typing import Optional, Union
 
 import pandas as pd
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, or_, between
 
 from bank import settings
 from bank.exceptions import *
@@ -15,10 +15,12 @@ from bank.orm import ProposalEnum, Session, Account, Proposal, Investment, Alloc
 LOG = getLogger('bank.dao.account_data')
 
 
+# Todo: Revisit pandas functions during unit testing
 class ProposalData:
+    """Data access for proposals tied to a given account"""
 
     def __init__(self, account_name: str) -> None:
-        """Retrieve data for an existing bank account
+        """Retrieve proposal data for an existing bank account
 
         Args:
             account_name: The name of the account
@@ -28,6 +30,8 @@ class ProposalData:
 
     @staticmethod
     def _verify_cluster_values(**kwargs: int) -> None:
+        """Raise a ``ValueError`` if given cluster names or service units are invalid"""
+
         for cluster, sus in kwargs.items():
             if cluster not in settings.clusters:
                 raise ValueError(f'{cluster} is not a valid cluster name.')
@@ -36,15 +40,35 @@ class ProposalData:
                 raise ValueError('Service units cannot be negative.')
 
     def _verify_proposal_id(self, pid: int) -> None:
+        """Raise a ``MissingProposalError`` if a given ID does not belong to the current account"""
+
         if not self.check_id_matches_account(pid):
             raise MissingProposalError(f'Account `{self._account_name}` has no proposal with {pid}.')
 
     def check_id_matches_account(self, pid: int) -> bool:
+        """Return whether a given proposal ID belongs to the current account
+
+        Args:
+            pid: The ID to compare against the current account
+
+        Returns:
+            Boolean representing whether ID matches the current account
+        """
+
         query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
         with Session() as session:
             return session.execute(query).scalars().first() is not None
 
     def get_current_proposal_data(self, active_only: bool = True) -> pd.DataFrame:
+        """Return a tabular summary of current account proposals
+
+        Args:
+            active_only: Only return a summary of active proposals
+
+        Returns:
+            A ``DataFrame`` with proposal information
+        """
+
         query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
             .where(Proposal.start_date <= date.today()) \
@@ -57,10 +81,27 @@ class ProposalData:
             return pd.read_sql_query(query, session.connection())
 
     def get_proposal_data_in_range(self, start: date, end: date, active_only: bool = True) -> pd.DataFrame:
+        """Return a tabular summary of account proposals overlying a given date range
+
+        Args:
+            start: Start date to search for proposals in
+            end: End date to search for proposals in
+            active_only: Only return a summary of active proposals
+
+        Returns:
+            A ``DataFrame`` with proposal information
+        """
+
         query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
-            .where(Proposal.start_date >= start) \
-            .where(Proposal.end_date < end)
+            .where(
+            or_(
+                between(start, Proposal.start_date, Proposal.end_date),
+                between(end, Proposal.start_date, Proposal.end_date),
+                between(Proposal.start_date, start, end),
+                between(Proposal.end_date, start, end)
+            )
+        )
 
         if active_only:
             query = query.where(Proposal.is_active)
@@ -75,13 +116,13 @@ class ProposalData:
             duration: int = 365,
             **kwargs: int
     ) -> None:
-        """Create a new proposal for the given account
+        """Create a new proposal for the account
 
         Args:
             type: The type of the proposal
             start: The start date of the proposal
             duration: How many days before the proposal expires
-            **kwargs: Service units to add on to each cluster
+            **kwargs: Service units to allocate to each cluster
         """
 
         with Session() as session:
@@ -106,7 +147,11 @@ class ProposalData:
             LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self, pid: int = None) -> None:
-        """Delete the account's current proposal"""
+        """Delete a proposal from the current account
+
+        Args:
+            pid: ID of the proposal to delete
+        """
 
         self._verify_proposal_id(pid)
         with Session() as session:
@@ -123,17 +168,18 @@ class ProposalData:
             end_date: Optional[date] = None,
             **kwargs: Union[int, date]
     ) -> None:
-        """Replace the number of service units allocated to a given cluster
+        """Overwrite the properties of a given proposal
 
         Args:
-            pid: Modify a specific proposal by its id (defaults to currently active proposal)
+            pid: The ID of the proposal to modify
             type: Optionally change the type of the proposal
             start_date: Optionally set a new start date for the proposal
             end_date: Optionally set a new end date for the proposal
             **kwargs: New service unit values to assign for each cluster
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingProposalError: If the given ID does not match the current account
+            ValueError: For invalid cluster names of service units
         """
 
         self._verify_proposal_id(pid)
@@ -153,14 +199,15 @@ class ProposalData:
             LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
     def add_sus(self, pid: int, **kwargs: int) -> None:
-        """Add service units to the account's current allocation
+        """Add service units to a given proposal
 
         Args:
-            pid: Modify a specific proposal by its id (defaults to currently active proposal)
+            pid: The ID of the proposal to modify
             **kwargs: Service units to add for each cluster
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingProposalError: If the given ID does not match the current account
+            ValueError: For invalid cluster names of service units
         """
 
         self._verify_proposal_id(pid)
@@ -176,14 +223,15 @@ class ProposalData:
             LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {kwargs}")
 
     def subtract_sus(self, pid: int, **kwargs: int) -> None:
-        """Subtract service units from the account's current allocation
+        """Subtract service units to a given proposal
 
         Args:
-            pid: Modify a specific proposal by its id (defaults to currently active proposal)
-            **kwargs: Service units to subtract from each cluster
+            pid: The ID of the proposal to modify
+            **kwargs: Service units to add for each cluster
 
         Raises:
-            MissingProposalError: If the account does not have a proposal
+            MissingProposalError: If the given ID does not match the current account
+            ValueError: For invalid cluster names of service units
         """
 
         self._verify_proposal_id(pid)

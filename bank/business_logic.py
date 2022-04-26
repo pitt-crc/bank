@@ -24,11 +24,29 @@ LOG = getLogger('bank.account_services')
 class ProposalServices:
     """Account logic for primary account proposals"""
 
-    def __init__(self, account_name):
+    def __init__(self, account_name: str) -> None:
+        """Administrate proposal data for the given user account
+
+        Args:
+            account_name: The name of the account to administrate
+        """
+
         self._account_name = account_name
         self._pdata = ProposalData(account_name)
 
-    def _default_pid(self, pid):
+    def _default_pid(self, pid: Union[None, int]) -> int:
+        """Return the default proposal ID to administrate
+
+        If ``pid`` is ``None``, return the ID of the currently active proposal.
+        Otherwise, return ``pid``.
+
+        Args:
+            pid: Either ``None`` or a proposal ID
+
+        Raises:
+            MissingProposalError: If ``pid`` is ``None`` and the account has no active proposal
+        """
+
         if pid is not None:
             return pid
 
@@ -45,6 +63,14 @@ class ProposalServices:
             duration: int = 365,
             **kwargs: int
     ) -> None:
+        """Create a new proposal for the account
+
+        Args:
+            type: The type of the proposal
+            start: The start date of the proposal
+            duration: How many days before the proposal expires
+            **kwargs: Service units to allocate to each cluster
+        """
 
         end = start + timedelta(days=duration)
         if self._pdata.get_proposal_data_in_range(start, end):
@@ -52,7 +78,13 @@ class ProposalServices:
 
         self._pdata.create_proposal(type=type, start=start, duration=duration, **kwargs)
 
-    def delete_proposal(self, pid):
+    def delete_proposal(self, pid: Optional[int] = None):
+        """Delete a proposal from the current account
+
+        Args:
+            pid: ID of the proposal to delete
+        """
+
         self._pdata.delete_proposal(self._default_pid(pid))
 
     def modify_proposal(
@@ -63,18 +95,54 @@ class ProposalServices:
             end_date: Optional[date] = None,
             **kwargs: Union[int, date]
     ) -> None:
+        """Overwrite the properties of the account's current allocation
+
+        Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
+            type: Optionally change the type of the proposal
+            start_date: Optionally set a new start date for the proposal
+            end_date: Optionally set a new end date for the proposal
+            **kwargs: New service unit values to assign for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
+        # Find any overlapping proposals minus the proposal being modified
         pid = self._default_pid(pid)
         overlapping_proposals = self._pdata.get_proposal_data_in_range(start_date, end_date)
         conflicting_proposal_ids = set(overlapping_proposals.pid) - {pid}
+
+        # Prevent modified proposal from creating an overlap with other proposals
         if conflicting_proposal_ids:
             raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
         self._pdata.modify_proposal(self._default_pid(pid), type, start_date, end_date, **kwargs)
 
     def add_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+        """Add service units to the account's current allocation
+
+        Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
+            **kwargs: Service units to add for each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
         self._pdata.add_sus(self._default_pid(pid), **kwargs)
 
     def subtract_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+        """Subtract service units from the account's current allocation
+
+        Args:
+            pid: Modify a specific proposal by its id (defaults to currently active proposal)
+            **kwargs: Service units to subtract from each cluster
+
+        Raises:
+            MissingProposalError: If the account does not have a proposal
+        """
+
         self._pdata.subtract_sus(self._default_pid(pid), **kwargs)
 
 
