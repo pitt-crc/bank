@@ -18,7 +18,7 @@ class InitExceptions(InvestmentSetup, TestCase):
             InvestmentData(account_name=settings.test_account)
 
     def test_error_proposal_is_class(self) -> None:
-        """Test a ``ValueError`` is raised when managing investments for accounts with Class proposals"""
+        """Test a ``ValueError`` is raised when managing investments for accounts with Value2 proposals"""
 
         account = ProposalData(settings.test_account)
         account.create_proposal(type=ProposalEnum.Class)

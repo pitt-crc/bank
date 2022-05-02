@@ -6,15 +6,11 @@ API Reference
 
 from __future__ import annotations
 
-import enum
+from enum import Enum
 
 
-class ProposalEnum(enum.Enum):
-    """Represents different classifications of user proposals"""
-
-    Unknown = 99
-    Proposal = 1
-    Class = 2
+class BaseEnum(Enum):
+    """Extends behavior of the base ``Enum`` class for easier casting"""
 
     @classmethod
     def from_string(cls, string: str) -> ProposalEnum:
@@ -28,3 +24,11 @@ class ProposalEnum(enum.Enum):
 
     def __str__(self) -> str:
         return self.name
+
+
+class ProposalEnum(BaseEnum):
+    """Represents different classifications of user proposals"""
+
+    Unknown = 99
+    Proposal = 1
+    Class = 2
