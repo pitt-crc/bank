@@ -7,7 +7,7 @@ from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal, Account, Allocation
-from tests._utils import ProposalSetup, EmptyAccountSetup
+from tests._utils import ProposalSetup, EmptyAccountSetup, TODAY, TOMORROW
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units) \
@@ -26,8 +26,6 @@ class CreateProposal(EmptyAccountSetup, TestCase):
     """Test the creation of proposals via the ``create_proposal`` method"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -69,8 +67,6 @@ class DeleteProposal(ProposalSetup, TestCase):
     """Test the deletion of proposals via the ``delete_proposal`` method"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -98,8 +94,6 @@ class ModifyProposal(ProposalSetup, TestCase):
     """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -126,15 +120,21 @@ class ModifyProposal(ProposalSetup, TestCase):
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
 
+        proposal_query = select(Proposal) \
+            .join(Account) \
+            .where(Account.name == settings.test_account) \
+            .order_by(Proposal.start_date.desc())
+
         with Session() as session:
-            old_proposal = session.execute(active_proposal_query).scalars().first()
-            new_start_date = old_proposal.start_date + timedelta(days=500)
-            new_end_date = old_proposal.end_date + timedelta(days=800)
+            old_proposal = session.execute(proposal_query).scalars().first()
+            proposal_id = old_proposal.id
+            new_start_date = old_proposal.start_date + timedelta(days=100)
+            new_end_date = old_proposal.end_date + timedelta(days=100)
             old_type = old_proposal.proposal_type
 
-        self.account.modify_proposal(start_date=new_start_date, end_date=new_end_date)
+        self.account.modify_proposal(proposal_id, start_date=new_start_date, end_date=new_end_date)
         with Session() as session:
-            new_proposal = session.execute(active_proposal_query).scalars().first()
+            new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
             self.assertEqual(new_end_date, new_proposal.end_date)
             self.assertEqual(old_type, new_proposal.proposal_type)
@@ -157,8 +157,6 @@ class AddSus(ProposalSetup, TestCase):
     """Test the addition of sus via the ``add`` method"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -193,8 +191,6 @@ class SubtractSus(ProposalSetup, TestCase):
     """Test the subtraction of sus via the ``subtract`` method"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -234,8 +230,6 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
     """Tests for errors when manipulating an account that does not have a proposal"""
 
     def setUp(self) -> None:
-        """Delete any proposals that may already exist for the test account"""
-
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
@@ -267,12 +261,25 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
 class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     """Tests to ensure proposals cannot overlap in time"""
 
+    def setUp(self) -> None:
+        super().setUp()
+        self.account = ProposalServices(settings.test_account)
+
+    def test_neighboring_proposals_ar_allowed(self):
+        self.account.create_proposal(start=TODAY, duration=1)
+        self.account.create_proposal(start=TOMORROW, duration=1)
+
     def test_error_on_proposal_creation(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
 
-        raise NotImplementedError
+        self.account.create_proposal(start=TODAY)
+        with self.assertRaises(ProposalExistsError):
+            self.account.create_proposal(start=TODAY)
 
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
-        raise NotImplementedError
+        self.account.create_proposal(start=TODAY, duration=1)
+        self.account.create_proposal(start=TOMORROW, duration=1)
+        with self.assertRaises(ProposalExistsError):
+            self.account.modify_proposal(start=TOMORROW)
