@@ -16,8 +16,8 @@ from sqlalchemy import or_, select, between, delete
 
 from . import settings
 from .exceptions import *
-from .orm import Investment, Proposal, Session, ProposalEnum, Allocation, Account
-from .system import SlurmAccount
+from .orm import Investment, Allocation, Account, Proposal, Session, ProposalEnum
+from .system import SlurmAccount, EmailTemplate
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -639,18 +639,18 @@ class AdminServices:
             email = None
             days_until_expire = (proposal.end_date - date.today()).days
             if days_until_expire == 0:
-                email = settings.expired_proposal_notice
-                subject = f'The account for {self.account_name} has reached its end date'
+                email = EmailTemplate(settings.expired_proposal_notice)
+                subject = f'The account for {self._account_name} has reached its end date'
                 self._slurm_acct.set_locked_state(True)
 
             elif days_until_expire in settings.warning_days:
-                email = settings.expiration_warning
-                subject = f'Your proposal expiry reminder for account: {self.account_name}'
+                email = EmailTemplate(settings.expiration_warning)
+                subject = f'Your proposal expiry reminder for account: {self._account_name}'
 
             elif proposal.percent_notified < next_notify_perc <= usage_perc:
                 proposal.percent_notified = next_notify_perc
-                email = settings.usage_warning
-                subject = f"Your account {self.account_name} has exceeded a proposal threshold"
+                email = EmailTemplate(settings.usage_warning)
+                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
 
             if email:
                 email.format(
