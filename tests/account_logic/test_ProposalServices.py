@@ -249,7 +249,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         """Test a ``MissingProposalError`` error is raised when modifying a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            ProposalServices(settings.test_account).modify_proposal(**{settings.test_cluster: 1, 'pid': 1000})
+            self.account.modify_proposal(**{settings.test_cluster: 1, 'pid': 1000})
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingProposalError`` error is raised when adding to a missing proposal"""

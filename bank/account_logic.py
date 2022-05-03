@@ -280,8 +280,12 @@ class InvestmentServices:
         self._account_name = account_name
 
         with Session() as session:
-            query = select(Proposal.type).join(Account).where(Account.name == account_name)
+            query = select(Proposal.proposal_type).join(Account).where(Account.name == account_name)
             proposal_type = session.execute(query).scalars().first()
+
+            if proposal_type is None:
+                raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
+
             if proposal_type is ProposalEnum.Class:
                 raise ValueError('Investments cannot be added/managed for class accounts')
 
