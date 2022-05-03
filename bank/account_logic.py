@@ -384,7 +384,8 @@ class InvestmentServices:
 
     def modify_investment(
             self,
-            inv_id: int, sus: Optional[int] = None,
+            inv_id: int,
+            sus: Optional[int] = None,
             start_date: Optional[date] = None,
             end_date: Optional[date] = None
     ) -> None:
@@ -477,6 +478,7 @@ class InvestmentServices:
             sus: The number of service units to withdraw
         """
 
+        self._verify_service_units(sus)
         requested_withdrawal = sus
 
         # Query all current and future unexpired investments and sort them
@@ -485,7 +487,7 @@ class InvestmentServices:
             .where(Account.name == self._account_name) \
             .where(Investment.end_date > date.today()) \
             .where(Investment.exhaustion_date is None) \
-            .order_by(Investment.c.start_date.desc)
+            .order_by(Investment.start_date.desc())
 
         with Session() as session:
             investments = session.execute(usable_investment_query).scalars().all()

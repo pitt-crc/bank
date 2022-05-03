@@ -100,13 +100,13 @@ class AddSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_sus_are_added(self) -> None:
         """Test SUs are added to the investment"""
 
-        sus_to_add = 1000
-        account = InvestmentServices(settings.test_account)
-
         inv_id = 1
-        account.add_sus(inv_id, sus_to_add)
+        sus_to_add = 1000
+        InvestmentServices(settings.test_account).add_sus(inv_id, sus_to_add)
+
+        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
         with Session() as session:
-            new_sus = account.get_investment(session, inv_id).service_units
+            new_sus = session.execute(inv_sus_query).scalars().first()
             self.assertEqual(self.num_inv_sus + sus_to_add, new_sus)
 
     def test_error_on_negative_sus(self) -> None:
@@ -126,11 +126,13 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_sus_are_subtracted(self) -> None:
         """Test SUs are removed from the proposal"""
 
-        sus_to_subtract = 10
-        account = InvestmentServices(settings.test_account)
-        account.subtract(1, sus_to_subtract)
+        inv_id = 1
+        sus_to_subtract = 100
+        InvestmentServices(settings.test_account).subtract_sus(inv_id, sus_to_subtract)
+
+        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
         with Session() as session:
-            new_sus = account.get_investment(session, 1).service_units
+            new_sus = session.execute(inv_sus_query).scalars().first()
             self.assertEqual(self.num_inv_sus - sus_to_subtract, new_sus)
 
     def test_error_on_negative_sus(self) -> None:
@@ -138,16 +140,16 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
 
         account = InvestmentServices(settings.test_account)
         with self.assertRaises(ValueError):
-            account.subtract(1, -1)
+            account.subtract_sus(1, -1)
 
         with self.assertRaises(ValueError):
-            account.subtract(1, 0)
+            account.subtract_sus(1, 0)
 
     def test_error_on_over_subtract(self) -> None:
         """Test for a ``ValueError`` if more service units are subtracted than available"""
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_account).subtract(1, self.num_inv_sus + 1000)
+            InvestmentServices(settings.test_account).subtract_sus(1, self.num_inv_sus + 1000)
 
 
 class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
@@ -156,46 +158,56 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_sus_are_modified(self) -> None:
         """Test sus are overwritten in the investment"""
 
-        account = InvestmentServices(settings.test_account)
+        investment_query = select(Investment).join(Account) \
+            .where(Account.name == settings.test_account) \
+            .order_by(Investment.start_date.desc())
+
         with Session() as session:
-            old_investment = account.get_investment(session, 1)
+            old_investment = session.execute(investment_query).scalars().first()
+            investment_id = old_investment.id
+            old_start_date = old_investment.start_date
+            old_end_date = old_investment.end_date
 
         sus_to_overwrite = 10
-        account.overwrite(1, sus_to_overwrite)
-        with Session() as session:
-            new_investment = account.get_investment(session, 1)
+        InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite)
 
-        self.assertEqual(sus_to_overwrite, new_investment.service_units)
-        self.assertEqual(old_investment.start_date, old_investment.start_date)
-        self.assertEqual(old_investment.end_date, old_investment.end_date)
+        with Session() as session:
+            new_investment = session.execute(investment_query).scalars().first()
+            self.assertEqual(sus_to_overwrite, new_investment.service_units)
+            self.assertEqual(old_start_date, new_investment.start_date)
+            self.assertEqual(old_end_date, new_investment.end_date)
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the investment"""
 
-        account = InvestmentServices(settings.test_account)
-        with Session() as session:
-            old_investment = account.get_investment(session, 1)
-
-        new_start_date = old_investment.start_date + timedelta(days=5)
-        new_end_date = old_investment.end_date + timedelta(days=10)
-        account.overwrite(1, start_date=new_start_date, end_date=new_end_date)
+        investment_query = select(Investment).join(Account) \
+            .where(Account.name == settings.test_account) \
+            .order_by(Investment.start_date.desc())
 
         with Session() as session:
-            new_investment = account.get_investment(session, 1)
+            old_investment = session.execute(investment_query).scalars().first()
+            investment_id = old_investment.id
+            new_start_date = old_investment.start_date + timedelta(days=5)
+            new_end_date = old_investment.end_date + timedelta(days=10)
 
-        self.assertEqual(old_investment.service_units, new_investment.service_units)
-        self.assertEqual(new_start_date, new_investment.start_date, 'Start date not overwritten with expected value')
-        self.assertEqual(new_end_date, new_investment.end_date, 'End date not overwritten with expected value')
+        sus_to_overwrite = 10
+        InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite, start_date=new_start_date, end_date=new_end_date)
+
+        with Session() as session:
+            new_investment = session.execute(investment_query).scalars().first()
+            self.assertEqual(sus_to_overwrite, new_investment.service_units)
+            self.assertEqual(new_start_date, new_investment.start_date)
+            self.assertEqual(new_end_date, new_investment.end_date)
 
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         account = InvestmentServices(settings.test_account)
         with self.assertRaises(ValueError):
-            account.overwrite(1, -1)
+            account.modify_investment(1, sus=-1)
 
         with self.assertRaises(ValueError):
-            account.overwrite(1, 0)
+            account.modify_investment(1, sus=0)
 
 
 class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
@@ -248,18 +260,8 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
             with self.assertRaises(ValueError):
                 InvestmentServices(settings.test_account).advance(sus)
 
-    def test_error_for_missing_investments(self) -> None:
-        """Test a ``MissingInvestmentError`` is raised if there are no investments"""
 
-        with Session() as session:
-            session.query(Investment).filter(Investment.account_name == settings.test_account).delete()
-            session.commit()
-
-        with self.assertRaises(MissingInvestmentError):
-            self.account.advance(10)
-
-
-class MissingInvetmentErrors(ProposalSetup, TestCase):
+class MissingInvestmentErrors(ProposalSetup, TestCase):
     """Tests for errors when manipulating an account that does not have a investment"""
 
     def setUp(self) -> None:
@@ -272,25 +274,31 @@ class MissingInvetmentErrors(ProposalSetup, TestCase):
         """Test for a ``MissingInvestmentError`` error when deleting a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.delete_investment()
+            self.account.delete_investment(inv_id=100)
 
     def test_error_on_modify(self) -> None:
         """Test a ``MissingInvestmentError`` error is raised when modifying a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.modify_investment(**{settings.test_cluster: 1, 'pid': 1000})
+            self.account.modify_investment(inv_id=100, sus=1)
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingInvestmentError`` error is raised when adding to a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.add_sus(**{settings.test_cluster: 1})
+            self.account.add_sus(inv_id=100, sus=1)
 
     def test_error_on_subtract(self) -> None:
         """Test a ``MissingInvestmentError`` error is raised when subtracting from a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.subtract_sus(**{settings.test_cluster: 1})
+            self.account.subtract_sus(inv_id=100, sus=1)
+
+    def test_error_on_advance(self) -> None:
+        """Test a ``MissingInvestmentError`` is raised if there are no investments to advance from"""
+
+        with self.assertRaises(MissingInvestmentError):
+            self.account.advance(10)
 
 
 class PreventOverlappingInvestments(EmptyAccountSetup, TestCase):

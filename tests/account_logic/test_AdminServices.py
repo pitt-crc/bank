@@ -61,6 +61,7 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
 class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     """Test for emails sent when locking accounts"""
 
+    @classmethod
     def setUpClass(cls) -> None:
         cls.account = AdminServices(settings.test_account)
 
