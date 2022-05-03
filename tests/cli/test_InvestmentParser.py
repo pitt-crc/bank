@@ -29,7 +29,7 @@ class SignatureMatchesCLI(ProposalSetup, InvestmentSetup, CLIAsserts, TestCase):
     def test_overwrite_investment(self) -> None:
         date = datetime.now().strftime(settings.date_format)
         self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --sus 10')
-        self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --start_date {date} --end_date {date}')
+        self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --start {date} --end {date}')
 
     def test_advance_sus(self) -> None:
         self.assert_parser_matches_func_signature(f'investment advance --account {settings.test_account} --sus 10')

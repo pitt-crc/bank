@@ -132,7 +132,7 @@ class ModifyProposal(ProposalSetup, TestCase):
             new_end_date = old_proposal.end_date + timedelta(days=100)
             old_type = old_proposal.proposal_type
 
-        self.account.modify_proposal(proposal_id, start_date=new_start_date, end_date=new_end_date)
+        self.account.modify_proposal(proposal_id, start=new_start_date, end=new_end_date)
         with Session() as session:
             new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
@@ -279,7 +279,9 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
-        self.account.create_proposal(start=TODAY, duration=1)
-        self.account.create_proposal(start=TOMORROW, duration=1)
+        su_kwargs = {settings.test_cluster: 1}
+        self.account.create_proposal(start=TODAY, duration=1, **su_kwargs)
+        self.account.create_proposal(start=TOMORROW, duration=1, **su_kwargs)
+
         with self.assertRaises(ProposalExistsError):
             self.account.modify_proposal(start=TOMORROW)

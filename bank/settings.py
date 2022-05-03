@@ -155,7 +155,7 @@ usage_warning = _ENV.get_value(
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your account on H2P has
-    exceeded {perc}% usage. The one year allocation started on {start_date}. You can 
+    exceeded {perc}% usage. The one year allocation started on {start}. You can 
     request a supplemental allocation at
     https://crc.pitt.edu/Pitt-CRC-Allocation-Proposal-Guidelines.<br><br>
     Your usage is printed below:<br>
@@ -184,8 +184,8 @@ expiration_warning = _ENV.get_value(
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account_name} on H2P will expire in {exp_in_days} days on {end_date}. 
-    The one year allocation started on {start_date}. 
+    {account_name} on H2P will expire in {exp_in_days} days on {end}. 
+    The one year allocation started on {start}. 
     Once your proposal expires, you will still be able to login and retrieve your 
     data, but you will be unable to run new compute jobs until you submit a new 
     proposal or request a supplemental allocation.
@@ -208,7 +208,7 @@ expired_proposal_notice = _ENV.get_value(
     <p>
     To Whom It May Concern,<br><br>
     This email has been generated automatically because your proposal for account
-    {account_name} on H2P has is_expired. The one year allocation started on {start_date}. 
+    {account_name} on H2P has is_expired. The one year allocation started on {start}. 
     You will still be able to login and retrieve your data, but you will be unable
     to run new compute  jobs until you submit a new proposal or request a 
     supplemental allocation. To do so, please visit

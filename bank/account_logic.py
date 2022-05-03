@@ -107,15 +107,15 @@ class ProposalServices:
 
         with Session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            end = start + timedelta(days=duration)
+            last_active_day = start + timedelta(days=duration - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
                 or_(
-                    between(start, Proposal.start_date, Proposal.end_date),
-                    between(end, Proposal.start_date, Proposal.end_date),
-                    between(Proposal.start_date, start, end),
-                    between(Proposal.end_date, start, end)
+                    between(start, Proposal.start_date, Proposal.last_active_date),
+                    between(last_active_day, Proposal.start_date, Proposal.last_active_date),
+                    between(Proposal.start_date, start, last_active_day),
+                    between(Proposal.last_active_date, start, last_active_day)
                 )
             )
 
@@ -187,28 +187,34 @@ class ProposalServices:
         self._verify_cluster_values(**kwargs)
 
         with Session() as session:
-            # Find any overlapping proposals minus the proposal being modified
+            # Get default proposal values
+            query = select(Proposal).where(Proposal.id == pid)
+            proposal = session.execute(query).scalars().first()
+            type = type or proposal.proposal_type
+            start_date = start_date or proposal.start_date
+            end_date = end_date or proposal.end_date
+            last_active_date = proposal.last_active_date
+
+            # Find any overlapping proposals (not including the proposal being modified)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(Proposal.id != pid) \
                 .where(
-                or_(
-                    between(start_date, Proposal.start_date, Proposal.end_date),
-                    between(end_date, Proposal.start_date, Proposal.end_date),
-                    between(Proposal.start_date, start_date, end_date),
-                    between(Proposal.end_date, start_date, end_date)
-                )
+                    or_(
+                        between(start_date, Proposal.start_date, Proposal.last_active_date),
+                        between(last_active_date, Proposal.start_date, Proposal.last_active_date),
+                        between(Proposal.start_date, start_date, last_active_date),
+                        between(Proposal.last_active_date, start_date, last_active_date)
+                    )
             )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
-            query = select(Proposal).where(Proposal.id == pid)
-            proposal = session.execute(query).scalars().first()
-            proposal.proposal_type = type or proposal.proposal_type
-            proposal.start_date = start_date or proposal.start_date
-            proposal.end_date = end_date or proposal.end_date
-
+            # Update the proposal record
+            proposal.proposal_type = type
+            proposal.start_date = start_date
+            proposal.end_date = end_date
             for allocation in proposal.allocations:
                 allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
 

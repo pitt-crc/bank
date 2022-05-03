@@ -6,13 +6,12 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates, relationship
-from sqlalchemy.sql import Select
 
 from .enum import ProposalEnum
 from .. import settings
@@ -48,8 +47,8 @@ class Proposal(Base):
       - id                 (Integer): Primary key for this table
       - account_id         (Integer): Primary key for the ``account`` table
       - proposal_type (ProposalEnum): The proposal type
-      - start_date            (Date): The date when the proposal goes into effect
-      - end_date              (Date): The proposal's expiration date
+      - start            (Date): The date when the proposal goes into effect
+      - end              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
 
     Relationships:
@@ -85,6 +84,29 @@ class Proposal(Base):
             return value
 
         raise ValueError(f'Value for {key} column must be between 0 and 100 (got {value}).')
+
+    @validates('end')
+    def _validate_end_date(self, key: str, value: int) -> int:
+        """Verify the end date is after the start date
+
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
+
+        if value <= self.start_date:
+            raise ValueError('End date must be greater than start date')
+
+        return value
+
+    @hybrid_property
+    def last_active_date(self) -> date:
+        """The last date for which the parent investment is active"""
+
+        return self.end_date - timedelta(days=1)
 
     @hybrid_property
     def is_expired(self) -> bool:
@@ -191,8 +213,8 @@ class Investment(Base):
 
     Table Fields:
       - id            (Integer): Primary key for this table
-      - start_date       (Date): Date the investment goes into effect
-      - end_date         (Date): Expiration date of the investment
+      - start       (Date): Date the investment goes into effect
+      - end         (Date): Expiration date of the investment
       - service_units (Integer): Total service units granted by an investment
       - rollover_sus  (Integer): Service units carried over from a previous investment
       - withdrawn_sus (Integer): Service units removed from this investment and into another
@@ -233,6 +255,29 @@ class Investment(Base):
             raise ValueError(f'Value for {key} columns must be a positive integer (got {value}).')
 
         return value
+
+    @validates('end')
+    def _validate_end_date(self, key: str, value: int) -> int:
+        """Verify the end date is after the start date
+
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
+
+        if value <= self.start_date:
+            raise ValueError('End date must be greater than start date')
+
+        return value
+
+    @hybrid_property
+    def last_active_date(self) -> date:
+        """The last date for which the parent investment is active"""
+
+        return self.end_date - timedelta(days=1)
 
     @hybrid_property
     def is_expired(self) -> bool:
