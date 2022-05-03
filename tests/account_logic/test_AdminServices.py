@@ -5,7 +5,7 @@ from unittest.mock import patch
 import time_machine
 
 from bank import settings
-from bank.business_logic import AdminServices
+from bank.account_logic import AdminServices
 from bank.orm import ProposalEnum
 from bank.system.slurm import SlurmAccount
 from tests._utils import ProposalSetup, InvestmentSetup
