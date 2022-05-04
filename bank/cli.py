@@ -222,8 +222,8 @@ class InvestmentParser(account_logic.InvestmentServices, BaseParser):
         investment_overwrite.add_argument('--account', **account_definition)
         investment_overwrite.add_argument('--id', **investment_id_definition)
         investment_overwrite.add_argument('--sus', type=int, help='The new number of SUs in the investment')
-        investment_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
-        investment_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
+        investment_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
+        investment_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
         investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)

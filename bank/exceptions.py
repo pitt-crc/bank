@@ -14,22 +14,6 @@ class CmdError(Exception):
     """Raised when a piped command writes to STDERR in the underlying shell."""
 
 
-class BankAccountNotFoundError(Exception):
-    """Raised when an account name is not found in the applicatiuon database"""
-
-
-class MissingProposalError(Exception):
-    """Raised when an account is missing a proposal in the bank database."""
-
-
-class MissingInvestmentError(Exception):
-    """Raised when an account is missing an investment in the bank database."""
-
-
-class ProposalExistsError(Exception):
-    """Raised when trying to create a proposal that already exists"""
-
-
 class SlurmAccountNotFoundError(Exception):
     """Raised when a Slurm user account does not exist"""
 
@@ -52,3 +36,19 @@ class CRCUserNotFound(Exception):
 
 class MissingFieldsError(Exception):
     """Raised when trying to send an incomplete email template"""
+
+
+class MissingProposalError(Exception):
+    """Raised when an account is missing a proposal in the bank database."""
+
+
+class ProposalExistsError(Exception):
+    """Raised when trying to create a proposal that already exists"""
+
+
+class MissingInvestmentError(Exception):
+    """Raised when an account is missing an investment in the bank database."""
+
+
+class InvestmentExistsError(Exception):
+    """Raised when trying to create an investment that already exists"""

@@ -5,9 +5,9 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.account_logic import InvestmentServices, ProposalServices
-from bank.exceptions import MissingInvestmentError, MissingProposalError
+from bank.exceptions import MissingInvestmentError, MissingProposalError, InvestmentExistsError
 from bank.orm import ProposalEnum, Investment, Session, Account
-from tests._utils import InvestmentSetup, ProposalSetup, EmptyAccountSetup
+from tests._utils import InvestmentSetup, ProposalSetup, YESTERDAY, TODAY, TOMORROW, DAY_AFTER_TOMORROW
 
 investments_query = select(Investment) \
     .join(Account) \
@@ -191,7 +191,7 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
             new_end_date = old_investment.end_date + timedelta(days=10)
 
         sus_to_overwrite = 10
-        InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite, start_date=new_start_date, end_date=new_end_date)
+        InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite, start=new_start_date, end=new_end_date)
 
         with Session() as session:
             new_investment = session.execute(investment_query).scalars().first()
@@ -214,6 +214,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the withdrawal of service units from a single investment"""
 
     def setUp(self) -> None:
+        super().setUp()
         self.account = InvestmentServices(settings.test_account)
 
     def test_investment_is_advanced(self) -> None:
@@ -247,7 +248,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
 
         with Session() as session:
-            investments = self.account.get_all_investments(session)
+            investments = session.execute(investments_query).scalars().all()
             available_sus = sum(inv.service_units for inv in investments)
 
         with self.assertRaises(ValueError):
@@ -301,15 +302,3 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
             self.account.advance(10)
 
 
-class PreventOverlappingInvestments(EmptyAccountSetup, TestCase):
-    """Tests to ensure investments cannot overlap in time"""
-
-    def test_error_on_investment_creation(self):
-        """Test new investments are not allowed to overlap with existing investments"""
-
-        raise NotImplementedError
-
-    def test_error_on_investment_modification(self):
-        """Test existing investments can not be modified to overlap with other investments"""
-
-        raise NotImplementedError

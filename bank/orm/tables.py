@@ -285,7 +285,7 @@ class Investment(Base):
 
         is_exhausted = self.exhaustion_date is not None
         past_end = self.end_date <= date.today()
-        spent_service_units = self.current_sus <= 0 and self.withdrawn_sus >= self.service_units
+        spent_service_units = (self.current_sus <= 0) & (self.withdrawn_sus >= self.service_units)
         return is_exhausted or past_end or spent_service_units
 
     @hybrid_property

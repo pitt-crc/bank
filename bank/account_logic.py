@@ -395,16 +395,16 @@ class InvestmentServices:
             self,
             inv_id: int,
             sus: Optional[int] = None,
-            start_date: Optional[date] = None,
-            end_date: Optional[date] = None
+            start: Optional[date] = None,
+            end: Optional[date] = None
     ) -> None:
         """Overwrite service units allocated to the given investment
 
         Args:
             inv_id: The id of the investment to change
             sus: New number of service units to assign to the investment
-            start_date: Optionally set a new start date for the investment
-            end_date: Optionally set a new end date for the investment
+            start: Optionally set a new start date for the investment
+            end: Optionally set a new end date for the investment
 
         Raises:
             MissingInvestmentError: If the account does not have a proposal
@@ -422,11 +422,11 @@ class InvestmentServices:
                 self._verify_service_units(sus)
                 investment.service_units = sus
 
-            if start_date:
-                investment.start_date = start_date
+            if start:
+                investment.start_date = start
 
-            if end_date:
-                investment.end_date = end_date
+            if end:
+                investment.end_date = end
 
             session.commit()
             LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
@@ -494,8 +494,7 @@ class InvestmentServices:
         # so that younger investments (i.e., with later start dates) come first
         usable_investment_query = select(Investment).join(Account) \
             .where(Account.name == self._account_name) \
-            .where(Investment.end_date > date.today()) \
-            .where(Investment.exhaustion_date is None) \
+            .where(Investment.is_expired == False) \
             .order_by(Investment.start_date.desc())
 
         with Session() as session:
@@ -528,7 +527,7 @@ class InvestmentServices:
 
             session.commit()
 
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self.account_name}')
+        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
 
 class AdminServices:
