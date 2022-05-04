@@ -22,7 +22,6 @@ jobs:
         pip install -r docs/requirements.txt
    
     - name: Build and commit
-      uses: sphinx-notes/pages@master
       run: |
         conda activate bank_docs
         tmp_dir=$(mktemp -d -t pages-XXXXXXXXXX)
