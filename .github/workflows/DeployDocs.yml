@@ -1,9 +1,10 @@
 name: Deploy Documentation
 
 on:
-  workflow_dispatch:
   push:
     branches: [ development ]
+
+  workflow_dispatch:
 
 jobs:
   Build:
@@ -15,32 +16,17 @@ jobs:
       with:
         fetch-depth: 0 # Otherwise, you will fail to push refs to destination repo
       
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
-        conda activate bank_docs
+        pip install -U pip
         pip install -r requirements.txt
         pip install -r docs/requirements.txt
    
-    - name: Build and commit
-      run: |
-        conda activate bank_docs
-        tmp_dir=$(mktemp -d -t pages-XXXXXXXXXX)
-        
-        echo Building docs
-        make -f docs/Makefile html
-        cp -vr docs/build/* $temp_dir
-        
-        echo Updating repo contents
-        git checkout --force gh-pages
-        rm -vrf * 
-        rm -rf $tmp_dir/.doctrees # Remove unused doctree
-        cp -vr $tmp_dir/. .
-        
-        echo Adding HTML documentation to repository index
-        git add .
-        echo Recording changes to repository
-        git commit --allow-empty -m "Add changes for $GITHUB_SHA"
-
+    - name: Build and Commit
+      uses: sphinx-notes/pages@master
+      with:
+        documentation_path: docs/source # Relative path under repository to documentation source files
+    
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
