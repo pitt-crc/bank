@@ -165,8 +165,8 @@ class ProposalServices:
             self,
             pid: Optional[int] = None,
             type: ProposalEnum = None,
-            start_date: Optional[date] = None,
-            end_date: Optional[date] = None,
+            start: Optional[date] = None,
+            end: Optional[date] = None,
             **kwargs: Union[int, date]
     ) -> None:
         """Overwrite the properties of an account proposal
@@ -174,8 +174,8 @@ class ProposalServices:
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             type: Optionally change the type of the proposal
-            start_date: Optionally set a new start date for the proposal
-            end_date: Optionally set a new end date for the proposal
+            start: Optionally set a new start date for the proposal
+            end: Optionally set a new end date for the proposal
             **kwargs: New service unit values to assign for each cluster
 
         Raises:
@@ -191,21 +191,24 @@ class ProposalServices:
             query = select(Proposal).where(Proposal.id == pid)
             proposal = session.execute(query).scalars().first()
             type = type or proposal.proposal_type
-            start_date = start_date or proposal.start_date
-            end_date = end_date or proposal.end_date
-            last_active_date = proposal.last_active_date
+            start = start or proposal.start_date
+            end = end or proposal.end_date
+            if start >= end:
+                raise ValueError('Proposal start date must be before the end date.')
+
+            last_active_date = end - timedelta(days=1)
 
             # Find any overlapping proposals (not including the proposal being modified)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(Proposal.id != pid) \
                 .where(
-                    or_(
-                        between(start_date, Proposal.start_date, Proposal.last_active_date),
-                        between(last_active_date, Proposal.start_date, Proposal.last_active_date),
-                        between(Proposal.start_date, start_date, last_active_date),
-                        between(Proposal.last_active_date, start_date, last_active_date)
-                    )
+                or_(
+                    between(start, Proposal.start_date, Proposal.last_active_date),
+                    between(last_active_date, Proposal.start_date, Proposal.last_active_date),
+                    between(Proposal.start_date, start, last_active_date),
+                    between(Proposal.last_active_date, start, last_active_date)
+                )
             )
 
             if session.execute(overlapping_proposal_query).scalars().first():
@@ -213,8 +216,8 @@ class ProposalServices:
 
             # Update the proposal record
             proposal.proposal_type = type
-            proposal.start_date = start_date
-            proposal.end_date = end_date
+            proposal.start_date = start
+            proposal.end_date = end
             for allocation in proposal.allocations:
                 allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
 

@@ -162,8 +162,8 @@ class ProposalParser(account_logic.ProposalServices, BaseParser):
         proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).modify_proposal)
         proposal_overwrite.add_argument('--account', **account_definition)
         proposal_overwrite.add_argument('--type', **type_definition)
-        proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
-        proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
+        proposal_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
+        proposal_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
         self._add_cluster_args(proposal_overwrite)
 
     @staticmethod

@@ -7,7 +7,7 @@ from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
 from bank.orm import Session, Proposal, Account, Allocation
-from tests._utils import ProposalSetup, EmptyAccountSetup, TODAY, TOMORROW
+from tests._utils import ProposalSetup, EmptyAccountSetup, TODAY, TOMORROW, DAY_AFTER_TOMORROW, YESTERDAY, DAY_BEFORE_YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units) \
@@ -152,6 +152,12 @@ class ModifyProposal(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             self.account.modify_proposal(**{settings.test_cluster: -1})
 
+    def test_error_on_inverted_dates(self) -> None:
+        """Test a ``ValueError`` is raised for start when the start date comes before the end date"""
+
+        with self.assertRaises(ValueError):
+            self.account.modify_proposal(end=DAY_BEFORE_YESTERDAY)
+
 
 class AddSus(ProposalSetup, TestCase):
     """Test the addition of sus via the ``add`` method"""
@@ -280,8 +286,8 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
         su_kwargs = {settings.test_cluster: 1}
-        self.account.create_proposal(start=TODAY, duration=1, **su_kwargs)
-        self.account.create_proposal(start=TOMORROW, duration=1, **su_kwargs)
+        self.account.create_proposal(start=YESTERDAY, duration=2, **su_kwargs)
+        self.account.create_proposal(start=TOMORROW, duration=2, **su_kwargs)
 
         with self.assertRaises(ProposalExistsError):
-            self.account.modify_proposal(start=TOMORROW)
+            self.account.modify_proposal(end=DAY_AFTER_TOMORROW)

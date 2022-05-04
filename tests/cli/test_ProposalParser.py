@@ -35,5 +35,5 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         date = datetime.now().strftime(settings.date_format)
         self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account}')
         self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --{settings.test_cluster} 200')
-        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --start_date {date} --end_date {date}')
+        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --start {date} --end {date}')
         self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --type Proposal')
