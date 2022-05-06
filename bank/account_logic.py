@@ -8,6 +8,7 @@ API Reference
 from __future__ import annotations
 
 from datetime import date, timedelta
+from io import StringIO
 from logging import getLogger
 from math import ceil
 from typing import List, Union, Tuple, Optional
@@ -533,110 +534,140 @@ class InvestmentServices:
 class AdminServices:
     """Administration for existing bank accounts"""
 
-    def __init__(self, accout_name):
-        self.account_name = accout_name
-        self._slurm_acct = SlurmAccount(accout_name)
+    def __init__(self, account_name: str) -> None:
+        """Administrate user data at the account level
+
+        Args:
+            account_name: The name of the account to administrate
+        """
+
+        self._account_name = account_name
+        self._slurm_acct = SlurmAccount(account_name)
+
+        self._proposal_query = select(Proposal).join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Proposal.is_active)
+
+        self._investment_query = select(Investment).join(Account) \
+            .where(Account.name == self._account_name). \
+            where(Investment.is_expired == False)
 
     @staticmethod
-    def _calculate_percentage(usage: Numeric, total: Numeric) -> Numeric:
+    def _calculate_percentage(usage: int, total: int) -> int:
         """Calculate the percentage ``100 * usage / total`` and return 0 if the answer is infinity"""
 
         if total > 0:
-            return 100 * usage / total
+            return 100 * usage // total
 
         return 0
 
     def _build_usage_str(self) -> str:
         """Return a human-readable summary of the account usage and allocation"""
 
-        with Session() as session:
-            proposal = self.get_proposal(session)
-            try:
-                investments = session.get_investment()
+        with Session() as session, StringIO() as output:
+            proposal = session.execute(self._proposal_query).scalars().first()
+            investments = session.execute(self._investment_query).scalars().all()
 
-            except MissingInvestmentError:
-                investments = []
+            single_column_line = f"|{'-' * 82}|\n"
+            three_column_line = f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
 
-        # The table header
-        output_lines = []
-        output_lines.append(f"|{'-' * 82}|")
-        output_lines.append(f"|{'Proposal End Date':^30}|{proposal.end_date.strftime(settings.date_format) :^51}|")
 
-        # Print usage information for the primary proposal
-        usage_total = 0
-        allocation_total = 0
-        for cluster in settings.clusters:
-            usage = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
-            allocation = getattr(proposal, cluster)
-            percentage = round(self._calculate_percentage(usage, allocation), 2) or 'N/A'
-            output_lines.append(f"|{'-' * 82}|")
-            output_lines.append(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(allocation) :^82}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
-            output_lines.append(f"|{'Overall':^20}|{usage:^30d}|{percentage:^30}|")
-            output_lines.append(f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|")
+            # The table header
+            output.write(single_column_line)
+            output.write(f"|{'Proposal End Date':^30}{proposal.end_date.strftime(settings.date_format) :^52}|\n")
 
-            usage_total += usage
-            allocation_total += allocation
+            # Print usage information for the primary proposal
+            usage_total = 0
+            allocation_total = 0
+            for allocation in proposal.allocations:
 
-        usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-        investment_total = sum(inv.service_units for inv in investments)
-        investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+                cluster = allocation.cluster_name
+                sus = allocation.service_units
+                output.write(single_column_line)
+                output.write(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(sus) :^82}|\n")
+                output.write(three_column_line)
+                output.write(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n")
+                output.write(three_column_line)
 
-        # Print usage information concerning investments
-        output_lines.append(f"|{'Aggregate':^82}|")
-        output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
+                usage_data = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
+                for user, user_usage in usage_data.items():
+                    user_percentage = self._calculate_percentage(user_usage, sus) or ''
+                    output.write(f"|{user:^20}|{user_usage:^30d}|{user_percentage:^30}|\n")
 
-        if investment_total == 0:
-            output_lines.append(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|")
-            output_lines.append(f"|{'-' * 82}|")
+                total_cluster_usage = sum(usage_data.values())
+                total_cluster_percent = self._calculate_percentage(total_cluster_usage, sus)
+                output.write(three_column_line)
+                output.write(f"|{'Overall':^20}|{total_cluster_usage:^30d}|{total_cluster_percent:^30}|\n")
+                output.write(single_column_line)
 
-        else:
-            output_lines.append(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|")
-            output_lines.append(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|")
-            output_lines.append(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|")
-            output_lines.append(f"|{'-' * 40:^40}|{'-' * 41:^41}|")
-            output_lines.append(f"|{'^a Investment SUs can be used across any cluster':^82}|")
-            output_lines.append(f"|{'-' * 82}|")
+                usage_total += total_cluster_usage
+                allocation_total += sus
 
-        return '\n'.join(output_lines)
+            usage_percentage = self._calculate_percentage(usage_total, allocation_total)
+            investment_total = sum(inv.service_units for inv in investments)
+            investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+
+            # Print usage information concerning investments
+            output.write(f"|{'Aggregate':^82}|\n")
+            output.write(single_column_line)
+
+            if investment_total == 0:
+                output.write(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|\n")
+                output.write(single_column_line)
+
+            else:
+                output.write(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n")
+                output.write(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n")
+                output.write(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n")
+                output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
+                output.write(f"|{'^a Investment SUs can be used across any cluster':^82}|\n")
+                output.write(single_column_line)
+
+            return output.getvalue()
 
     def _build_investment_str(self) -> str:
         """Return a human-readable summary of the account's investments
 
         The returned string is empty if there are no investments
         """
+
         with Session() as session:
             try:
-                investments = self.get_all_investments(session, expired=True)
+                investments = session.execute(self._investment_query).scalars().all()
 
             except MissingInvestmentError:
                 return ''
 
-        output_lines = [
-            '|--------------------------------------------------------------------------------|',
-            '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs |',
-            '|--------------------------------------------------------------------------------|',
-        ]
-        for inv in investments:
-            output_lines.append(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |")
+        full_width_line = '|' + '-' * 82 + '|\n'
+        header_line = '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs   |\n'
 
-        output_lines.append('|--------------------------------------------------------------------------------|')
-        return '\n'.join(output_lines)
+        with StringIO() as output:
+            output.writelines([full_width_line, header_line, full_width_line])
+            for inv in investments:
+                output.write(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |\n")
+
+            if investments:
+                output.write(full_width_line)
+
+            return output.getvalue()
 
     def print_info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         print(self._build_usage_str())
-        print(self._build_investment_str())
+        inv_str = self._build_investment_str()
+        if inv_str:
+            print(inv_str)
 
     def notify_account(self) -> None:
         """Send any pending usage alerts to the account"""
 
+        proposal_query = select(Proposal).join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Proposal.is_active)
+
         with Session() as session:
-            proposal = self.get_proposal(session)
+            proposal = session.execute(proposal_query).scalars().first()
 
             # Determine the next usage percentage that an email is scheduled to be sent out
             usage = self._slurm_acct.get_total_usage()
@@ -662,7 +693,7 @@ class AdminServices:
 
             if email:
                 email.format(
-                    account_name=self.account_name,
+                    account_name=self._account_name,
                     start_date=proposal.start_date.strftime(settings.date_format),
                     end_date=proposal.end_date.strftime(settings.date_format),
                     exp_in_days=days_until_expire,
@@ -670,7 +701,7 @@ class AdminServices:
                     usage=self._build_usage_str(),
                     investment=self._build_investment_str()
                 ).send_to(
-                    to=f'{self.account_name}{settings.user_email_suffix}',
+                    to=f'{self._account_name}{settings.user_email_suffix}',
                     ffrom=settings.from_address,
                     subject=subject)
 
@@ -691,13 +722,13 @@ class AdminServices:
 
     @classmethod
     def notify_unlocked(cls) -> None:
-        """Lock any is_expired accounts"""
+        """Lock any expired accounts"""
 
         for account in cls.find_unlocked():
             cls(account).notify_account()
 
     def renew(self, reset_usage: bool = True) -> None:
-        """Archive any is_expired investments and rollover unused service units"""
+        """Archive any expired investments and rollover unused service units"""
 
         with Session() as session:
 
@@ -727,7 +758,7 @@ class AdminServices:
 
             # Create a new user proposal and archive the old one
             new_proposal = Proposal(
-                account_name=current_proposal.account_name,
+                account_name=current_proposal._account_name,
                 proposal_type=current_proposal.proposal_type,
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=365),

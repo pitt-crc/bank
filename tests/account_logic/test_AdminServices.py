@@ -28,7 +28,7 @@ class CalculatePercentage(TestCase):
 class Renewal(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
-    @patch.object(SlurmAccount, "get_cluster_usage", return_value=0)
+    @patch.object(SlurmAccount, "get_cluster_usage", return_value={'user1': 100, 'user2': 200})
     def setUp(self, *args) -> None:
         super().setUp()
 
@@ -76,7 +76,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         # Make sure the account was notified
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
-        self.assertEqual(f'The account for {self.account.account_name} has reached its end date', sent_email['subject'])
+        self.assertEqual(f'The account for {self.account._account_name} has reached its end date', sent_email['subject'])
 
         # Make sure account was locked
         mock_locked_state.assert_called_once()
@@ -95,7 +95,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
 
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
-        self.assertEqual(f'Your proposal expiry reminder for account: {self.account.account_name}', sent_email['subject'])
+        self.assertEqual(f'Your proposal expiry reminder for account: {self.account._account_name}', sent_email['subject'])
 
     @patch.object(settings, "notify_levels", (1,))  # Ensure a notification is sent after small usage percentage
     @patch.object(SlurmAccount, "get_total_usage", lambda self: 100)  # Ensure account usage is a reproducible value for testing
@@ -105,7 +105,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         self.account.notify_account()
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
-        self.assertEqual(f'Your account {self.account.account_name} has exceeded a proposal threshold', sent_email['subject'])
+        self.assertEqual(f'Your account {self.account._account_name} has exceeded a proposal threshold', sent_email['subject'])
 
         # Ensure the percent notified is updated in the database
         proposal = self.account.get_proposal(self.session)

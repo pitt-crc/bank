@@ -37,7 +37,7 @@ class ProposalSetup(EmptyAccountSetup):
     def setUp(self) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
-        super(ProposalSetup, self).setUp()
+        super().setUp()
 
         proposals = []
         for i in range(3):
