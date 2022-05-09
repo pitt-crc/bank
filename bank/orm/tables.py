@@ -285,8 +285,17 @@ class Investment(Base):
 
         is_exhausted = self.exhaustion_date is not None
         past_end = self.end_date <= date.today()
-        spent_service_units = (self.current_sus <= 0) & (self.withdrawn_sus >= self.service_units)
+        spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
         return is_exhausted or past_end or spent_service_units
+
+    @is_expired.expression
+    def is_expired(cls) -> bool:
+        """Return whether the investment is past its end date or has exhausted its allocation"""
+
+        is_exhausted = cls.exhaustion_date != None
+        past_end = cls.end_date <= date.today()
+        spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
+        return is_exhausted | past_end | spent_service_units
 
     @hybrid_property
     def is_active(self) -> bool:
