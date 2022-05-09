@@ -36,5 +36,9 @@ class AccountUsage(TestCase):
         usage_seconds = account.get_cluster_usage(cluster)
         usage_hours = account.get_cluster_usage(cluster, in_hours=True)
 
-        self.assertGreater(usage_seconds, 0)
-        self.assertEqual(int(usage_seconds // 60), usage_hours)
+        test_user = next(iter(usage_seconds.keys()))
+        test_usage_seconds = usage_seconds[test_user]
+        test_usage_hours = usage_hours[test_user]
+
+        self.assertGreater(test_usage_seconds, 0)
+        self.assertEqual(int(test_usage_seconds // 60), test_usage_hours)
