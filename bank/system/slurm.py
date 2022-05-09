@@ -110,12 +110,12 @@ class SlurmAccount:
         clus_str = ','.join(settings.clusters)
         ShellCmd(f"sacctmgr -i delete account {self} cluster={clus_str}").raise_err()
 
-    def add_user(self, user: str, default: bool = False) -> None:
+    def add_user(self, user: str, make_default: bool = False) -> None:
         """Add a new user to the current slurm account
 
         Args:
             user: Name of the user to add to the current account
-            default: Make the current account the default account for the user
+            make_default: Make the current account the default account for the user
 
         Raises:
             LdapUserNotFound: If the given user does not exist in LDAP
@@ -125,7 +125,7 @@ class SlurmAccount:
         ldap.check_ldap_user(user, raise_if_false=True)
         ldap.check_ldap_group(self.account_name, raise_if_false=True)
 
-        if not default:
+        if not make_default:
             ShellCmd(f"sacctmgr -i add user {user} account={self} cluster=smp,gpu,mpi,htc").raise_err()
 
         if ldap.check_crc_user(user):
@@ -138,12 +138,16 @@ class SlurmAccount:
                 f"sacctmgr -i add user {user} defaultaccount={self} cluster=smp,gpu,mpi,htc"
             )
 
-    def remove_user(self, user_name: str) -> None:
-        """Remove an existing user from the current Slurm account"""
+    def remove_user(self, user: str) -> None:
+        """Remove an existing user from the current Slurm account
 
-        ldap.check_ldap_user(user_name, raise_if_false=True)
+        Args:
+            user: Name of the user to remove from the current account
+        """
+
+        ldap.check_ldap_user(user, raise_if_false=True)
         clus_str = ','.join(settings.clusters)
-        ShellCmd(f"sacctmgr -i delete user {user_name} account={self} cluster={clus_str}").raise_err()
+        ShellCmd(f"sacctmgr -i delete user {user} account={self} cluster={clus_str}").raise_err()
 
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked"""
