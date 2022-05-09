@@ -30,3 +30,15 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
 
     def test_renew_investment(self) -> None:
         self.assert_parser_matches_func_signature(f'admin renew --account {settings.test_account}')
+
+    def test_create_account(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin create_account --account {settings.test_account}')
+
+    def test_delete_account(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin delete_account --account {settings.test_account}')
+
+    def test_add_user(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin add_user --account {settings.test_account}')
+
+    def test_remove_user(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin remove_user --account {settings.test_account}')
