@@ -134,6 +134,27 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
         renew.set_defaults(function=super(AccountParser, AccountParser).renew)
         renew.add_argument('--account', type=account_logic.InvestmentServices, **account_definition)
 
+        create_account = account_subparsers.add_parser('create', help='Create a new bank account')
+        create_account.set_defaults(function=super(AccountParser, AccountParser).create_account)
+        create_account.add_argument('--account', dest='account_name')
+        create_account.add_argument('--pi', dest='description')
+        create_account.add_argument('--department', dest='organization')
+
+        delete_account = account_subparsers.add_parser('delete', help='Delete an existing bank account')
+        delete_account.set_defaults(function=super(AccountParser, AccountParser).delete_account)
+        delete_account.add_argument('--account', type=system.SlurmAccount, **account_definition)
+
+        add_user = account_subparsers.add_parser('add_user', help='Add an authorized user to an existing bank account')
+        add_user.set_defaults(function=super(AccountParser, AccountParser).add_user)
+        add_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
+        add_user.add_argument('--user', help='Name of the user account')
+        add_user.add_argument('--make_default', action='store_true')
+
+        remove_user = account_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
+        remove_user.set_defaults(function=super(AccountParser, AccountParser).remove_user)
+        remove_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
+        remove_user.add_argument('--user', help='Name of the user account')
+
 
 class ProposalParser(account_logic.ProposalServices, BaseParser):
     """Command line parser for the ``proposal`` service"""

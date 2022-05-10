@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 from bank import settings
-from bank.cli import AdminParser, AccountParser
-from tests.cli._utils import CLIAsserts
+from bank.cli import AccountParser
 from tests._utils import ProposalSetup
+from tests.cli._utils import CLIAsserts
 
 
 class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
@@ -24,3 +24,15 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
 
     def test_renew_investment(self) -> None:
         self.assert_parser_matches_func_signature(f'account renew --account {settings.test_account}')
+
+    def test_create_account(self) -> None:
+        self.assert_parser_matches_func_signature(f'account create --account {settings.test_account}')
+
+    def test_delete_account(self) -> None:
+        self.assert_parser_matches_func_signature(f'account delete --account {settings.test_account}')
+
+    def test_add_user(self) -> None:
+        self.assert_parser_matches_func_signature(f'account add_user --account {settings.test_account}')
+
+    def test_remove_user(self) -> None:
+        self.assert_parser_matches_func_signature(f'account remove_user --account {settings.test_account}')
