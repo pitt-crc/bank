@@ -25,7 +25,7 @@ LOG = getLogger('bank.account_services')
 
 
 class ProposalServices:
-    """Administrative management tool for account proposals"""
+    """Administrative tool for managing account proposals"""
 
     def __init__(self, account_name: str) -> None:
         """Administrate proposal data for the given user account
@@ -275,7 +275,7 @@ class ProposalServices:
 
 
 class InvestmentServices:
-    """Administrative management tool for account Investments"""
+    """Administrative tool for managing account Investments"""
 
     def __init__(self, account_name: str) -> None:
         """Administrate investment data for the given user account
@@ -531,8 +531,8 @@ class InvestmentServices:
         LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
 
-class AdminServices:
-    """Administration for existing bank accounts"""
+class AccountServices:
+    """Administrative tool for managing individual bank accounts"""
 
     def __init__(self, account_name: str) -> None:
         """Administrate user data at the account level
@@ -550,7 +550,7 @@ class AdminServices:
 
         self._investment_query = select(Investment).join(Account) \
             .where(Account.name == self._account_name). \
-            where(Investment.is_expired == False)
+            where(Investment.is_active)
 
     @staticmethod
     def _calculate_percentage(usage: int, total: int) -> int:
@@ -570,7 +570,6 @@ class AdminServices:
 
             single_column_line = f"|{'-' * 82}|\n"
             three_column_line = f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
-
 
             # The table header
             output.write(single_column_line)
@@ -659,7 +658,7 @@ class AdminServices:
         if inv_str:
             print(inv_str)
 
-    def notify_account(self) -> None:
+    def notify(self) -> None:
         """Send any pending usage alerts to the account"""
 
         proposal_query = select(Proposal).join(Account) \
@@ -671,8 +670,8 @@ class AdminServices:
 
             # Determine the next usage percentage that an email is scheduled to be sent out
             usage = self._slurm_acct.get_total_usage()
-            allocated = proposal.total_allocated
-            usage_perc = min(int(usage / allocated * 100), 100)
+            total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
+            usage_perc = min(int(usage / total_allocated * 100), 100)
             next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
 
             email = None
@@ -694,8 +693,8 @@ class AdminServices:
             if email:
                 email.format(
                     account_name=self._account_name,
-                    start_date=proposal.start_date.strftime(settings.date_format),
-                    end_date=proposal.end_date.strftime(settings.date_format),
+                    start=proposal.start_date.strftime(settings.date_format),
+                    end=proposal.end_date.strftime(settings.date_format),
                     exp_in_days=days_until_expire,
                     perc=usage_perc,
                     usage=self._build_usage_str(),
@@ -707,25 +706,8 @@ class AdminServices:
 
             session.commit()
 
-    @staticmethod
-    def find_unlocked() -> Tuple[str]:
-        """Return the names for all unexpired proposals with unlocked accounts
-
-        Returns:
-            A tuple of account names
-        """
-
-        # Query database for accounts that are unlocked and is_expired
-        with Session() as session:
-            proposals: List[Proposal] = session.query(Proposal).filter((Proposal.end_date < date.today())).all()
-            return tuple(p.account_name for p in proposals if not SlurmAccount(p.account_name).get_locked_state())
-
-    @classmethod
-    def notify_unlocked(cls) -> None:
-        """Lock any expired accounts"""
-
-        for account in cls.find_unlocked():
-            cls(account).notify_account()
+    def check_su_status(self) -> None:
+        raise NotImplementedError
 
     def renew(self, reset_usage: bool = True) -> None:
         """Archive any expired investments and rollover unused service units"""
@@ -778,3 +760,40 @@ class AdminServices:
         if reset_usage:
             self._slurm_acct.reset_raw_usage()
             self._slurm_acct.set_locked_state(False)
+
+
+class BankAdminServices:
+    """Administrative tasks for managing the banking system as a whole"""
+
+    @staticmethod
+    def find_unlocked() -> Tuple[AccountServices]:
+        """Return the names for all unexpired proposals with unlocked accounts
+
+        Returns:
+            A tuple of account names
+        """
+
+        # Query database for accounts that are unlocked and is_expired
+        account_name_query = select(Account.name).join(Proposal).where(Proposal.end_date < date.today())
+        with Session() as session:
+            account_names = session.execute(account_name_query).scalrs().all()
+            return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
+
+    @classmethod
+    def notify_unlocked(cls) -> None:
+        """Send any pending email notifications to unlocked bank accounts"""
+
+        for account in cls.find_unlocked():
+            account.notify()
+
+    @classmethod
+    def lock_expired_accounts(cls) -> None:
+        """Lock any expired accounts"""
+
+        for account in cls.find_unlocked():
+            account.check_su_status()
+
+    @classmethod
+    def update_account_status(cls) -> None:
+        cls.notify_unlocked()
+        cls.lock_expired_accounts()

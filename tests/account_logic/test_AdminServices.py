@@ -3,12 +3,17 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import time_machine
+from sqlalchemy import select
 
 from bank import settings
-from bank.account_logic import AdminServices
-from bank.orm import ProposalEnum
+from bank.account_logic import AccountServices
+from bank.orm import ProposalEnum, Session, Proposal, Account
 from bank.system.slurm import SlurmAccount
 from tests._utils import ProposalSetup, InvestmentSetup
+
+active_proposal_query = select(Proposal).join(Account) \
+    .where(Account.name == settings.test_account) \
+    .where(Proposal.is_active)
 
 
 class CalculatePercentage(TestCase):
@@ -17,12 +22,12 @@ class CalculatePercentage(TestCase):
     def test_divide_by_zero(self) -> None:
         """Test dividing by zero returns zero"""
 
-        self.assertEqual(0, AdminServices._calculate_percentage(100, 0))
+        self.assertEqual(0, AccountServices._calculate_percentage(100, 0))
 
     def test_divide_by_positive(self) -> None:
         """Test dividing by a positive number gives a percentage"""
 
-        self.assertEqual(50, AdminServices._calculate_percentage(1, 2))
+        self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
 
 
 class Renewal(ProposalSetup, InvestmentSetup, TestCase):
@@ -61,17 +66,20 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
 class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     """Test for emails sent when locking accounts"""
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.account = AdminServices(settings.test_account)
+    def setUp(self) -> None:
+        super().setUp()
+
+        self.account = AccountServices(settings.test_account)
+        with Session() as session:
+            active_proposal = session.execute(active_proposal_query).scalars().first()
+            self.proposal_end_date = active_proposal.end_date
 
     @patch('bank.system.SlurmAccount.set_locked_state')
     def test_email_sent_for_expired(self, mock_locked_state, mock_send_message) -> None:
         """Test an expiration email is sent if the account is is_expired"""
 
-        proposal = self.account.get_proposal(self.session)
-        with time_machine.travel(proposal.end_date + timedelta(days=1)):
-            self.account.notify_account()
+        with time_machine.travel(self.proposal_end_date + timedelta(days=100)):
+            self.account.notify()
 
         # Make sure the account was notified
         mock_send_message.assert_called_once()
@@ -87,11 +95,9 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     def test_email_sent_for_warning_day(self, mock_send_message) -> None:
         """Test a warning email is sent if the account has reached an expiration warning limit"""
 
-        proposal = self.account.get_proposal(self.session)
-
         # Note: time_machine.travel travels to just before the given point in time
-        with time_machine.travel(proposal.end_date - timedelta(days=9)):
-            self.account.notify_account()
+        with time_machine.travel(self.proposal_end_date - timedelta(days=9)):
+            self.account.notify()
 
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
@@ -99,19 +105,20 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
 
     @patch.object(settings, "notify_levels", (1,))  # Ensure a notification is sent after small usage percentage
     @patch.object(SlurmAccount, "get_total_usage", lambda self: 100)  # Ensure account usage is a reproducible value for testing
-    def test_email_sent_for_warning_day(self, mock_send_message) -> None:
-        """Test a warning email is sent if the account exceeds a certain usage percantage"""
+    def test_email_sent_for_percentage(self, mock_send_message) -> None:
+        """Test a warning email is sent if the account exceeds a certain usage percentage"""
 
-        self.account.notify_account()
+        self.account.notify()
         mock_send_message.assert_called_once()
         sent_email = mock_send_message.call_args[0][0]
         self.assertEqual(f'Your account {self.account._account_name} has exceeded a proposal threshold', sent_email['subject'])
 
         # Ensure the percent notified is updated in the database
-        proposal = self.account.get_proposal(self.session)
-        self.assertEqual(1, proposal.percent_notified)
+        with Session() as session:
+            proposal = session.execute(active_proposal_query).scalars().first()
+            self.assertEqual(1, proposal.percent_notified)
 
         # Make sure a second alert is not sent during successive calls
         # Note: ``assert_called_once`` includes earlier calls in the test
-        self.account.notify_account()
+        self.account.notify()
         mock_send_message.assert_called_once()
