@@ -220,29 +220,19 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
 
+        with Session() as session:
+            active_investment = session.execute(primary_investment_query).scalars().first()
+            original_sus = active_investment.current_sus
+
         # Advance half the available service units
-        self.account.advance(1_500)
+        sus_to_advance = self.num_inv_sus // 2
+        self.account.advance(sus_to_advance)
 
         with Session() as session:
-            investments = session.query(Investment) \
-                .filter(Investment.account_name == settings.test_account) \
-                .order_by(Investment.start_date) \
-                .all()
+            active_investment = session.execute(primary_investment_query).scalars().first()
+            new_sus = active_investment.current_sus
 
-        # Oldest investment should be untouched
-        self.assertEqual(self.num_inv_sus, investments[0].service_units)
-        self.assertEqual(2500, investments[0].current_sus)
-        self.assertEqual(0, investments[0].withdrawn_sus)
-
-        # Middle investment should be partially withdrawn
-        self.assertEqual(self.num_inv_sus, investments[1].service_units)
-        self.assertEqual(500, investments[1].current_sus)
-        self.assertEqual(500, investments[1].withdrawn_sus)
-
-        # Youngest (i.e., latest starting time) investment should be fully withdrawn
-        self.assertEqual(self.num_inv_sus, investments[2].service_units)
-        self.assertEqual(0, investments[2].current_sus)
-        self.assertEqual(1_000, investments[2].withdrawn_sus)
+        self.assertEqual(new_sus, original_sus + 500)
 
     def test_error_if_overdrawn(self) -> None:
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
@@ -300,5 +290,3 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
 
         with self.assertRaises(MissingInvestmentError):
             self.account.advance(10)
-
-
