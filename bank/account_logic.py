@@ -10,9 +10,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 from io import StringIO
 from logging import getLogger
-from math import ceil
-from typing import List, Union, Tuple, Optional
+from typing import Union, Tuple, Optional
 
+from math import ceil
 from sqlalchemy import or_, select, between, delete
 
 from . import settings
@@ -663,50 +663,50 @@ class AccountServices:
 
         proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
-            .where(Proposal.is_active)
+            .where(Proposal.exhaustion_date is not None) \
+            .where(Proposal.start_date < date.today())
 
         with Session() as session:
-            proposal = session.execute(proposal_query).scalars().first()
+            for proposal in session.execute(proposal_query).scalars().all():
+                self._notify_proposal(proposal)
 
-            # Determine the next usage percentage that an email is scheduled to be sent out
-            usage = self._slurm_acct.get_total_usage()
-            total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
-            usage_perc = min(int(usage / total_allocated * 100), 100)
-            next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
+    def _notify_proposal(self, proposal):
+        # Determine the next usage percentage that an email is scheduled to be sent out
+        usage = self._slurm_acct.get_total_usage()
+        total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
+        usage_perc = min(int(usage / total_allocated * 100), 100)
+        next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
 
-            email = None
-            days_until_expire = (proposal.end_date - date.today()).days
-            if days_until_expire == 0:
-                email = EmailTemplate(settings.expired_proposal_notice)
-                subject = f'The account for {self._account_name} has reached its end date'
-                self._slurm_acct.set_locked_state(True)
+        email = None
+        days_until_expire = (proposal.end_date - date.today()).days
+        if days_until_expire <= 0:
+            email = EmailTemplate(settings.expired_proposal_notice)
+            subject = f'The account for {self._account_name} has reached its end date'
 
-            elif days_until_expire in settings.warning_days:
-                email = EmailTemplate(settings.expiration_warning)
-                subject = f'Your proposal expiry reminder for account: {self._account_name}'
+        elif days_until_expire in settings.warning_days:
+            email = EmailTemplate(settings.expiration_warning)
+            subject = f'Your proposal expiry reminder for account: {self._account_name}'
 
-            elif proposal.percent_notified < next_notify_perc <= usage_perc:
-                proposal.percent_notified = next_notify_perc
-                email = EmailTemplate(settings.usage_warning)
-                subject = f"Your account {self._account_name} has exceeded a proposal threshold"
+        elif proposal.percent_notified < next_notify_perc <= usage_perc:
+            proposal.percent_notified = next_notify_perc
+            email = EmailTemplate(settings.usage_warning)
+            subject = f"Your account {self._account_name} has exceeded a proposal threshold"
 
-            if email:
-                email.format(
-                    account_name=self._account_name,
-                    start=proposal.start_date.strftime(settings.date_format),
-                    end=proposal.end_date.strftime(settings.date_format),
-                    exp_in_days=days_until_expire,
-                    perc=usage_perc,
-                    usage=self._build_usage_str(),
-                    investment=self._build_investment_str()
-                ).send_to(
-                    to=f'{self._account_name}{settings.user_email_suffix}',
-                    ffrom=settings.from_address,
-                    subject=subject)
+        if email:
+            email.format(
+                account_name=self._account_name,
+                start=proposal.start_date.strftime(settings.date_format),
+                end=proposal.end_date.strftime(settings.date_format),
+                exp_in_days=days_until_expire,
+                perc=usage_perc,
+                usage=self._build_usage_str(),
+                investment=self._build_investment_str()
+            ).send_to(
+                to=f'{self._account_name}{settings.user_email_suffix}',
+                ffrom=settings.from_address,
+                subject=subject)
 
-            session.commit()
-
-    def check_su_status(self) -> None:
+    def lock_if_expired(self) -> None:
         raise NotImplementedError
 
     def renew(self, reset_usage: bool = True) -> None:
@@ -791,9 +791,11 @@ class BankAdminServices:
         """Lock any expired accounts"""
 
         for account in cls.find_unlocked():
-            account.check_su_status()
+            account.lock_if_expired()
 
     @classmethod
     def update_account_status(cls) -> None:
-        cls.notify_unlocked()
+        """Update and notify bank accounts depending on their current system usage and account status"""
+
         cls.lock_expired_accounts()
+        cls.notify_unlocked()

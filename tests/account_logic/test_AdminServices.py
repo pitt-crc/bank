@@ -95,7 +95,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     def test_email_sent_for_warning_day(self, mock_send_message) -> None:
         """Test a warning email is sent if the account has reached an expiration warning limit"""
 
-        # Note: time_machine.travel travels to just before the given point in time
+        # Note: ``time_machine.travel`` travels to just before the given point in time
         with time_machine.travel(self.proposal_end_date - timedelta(days=9)):
             self.account.notify()
 

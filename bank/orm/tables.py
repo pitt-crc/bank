@@ -36,6 +36,7 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
+
     proposals = relationship('Proposal', back_populates='account', cascade="all,delete")
     investments = relationship('Investment', back_populates='account', cascade="all,delete")
 
@@ -64,6 +65,7 @@ class Proposal(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False, default=0)
+    exhaustion_date = Column(Date, nullable=True)
 
     account = relationship('Account', back_populates='proposals')
     allocations = relationship('Allocation', back_populates='proposal', cascade="all,delete")
@@ -169,7 +171,6 @@ class Allocation(Base):
     cluster_name = Column(String, nullable=False)
     service_units = Column(Integer, nullable=False)
     final_usage = Column(Integer, nullable=True)
-    exhaustion_date = Column(Date, nullable=True)
 
     proposal = relationship('Proposal', back_populates='allocations')
 
