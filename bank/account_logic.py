@@ -491,35 +491,41 @@ class InvestmentServices:
         self._verify_service_units(sus)
         requested_withdrawal = sus
 
-        # Query all current and future unexpired investments and sort them
-        # so that younger investments (i.e., with later start dates) come first
-        usable_investment_query = select(Investment).join(Account) \
-            .where(Account.name == self._account_name) \
-            .where(Investment.is_expired == False) \
-            .order_by(Investment.start_date.desc())
-
         with Session() as session:
-            investments = session.execute(usable_investment_query).scalars().all()
-            if len(investments) < 2:
-                raise MissingInvestmentError(f'Account has {len(investments)} investments, but must have at least 2 to process an advance.')
+            # Find the investment to add service units into
+            active_investment_query = select(Investment).join(Account) \
+                .where(Account.name == self._account_name) \
+                .where(Investment.is_active)
 
-            *young_investments, oldest_investment = investments
-            if not (oldest_investment.start_date <= date.today() or date.today() < oldest_investment.end_date):
+            active_investment = session.execute(active_investment_query).scalars().first()
+            if not active_investment:
                 raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
 
-            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in investments)
+            # Find investments to take service units out of
+            usable_investment_query = select(Investment).join(Account) \
+                .where(Account.name == self._account_name) \
+                .where(not Investment.is_expired == False) \
+                .where(Investment.id != active_investment.id) \
+                .order_by(Investment.start_date.desc())
+
+            usable_investments = session.execute(usable_investment_query).scalars().all()
+            if not usable_investments:
+                raise MissingInvestmentError(f'Account has no investments to adv ance service units from.')
+
+            # Make sure there are enough service units to cover the withdrawal
+            available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in usable_investments)
             if sus > available_sus:
                 raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
-            # Move service units from younger investments to the oldest available investment
-            for investment in young_investments:
+            # Move service units from future investments into the current investment
+            for investment in usable_investments:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
 
                 LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
-                oldest_investment.current_sus += to_withdraw
+                active_investment.current_sus += to_withdraw
 
                 # Check if we have withdrawn the requested number of service units
                 sus -= to_withdraw

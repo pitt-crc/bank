@@ -5,9 +5,9 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.account_logic import InvestmentServices, ProposalServices
-from bank.exceptions import MissingInvestmentError, MissingProposalError, InvestmentExistsError
+from bank.exceptions import MissingInvestmentError, MissingProposalError
 from bank.orm import ProposalEnum, Investment, Session, Account
-from tests._utils import InvestmentSetup, ProposalSetup, YESTERDAY, TODAY, TOMORROW, DAY_AFTER_TOMORROW
+from tests._utils import InvestmentSetup, ProposalSetup
 
 investments_query = select(Investment) \
     .join(Account) \
@@ -232,7 +232,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
             active_investment = session.execute(primary_investment_query).scalars().first()
             new_sus = active_investment.current_sus
 
-        self.assertEqual(new_sus, original_sus + 500)
+        self.assertEqual(new_sus, original_sus + sus_to_advance)
 
     def test_error_if_overdrawn(self) -> None:
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
