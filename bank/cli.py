@@ -67,6 +67,7 @@ class BaseParser(ArgumentParser):
         """Handles the parsing of command line arguments"""
 
         # If parent init has already been called, there is no need to call it again
+        # Doing so would overwrite properties of the existing instance
         if hasattr(self, 'prog'):
             return
 
@@ -88,7 +89,7 @@ class BaseParser(ArgumentParser):
             return super().add_subparsers(parser_class=BaseParser)
 
 
-class AdminParser(account_logic.BankAdminServices, BaseParser):
+class AdminParser(account_logic.AdminServices, BaseParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -98,11 +99,14 @@ class AdminParser(account_logic.BankAdminServices, BaseParser):
         admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
-        update_status = admin_subparsers.add_parser('lock_expired', help='Notify and lock all is_expired or overdrawn accounts')
+        update_status = admin_subparsers.add_parser('update_status', help='Notify and lock all expired or overdrawn accounts')
         update_status.set_defaults(function=self.update_account_status)
 
-        find_unlocked = admin_subparsers.add_parser('find_unlocked', help='List all unlocked user accounts')
-        find_unlocked.set_defaults(function=self.find_unlocked)
+        update_status = admin_subparsers.add_parser('notify_usage', help='Send any pending account usage notifications')
+        update_status.set_defaults(function=self.send_usage_notifications)
+
+        maintain = admin_subparsers.add_parser('run_maintenance', help='Run regular maintenance tasks')
+        maintain.set_defaults(function=self.run_maintenance)
 
 
 class AccountParser(account_logic.AccountServices, system.SlurmAccount, BaseParser):
@@ -110,6 +114,7 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
 
     def __init__(self, **kwargs) -> None:
         BaseParser.__init__(self, **kwargs)
+        super_class = super(AccountParser, AccountParser)
 
         subparsers = self.add_subparsers()
         account_parser = subparsers.add_parser('account', help='Tools for general account management')
@@ -118,42 +123,42 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
 
-        info = account_subparsers.add_parser('info', help='Print account usage and allocation information')
-        info.set_defaults(function=super(AccountParser, AccountParser).print_info)
-        info.add_argument('--account', type=account_logic.AccountServices, **account_definition)
-
-        slurm_lock = account_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.set_defaults(function=super(AccountParser, AccountParser).set_locked_state, lock_state=True)
-        slurm_lock.add_argument('--account', type=system.SlurmAccount, **account_definition)
-
-        slurm_unlock = account_subparsers.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
-        slurm_unlock.set_defaults(function=super(AccountParser, AccountParser).set_locked_state, lock_state=False)
-        slurm_unlock.add_argument('--account', type=system.SlurmAccount, **account_definition)
-
-        renew = account_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
-        renew.set_defaults(function=super(AccountParser, AccountParser).renew)
-        renew.add_argument('--account', type=account_logic.InvestmentServices, **account_definition)
-
         create_account = account_subparsers.add_parser('create', help='Create a new bank account')
-        create_account.set_defaults(function=super(AccountParser, AccountParser).create_account)
+        create_account.set_defaults(function=super_class.create_account)
         create_account.add_argument('--account', dest='account_name')
         create_account.add_argument('--pi', dest='description')
         create_account.add_argument('--department', dest='organization')
 
         delete_account = account_subparsers.add_parser('delete', help='Delete an existing bank account')
-        delete_account.set_defaults(function=super(AccountParser, AccountParser).delete_account)
+        delete_account.set_defaults(function=super_class.delete_account)
         delete_account.add_argument('--account', type=system.SlurmAccount, **account_definition)
 
         add_user = account_subparsers.add_parser('add_user', help='Add an authorized user to an existing bank account')
-        add_user.set_defaults(function=super(AccountParser, AccountParser).add_user)
+        add_user.set_defaults(function=super_class.add_user)
         add_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
         add_user.add_argument('--user', help='Name of the user account')
         add_user.add_argument('--make_default', action='store_true')
 
         remove_user = account_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
-        remove_user.set_defaults(function=super(AccountParser, AccountParser).remove_user)
+        remove_user.set_defaults(function=super_class.remove_user)
         remove_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
         remove_user.add_argument('--user', help='Name of the user account')
+
+        slurm_lock = account_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        slurm_lock.set_defaults(function=super_class.set_locked_state, lock_state=True)
+        slurm_lock.add_argument('--account', type=system.SlurmAccount, **account_definition)
+
+        slurm_unlock = account_subparsers.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        slurm_unlock.set_defaults(function=super_class.set_locked_state, lock_state=False)
+        slurm_unlock.add_argument('--account', type=system.SlurmAccount, **account_definition)
+
+        renew = account_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
+        renew.set_defaults(function=super_class.renew)
+        renew.add_argument('--account', type=account_logic.InvestmentServices, **account_definition)
+
+        info = account_subparsers.add_parser('info', help='Print account usage and allocation information')
+        info.set_defaults(function=super_class.print_info)
+        info.add_argument('--account', type=account_logic.AccountServices, **account_definition)
 
 
 class ProposalParser(account_logic.ProposalServices, BaseParser):

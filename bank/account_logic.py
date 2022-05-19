@@ -706,7 +706,7 @@ class AccountServices:
                 ffrom=settings.from_address,
                 subject=subject)
 
-    def lock_if_expired(self) -> None:
+    def update_account_status(self) -> None:
         raise NotImplementedError
 
     def renew(self, reset_usage: bool = True) -> None:
@@ -762,7 +762,7 @@ class AccountServices:
             self._slurm_acct.set_locked_state(False)
 
 
-class BankAdminServices:
+class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
@@ -780,22 +780,22 @@ class BankAdminServices:
             return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
 
     @classmethod
-    def notify_unlocked(cls) -> None:
-        """Send any pending email notifications to unlocked bank accounts"""
+    def send_usage_notifications(cls) -> None:
+        """Send any pending usage notifications to unlocked bank accounts"""
 
         for account in cls.find_unlocked():
             account.notify()
 
     @classmethod
-    def lock_expired_accounts(cls) -> None:
-        """Lock any expired accounts"""
+    def update_account_status(cls) -> None:
+        """Update account usage information and lock any expired or overdrawn accounts"""
 
         for account in cls.find_unlocked():
-            account.lock_if_expired()
+            account.update_account_status()
 
     @classmethod
-    def update_account_status(cls) -> None:
-        """Update and notify bank accounts depending on their current system usage and account status"""
+    def run_maintenance(cls) -> None:
+        """Run regular banking system maintenance"""
 
-        cls.lock_expired_accounts()
-        cls.notify_unlocked()
+        cls.update_account_status()
+        cls.send_usage_notifications()
