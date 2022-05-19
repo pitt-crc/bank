@@ -8,11 +8,11 @@ API Reference
 from __future__ import annotations
 
 from datetime import date, timedelta
-from io import StringIO
 from logging import getLogger
 from typing import Union, Tuple, Optional
 
 from math import ceil
+from prettytable import PrettyTable
 from sqlalchemy import or_, select, between, delete
 
 from . import settings
@@ -570,65 +570,54 @@ class AccountServices:
     def _build_usage_str(self) -> str:
         """Return a human-readable summary of the account usage and allocation"""
 
-        with Session() as session, StringIO() as output:
+        output_table = PrettyTable(header=False, padding_width=0)
+        with Session() as session:
             proposal = session.execute(self._proposal_query).scalars().first()
             investments = session.execute(self._investment_query).scalars().all()
 
-            single_column_line = f"|{'-' * 82}|\n"
-            three_column_line = f"|{'-' * 20}|{'-' * 30}|{'-' * 30}|\n"
+            if not proposal:
+                raise MissingProposalError('Account has no proposal')
 
-            # The table header
-            output.write(single_column_line)
-            output.write(f"|{'Proposal End Date':^30}{proposal.end_date.strftime(settings.date_format) :^52}|\n")
-
-            # Print usage information for the primary proposal
             usage_total = 0
             allocation_total = 0
             for allocation in proposal.allocations:
-
-                cluster = allocation.cluster_name
-                sus = allocation.service_units
-                output.write(single_column_line)
-                output.write(f"|{'Cluster: ' + cluster + ', Available SUs: ' + str(sus) :^82}|\n")
-                output.write(three_column_line)
-                output.write(f"|{'User':^20}|{'SUs Used':^30}|{'Percentage of Total':^30}|\n")
-                output.write(three_column_line)
-
-                usage_data = self._slurm_acct.get_cluster_usage(cluster, in_hours=True)
-                for user, user_usage in usage_data.items():
-                    user_percentage = self._calculate_percentage(user_usage, sus) or ''
-                    output.write(f"|{user:^20}|{user_usage:^30d}|{user_percentage:^30}|\n")
-
+                usage_data = self._slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
                 total_cluster_usage = sum(usage_data.values())
-                total_cluster_percent = self._calculate_percentage(total_cluster_usage, sus)
-                output.write(three_column_line)
-                output.write(f"|{'Overall':^20}|{total_cluster_usage:^30d}|{total_cluster_percent:^30}|\n")
-                output.write(single_column_line)
+                total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units)
+
+                # Build an inner table of individual user usage on the current cluster
+                user_usage_table = PrettyTable(border=False, field_names=['User', 'SUs Used', 'Percentage of Total'])
+                for user, user_usage in usage_data.items():
+                    user_percentage = self._calculate_percentage(user_usage, allocation.service_units) or ''
+                    user_usage_table.add_row([user, user_usage, user_percentage])
+
+                # Add the table created above to the outer table that will eventually be returned
+                output_table.add_row(f"Cluster: {allocation.cluster_name}, Available SUs: {allocation.service_units}")
+                output_table.add_row(user_usage_table)
+                output_table.add_row(['Overall', total_cluster_usage, total_cluster_percent])
 
                 usage_total += total_cluster_usage
-                allocation_total += sus
+                allocation_total += allocation.service_units
 
             usage_percentage = self._calculate_percentage(usage_total, allocation_total)
             investment_total = sum(inv.service_units for inv in investments)
             investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
 
-            # Print usage information concerning investments
-            output.write(f"|{'Aggregate':^82}|\n")
-            output.write(single_column_line)
-
+            # Add another inner table describing aggregate usage
+            output_table.add_row(['Aggregate'])
+            aggregate_table = PrettyTable(border=False, header=False)
             if investment_total == 0:
-                output.write(f"|{'Aggregate Usage':^40}|{usage_percentage:^41.2f}|\n")
-                output.write(single_column_line)
+                aggregate_table.add_row(['Aggregate Usage', usage_percentage])
+                output_table.add_row(aggregate_table)
 
             else:
-                output.write(f"|{'Investments Total':^40}|{str(investment_total) + '^a':^41}|\n")
-                output.write(f"|{'Aggregate Usage (no investments)':^40}|{usage_percentage:^41.2f}|\n")
-                output.write(f"|{'Aggregate Usage':^40}|{investment_percentage:^41.2f}|\n")
-                output.write(f"|{'-' * 40:^40}|{'-' * 41:^41}|\n")
-                output.write(f"|{'^a Investment SUs can be used across any cluster':^82}|\n")
-                output.write(single_column_line)
+                aggregate_table.add_row(['Investments Total', str(investment_total) + '^a'])
+                aggregate_table.add_row(['Aggregate Usage (no investments)', usage_percentage])
+                aggregate_table.add_row(['Aggregate Usage', investment_percentage])
+                output_table.add_row(aggregate_table)
+                output_table.add_row('^a Investment SUs can be used across any cluster')
 
-            return output.getvalue()
+            return output_table
 
     def _build_investment_str(self) -> str:
         """Return a human-readable summary of the account's investments
@@ -637,32 +626,28 @@ class AccountServices:
         """
 
         with Session() as session:
-            try:
-                investments = session.execute(self._investment_query).scalars().all()
+            investments = session.execute(self._investment_query).scalars().all()
+            if not investments:
+                raise MissingInvestmentError('Account has no investments')
 
-            except MissingInvestmentError:
-                return ''
-
-        full_width_line = '|' + '-' * 82 + '|\n'
-        header_line = '| Total Investment SUs | Start Date | Current SUs | Withdrawn SUs | Rollover SUs   |\n'
-
-        with StringIO() as output:
-            output.writelines([full_width_line, header_line, full_width_line])
+            table = PrettyTable(fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
-                output.write(f"| {inv.service_units:20} | {inv.start_date.strftime(settings.date_format):>10} | {inv.current_sus:11} | {inv.withdrawn_sus:13} | {inv.withdrawn_sus:12} |\n")
+                table.add_row([inv.service_units, inv.start_date.strftime(settings.date_format), inv.current_sus, inv.withdrawn_sus, inv.withdrawn_sus])
 
-            if investments:
-                output.write(full_width_line)
-
-            return output.getvalue()
+        return table
 
     def print_info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
-        print(self._build_usage_str())
-        inv_str = self._build_investment_str()
-        if inv_str:
-            print(inv_str)
+        try:
+            print(self._build_usage_str())
+            print(self._build_investment_str())
+
+        except MissingProposalError:
+            print(f'Account {self._account_name} has no current proposal')
+
+        except MissingInvestmentError:
+            pass
 
     def notify(self) -> None:
         """Send any pending usage alerts to the account"""
