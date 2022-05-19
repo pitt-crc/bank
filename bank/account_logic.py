@@ -567,7 +567,7 @@ class AccountServices:
 
         return 0
 
-    def _build_usage_str(self) -> str:
+    def _build_usage_table(self) -> PrettyTable:
         """Return a human-readable summary of the account usage and allocation"""
 
         output_table = PrettyTable(header=False, padding_width=0)
@@ -619,7 +619,7 @@ class AccountServices:
 
             return output_table
 
-    def _build_investment_str(self) -> str:
+    def _build_investment_table(self) -> PrettyTable:
         """Return a human-readable summary of the account's investments
 
         The returned string is empty if there are no investments
@@ -640,8 +640,8 @@ class AccountServices:
         """Print a summary of service units allocated to and used by the account"""
 
         try:
-            print(self._build_usage_str())
-            print(self._build_investment_str())
+            print(self._build_usage_table())
+            print(self._build_investment_table())
 
         except MissingProposalError:
             print(f'Account {self._account_name} has no current proposal')
@@ -690,8 +690,8 @@ class AccountServices:
                 end=proposal.end_date.strftime(settings.date_format),
                 exp_in_days=days_until_expire,
                 perc=usage_perc,
-                usage=self._build_usage_str(),
-                investment=self._build_investment_str()
+                usage=self._build_usage_table(),
+                investment=self._build_investment_table()
             ).send_to(
                 to=f'{self._account_name}{settings.user_email_suffix}',
                 ffrom=settings.from_address,

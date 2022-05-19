@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest import TestCase
+from unittest import TestCase, skip
 from unittest.mock import patch
 
 import time_machine
@@ -39,6 +39,7 @@ class PrintInfo(EmptyAccountSetup, TestCase):
         mock_print.assert_called_with(f'Account {settings.test_account} has no current proposal')
 
 
+@skip('This functionality hasn\'t been fully implimented yet.')
 class Renewal(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
@@ -71,6 +72,7 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
         self.assertEqual(self.num_inv_sus * settings.inv_rollover_fraction, current_investment.rollover_sus)
 
 
+@skip('This functionality hasn\'t been fully implimented yet.')
 @patch('smtplib.SMTP.send_message')
 class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     """Test for emails sent when locking accounts"""
