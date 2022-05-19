@@ -7,6 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
+from typing import Dict
 
 from environ import environ
 
@@ -170,7 +171,7 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self} cluster={clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
-    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> int:
+    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
         """Return the raw account usage on a given cluster
 
         Args:
@@ -178,23 +179,30 @@ class SlurmAccount:
             in_hours: Return usage in units of hours (Defaults to seconds)
 
         Returns:
-            The account's usage of the given cluster
+            A dictionary with the number of service units used by each user in the account
         """
 
         LOG.debug(f'Fetching cluster usage for {self}')
 
         # Only the second and third line are necessary from the output table
         cmd = ShellCmd(f"sshare -A {self} -M {cluster} -P -a")
-        header, data = cmd.out.split('\n')[1:3]
+        header, *data = cmd.out.split('\n')[1:]
         raw_usage_index = header.split('|').index("RawUsage")
-        usage = int(data.split('|')[raw_usage_index])
+        username_index = header.split('|').index("User")
 
-        if in_hours:  # Convert from seconds to hours
-            usage //= 60
+        out_data = dict()
+        for line in data:
+            split_line = line.split('|')
+            user = split_line[username_index]
+            usage = int(split_line[raw_usage_index])
+            if in_hours:  # Convert from seconds to hours
+                usage //= 60
 
-        return usage
+            out_data[user] = usage
 
-    def get_total_usage(self, in_hours: bool = False) -> int:
+        return out_data
+
+    def get_total_usage(self, in_hours: bool = True) -> int:
         """Return the raw account usage across all clusters defined in application settings
 
         Args:
@@ -204,7 +212,12 @@ class SlurmAccount:
             The account's usage of the given cluster
         """
 
-        return sum(self.get_cluster_usage(cluster, in_hours) for cluster in settings.clusters)
+        total = 0
+        for cluster in settings.clusters:
+            user_usage = self.get_cluster_usage(cluster, in_hours)
+            total + sum(user_usage.values())
+
+        return total
 
     @RequireRoot
     def reset_raw_usage(self) -> None:

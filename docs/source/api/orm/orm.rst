@@ -11,4 +11,4 @@ SubModules
    :nosignatures:
 
    bank.orm.tables
-   bank.orm.utils
+   bank.orm.enum

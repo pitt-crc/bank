@@ -54,7 +54,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import List, Optional
 
-from . import settings, account_services, system
+from . import settings, system, account_logic
 from .orm import ProposalEnum
 
 LOG = getLogger('bank.cli')
@@ -67,6 +67,7 @@ class BaseParser(ArgumentParser):
         """Handles the parsing of command line arguments"""
 
         # If parent init has already been called, there is no need to call it again
+        # Doing so would overwrite properties of the existing instance
         if hasattr(self, 'prog'):
             return
 
@@ -88,7 +89,7 @@ class BaseParser(ArgumentParser):
             return super().add_subparsers(parser_class=BaseParser)
 
 
-class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParser):
+class AdminParser(account_logic.AdminServices, BaseParser):
     """Command line parser for the ``admin`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -98,54 +99,69 @@ class AdminParser(account_services.AdminServices, system.SlurmAccount, BaseParse
         admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
+        update_status = admin_subparsers.add_parser('update_status', help='Notify and lock all expired or overdrawn accounts')
+        update_status.set_defaults(function=self.update_account_status)
+
+        update_status = admin_subparsers.add_parser('notify_usage', help='Send any pending account usage notifications')
+        update_status.set_defaults(function=self.send_usage_notifications)
+
+        maintain = admin_subparsers.add_parser('run_maintenance', help='Run regular maintenance tasks')
+        maintain.set_defaults(function=self.run_maintenance)
+
+
+class AccountParser(account_logic.AccountServices, system.SlurmAccount, BaseParser):
+    """Command line parser for the ``account`` service"""
+
+    def __init__(self, **kwargs) -> None:
+        BaseParser.__init__(self, **kwargs)
+        super_class = super(AccountParser, AccountParser)
+
+        subparsers = self.add_subparsers()
+        account_parser = subparsers.add_parser('account', help='Tools for general account management')
+        account_subparsers = account_parser.add_subparsers(title="admin actions")
+
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
 
-        info = admin_subparsers.add_parser('info', help='Print account usage and allocation information')
-        info.set_defaults(function=super(AdminParser, AdminParser).print_info)
-        info.add_argument('--account', type=account_services.AdminServices, **account_definition)
-
-        slurm_lock = admin_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=True)
-        slurm_lock.add_argument('--account', type=system.SlurmAccount, **account_definition)
-
-        slurm_unlock = admin_subparsers.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
-        slurm_unlock.set_defaults(function=super(AdminParser, AdminParser).set_locked_state, lock_state=False)
-        slurm_unlock.add_argument('--account', type=system.SlurmAccount, **account_definition)
-
-        lock_expired = admin_subparsers.add_parser('lock_expired', help='Notify and lock all expired or overdrawn accounts')
-        lock_expired.set_defaults(function=super(AdminParser, AdminParser).notify_unlocked)
-
-        find_unlocked = admin_subparsers.add_parser('find_unlocked', help='List all unlocked user accounts')
-        find_unlocked.set_defaults(function=super(AdminParser, AdminParser).find_unlocked)
-
-        renew = admin_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any expired investments')
-        renew.set_defaults(function=super(AdminParser, AdminParser).renew)
-        renew.add_argument('--account', type=account_services.InvestmentServices, **account_definition)
-
-        create_account = admin_subparsers.add_parser('create_account', help='Create a new bank account')
-        create_account.set_defaults(function=super(AdminParser, AdminParser).create_account)
+        create_account = account_subparsers.add_parser('create', help='Create a new bank account')
+        create_account.set_defaults(function=super_class.create_account)
         create_account.add_argument('--account', dest='account_name')
         create_account.add_argument('--pi', dest='description')
         create_account.add_argument('--department', dest='organization')
 
-        delete_account = admin_subparsers.add_parser('delete_account', help='Delete an existing bank account')
-        delete_account.set_defaults(function=super(AdminParser, AdminParser).delete_account)
+        delete_account = account_subparsers.add_parser('delete', help='Delete an existing bank account')
+        delete_account.set_defaults(function=super_class.delete_account)
         delete_account.add_argument('--account', type=system.SlurmAccount, **account_definition)
 
-        add_user = admin_subparsers.add_parser('add_user', help='Add an authorized user to an existing bank account')
-        add_user.set_defaults(function=super(AdminParser, AdminParser).add_user)
+        add_user = account_subparsers.add_parser('add_user', help='Add an authorized user to an existing bank account')
+        add_user.set_defaults(function=super_class.add_user)
         add_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
         add_user.add_argument('--user', help='Name of the user account')
         add_user.add_argument('--make_default', action='store_true')
 
-        remove_user = admin_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
-        remove_user.set_defaults(function=super(AdminParser, AdminParser).remove_user)
+        remove_user = account_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
+        remove_user.set_defaults(function=super_class.remove_user)
         remove_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
         remove_user.add_argument('--user', help='Name of the user account')
 
+        slurm_lock = account_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        slurm_lock.set_defaults(function=super_class.set_locked_state, lock_state=True)
+        slurm_lock.add_argument('--account', type=system.SlurmAccount, **account_definition)
 
-class ProposalParser(account_services.ProposalServices, BaseParser):
+        slurm_unlock = account_subparsers.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        slurm_unlock.set_defaults(function=super_class.set_locked_state, lock_state=False)
+        slurm_unlock.add_argument('--account', type=system.SlurmAccount, **account_definition)
+
+        renew = account_subparsers.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
+        renew.set_defaults(function=super_class.renew)
+        renew.add_argument('--account', type=account_logic.InvestmentServices, **account_definition)
+
+        info = account_subparsers.add_parser('info', help='Print account usage and allocation information')
+        info.set_defaults(function=super_class.print_info)
+        info.add_argument('--account', type=account_logic.AccountServices, **account_definition)
+
+
+class ProposalParser(account_logic.ProposalServices, BaseParser):
     """Command line parser for the ``proposal`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -156,7 +172,7 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', type=account_services.ProposalServices, help='The parent slurm account')
+        account_definition = dict(dest='self', metavar='acc', type=account_logic.ProposalServices, help='The parent slurm account')
         type_definition = dict(type=ProposalEnum.from_string, help='', choices=list(ProposalEnum))
 
         proposal_create = proposal_subparsers.add_parser('create', help='Create a new proposal for an existing slurm account')
@@ -170,21 +186,21 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
         proposal_delete.add_argument('--account', **account_definition)
 
         proposal_add = proposal_subparsers.add_parser('add', help='Add service units to an existing proposal')
-        proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add)
+        proposal_add.set_defaults(function=super(ProposalParser, ProposalParser).add_sus)
         proposal_add.add_argument('--account', **account_definition)
         self._add_cluster_args(proposal_add)
 
         proposal_subtract = proposal_subparsers.add_parser('subtract', help='Subtract service units from an existing proposal')
-        proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract)
+        proposal_subtract.set_defaults(function=super(ProposalParser, ProposalParser).subtract_sus)
         proposal_subtract.add_argument('--account', **account_definition)
         self._add_cluster_args(proposal_subtract)
 
         proposal_overwrite = proposal_subparsers.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).overwrite)
+        proposal_overwrite.set_defaults(function=super(ProposalParser, ProposalParser).modify_proposal)
         proposal_overwrite.add_argument('--account', **account_definition)
         proposal_overwrite.add_argument('--type', **type_definition)
-        proposal_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
-        proposal_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
+        proposal_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
+        proposal_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
         self._add_cluster_args(proposal_overwrite)
 
     @staticmethod
@@ -199,7 +215,7 @@ class ProposalParser(account_services.ProposalServices, BaseParser):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(account_services.InvestmentServices, BaseParser):
+class InvestmentParser(account_logic.InvestmentServices, BaseParser):
     """Command line parser for the ``investment`` service"""
 
     def __init__(self, **kwargs) -> None:
@@ -210,8 +226,8 @@ class InvestmentParser(account_services.InvestmentServices, BaseParser):
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', type=account_services.InvestmentServices, help='The parent slurm account')
-        proposal_id_definition = dict(type=int, required=True, help='The investment proposal id')
+        account_definition = dict(dest='self', metavar='acc', type=account_logic.InvestmentServices, help='The parent slurm account')
+        investment_id_definition = dict(dest='inv_id', metavar='id', type=int, required=True, help='The investment proposal id')
         service_unit_definition = dict(type=int, help='The number of SUs you want to process', required=True)
 
         investment_create = investment_subparsers.add_parser('create', help='Create a new investment')
@@ -224,27 +240,27 @@ class InvestmentParser(account_services.InvestmentServices, BaseParser):
         investment_delete = investment_subparsers.add_parser('delete', help='Delete an existing investment')
         investment_delete.set_defaults(function=super(InvestmentParser, InvestmentParser).delete_investment)
         investment_delete.add_argument('--account', **account_definition)
-        investment_delete.add_argument('--id', **proposal_id_definition)
+        investment_delete.add_argument('--id', **investment_id_definition)
 
         investment_add = investment_subparsers.add_parser('add', help='Add service units to an existing investment')
-        investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add)
+        investment_add.set_defaults(function=super(InvestmentParser, InvestmentParser).add_sus)
         investment_add.add_argument('--account', **account_definition)
-        investment_add.add_argument('--id', **proposal_id_definition)
+        investment_add.add_argument('--id', **investment_id_definition)
         investment_add.add_argument('--sus', **service_unit_definition)
 
         investment_subtract = investment_subparsers.add_parser('subtract', help='Subtract service units from an existing investment')
-        investment_subtract.set_defaults(function=super(InvestmentParser, InvestmentParser).subtract)
+        investment_subtract.set_defaults(function=super(InvestmentParser, InvestmentParser).subtract_sus)
         investment_subtract.add_argument('--account', **account_definition)
-        investment_subtract.add_argument('--id', **proposal_id_definition)
+        investment_subtract.add_argument('--id', **investment_id_definition)
         investment_subtract.add_argument('--sus', **service_unit_definition)
 
         investment_overwrite = investment_subparsers.add_parser('overwrite', help='Overwrite properties of an existing investment')
-        investment_overwrite.set_defaults(function=super(InvestmentParser, InvestmentParser).overwrite)
+        investment_overwrite.set_defaults(function=super(InvestmentParser, InvestmentParser).modify_investment)
         investment_overwrite.add_argument('--account', **account_definition)
-        investment_overwrite.add_argument('--id', **proposal_id_definition)
+        investment_overwrite.add_argument('--id', **investment_id_definition)
         investment_overwrite.add_argument('--sus', type=int, help='The new number of SUs in the investment')
-        investment_overwrite.add_argument('--start_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
-        investment_overwrite.add_argument('--end_date', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
+        investment_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
+        investment_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
 
         investment_advance = investment_subparsers.add_parser('advance', help='Move service units from future investments to the current allocation')
         investment_advance.set_defaults(function=super(InvestmentParser, InvestmentParser).advance)
@@ -252,11 +268,12 @@ class InvestmentParser(account_services.InvestmentServices, BaseParser):
         investment_advance.add_argument('--sus', **service_unit_definition)
 
 
-class CLIParser(AdminParser, ProposalParser, InvestmentParser):
+class CLIParser(AdminParser, AccountParser, ProposalParser, InvestmentParser):
     """Command line parser used as the primary entry point for the parent application"""
 
     def __init__(self, **kwargs) -> None:
         AdminParser.__init__(self, **kwargs)
+        AccountParser.__init__(self, **kwargs)
         ProposalParser.__init__(self, **kwargs)
         InvestmentParser.__init__(self, **kwargs)
 

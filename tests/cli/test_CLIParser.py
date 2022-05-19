@@ -13,6 +13,9 @@ class HasSubparsers(TestCase):
     def test_has_admin_subparser(self) -> None:
         self.assertIn('admin', self.cli_choices)
 
+    def test_has_account_subparser(self) -> None:
+        self.assertIn('account', self.cli_choices)
+
     def test_has_proposal_subparser(self) -> None:
         self.assertIn('proposal', self.cli_choices)
 

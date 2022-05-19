@@ -1,9 +1,8 @@
 from unittest import TestCase
 
-from bank import settings
 from bank.cli import AdminParser
+from tests._utils import ProposalSetup
 from tests.cli._utils import CLIAsserts
-from tests.account_services._utils import ProposalSetup
 
 
 class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
@@ -13,32 +12,11 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     def setUpClass(cls) -> None:
         cls.parser = AdminParser()
 
-    def test_account_info(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin info --account {settings.test_account}')
+    def test_update_status(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin update_status')
 
-    def test_lock(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin lock --account {settings.test_account}')
+    def test_notify_usage(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin notify_usage')
 
-    def test_unlock(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin unlock --account {settings.test_account}')
-
-    def test_notify_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin lock_expired')
-
-    def test_unlocked_accounts(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin find_unlocked')
-
-    def test_renew_investment(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin renew --account {settings.test_account}')
-
-    def test_create_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin create_account --account {settings.test_account}')
-
-    def test_delete_account(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin delete_account --account {settings.test_account}')
-
-    def test_add_user(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin add_user --account {settings.test_account}')
-
-    def test_remove_user(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin remove_user --account {settings.test_account}')
+    def test_run_maintenance(self) -> None:
+        self.assert_parser_matches_func_signature(f'admin run_maintenance')

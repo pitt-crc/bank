@@ -3,11 +3,11 @@ from unittest import TestCase
 
 from bank import settings
 from bank.cli import InvestmentParser
-from tests.account_services._utils import InvestorSetup
+from tests._utils import InvestmentSetup, ProposalSetup
 from tests.cli._utils import CLIAsserts
 
 
-class SignatureMatchesCLI(InvestorSetup, CLIAsserts, TestCase):
+class SignatureMatchesCLI(ProposalSetup, InvestmentSetup, CLIAsserts, TestCase):
     """Test the ``InvestmentParser`` interface defines arguments that match the underlying DAO signatures"""
 
     @classmethod
@@ -29,7 +29,7 @@ class SignatureMatchesCLI(InvestorSetup, CLIAsserts, TestCase):
     def test_overwrite_investment(self) -> None:
         date = datetime.now().strftime(settings.date_format)
         self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --sus 10')
-        self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --start_date {date} --end_date {date}')
+        self.assert_parser_matches_func_signature(f'investment overwrite --account {settings.test_account} --id 0 --start {date} --end {date}')
 
     def test_advance_sus(self) -> None:
         self.assert_parser_matches_func_signature(f'investment advance --account {settings.test_account} --sus 10')

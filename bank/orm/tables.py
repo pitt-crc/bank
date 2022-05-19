@@ -1,4 +1,4 @@
-"""Object-oriented definitions for the underlying database schema
+"""Object-oriented definitions for the underlying database schema.
 
 API Reference
 -------------
@@ -6,178 +6,303 @@ API Reference
 
 from __future__ import annotations
 
-import logging
-from datetime import date
-from logging import getLogger
+from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, Integer, String, Enum
+from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey, select
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import validates
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import validates, relationship
 
-from .utils import Validators, ProposalEnum
+from .enum import ProposalEnum
 from .. import settings
-from ..system import SlurmAccount
 
-LOG = getLogger('bank.orm.tables')
 Base = declarative_base()
 metadata = Base.metadata
 
 
-class Proposal(Base):
-    """Class representation of the ``proposal`` table
+class Account(Base):
+    """User account data
 
     Table Fields:
-      - id: Integer
-      - account_name: String
-      - proposal_type: ProposalEnum
-      - start_date: Date
-      - end_date: Date
-      - percent_notified: Integer
+      - id  (Integer): Primary key for this table
+      - name (String): Unique account name
+
+    Relationships:
+      - proposals     (Proposal): One to many
+      - investments (Investment): One to many
+    """
+
+    __tablename__ = 'account'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False, unique=True)
+
+    proposals = relationship('Proposal', back_populates='account', cascade="all,delete")
+    investments = relationship('Investment', back_populates='account', cascade="all,delete")
+
+
+class Proposal(Base):
+    """Metadata for user proposals
+
+    Table Fields:
+      - id                 (Integer): Primary key for this table
+      - account_id         (Integer): Primary key for the ``account`` table
+      - proposal_type (ProposalEnum): The proposal type
+      - start            (Date): The date when the proposal goes into effect
+      - end              (Date): The proposal's expiration date
+      - percent_notified   (Integer): Percent usage when account holder was last notified
+
+    Relationships:
+      - account        (Account): Many to one
+      - allocations (Allocation): One to many
     """
 
     __tablename__ = 'proposal'
 
-    id = Column(Integer, primary_key=True)
-    account_name = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(Integer, ForeignKey(Account.id))
     proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    percent_notified = Column(Integer, nullable=False)
+    percent_notified = Column(Integer, nullable=False, default=0)
+    exhaustion_date = Column(Date, nullable=True)
 
-    _validate_service_units = validates(*settings.clusters)(Validators.validate_service_units)
-    _validate_percent_notified = validates('percent_notified')(Validators.validate_percent_notified)
+    account = relationship('Account', back_populates='proposals')
+    allocations = relationship('Allocation', back_populates='proposal', cascade="all,delete")
 
-    @property
-    def expired(self) -> bool:
-        """Return whether the investment is past its end date"""
+    @validates('percent_notified')
+    def _validate_percent_notified(self, key: str, value: int) -> int:
+        """Verify the given value is between 0 and 100 (inclusive)
 
-        return self.end_date <= date.today()
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
 
-    @property
-    def total_allocated(self) -> int:
-        return sum(getattr(self, c) for c in settings.clusters)
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
 
-    def to_archive_object(self) -> ProposalArchive:
-        """Return data from the current row as an ``InvestorArchive`` instance"""
+        if 0 <= value <= 100:
+            return value
 
-        logging.debug(f'Creating archive object for proposal {self.id}')
-        archive_obj = ProposalArchive(
-            id=self.id,
-            proposal_type=self.proposal_type,
-            account_name=self.account_name,
-            start_date=self.start_date,
-            end_date=self.end_date,
-        )
+        raise ValueError(f'Value for {key} column must be between 0 and 100 (got {value}).')
 
-        # Add the usage and allocation for each cluster to the archive object
-        slurm_acct = SlurmAccount(self.account_name)
-        for cluster in settings.clusters:
-            setattr(archive_obj, cluster, getattr(self, cluster))
-            setattr(archive_obj, f'{cluster}_usage', slurm_acct.get_cluster_usage(cluster))
+    @validates('end')
+    def _validate_end_date(self, key: str, value: int) -> int:
+        """Verify the end date is after the start date
 
-        return archive_obj
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
+
+        if value <= self.start_date:
+            raise ValueError('End date must be greater than start date')
+
+        return value
+
+    @hybrid_property
+    def last_active_date(self) -> date:
+        """The last date for which the parent investment is active"""
+
+        return self.end_date - timedelta(days=1)
+
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Return whether the proposal is past its end date or has exhausted its allocation"""
+
+        today = date.today()
+        if today >= self.end_date:
+            return True
+
+        if today < self.start_date:
+            return False
+
+        has_allocations = bool(self.allocations)
+        has_service_units = any(alloc.final_usage is None for alloc in self.allocations)
+        return not (has_allocations and has_service_units)
+
+    @hybrid_property
+    def is_active(self) -> bool:
+        """Return if the proposal is within its active date range and has available service units"""
+
+        today = date.today()
+        in_date_range = (self.start_date <= today) and (today < self.end_date)
+        has_allocations = any(alloc.final_usage is None for alloc in self.allocations)
+        return in_date_range and has_allocations
+
+    @is_active.expression
+    def is_active(cls) -> bool:
+        today = date.today()
+        subquery = select(Proposal.id).join(Allocation) \
+            .where(Proposal.start_date <= today) \
+            .where(today < Proposal.end_date) \
+            .where(Allocation.final_usage == None)
+
+        return cls.id.in_(subquery)
 
 
-class ProposalArchive(Base):
-    """Class representation of the ``proposal_archive`` table
+class Allocation(Base):
+    """Service unit allocations on individual clusters
+
+    Values for the ``final_usage`` may column exceed the ``service_units``
+    column in situations where system administrators have bypassed the banking
+    system and manually enabled continued usage of a cluster after an allocation
+    has run out.
 
     Table Fields:
-      - id: Integer
-      - account_name: String
-      - proposal_type: ProposalEnum
-      - start_date: Date
-      - end_date: Date
+      - id             (Integer): Primary key for this table
+      - proposal_id (ForeignKey): Primary key for the ``proposal`` table
+      - cluster_name    (String): Name of the allocated cluster
+      - service_units  (Integer): Number of allocated service units
+      - final_usage    (Integer): Total service units utilized at proposal expiration
+
+    Relationships:
+      - proposal (Proposal): Many to one
     """
 
-    __tablename__ = 'proposal_archive'
+    __tablename__ = 'allocation'
 
-    id = Column(Integer, primary_key=True)
-    account_name = Column(String, nullable=False)
-    proposal_type = Column(Enum(ProposalEnum), nullable=False)
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
-
-    _validate_service_units = validates(*settings.clusters, *(f'{c}_usage' for c in settings.clusters))(
-        Validators.validate_service_units
-    )
-
-
-class Investor(Base):
-    """Class representation of the ``investor`` table
-
-    Table Fields:
-      - id: Integer
-      - account_name: String
-      - start_date: Date
-      - end_date: Date
-      - service_units: Integer
-      - current_sus: Integer
-      - withdrawn_sus: Integer
-      - rollover_sus: Integer
-    """
-
-    __tablename__ = 'investor'
-
-    id = Column(Integer, primary_key=True)
-    account_name = Column(String, nullable=False)
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    proposal_id = Column(Integer, ForeignKey(Proposal.id))
+    cluster_name = Column(String, nullable=False)
     service_units = Column(Integer, nullable=False)
-    current_sus = Column(Integer, nullable=False)
-    withdrawn_sus = Column(Integer, nullable=False)
-    rollover_sus = Column(Integer, nullable=False)
+    final_usage = Column(Integer, nullable=True)
 
-    _validate_service_units = validates('service_units')(Validators.validate_service_units)
+    proposal = relationship('Proposal', back_populates='allocations')
 
-    @property
-    def expired(self) -> bool:
-        """Return whether the investment is past its end date or is fully withdrawn with no remaining service units."""
+    @validates('service_units')
+    def _validate_service_units(self, key: str, value: int) -> int:
+        """Verify whether a numerical value non-negative
 
-        return (self.end_date <= date.today()) or (self.current_sus == 0 and self.withdrawn_sus >= self.service_units)
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
 
-    def to_archive_object(self) -> InvestorArchive:
-        """Return data from the current row as an ``InvestorArchive`` instance"""
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
 
-        logging.debug(f'Creating archive object for Investor {self.id}')
-        return InvestorArchive(
-            id=self.id,
-            account_name=self.account_name,
-            start_date=self.start_date,
-            end_date=self.end_date,
-            exhaustion_date=date.today(),
-            service_units=self.service_units,
-            current_sus=self.current_sus
-        )
+        if value < 0:
+            raise ValueError(f'Value for {key} column must be a non-negative integer (got {value}).')
+
+        return value
+
+    @validates('cluster_name')
+    def _validate_cluster_name(self, key: str, value: int) -> None:
+        """Verify a cluster name is defined in application settings
+
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value is not in application settings
+        """
+
+        if value not in settings.clusters:
+            raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
+
+        return value
 
 
-class InvestorArchive(Base):
-    """Class representation of the ``investor_archive`` table
+class Investment(Base):
+    """Service unit allocations granted in exchange for user investment
 
     Table Fields:
-      - id: Integer
-      - account_name: String
-      - start_date: Date
-      - end_date: Date
-      - exhaustion_date: Date
-      - service_units: Integer
-      - current_sus: Integer
+      - id            (Integer): Primary key for this table
+      - start       (Date): Date the investment goes into effect
+      - end         (Date): Expiration date of the investment
+      - service_units (Integer): Total service units granted by an investment
+      - rollover_sus  (Integer): Service units carried over from a previous investment
+      - withdrawn_sus (Integer): Service units removed from this investment and into another
+      - current_sus   (Integer): Total service units available in the investment
+      - exhaustion_date  (Date): Date the investment is_expired or reached full utilization
+
+    Relationships:
+      - account (Account): Many to one
     """
 
-    __tablename__ = 'investor_archive'
+    __tablename__ = 'investment'
 
-    id = Column(Integer, primary_key=True)
-    account_name = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(Integer, ForeignKey(Account.id))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    exhaustion_date = Column(Date, nullable=False)
-    service_units = Column(Integer, nullable=False)
-    current_sus = Column(Integer, nullable=False)
+    service_units = Column(Integer, nullable=False)  # Initial allocation of service units
+    rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
+    withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
+    current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
+    exhaustion_date = Column(Date, nullable=True)
 
-    _validate_service_units = validates('service_units')(Validators.validate_service_units)
+    account = relationship('Account', back_populates='investments')
 
+    @validates('service_units')
+    def _validate_service_units(self, key: str, value: int) -> int:
+        """Verify whether a numerical value is positive
 
-# Dynamically add columns for each of the managed clusters
-for _cluster in settings.clusters:
-    setattr(Proposal, _cluster, Column(Integer, default=0))
-    setattr(ProposalArchive, _cluster, Column(Integer, nullable=False))
-    setattr(ProposalArchive, f'{_cluster}_usage', Column(Integer, nullable=False))
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
+
+        if value <= 0:
+            raise ValueError(f'Value for {key} columns must be a positive integer (got {value}).')
+
+        return value
+
+    @validates('end')
+    def _validate_end_date(self, key: str, value: int) -> int:
+        """Verify the end date is after the start date
+
+        Args:
+            key: Name of the column data is being entered into
+            value: The value to test
+
+        Raises:
+            ValueError: If the given value does not match required criteria
+        """
+
+        if value <= self.start_date:
+            raise ValueError('End date must be greater than start date')
+
+        return value
+
+    @hybrid_property
+    def last_active_date(self) -> date:
+        """The last date for which the parent investment is active"""
+
+        return self.end_date - timedelta(days=1)
+
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Return whether the investment is past its end date or has exhausted its allocation"""
+
+        is_exhausted = self.exhaustion_date is not None
+        past_end = self.end_date <= date.today()
+        spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
+        return is_exhausted or past_end or spent_service_units
+
+    @is_expired.expression
+    def is_expired(cls) -> bool:
+        """Return whether the investment is past its end date or has exhausted its allocation"""
+
+        is_exhausted = cls.exhaustion_date != None
+        past_end = cls.end_date <= date.today()
+        spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
+        return is_exhausted | past_end | spent_service_units
+
+    @hybrid_property
+    def is_active(self) -> bool:
+        """Return if the investment is within its active date range and has available service units"""
+
+        today = date.today()
+        in_date_range = (self.start_date <= today) & (today < self.end_date)
+        has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
+        return in_date_range & has_service_units
