@@ -1,5 +1,5 @@
 """The ``settings`` module is used to define default application settings and
-provides access to application settings as defined in the working environment.
+provides access to settings as defined in the working environment.
 
 Application Settings
 --------------------
