@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch, call
 
-from bank.exceptions import MissingFieldsError
+from bank.exceptions import MissingEmailFieldsError
 from bank.system.smtp import EmailTemplate
 
 
@@ -84,7 +84,7 @@ class MessageSending(TestCase):
     def test_error_on_incomplete_message(self, mock_smtp) -> None:
         """Test a ``RuntimeError`` is raised when sending an incomplete email message"""
 
-        with self.assertRaises(MissingFieldsError):
+        with self.assertRaises(MissingEmailFieldsError):
             EmailTemplate('{x}').send_to(
                 self.to_address, self.subject, self.from_address, smtp=mock_smtp)
 
