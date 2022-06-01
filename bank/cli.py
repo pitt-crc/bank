@@ -1,6 +1,6 @@
 """The ``cli`` module defines the command line interface for the parent
 application. This module is effectively a wrapper around existing functionality
-defined in the ``account_services`` module.
+defined in the ``account_logic`` module.
 
 Command line functions are grouped together by the service being administered.
 
@@ -49,10 +49,10 @@ API Reference
 
 from __future__ import annotations
 
+import sys
 from argparse import ArgumentParser, Action
 from datetime import datetime
 from logging import getLogger
-from typing import List, Optional
 
 from . import settings, system, account_logic
 from .orm import ProposalEnum
@@ -74,12 +74,29 @@ class BaseParser(ArgumentParser):
         super(BaseParser, self).__init__(**kwargs)
         self.set_defaults(function=self.print_help)
 
+    def error(self, message):
+        """Print the error message to STDOUT and exit
+
+        If the application was called without any arguments, print the help text.
+
+        Args:
+            message: The error message
+        """
+
+        if len(sys.argv) == 1:
+            self.print_help()
+
+        else:
+            sys.stderr.write('ERROR: {}\n'.format(message))
+
+        sys.exit(2)
+
     def add_subparsers(self, **kwargs) -> Action:
         """Return a subparser for the parent parser class
 
         Parser instances are only allowed to have a single subparser. If a
         subparser for the parent parser already exists, return the existing
-        parser.
+        subparser.
         """
 
         if self._subparsers:
@@ -99,13 +116,11 @@ class AdminParser(account_logic.AdminServices, BaseParser):
         admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
 
-        update_status = admin_subparsers.add_parser('update_status', help='Notify and lock all expired or overdrawn accounts')
+        update_status = admin_subparsers.add_parser('update_status', help='Update account status and send pending notifications for a single account')
         update_status.set_defaults(function=self.update_account_status)
+        update_status.add_argument('--account', dest='account_name')
 
-        update_status = admin_subparsers.add_parser('notify_usage', help='Send any pending account usage notifications')
-        update_status.set_defaults(function=self.send_usage_notifications)
-
-        maintain = admin_subparsers.add_parser('run_maintenance', help='Run regular maintenance tasks')
+        maintain = admin_subparsers.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
         maintain.set_defaults(function=self.run_maintenance)
 
 
@@ -116,8 +131,8 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
         BaseParser.__init__(self, **kwargs)
         super_class = super(AccountParser, AccountParser)
 
-        subparsers = self.add_subparsers()
-        account_parser = subparsers.add_parser('account', help='Tools for general account management')
+        parent_parser = self.add_subparsers()
+        account_parser = parent_parser.add_parser('account', help='Tools for general account management')
         account_subparsers = account_parser.add_subparsers(title="admin actions")
 
         # Reusable definitions for arguments
@@ -125,9 +140,9 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
 
         create_account = account_subparsers.add_parser('create', help='Create a new bank account')
         create_account.set_defaults(function=super_class.create_account)
-        create_account.add_argument('--account', dest='account_name')
-        create_account.add_argument('--pi', dest='description')
-        create_account.add_argument('--department', dest='organization')
+        create_account.add_argument('--account', dest='account_name', help='Name of a slurm user account')
+        create_account.add_argument('--pi', dest='description', help='Name of the primary account user')
+        create_account.add_argument('--department', dest='organization', help='Name of the PI\'s primary department')
 
         delete_account = account_subparsers.add_parser('delete', help='Delete an existing bank account')
         delete_account.set_defaults(function=super_class.delete_account)
@@ -137,7 +152,7 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
         add_user.set_defaults(function=super_class.add_user)
         add_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
         add_user.add_argument('--user', help='Name of the user account')
-        add_user.add_argument('--make_default', action='store_true')
+        add_user.add_argument('--make_default', action='store_true', help='Make this the users default account')
 
         remove_user = account_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
         remove_user.set_defaults(function=super_class.remove_user)
@@ -277,21 +292,11 @@ class CLIParser(AdminParser, AccountParser, ProposalParser, InvestmentParser):
         ProposalParser.__init__(self, **kwargs)
         InvestmentParser.__init__(self, **kwargs)
 
-    def execute(self, args: Optional[List[str]] = None) -> None:
-        """Method used to evaluate the command line parser
-
-        Parse command line arguments and evaluate the corresponding function.
-        If arguments are not explicitly passed to this function, they are
-        retrieved from the command line.
-
-        Args:
-            args: A list of command line arguments
-        """
-
-        LOG.debug(f'Evaluate CLI with args: {args}')
+    def execute(self) -> None:
+        """Parse command line arguments and execute the application."""
 
         try:
-            cli_kwargs = dict(self.parse_args(args)._get_kwargs())
+            cli_kwargs = dict(self.parse_args()._get_kwargs())
             function = cli_kwargs.pop('function', self.print_help)
             function(**cli_kwargs)
 
