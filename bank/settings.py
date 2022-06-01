@@ -5,71 +5,50 @@ Application Settings
 --------------------
 
 .. list-table::
-   :widths: 20 25 55
+   :widths: 25 75
    :header-rows: 1
 
    * - Variable Name
-     - Env. Variable
      - Description
    * - test_account
-     - CRC_BANK_TEST_ACCOUNT
      - Name of the account to use when running application tests
    * - test_cluster
-     - CRC_BANK_TEST_CLUSTER
      - Name of the cluster to run application tests against
    * - date_format
-     - CRC_BANK_DATE_FORMAT
      - The format used when representing datetimes as strings
    * - log_path
-     - CRC_BANK_LOG_PATH
      - The path of the application log file
    * - log_format
-     - CRC_BANK_LOG_FORMAT
      - The format of log file entries (follows standard python conventions)
    * - log_level
-     - CRC_BANK_LOG_LEVEL
      - The minimum severity level to include in the log file (follows standard python conventions)
    * - db_path
-     - CRC_BANK_DB_PATH
      - Path to the application SQLite backend
    * - clusters
-     - CRC_BANK_CLUSTERS
      - A list of cluster names to track usage on
    * - inv_rollover_fraction
-     - INV_ROLLOVER_FRACTION
      - Fraction of service units to carry over when rolling over investments
    * - user_email_suffix
-     - CRC_BANK_EMAIL_SUFFIX
      - The email suffix for user accounts. We assume the ``Description`` field of each account in ``sacctmgr`` contains the prefix.
    * - from_address
-     - CRC_BANK_FROM_ADDRESS
      - The address to send user alerts from
    * - notify_levels
-     - CRC_BANK_NOTIFY_LEVELS
      - Send an email each time a user exceeds a proposal usage threshold
    * - usage_warning
-     - CRC_BANK_USAGE_WARNING
      - The email template used when a user exceeds a proposal usage threshold
    * - warning_days
-     - CRC_BANK_WARNING_DAYS
      - Send an email when a user's propsal is a given number of days from expiring
    * - expiration_warning
-     - CRC_BANK_EXPIRATION_WARNING
      - The email template to use when a user's propsal is a given number of days from expiring
    * - expired_proposal_notice
-     - CRC_BANK_EXPIRED_PROPOSAL_NOTICE
      - The email template to use when a user's propsal has expired
    * - ldap_username
-     - CRC_BANK_LDAP_USERNAME
      - Username to use when running LDAP queries
    * - ldap_password_path
-     - CRC_BANK_LDAP_PASSWORD_PATH
      - Plain text password corresponding to the configured LDAP userid
    * - ad_server
-     - CRC_BANK_AD_SERVER
      - Microsoft's Active Directory (AD) for user authentication and authorization
    * - ldap_hostname
-     - CRC_BANK_LDAP_HOSTNAME
      - Fully resolved LDAP hostname
 
 Usage Example
@@ -112,43 +91,41 @@ _CUR_DIR = Path(__file__).resolve().parent
 _APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
 
 # Settings for running the test suite.
-test_account = _ENV.get_value(_APP_PREFIX + 'TEST_ACCOUNT', default='sam')
-test_cluster = _ENV.get_value(_APP_PREFIX + 'TEST_CLUSTER', default='smp')
+test_account = 'sam'
+test_cluster = 'smp'
 
 # Define how dates should be displayed as strings (in errors, emails, and STDOUT messages)
-date_format = _ENV.get_value(_APP_PREFIX + 'DATE_FORMAT', default='%m/%d/%y')
+date_format = '%m/%d/%y'
 
 # Where and how to write log files
-log_path = _ENV.get_value(_APP_PREFIX + 'LOG_PATH', default=_CUR_DIR / 'crc_bank.log')
-log_format = _ENV.get_value(_APP_PREFIX + 'LOG_FORMAT', default='[%(levelname)s] %(asctime)s - %(name)s - %(message)s')
-log_level = _ENV.get_value(_APP_PREFIX + 'LOG_LEVEL', default='INFO')
+log_path = _CUR_DIR / 'crc_bank.log'
+log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
+log_level = 'INFO'
 
 # Path to the application database
-db_path = _ENV.get_value(_APP_PREFIX + 'DB_PATH', default=f"sqlite:///{_CUR_DIR / 'crc_bank.db'}")
+db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = _ENV.get_value(_APP_PREFIX + 'CLUSTERS', default=('smp', 'mpi', 'gpu', 'htc'))
+clusters = ('smp', 'mpi', 'gpu', 'htc')
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1
-inv_rollover_fraction = _ENV.get_value(_APP_PREFIX + 'INV_ROLLOVER_FRACTION', cast=float, default=0.5)
+inv_rollover_fraction = 0.5
 
 # The email suffix for your organization. We assume the ``Description``
 # field of each account in ``sacctmgr`` contains the prefix.
-user_email_suffix = _ENV.get_value(_APP_PREFIX + 'EMAIL_SUFFIX', default='@pitt.edu')
-from_address = _ENV.get_value(_APP_PREFIX + 'FROM_ADDRESS', default='noreply@pitt.edu')
+user_email_suffix = '@pitt.edu'
+from_address = 'noreply@pitt.edu'
 
 # LDAP variables
-ldap_username = _ENV.get_value(_APP_PREFIX + 'LDAP_USERNAME', default='crcquery')
-ldap_password_path = _ENV.get_value(_APP_PREFIX + 'LDAP_PASSWORD_PATH', default='/ihome/crc/scripts/crcquery.txt')
-ldap_hostname = _ENV.get_value(_APP_PREFIX + 'LDAP_HOSTNAME', default='ldap://sam-ldap-prod-01.cssd.pitt.edu')
-ad_server = _ENV.get_value(_APP_PREFIX + 'AD_SERVER', default='pittad.univ.pitt.edu')
+ldap_username = 'crcquery'
+ldap_password_path = '/ihome/crc/scripts/crcquery.txt'
+ldap_hostname = 'ldap://sam-ldap-prod-01.cssd.pitt.edu'
+ad_server = 'pittad.univ.pitt.edu'
 
 # An email to send when a user has exceeded a proposal usage threshold
-notify_levels = _ENV.get_value(_APP_PREFIX + 'NOTIFY_LEVELS', default=(90,))
-usage_warning = _ENV.get_value(
-    _APP_PREFIX + 'USAGE_WARNING',
-    default=dedent("""
+notify_levels = (90,)
+usage_warning = dedent("""
     <html>
     <head></head>
     <body>
@@ -171,13 +148,11 @@ usage_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """))
+    """)
 
 # An email to send when a user is  nearing the end of their proposal
-warning_days = _ENV.get_value(_APP_PREFIX + 'WARNING_DAYS', default=(60,))
-expiration_warning = _ENV.get_value(
-    _APP_PREFIX + 'EXPIRATION_WARNING',
-    default=dedent("""
+warning_days = (60,)
+expiration_warning = dedent("""
     <html
     <head></head>
     <body>
@@ -196,12 +171,10 @@ expiration_warning = _ENV.get_value(
     </p>
     </body>
     </html>
-    """))
+    """)
 
 # An email to send when the proposal has is_expired
-expired_proposal_notice = _ENV.get_value(
-    _APP_PREFIX + 'EXPIRED_PROPOSAL_WARNING',
-    default=dedent("""
+expired_proposal_notice = dedent("""
     <html>
     <head></head>
     <body>
@@ -218,4 +191,4 @@ expired_proposal_notice = _ENV.get_value(
     </p>
     </body>
     </html>
-    """))
+    """)
