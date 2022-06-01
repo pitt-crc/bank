@@ -1,4 +1,4 @@
-"""Object-oriented definitions for the underlying database schema.
+"""Object-oriented definition for the underlying database schema.
 
 API Reference
 -------------
@@ -48,9 +48,10 @@ class Proposal(Base):
       - id                 (Integer): Primary key for this table
       - account_id         (Integer): Primary key for the ``account`` table
       - proposal_type (ProposalEnum): The proposal type
-      - start            (Date): The date when the proposal goes into effect
-      - end              (Date): The proposal's expiration date
+      - start_date            (Date): The date when the proposal goes into effect
+      - end_date              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
+      - exhaustion_date       (Date): Date the proposal expired or reached full utilization
 
     Relationships:
       - account        (Account): Many to one
@@ -75,7 +76,7 @@ class Proposal(Base):
         """Verify the given value is between 0 and 100 (inclusive)
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:
@@ -89,10 +90,10 @@ class Proposal(Base):
 
     @validates('end')
     def _validate_end_date(self, key: str, value: int) -> int:
-        """Verify the end date is after the start date
+        """Verify the proposal end date is after the start date
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:
@@ -112,7 +113,7 @@ class Proposal(Base):
 
     @hybrid_property
     def is_expired(self) -> bool:
-        """Return whether the proposal is past its end date or has exhausted its allocation"""
+        """Whether the proposal is past its end date or has exhausted its allocation"""
 
         today = date.today()
         if today >= self.end_date:
@@ -127,7 +128,7 @@ class Proposal(Base):
 
     @hybrid_property
     def is_active(self) -> bool:
-        """Return if the proposal is within its active date range and has available service units"""
+        """Whether the proposal is within its active date range and has available service units"""
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
@@ -148,7 +149,7 @@ class Proposal(Base):
 class Allocation(Base):
     """Service unit allocations on individual clusters
 
-    Values for the ``final_usage`` may column exceed the ``service_units``
+    Values for the ``final_usage`` column may exceed the ``service_units``
     column in situations where system administrators have bypassed the banking
     system and manually enabled continued usage of a cluster after an allocation
     has run out.
@@ -176,10 +177,10 @@ class Allocation(Base):
 
     @validates('service_units')
     def _validate_service_units(self, key: str, value: int) -> int:
-        """Verify whether a numerical value non-negative
+        """Verify whether a numerical value is non-negative
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:
@@ -196,7 +197,7 @@ class Allocation(Base):
         """Verify a cluster name is defined in application settings
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:
@@ -214,13 +215,14 @@ class Investment(Base):
 
     Table Fields:
       - id            (Integer): Primary key for this table
-      - start       (Date): Date the investment goes into effect
-      - end         (Date): Expiration date of the investment
+      - account_id    (Integer): Primary key for the ``account`` table
+      - start_date       (Date): Date the investment goes into effect
+      - end_date         (Date): Expiration date of the investment
       - service_units (Integer): Total service units granted by an investment
       - rollover_sus  (Integer): Service units carried over from a previous investment
       - withdrawn_sus (Integer): Service units removed from this investment and into another
       - current_sus   (Integer): Total service units available in the investment
-      - exhaustion_date  (Date): Date the investment is_expired or reached full utilization
+      - exhaustion_date  (Date): Date the investment expired or reached full utilization
 
     Relationships:
       - account (Account): Many to one
@@ -245,7 +247,7 @@ class Investment(Base):
         """Verify whether a numerical value is positive
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:
@@ -262,7 +264,7 @@ class Investment(Base):
         """Verify the end date is after the start date
 
         Args:
-            key: Name of the column data is being entered into
+            key: Name of the database column being tested
             value: The value to test
 
         Raises:

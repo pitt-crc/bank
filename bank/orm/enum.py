@@ -10,17 +10,24 @@ from enum import Enum
 
 
 class BaseEnum(Enum):
-    """Extends behavior of the base ``Enum`` class for easier casting"""
+    """Extends the behavior of the builtin ``Enum`` class for easier instance construction"""
 
     @classmethod
-    def from_string(cls, string: str) -> ProposalEnum:
-        """Return an instance of the parent class corresponding to a proposal type"""
+    def from_string(cls, string: str) -> BaseEnum:
+        """Return an instance of the parent class corresponding to the given type
+
+        Args:
+            string: The name of the Enum value as a string
+
+        Returns:
+            An instance of the parent Enum class
+        """
 
         try:
             return cls[string]
 
         except KeyError:
-            raise ValueError(f'Invalid ProposalEnum type: {string}')
+            raise ValueError(f'Invalid Enum type: {string}')
 
     def __str__(self) -> str:
         return self.name
