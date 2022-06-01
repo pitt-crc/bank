@@ -41,7 +41,7 @@ class RequireRoot:
 class ShellCmd:
     """Executes commands using the underlying shell environment
 
-    Output to StdOut and StdError from the executed command are
+    Output to STDOUT and STDERR from the executed command are
     written to the ``out`` and ``err`` attributes respectively.
     """
 

@@ -1,8 +1,4 @@
-"""A banking and proposal system for Slurm.
-
-For a command line interface to this package, see the ``crc_bank.py`` file
-included with the source code of this application.
-"""
+"""A banking and proposal system for Slurm."""
 
 import logging
 

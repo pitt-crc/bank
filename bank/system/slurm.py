@@ -74,7 +74,7 @@ class SlurmAccount:
             account_name: The name of the slurm account
 
         Returns:
-            Whether the account exists
+            Boolean value indicating whether the account exists
         """
 
         cmd = ShellCmd(f'sacctmgr -n show assoc account={account_name}')
@@ -176,7 +176,7 @@ class SlurmAccount:
 
         Args:
             cluster: The name of the cluster
-            in_hours: Return usage in units of hours (Defaults to seconds)
+            in_hours: Return usage in units of hours instead of seconds
 
         Returns:
             A dictionary with the number of service units used by each user in the account
@@ -206,7 +206,7 @@ class SlurmAccount:
         """Return the raw account usage across all clusters defined in application settings
 
         Args:
-            in_hours: Return usage in units of hours (Defaults to seconds)
+            in_hours: Return usage in units of hours instead of seconds
 
         Returns:
             The account's usage of the given cluster

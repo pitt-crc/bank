@@ -1,6 +1,6 @@
-"""The ``system`` module acts as an interface provides an object-oriented
-interface for various command line utilities (e.g., ``sacctmgr``)
-and system services (e.g., ``smtp``) installed on the parent system.
+"""The ``system`` module provides an object-oriented interface for various
+command line utilities (e.g., ``sacctmgr``) and system services
+(e.g., ``smtp``).
 
 SubModules
 ----------
