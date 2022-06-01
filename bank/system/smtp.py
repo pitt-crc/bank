@@ -53,7 +53,7 @@ class EmailTemplate(Formatter):
     def format(self, **kwargs: Any) -> EmailTemplate:
         """Format the email template
 
-        See the ``fields`` attribute for available arguments.
+        See the ``fields`` attribute for valid keyword argument names.
 
         Args:
             kwargs: Values used to format each field in the template

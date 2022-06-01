@@ -1,3 +1,9 @@
+"""Rudimentary API for interfacing with the Pitt LDAP server
+
+API Reference
+-------------
+"""
+
 import ldap
 import ldap.sasl
 from ldap3 import Server, Connection
@@ -8,14 +14,14 @@ from bank.settings import ldap_username, ldap_password_path, ldap_hostname, ad_s
 
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:
-    """Return Whether the given ldap group exists
+    """Return whether the given ldap group exists
 
     Args:
         account: The name of the account to check for
-        raise_if_false: Raise an error if the return value is false
+        raise_if_false: Raise an error if the return value is ``False``
 
     Raises:
-        LDAPGroupNotFound: If ``raise_if_false`` is True and the account does not exist
+        LDAPGroupNotFound: If ``raise_if_false`` is ``True`` and the account does not exist
     """
 
     cmd = ShellCmd("getent group {0}".format(account))
@@ -32,10 +38,10 @@ def check_ldap_user(username: str, raise_if_false=False) -> bool:
 
     Args:
         username: The username to check for
-        raise_if_false: Raise an error if the return value is false
+        raise_if_false: Raise an error if the return value is ``False``
 
     Raises:
-        LdapUserNotFound: If ``raise_if_false`` is True and the user is not found
+        LdapUserNotFound: If ``raise_if_false`` is ``True`` and the user is not found
     """
 
     with open(ldap_password_path, "r") as f:
@@ -66,10 +72,10 @@ def check_crc_user(username: str, raise_if_false=False) -> bool:
 
     Args:
         username: The username to check for
-        raise_if_false: Raise an error if the return value is false
+        raise_if_false: Raise an error if the return value is ``False``
 
     Raises:
-        CRCUserNotFound: If ``raise_if_false`` is True and the user is not found
+        CRCUserNotFound: If ``raise_if_false`` is ``True`` and the user is not found
     """
 
     with open(ldap_password_path, "r") as f:
