@@ -83,8 +83,8 @@ The ``crc_bank`` application was built at the University of Pittsburgh and
 comes configured out of the box to run on Pitt servers. You will need to
 configure the application settings to work on your system.
 
-Application settings can be modified by setting variables in the working
-environment. For a full list of application settings, see the table of
+Application settings can be modified by modifying the ``bank/settings.py`` file.
+For a full list of application settings, see the table of
 available settings in the :ref:`API documentation <settings>`.
 
 Testing Your Installation
