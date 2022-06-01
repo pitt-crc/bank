@@ -34,7 +34,7 @@ class CRCUserNotFound(Exception):
     """Raised when an LDAP group is referenced that does not exist."""
 
 
-class MissingFieldsError(Exception):
+class MissingEmailFieldsError(Exception):
     """Raised when trying to send an incomplete email template."""
 
 
