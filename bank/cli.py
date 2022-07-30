@@ -38,9 +38,9 @@ If you want to access the command line interface for just a single service
 
 .. code-block:: python
 
-   >>> from bank.cli import AdminParser
+   >>> from bank.cli import AdminSubParser
    >>>
-   >>> admin_parser = AdminParser()
+   >>> admin_parser = AdminSubParser()
    >>> admin_parser.parse_args()
 
 API Reference
@@ -58,7 +58,7 @@ from . import settings
 from .orm import ProposalEnum
 
 
-class BaseParser(ArgumentParser):
+class BaseSubParser(ArgumentParser):
     """Used to extend functionality of the builtin ``ArgumentParser`` class"""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -73,59 +73,25 @@ class BaseParser(ArgumentParser):
     def define_interface(cls, parent_parser):
         pass
 
-    def error(self, message):
-        """Print the error message to STDOUT and exit
 
-        If the application was called without any arguments, print the help text.
-
-        Args:
-            message: The error message
-        """
-
-        if len(sys.argv) == 1:
-            self.print_help()
-
-        else:
-            sys.stderr.write('ERROR: {}\n'.format(message))
-
-        sys.exit(2)
-
-
-class AdminParser(BaseParser):
+class AdminSubParser(BaseSubParser):
     """Command line parser for the ``admin`` service"""
 
-    @staticmethod
-    def define_interface(parent_parser):
+    @classmethod
+    def define_interface(cls, parent_parser):
         update_status = parent_parser.add_parser('update_status', help='Update account status and send pending notifications for a single account')
         update_status.add_argument('--account', dest='account_name')
 
         parent_parser.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
 
 
-class AccountParser(BaseParser):
+class AccountSubParser(BaseSubParser):
     """Command line parser for the ``account`` service"""
 
     @classmethod
     def define_interface(cls, parent_parser):
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
-
-        create_account = parent_parser.add_parser('create', help='Create a new bank account')
-        create_account.add_argument('--account', dest='account_name', help='Name of a slurm user account')
-        create_account.add_argument('--pi', dest='description', help='Name of the primary account user')
-        create_account.add_argument('--department', dest='organization', help='Name of the PI\'s primary department')
-
-        delete_account = parent_parser.add_parser('delete', help='Delete an existing bank account')
-        delete_account.add_argument('--account', **account_definition)
-
-        add_user = parent_parser.add_parser('add_user', help='Add an authorized user to an existing bank account')
-        add_user.add_argument('--account', **account_definition)
-        add_user.add_argument('--user', help='Name of the user account')
-        add_user.add_argument('--make_default', action='store_true', help='Make this the users default account')
-
-        remove_user = parent_parser.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
-        remove_user.add_argument('--account', **account_definition)
-        remove_user.add_argument('--user', help='Name of the user account')
 
         slurm_lock = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         slurm_lock.add_argument('--account', **account_definition)
@@ -140,7 +106,7 @@ class AccountParser(BaseParser):
         info.add_argument('--account', **account_definition)
 
 
-class ProposalParser(BaseParser):
+class ProposalSubParser(BaseSubParser):
     """Command line parser for the ``proposal`` service"""
 
     @classmethod
@@ -184,7 +150,7 @@ class ProposalParser(BaseParser):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(ArgumentParser):
+class InvestmentParser(BaseSubParser):
     """Command line parser for the ``investment`` service"""
 
     @classmethod
@@ -226,31 +192,54 @@ class InvestmentParser(ArgumentParser):
         investment_advance.add_argument('--sus', **service_unit_definition)
 
 
-class Application(BaseParser):
+class Application(ArgumentParser):
     """Command line parser used as the primary entry point for the parent application"""
 
-    @classmethod
-    def define_interface(cls, parent_parser):
+    def __init__(self):
 
-        admin_parser = parent_parser.add_parser('admin', help='Tools for general account management')
+        super().__init__()
+        subparsers = self.add_subparsers(parser_class=ArgumentParser)
+
+        admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
-        AdminParser.define_interface(admin_subparsers)
+        AdminSubParser.define_interface(admin_subparsers)
 
-        account_parser = parent_parser.add_parser('account', help='Tools for general account management')
+        account_parser = subparsers.add_parser('account', help='Tools for general account management')
         account_subparsers = account_parser.add_subparsers(title="admin actions")
-        AccountParser.define_interface(account_subparsers)
+        AccountSubParser.define_interface(account_subparsers)
 
-        proposal_parser = parent_parser.add_parser('proposal', help='Administrative tools for user proposals')
+        proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
-        ProposalParser.define_interface(proposal_subparsers)
+        ProposalSubParser.define_interface(proposal_subparsers)
 
-        investment_parser = parent_parser.add_parser('investment', help='Administrative tools for user investments')
+        investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
         InvestmentParser.define_interface(investment_subparsers)
 
+    def error(self, message):
+        """Print the error message to STDOUT and exit
+
+        If the application was called without any arguments, print the help text.
+
+        Args:
+            message: The error message
+        """
+
+        if len(sys.argv) == 1:
+            self.print_help()
+
+        else:
+            sys.stderr.write('ERROR: {}\n'.format(message))
+
+        sys.exit(2)
+
     @classmethod
     def execute(cls) -> None:
-        """Parse command line arguments and execute the application."""
+        """Parse command line arguments and execute the application.
+
+        This method is defined as a class method to provide an executable hook
+        for the package setup.py file.
+        """
 
         app = cls()
         cli_kwargs = vars(app.parse_args())

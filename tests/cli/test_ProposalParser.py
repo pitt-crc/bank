@@ -2,7 +2,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from bank import settings
-from bank.cli import ProposalParser
+from bank.cli import ProposalSubParser
 from tests.cli._utils import CLIAsserts
 
 
@@ -11,7 +11,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.parser = ProposalParser()
+        cls.parser = ProposalSubParser()
 
     def test_create_proposal(self) -> None:
         self.assert_parser_matches_func_signature(f'proposal create --account {settings.test_account}')
