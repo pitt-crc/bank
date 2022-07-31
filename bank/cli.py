@@ -31,16 +31,13 @@ Use the ``CommandLineApplication`` object to parse and evaluate commandline argu
    >>> # Parse commandline arguments and launch the banking application
    >>> app.execute()
 
-The application's argument parsing functionality is accessible in the standard
-``argparse`` fashion:
+The application's argument parsing functionality is accessible via the
+``parser`` attribute:
 
 .. code-block:: python
 
    >>> # Raise an error if there are unknown args
-   >>> args = app.parse_args()
-   >>>
-   >>> # Return unknown args separately and do not raise an exception
-   >>> known_args, unknown_args = app.parse_known_args()
+   >>> args = app.parser.parse_args()
 
 If you want to access the commandline interface for just a single service
 (e.g., for testing purposes) you can use the dedicated class for that service:
@@ -84,6 +81,23 @@ class BaseParser(ArgumentParser):
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=ArgumentParser)
         self.define_interface(subparsers)
+
+    def error(self, message: str) -> None:
+        """Print the error message to STDOUT and exit
+
+        If the application was called without any arguments, print the help text.
+
+        Args:
+            message: The error message
+        """
+
+        if len(sys.argv) == 1:
+            self.print_help()
+
+        else:
+            sys.stderr.write('ERROR: {}\n'.format(message))
+
+        sys.exit(2)
 
     @classmethod
     @abc.abstractmethod
@@ -258,14 +272,14 @@ class InvestmentParser(BaseParser):
         advance_parser.add_argument('--sus', **service_unit_definition)
 
 
-class CommandLineApplication(ArgumentParser):
+class CommandLineApplication:
     """commandline application used as the primary entry point for the parent application"""
 
     def __init__(self):
         """Initialize the application's commandline interface"""
 
-        super().__init__()
-        self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
+        self.parser = ArgumentParser()
+        self._subparsers = self.parser.add_subparsers(parser_class=ArgumentParser)
 
         # Add desired parsers to the commandline application
         self.add_parser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
@@ -283,26 +297,9 @@ class CommandLineApplication(ArgumentParser):
             help_text: The help text description
         """
 
-        parser = self.subparsers.add_parser(command, help=help_text)
+        parser = self._subparsers.add_parser(command, help=help_text)
         subparsers = parser.add_subparsers(title=title)
         parser_class.define_interface(subparsers)
-
-    def error(self, message: str) -> None:
-        """Print the error message to STDOUT and exit
-
-        If the application was called without any arguments, print the help text.
-
-        Args:
-            message: The error message
-        """
-
-        if len(sys.argv) == 1:
-            self.print_help()
-
-        else:
-            sys.stderr.write('ERROR: {}\n'.format(message))
-
-        sys.exit(2)
 
     @classmethod
     def execute(cls) -> None:
@@ -312,11 +309,6 @@ class CommandLineApplication(ArgumentParser):
         for the packaged setup.py file.
         """
 
-        app = cls()
-        cli_kwargs = vars(app.parse_args())
-
-        try:
-            print(cli_kwargs)
-
-        except Exception as err:
-            app.error(str(err))
+        cli_kwargs = vars(cls().parser.parse_args())
+        executable = cli_kwargs.pop('function')
+        executable(**cli_kwargs)
