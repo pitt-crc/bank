@@ -53,6 +53,7 @@ import abc
 import sys
 from argparse import ArgumentParser
 from datetime import datetime
+from typing import Type
 
 from . import settings
 from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
@@ -248,31 +249,36 @@ class InvestmentParser(BaseParser):
         advance_parser.add_argument('--sus', **service_unit_definition)
 
 
-class Application(ArgumentParser):
-    """Command line parser used as the primary entry point for the parent application"""
+class CommandLineApplication(ArgumentParser):
+    """Command line application used as the primary entry point for the parent application"""
 
     def __init__(self):
+        """Initialize the application's commandline interface"""
 
         super().__init__()
-        subparsers = self.add_subparsers(parser_class=ArgumentParser)
+        self.subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-        admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
-        admin_subparsers = admin_parser.add_subparsers(title="admin actions")
-        AdminParser.define_interface(admin_subparsers)
+        # Add desired parsers to the commandline application
+        self.add_parser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
+        self.add_parser_to_app('account', AccountParser, title='Account actions', help_text='Tools for general account management')
+        self.add_parser_to_app('proposal', ProposalParser, title='Proposal actions', help_text='Administrative tools for user proposals')
+        self.add_parser_to_app('investment', InvestmentParser, title='Investment actions', help_text='Administrative tools for user investments')
 
-        account_parser = subparsers.add_parser('account', help='Tools for general account management')
-        account_subparsers = account_parser.add_subparsers(title="admin actions")
-        AccountParser.define_interface(account_subparsers)
+    def add_parser_to_app(self, command: str, parser_class: Type[BaseParser], title: str, help_text: str) -> None:
+        """Add a parser to the parent commandline application
 
-        proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
-        proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
-        ProposalParser.define_interface(proposal_subparsers)
+        Args:
+            command: The commandline argument used to invoke the given parser
+            parser_class: A ``BaseParser`` subclass
+            title: The help text title
+            help_text: The help text description
+        """
 
-        investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
-        investment_subparsers = investment_parser.add_subparsers(title="investment actions")
-        InvestmentParser.define_interface(investment_subparsers)
+        parser = self.subparsers.add_parser(command, help=help_text)
+        subparsers = parser.add_subparsers(title=title)
+        parser_class.define_interface(subparsers)
 
-    def error(self, message):
+    def error(self, message: str) -> None:
         """Print the error message to STDOUT and exit
 
         If the application was called without any arguments, print the help text.
@@ -294,7 +300,7 @@ class Application(ArgumentParser):
         """Parse command line arguments and execute the application.
 
         This method is defined as a class method to provide an executable hook
-        for the package setup.py file.
+        for the packaged setup.py file.
         """
 
         app = cls()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from bank.cli import Application
+from bank.cli import CommandLineApplication
 
 if __name__ == '__main__':
-    Application().execute()
+    CommandLineApplication().execute()
