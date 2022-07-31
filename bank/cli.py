@@ -55,8 +55,9 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 from . import settings
-from .account_logic import AdminServices
+from .account_logic import AdminServices, AccountServices
 from .orm import ProposalEnum
+from .system import SlurmAccount
 
 
 class BaseParser(ArgumentParser):
@@ -108,24 +109,34 @@ class AdminParser(BaseParser):
 
 
 class AccountParser(BaseParser):
-    """Command line parser for the ``account`` service"""
+    """Commandline interface for the ``AccountServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser):
+    def define_interface(cls, parent_parser) -> None:
+        """Define the command line interface of the parent parser
+
+        Args:
+            parent_parser: Subparser action to assign parsers and arguments to
+        """
+
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
+        account_argument = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
 
-        slurm_lock = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        slurm_lock.add_argument('--account', **account_definition)
+        lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        lock_parser.set_defaults(function=lambda account: SlurmAccount(account).set_locked_state(True))
+        lock_parser.add_argument('--account', **account_argument)
 
-        slurm_unlock = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
-        slurm_unlock.add_argument('--account', **account_definition)
+        unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        unlock_parser.set_defaults(function=lambda account: SlurmAccount(account).set_locked_state(False))
+        unlock_parser.add_argument('--account', **account_argument)
 
-        renew = parent_parser.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
-        renew.add_argument('--account', **account_definition)
+        renew_parser = parent_parser.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
+        renew_parser.set_defaults(function=AccountServices.renew)
+        renew_parser.add_argument('--account', **account_argument)
 
-        info = parent_parser.add_parser('info', help='Print account usage and allocation information')
-        info.add_argument('--account', **account_definition)
+        info_parser = parent_parser.add_parser('info', help='Print account usage and allocation information')
+        info_parser.set_defaults(function=AccountServices.print_info)
+        info_parser.add_argument('--account', **account_argument)
 
 
 class ProposalParser(BaseParser):
