@@ -1,40 +1,49 @@
-"""The ``cli`` module defines the command line interface for the parent
+"""The ``cli`` module defines the commandline interface for the parent
 application. This module is effectively a wrapper around existing functionality
 defined in the ``account_logic`` module.
 
-Command line functions are grouped together by the service being administered.
+Commandline functions are grouped together by the service being administered.
 
 .. code-block:: bash
 
    application.py <service> <action> --arguments
 
 Each service is represented by a distinct class which handles the parsing
-and evaluation of all actions related to that service. These classes are
-ultimetly inherited by the ``CLIParser`` class, which acts as the primary
-command line interface for interacting with the parent application as a whole.
+of commands and arguments related to that service. These classes are ultimetly
+called by the ``CommandLineApplication`` class, which acts as the primary
+commandline interface for the parent application.
 
-.. note:: Parser classes in this module are based on the ``ArgumentParser``
-  class from the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
+.. note::
+   Parser classes in this module are based on the ``ArgumentParser``
+   class from the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
 
 Usage Example
 -------------
 
-Use the ``CLIParser`` object to parsing and evaluate command line arguments:
+Use the ``CommandLineApplication`` object to parse and evaluate commandline arguments:
 
 .. code-block:: python
 
-   >>> from bank.cli import CLIParser
+   >>> from bank.cli import CommandLineApplication
    >>>
-   >>> parser = CLIParser()
+   >>> app = CommandLineApplication()
    >>>
-   >>> # Parse command line arguments but do not evaluate the result
-   >>> args = parser.parse_args()
-   >>>
-   >>> # Parse command line arguments AND evaluate the corresponding function
-   >>> parser.execute()
+   >>> # Parse commandline arguments and launch the banking application
+   >>> app.execute()
 
-If you want to access the command line interface for just a single service
-(E.g., for testing purposes) you can use the dedicated class for that service:
+The application's argument parsing functionality is accessible in the standard
+``argparse`` fashion:
+
+.. code-block:: python
+
+   >>> # Raise an error if there are unknown args
+   >>> args = app.parse_args()
+   >>>
+   >>> # Return unknown args separately and do not raise an exception
+   >>> known_args, unknown_args = app.parse_known_args()
+
+If you want to access the commandline interface for just a single service
+(e.g., for testing purposes) you can use the dedicated class for that service:
 
 .. code-block:: python
 
@@ -70,7 +79,7 @@ class BaseParser(ArgumentParser):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate the command line interface and add any necessary subparsers"""
+        """Instantiate the commandline interface and add any necessary subparsers"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=ArgumentParser)
@@ -79,9 +88,9 @@ class BaseParser(ArgumentParser):
     @classmethod
     @abc.abstractmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the command line interface of the parent parser
+        """Define the commandline interface of the parent parser
 
-        Adds parsers and command line arguments to the given subparser action.
+        Adds parsers and commandline arguments to the given subparser action.
         The ``parent_parser`` object is the same object returned by the
         ``add_subparsers`` method.
 
@@ -95,7 +104,7 @@ class AdminParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the command line interface of the parent parser
+        """Define the commandline interface of the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -114,7 +123,7 @@ class AccountParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the command line interface of the parent parser
+        """Define the commandline interface of the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -145,7 +154,7 @@ class ProposalParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the command line interface of the parent parser
+        """Define the commandline interface of the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -185,7 +194,7 @@ class ProposalParser(BaseParser):
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:
-        """Add argument definitions to the given command line subparser
+        """Add argument definitions to the given commandline subparser
 
         Args:
             parser: The parser to add arguments to
@@ -200,7 +209,7 @@ class InvestmentParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the command line interface of the parent parser
+        """Define the commandline interface of the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -250,7 +259,7 @@ class InvestmentParser(BaseParser):
 
 
 class CommandLineApplication(ArgumentParser):
-    """Command line application used as the primary entry point for the parent application"""
+    """commandline application used as the primary entry point for the parent application"""
 
     def __init__(self):
         """Initialize the application's commandline interface"""
@@ -297,7 +306,7 @@ class CommandLineApplication(ArgumentParser):
 
     @classmethod
     def execute(cls) -> None:
-        """Parse command line arguments and execute the application.
+        """Parse commandline arguments and execute the application.
 
         This method is defined as a class method to provide an executable hook
         for the packaged setup.py file.
