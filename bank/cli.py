@@ -55,7 +55,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 from . import settings
-from .account_logic import AdminServices, AccountServices, ProposalServices
+from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
 from .orm import ProposalEnum
 from .system import SlurmAccount
 
@@ -195,45 +195,57 @@ class ProposalParser(BaseParser):
 
 
 class InvestmentParser(BaseParser):
-    """Command line parser for the ``investment`` service"""
+    """Commandline interface for the ``InvestmentServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser):
+    def define_interface(cls, parent_parser) -> None:
+        """Define the command line interface of the parent parser
+
+        Args:
+            parent_parser: Subparser action to assign parsers and arguments to
+        """
+
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='The parent slurm account')
         investment_id_definition = dict(dest='inv_id', metavar='id', type=int, required=True, help='The investment proposal id')
         service_unit_definition = dict(type=int, help='The number of SUs you want to process', required=True)
 
-        investment_create = parent_parser.add_parser('create', help='Create a new investment')
-        investment_create.add_argument('--account', **account_definition)
-        investment_create.add_argument('--sus', type=int, help='The number of SUs you want to insert', required=True)
-        investment_create.add_argument('--num_inv', type=int, default=5, help='Optionally divide service units across n sequential investments')
-        investment_create.add_argument('--duration', type=int, default=365, help='The length of each investment')
+        create_parser = parent_parser.add_parser('create', help='Create a new investment')
+        create_parser.set_defaults(function=InvestmentServices.create_investment)
+        create_parser.add_argument('--account', **account_definition)
+        create_parser.add_argument('--sus', type=int, help='The number of SUs you want to insert', required=True)
+        create_parser.add_argument('--num_inv', type=int, default=5, help='Optionally divide service units across n sequential investments')
+        create_parser.add_argument('--duration', type=int, default=365, help='The length of each investment')
 
-        investment_delete = parent_parser.add_parser('delete', help='Delete an existing investment')
-        investment_delete.add_argument('--account', **account_definition)
-        investment_delete.add_argument('--id', **investment_id_definition)
+        delete_parser = parent_parser.add_parser('delete', help='Delete an existing investment')
+        delete_parser.set_defaults(function=InvestmentServices.delete_investment)
+        delete_parser.add_argument('--account', **account_definition)
+        delete_parser.add_argument('--id', **investment_id_definition)
 
-        investment_add = parent_parser.add_parser('add', help='Add service units to an existing investment')
-        investment_add.add_argument('--account', **account_definition)
-        investment_add.add_argument('--id', **investment_id_definition)
-        investment_add.add_argument('--sus', **service_unit_definition)
+        add_parser = parent_parser.add_parser('add', help='Add service units to an existing investment')
+        add_parser.set_defaults(function=InvestmentServices.add_sus)
+        add_parser.add_argument('--account', **account_definition)
+        add_parser.add_argument('--id', **investment_id_definition)
+        add_parser.add_argument('--sus', **service_unit_definition)
 
-        investment_subtract = parent_parser.add_parser('subtract', help='Subtract service units from an existing investment')
-        investment_subtract.add_argument('--account', **account_definition)
-        investment_subtract.add_argument('--id', **investment_id_definition)
-        investment_subtract.add_argument('--sus', **service_unit_definition)
+        subtract_parser = parent_parser.add_parser('subtract', help='Subtract service units from an existing investment')
+        subtract_parser.set_defaults(function=InvestmentServices.subtract_sus)
+        subtract_parser.add_argument('--account', **account_definition)
+        subtract_parser.add_argument('--id', **investment_id_definition)
+        subtract_parser.add_argument('--sus', **service_unit_definition)
 
-        investment_overwrite = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing investment')
-        investment_overwrite.add_argument('--account', **account_definition)
-        investment_overwrite.add_argument('--id', **investment_id_definition)
-        investment_overwrite.add_argument('--sus', type=int, help='The new number of SUs in the investment')
-        investment_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
-        investment_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
+        overwrite_parser = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing investment')
+        overwrite_parser.set_defaults(function=InvestmentServices.modify_investment)
+        overwrite_parser.add_argument('--account', **account_definition)
+        overwrite_parser.add_argument('--id', **investment_id_definition)
+        overwrite_parser.add_argument('--sus', type=int, help='The new number of SUs in the investment')
+        overwrite_parser.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
+        overwrite_parser.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
 
-        investment_advance = parent_parser.add_parser('advance', help='Move service units from future investments to the current allocation')
-        investment_advance.add_argument('--account', **account_definition)
-        investment_advance.add_argument('--sus', **service_unit_definition)
+        advance_parser = parent_parser.add_parser('advance', help='Move service units from future investments to the current allocation')
+        advance_parser.set_defaults(function=InvestmentServices.add_sus)
+        advance_parser.add_argument('--account', **account_definition)
+        advance_parser.add_argument('--sus', **service_unit_definition)
 
 
 class Application(ArgumentParser):
@@ -244,7 +256,6 @@ class Application(ArgumentParser):
         super().__init__()
         subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
-        breakpoint()
         admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
         AdminParser.define_interface(admin_subparsers)
