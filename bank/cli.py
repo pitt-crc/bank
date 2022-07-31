@@ -55,7 +55,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 from . import settings
-from .account_logic import AdminServices, AccountServices
+from .account_logic import AdminServices, AccountServices, ProposalServices
 from .orm import ProposalEnum
 from .system import SlurmAccount
 
@@ -140,36 +140,47 @@ class AccountParser(BaseParser):
 
 
 class ProposalParser(BaseParser):
-    """Command line parser for the ``proposal`` service"""
+    """Commandline interface for the ``ProposalServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser):
+    def define_interface(cls, parent_parser) -> None:
+        """Define the command line interface of the parent parser
+
+        Args:
+            parent_parser: Subparser action to assign parsers and arguments to
+        """
+
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='The parent slurm account')
         type_definition = dict(type=ProposalEnum.from_string, help='', choices=list(ProposalEnum))
 
-        proposal_create = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
-        proposal_create.add_argument('--account', **account_definition)
-        proposal_create.add_argument('--type', **type_definition)
-        cls._add_cluster_args(proposal_create)
+        create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
+        create_parser.set_defaults(function=ProposalServices.create_proposal)
+        create_parser.add_argument('--account', **account_definition)
+        create_parser.add_argument('--type', **type_definition)
+        cls._add_cluster_args(create_parser)
 
-        proposal_delete = parent_parser.add_parser('delete', help='Delete an existing account proposal')
-        proposal_delete.add_argument('--account', **account_definition)
+        delete_parser = parent_parser.add_parser('delete', help='Delete an existing account proposal')
+        delete_parser.set_defaults(function=ProposalServices.delete_proposal)
+        delete_parser.add_argument('--account', **account_definition)
 
-        proposal_add = parent_parser.add_parser('add', help='Add service units to an existing proposal')
-        proposal_add.add_argument('--account', **account_definition)
-        cls._add_cluster_args(proposal_add)
+        add_parser = parent_parser.add_parser('add', help='Add service units to an existing proposal')
+        add_parser.set_defaults(function=ProposalServices.add_sus)
+        add_parser.add_argument('--account', **account_definition)
+        cls._add_cluster_args(add_parser)
 
-        proposal_subtract = parent_parser.add_parser('subtract', help='Subtract service units from an existing proposal')
-        proposal_subtract.add_argument('--account', **account_definition)
-        cls._add_cluster_args(proposal_subtract)
+        subtract_parser = parent_parser.add_parser('subtract', help='Subtract service units from an existing proposal')
+        subtract_parser.set_defaults(function=ProposalServices.subtract_sus)
+        subtract_parser.add_argument('--account', **account_definition)
+        cls._add_cluster_args(subtract_parser)
 
-        proposal_overwrite = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        proposal_overwrite.add_argument('--account', **account_definition)
-        proposal_overwrite.add_argument('--type', **type_definition)
-        proposal_overwrite.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
-        proposal_overwrite.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
-        cls._add_cluster_args(proposal_overwrite)
+        overwrite_parser = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing proposal')
+        overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
+        overwrite_parser.add_argument('--account', **account_definition)
+        overwrite_parser.add_argument('--type', **type_definition)
+        overwrite_parser.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
+        overwrite_parser.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
+        cls._add_cluster_args(overwrite_parser)
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:
