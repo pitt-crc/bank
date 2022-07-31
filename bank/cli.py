@@ -38,9 +38,9 @@ If you want to access the command line interface for just a single service
 
 .. code-block:: python
 
-   >>> from bank.cli import AdminSubParser
+   >>> from bank.cli import AdminParser
    >>>
-   >>> admin_parser = AdminSubParser()
+   >>> admin_parser = AdminParser()
    >>> admin_parser.parse_args()
 
 API Reference
@@ -58,11 +58,16 @@ from . import settings
 from .orm import ProposalEnum
 
 
-class BaseSubParser(ArgumentParser):
-    """Used to extend functionality of the builtin ``ArgumentParser`` class"""
+class BaseParser(ArgumentParser):
+    """Abstract base class to use when building commandline parser objects
+
+    Subclasses must define the commandline interface (i.e., any commandline
+    subparsers or arguments) by implementing the ``define_interface`` method.
+    The interface is automatically added to the parser object at installation.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate the command line interface and any necessary subparsers"""
+        """Instantiate the command line interface and add any necessary subparsers"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=ArgumentParser)
@@ -70,11 +75,19 @@ class BaseSubParser(ArgumentParser):
 
     @classmethod
     @abc.abstractmethod
-    def define_interface(cls, parent_parser):
-        pass
+    def define_interface(cls, parent_parser) -> None:
+        """Define the command line interface of the parent parser
+
+        Adds parsers and command line arguments to the given subparser action.
+        The ``parent_parser`` object is the same object returned by the
+        ``add_subparsers`` method.
+
+        Args:
+            parent_parser: Subparser action to assign parsers and arguments to
+        """
 
 
-class AdminSubParser(BaseSubParser):
+class AdminParser(BaseParser):
     """Command line parser for the ``admin`` service"""
 
     @classmethod
@@ -85,7 +98,7 @@ class AdminSubParser(BaseSubParser):
         parent_parser.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
 
 
-class AccountSubParser(BaseSubParser):
+class AccountParser(BaseParser):
     """Command line parser for the ``account`` service"""
 
     @classmethod
@@ -106,7 +119,7 @@ class AccountSubParser(BaseSubParser):
         info.add_argument('--account', **account_definition)
 
 
-class ProposalSubParser(BaseSubParser):
+class ProposalParser(BaseParser):
     """Command line parser for the ``proposal`` service"""
 
     @classmethod
@@ -150,7 +163,7 @@ class ProposalSubParser(BaseSubParser):
             parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
 
 
-class InvestmentParser(BaseSubParser):
+class InvestmentParser(BaseParser):
     """Command line parser for the ``investment`` service"""
 
     @classmethod
@@ -200,17 +213,18 @@ class Application(ArgumentParser):
         super().__init__()
         subparsers = self.add_subparsers(parser_class=ArgumentParser)
 
+        breakpoint()
         admin_parser = subparsers.add_parser('admin', help='Tools for general account management')
         admin_subparsers = admin_parser.add_subparsers(title="admin actions")
-        AdminSubParser.define_interface(admin_subparsers)
+        AdminParser.define_interface(admin_subparsers)
 
         account_parser = subparsers.add_parser('account', help='Tools for general account management')
         account_subparsers = account_parser.add_subparsers(title="admin actions")
-        AccountSubParser.define_interface(account_subparsers)
+        AccountParser.define_interface(account_subparsers)
 
         proposal_parser = subparsers.add_parser('proposal', help='Administrative tools for user proposals')
         proposal_subparsers = proposal_parser.add_subparsers(title="proposal actions")
-        ProposalSubParser.define_interface(proposal_subparsers)
+        ProposalParser.define_interface(proposal_subparsers)
 
         investment_parser = subparsers.add_parser('investment', help='Administrative tools for user investments')
         investment_subparsers = investment_parser.add_subparsers(title="investment actions")
