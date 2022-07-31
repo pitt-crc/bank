@@ -55,6 +55,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 from . import settings
+from .account_logic import AdminServices
 from .orm import ProposalEnum
 
 
@@ -88,14 +89,22 @@ class BaseParser(ArgumentParser):
 
 
 class AdminParser(BaseParser):
-    """Command line parser for the ``admin`` service"""
+    """Commandline interface for the ``AdminServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser):
+    def define_interface(cls, parent_parser) -> None:
+        """Define the command line interface of the parent parser
+
+        Args:
+            parent_parser: Subparser action to assign parsers and arguments to
+        """
+
         update_status = parent_parser.add_parser('update_status', help='Update account status and send pending notifications for a single account')
+        update_status.set_defaults(function=AdminServices.update_account_status)
         update_status.add_argument('--account', dest='account_name')
 
-        parent_parser.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
+        maintenance_parser = parent_parser.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
+        maintenance_parser.set_defaults(function=AdminServices.run_maintenance)
 
 
 class AccountParser(BaseParser):
