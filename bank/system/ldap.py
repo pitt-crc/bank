@@ -9,8 +9,8 @@ import ldap.sasl
 from ldap3 import Server, Connection
 
 from bank.exceptions import LdapUserNotFound, LDAPGroupNotFound, CRCUserNotFound
-from bank.system import ShellCmd
 from bank.settings import ldap_username, ldap_password_path, ldap_hostname, ad_server
+from bank.system import ShellCmd
 
 
 def check_ldap_group(account: str, raise_if_false=False) -> bool:

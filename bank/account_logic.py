@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from logging import getLogger
+from math import ceil
 from typing import Union, Tuple, Optional
 
-from math import ceil
 from prettytable import PrettyTable
 from sqlalchemy import or_, select, between, delete
 
