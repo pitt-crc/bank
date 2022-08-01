@@ -144,7 +144,7 @@ class AccountParser(BaseParser):
         """
 
         # Reusable definitions for arguments
-        account_argument = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
+        account_argument = dict(metavar='acc', help='Name of a slurm user account', required=True)
 
         lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=lambda account: SlurmAccount(account).set_locked_state(True))
@@ -156,11 +156,11 @@ class AccountParser(BaseParser):
 
         renew_parser = parent_parser.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
         renew_parser.set_defaults(function=AccountServices.renew)
-        renew_parser.add_argument('--account', **account_argument)
+        renew_parser.add_argument('--account', **account_argument, dest='self', type=AccountServices)
 
         info_parser = parent_parser.add_parser('info', help='Print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.print_info)
-        info_parser.add_argument('--account', **account_argument)
+        info_parser.add_argument('--account', **account_argument, dest='self', type=AccountServices)
 
 
 class ProposalParser(BaseParser):
