@@ -20,11 +20,6 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(self.parser, 'update_status')
 
-    def test_notify_usage(self) -> None:
-        """Test the parsing of arguments by the ``notify_usage`` command"""
-
-        self.assert_parser_matches_func_signature(self.parser, 'notify_usage')
-
     def test_run_maintenance(self) -> None:
         """Test the parsing of arguments by the ``run_maintenance`` command"""
 
