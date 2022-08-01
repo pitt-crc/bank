@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from logging import getLogger
-from typing import Dict
+from typing import Dict, Collection, Optional
 
 from environ import environ
 
@@ -39,17 +39,17 @@ class Slurm:
             return False
 
     @classmethod
-    def cluster_names(cls) -> set[str]:
+    def cluster_names(cls) -> tuple[str]:
         """Return cluster names configured with slurm
 
         Returns:
-            A set of cluster names
+            A tuple of cluster names
         """
 
         # Get cluster names using squeue to fetch all running jobs for a non-existent username
         output = ShellCmd('squeue -u fakeuser -M all').out
         regex_pattern = re.compile(r'CLUSTER: (.*)\n')
-        return set(re.findall(regex_pattern, output))
+        return tuple(set(re.findall(regex_pattern, output)))
 
 
 class SlurmAccount:
@@ -167,24 +167,37 @@ class SlurmAccount:
         clus_str = ','.join(settings.clusters)
         ShellCmd(f"sacctmgr -i delete user {user} account={self} cluster={clus_str}").raise_err()
 
-    def get_locked_state(self) -> bool:
-        """Return whether the user account is locked"""
+    def get_locked_state(self, cluster: Optional[str]) -> bool:
+        """Return whether the user account is locked
 
-        cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins'
+        Args:
+            cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
+
+        Returns:
+            Whether the user is locked out from ANY of the given clusters
+        """
+
+        if cluster is None:
+            cluster = ','.join(Slurm.cluster_names())
+
+        cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    def set_locked_state(self, lock_state: bool) -> None:
+    def set_locked_state(self, lock_state: bool, cluster: Optional[str]) -> None:
         """Lock or unlock the user account
 
         Args:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
+            cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
         """
 
         LOG.info(f'Updating lock state for Slurm account {self} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
-        clusters_as_str = ','.join(settings.clusters)
+        if cluster is None:
+            cluster = ','.join(Slurm.cluster_names())
+
         ShellCmd(
-            f'sacctmgr -i modify account where account={self} cluster={clusters_as_str} set GrpTresRunMins=cpu={lock_state_int}'
+            f'sacctmgr -i modify account where account={self} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_err()
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
