@@ -12,8 +12,7 @@ from typing import Dict
 from environ import environ
 
 from bank import settings
-from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmAccountExistsError
-from . import ldap
+from bank.exceptions import CmdError, SlurmAccountNotFoundError
 from .shell import ShellCmd
 
 ENV = environ.Env()
