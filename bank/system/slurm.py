@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from logging import getLogger
-from typing import Dict, Collection, Optional
+from typing import Dict, Optional
 
 from environ import environ
 
