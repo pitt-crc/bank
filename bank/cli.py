@@ -282,13 +282,13 @@ class CommandLineApplication:
         self._subparsers = self.parser.add_subparsers(parser_class=ArgumentParser)
 
         # Add desired parsers to the commandline application
-        self.add_parser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
-        self.add_parser_to_app('account', AccountParser, title='Account actions', help_text='Tools for general account management')
-        self.add_parser_to_app('proposal', ProposalParser, title='Proposal actions', help_text='Administrative tools for user proposals')
-        self.add_parser_to_app('investment', InvestmentParser, title='Investment actions', help_text='Administrative tools for user investments')
+        self.add_subparser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
+        self.add_subparser_to_app('account', AccountParser, title='Account actions', help_text='Tools for general account management')
+        self.add_subparser_to_app('proposal', ProposalParser, title='Proposal actions', help_text='Administrative tools for user proposals')
+        self.add_subparser_to_app('investment', InvestmentParser, title='Investment actions', help_text='Administrative tools for user investments')
 
-    def add_parser_to_app(self, command: str, parser_class: Type[BaseParser], title: str, help_text: str) -> None:
-        """Add a parser to the parent commandline application
+    def add_subparser_to_app(self, command: str, parser_class: Type[BaseParser], title: str, help_text: str) -> None:
+        """Add a parser object to the parent commandline application as a subparser
 
         Args:
             command: The commandline argument used to invoke the given parser
