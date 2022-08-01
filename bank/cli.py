@@ -95,9 +95,7 @@ class BaseParser(ArgumentParser):
             self.print_help()
 
         else:
-            sys.stderr.write('ERROR: {}\n'.format(message))
-
-        sys.exit(2)
+            super().error(message)
 
     @classmethod
     @abc.abstractmethod
