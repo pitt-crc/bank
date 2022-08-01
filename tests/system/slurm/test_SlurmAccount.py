@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 from bank import settings
 from bank.exceptions import SlurmAccountNotFoundError
-from bank.system.slurm import SlurmAccount
+from bank.system.slurm import SlurmAccount, Slurm
 
 # Skip all tests in this module if slurm is not installed
-skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
+skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 
 
 class InitExceptions(TestCase):

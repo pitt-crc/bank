@@ -6,6 +6,7 @@ API Reference
 
 from __future__ import annotations
 
+import re
 from logging import getLogger
 from typing import Dict
 
@@ -18,6 +19,37 @@ from .shell import ShellCmd
 
 ENV = environ.Env()
 LOG = getLogger('bank.system.slurm')
+
+
+class Slurm:
+    """High level interface for the suite of slurm commandline utilities"""
+
+    @staticmethod
+    def is_installed() -> bool:
+        """Return whether ``sacctmgr`` is installed on the host machine"""
+
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+            return cmd.out.startswith('slurm')
+
+        # We catch all exceptions, but explicitly list the
+        # common cases for reference by curious developers
+        except (CmdError, FileNotFoundError, Exception):
+            return False
+
+    @classmethod
+    def cluster_names(cls) -> set[str]:
+        """Return cluster names configured with slurm
+
+        Returns:
+            A set of cluster names
+        """
+
+        # Get cluster names using squeue to fetch all running jobs for a non-existent username
+        output = ShellCmd('squeue -u fakeuser -M all').out
+        regex_pattern = re.compile(r'CLUSTER: (.*)\n')
+        return set(re.findall(regex_pattern, output))
 
 
 class SlurmAccount:
@@ -35,7 +67,7 @@ class SlurmAccount:
         """
 
         self._account = account_name
-        if not self.check_slurm_installed():
+        if not Slurm.is_installed():
             LOG.error('System error: Slurm is not installed')
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
@@ -51,20 +83,6 @@ class SlurmAccount:
         """The name of the slurm account being administered"""
 
         return self._account
-
-    @staticmethod
-    def check_slurm_installed() -> bool:
-        """Return whether ``sacctmgr`` is installed on the host machine"""
-
-        try:
-            cmd = ShellCmd('sacctmgr -V')
-            cmd.raise_err()
-            return cmd.out.startswith('slurm')
-
-        # We catch all exceptions, but explicitly list the
-        # common cases for reference by curious developers
-        except (CmdError, FileNotFoundError, Exception):
-            return False
 
     @staticmethod
     def check_account_exists(account_name: str) -> bool:
