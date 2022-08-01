@@ -4,38 +4,13 @@ API Reference
 -------------
 """
 
-from functools import wraps
 from logging import getLogger
-from os import geteuid
 from shlex import split
 from subprocess import Popen, PIPE
 
 from bank.exceptions import CmdError
 
 LOG = getLogger('bank.system.shell')
-
-
-class RequireRoot:
-    """Function decorator for requiring root privileges"""
-
-    @staticmethod
-    def check_user_is_root() -> bool:
-        """Return if the current user is root"""
-
-        return geteuid() == 0
-
-    def __new__(cls, func: callable) -> callable:
-        """Wrap the given function"""
-
-        @wraps(func)
-        def wrapped(*args, **kwargs):
-            if not cls.check_user_is_root():
-                LOG.error('Attempted action that requires root access without appropriate permissions')
-                raise PermissionError("This action must be run with sudo privileges")
-
-            return func(*args, **kwargs)  # pragma: no cover
-
-        return wrapped
 
 
 class ShellCmd:

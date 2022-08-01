@@ -14,7 +14,7 @@ from environ import environ
 from bank import settings
 from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmAccountExistsError
 from . import ldap
-from .shell import ShellCmd, RequireRoot
+from .shell import ShellCmd
 
 ENV = environ.Env()
 LOG = getLogger('bank.system.slurm')
@@ -104,7 +104,6 @@ class SlurmAccount:
 
         return SlurmAccount(account_name)
 
-    @RequireRoot
     def delete_account(self) -> None:
         """Delete the current Slurm account"""
 
@@ -156,7 +155,6 @@ class SlurmAccount:
         cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    @RequireRoot
     def set_locked_state(self, lock_state: bool) -> None:
         """Lock or unlock the user account
 
@@ -219,7 +217,6 @@ class SlurmAccount:
 
         return total
 
-    @RequireRoot
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 
