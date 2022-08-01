@@ -268,6 +268,7 @@ class InvestmentParser(BaseParser):
 
         advance_parser = parent_parser.add_parser('advance', help='Move service units from future investments to the current allocation')
         advance_parser.set_defaults(function=InvestmentServices.add_sus)
+        advance_parser.add_argument('--id', **investment_id_definition)
         advance_parser.add_argument('--account', **account_definition)
         advance_parser.add_argument('--sus', **service_unit_definition)
 
