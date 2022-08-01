@@ -280,7 +280,7 @@ class CommandLineApplication:
         """Initialize the application's commandline interface"""
 
         self.parser = ArgumentParser()
-        self._subparsers = self.parser.add_subparsers(parser_class=ArgumentParser)
+        self.subparsers = self.parser.add_subparsers(parser_class=ArgumentParser)
 
         # Add desired parsers to the commandline application
         self.add_subparser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
@@ -298,7 +298,7 @@ class CommandLineApplication:
             help_text: The help text description
         """
 
-        parser = self._subparsers.add_parser(command, help=help_text)
+        parser = self.subparsers.add_parser(command, help=help_text)
         subparsers = parser.add_subparsers(title=title)
         parser_class.define_interface(subparsers)
 
