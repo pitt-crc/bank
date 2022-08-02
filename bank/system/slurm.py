@@ -12,9 +12,8 @@ from typing import Dict
 from environ import environ
 
 from bank import settings
-from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmAccountExistsError
-from . import ldap
-from .shell import ShellCmd, RequireRoot
+from bank.exceptions import CmdError, SlurmAccountNotFoundError
+from .shell import ShellCmd
 
 ENV = environ.Env()
 LOG = getLogger('bank.system.slurm')
@@ -80,83 +79,12 @@ class SlurmAccount:
         cmd = ShellCmd(f'sacctmgr -n show assoc account={account_name}')
         return bool(cmd.out)
 
-    @classmethod
-    def create_account(cls, account_name: str, description: str, organization: str) -> SlurmAccount:
-        """Create a new slurm account
-
-        Args:
-            account_name: The name of the new Slurm account
-            description: Description of the new slurm user account
-            organization: Internal organization or department of the slurm user account
-
-        Returns:
-            An instance of the parent class for the new user account
-        """
-
-        ldap.check_ldap_user(description)
-        if cls.check_account_exists(account_name):
-            raise SlurmAccountExistsError(f'Account {account_name} already exists')
-
-        clus_str = ','.join(settings.clusters)
-        ShellCmd(
-            f'sacctmgr -i add account {account_name} description="{description}" organization="{organization}" clusters={clus_str}'
-        ).raise_err()
-
-        return SlurmAccount(account_name)
-
-    @RequireRoot
-    def delete_account(self) -> None:
-        """Delete the current Slurm account"""
-
-        clus_str = ','.join(settings.clusters)
-        ShellCmd(f"sacctmgr -i delete account {self} cluster={clus_str}").raise_err()
-
-    def add_user(self, user: str, make_default: bool = False) -> None:
-        """Add a new user to the current slurm account
-
-        Args:
-            user: Name of the user to add to the current account
-            make_default: Make the current account the default account for the user
-
-        Raises:
-            LdapUserNotFound: If the given user does not exist in LDAP
-            LdapUserNotFound: If the current account is not a group in LDAP
-        """
-
-        ldap.check_ldap_user(user, raise_if_false=True)
-        ldap.check_ldap_group(self.account_name, raise_if_false=True)
-
-        if not make_default:
-            ShellCmd(f"sacctmgr -i add user {user} account={self} cluster=smp,gpu,mpi,htc").raise_err()
-
-        if ldap.check_crc_user(user):
-            ShellCmd(
-                f"sacctmgr -i update user where user={user} cluster=smp,gpu,mpi,htc set defaultaccount={self}"
-            )
-
-        else:
-            ShellCmd(
-                f"sacctmgr -i add user {user} defaultaccount={self} cluster=smp,gpu,mpi,htc"
-            )
-
-    def remove_user(self, user: str) -> None:
-        """Remove an existing user from the current Slurm account
-
-        Args:
-            user: Name of the user to remove from the current account
-        """
-
-        ldap.check_ldap_user(user, raise_if_false=True)
-        clus_str = ','.join(settings.clusters)
-        ShellCmd(f"sacctmgr -i delete user {user} account={self} cluster={clus_str}").raise_err()
-
     def get_locked_state(self) -> bool:
         """Return whether the user account is locked"""
 
         cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    @RequireRoot
     def set_locked_state(self, lock_state: bool) -> None:
         """Lock or unlock the user account
 
@@ -219,7 +147,6 @@ class SlurmAccount:
 
         return total
 
-    @RequireRoot
     def reset_raw_usage(self) -> None:
         """Reset the raw account usage on all clusters to zero"""
 

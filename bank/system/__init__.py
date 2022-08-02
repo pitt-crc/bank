@@ -8,7 +8,6 @@ SubModules
 .. autosummary::
    :nosignatures:
 
-   bank.system.ldap
    bank.system.shell
    bank.system.slurm
    bank.system.smtp
