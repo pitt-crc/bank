@@ -18,6 +18,10 @@ class SlurmAccountNotFoundError(Exception):
     """Raised when a Slurm user account does not exist."""
 
 
+class SlurmClusterNotFoundError(Exception):
+    """Raised when a Slurm cluster does not exist."""
+
+
 class SlurmAccountExistsError(Exception):
     """Raised when a Slurm user account already exists."""
 

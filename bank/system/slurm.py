@@ -13,7 +13,7 @@ from typing import Dict, Optional
 from environ import environ
 
 from bank import settings
-from bank.exceptions import CmdError, SlurmAccountNotFoundError
+from bank.exceptions import CmdError, SlurmAccountNotFoundError, SlurmClusterNotFoundError
 from .shell import ShellCmd
 
 ENV = environ.Env()
@@ -108,7 +108,7 @@ class SlurmAccount:
         """
 
         if cluster and cluster not in Slurm.cluster_names():
-            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
+            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         if cluster is None:
             cluster = ','.join(Slurm.cluster_names())
@@ -125,7 +125,7 @@ class SlurmAccount:
         """
 
         if cluster and cluster not in Slurm.cluster_names():
-            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
+            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         LOG.info(f'Updating lock state for Slurm account {self} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
@@ -149,7 +149,7 @@ class SlurmAccount:
 
         LOG.debug(f'Fetching cluster usage for {self}')
         if cluster and cluster not in Slurm.cluster_names():
-            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
+            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         # Only the second and third line are necessary from the output table
         cmd = ShellCmd(f"sshare -A {self} -M {cluster} -P -a")
