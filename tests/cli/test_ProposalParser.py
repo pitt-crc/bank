@@ -1,3 +1,5 @@
+"""Tests for the ``ProposalParser`` class"""
+
 from datetime import datetime
 from unittest import TestCase
 
@@ -7,33 +9,44 @@ from tests.cli._utils import CLIAsserts
 
 
 class SignatureMatchesCLI(TestCase, CLIAsserts):
-    """Test the ``ProposalParser`` interface defines arguments that match the underlying DAO signatures"""
+    """Test parser arguments match the signatures of the corresponding executable"""
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.parser = ProposalParser()
+    def setUp(self) -> None:
+        """Define an instance of the parser object being tested"""
+
+        self.parser = ProposalParser()
 
     def test_create_proposal(self) -> None:
-        self.assert_parser_matches_func_signature(f'proposal create --account {settings.test_account}')
-        self.assert_parser_matches_func_signature(f'proposal create --type Proposal --account {settings.test_account}')
-        self.assert_parser_matches_func_signature(f'proposal create --type Class --account {settings.test_account}')
+        """Test the parsing of arguments by the ``create`` command"""
 
-        self.assert_parser_matches_func_signature(f'proposal create --account {settings.test_account} --{settings.test_cluster} 100')
-        self.assert_parser_matches_func_signature(f'proposal create --type Proposal --account {settings.test_account} --{settings.test_cluster} 100')
-        self.assert_parser_matches_func_signature(f'proposal create --type Class --account {settings.test_account} --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(self.parser, 'create --account dummy_user')
+        self.assert_parser_matches_func_signature(self.parser, 'create --type Proposal --account dummy_user')
+        self.assert_parser_matches_func_signature(self.parser, 'create --type Class --account dummy_user')
+
+        self.assert_parser_matches_func_signature(self.parser, f'create --account dummy_user --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(self.parser, f'create --type Proposal --account dummy_user --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(self.parser, f'create --type Class --account dummy_user --{settings.test_cluster} 100')
 
     def test_delete_proposal(self) -> None:
-        self.assert_parser_matches_func_signature(f'proposal delete --account {settings.test_account}')
+        """Test the parsing of arguments by the ``delete`` command"""
+
+        self.assert_parser_matches_func_signature(self.parser, 'delete --account dummy_user')
 
     def test_add_service_units(self) -> None:
-        self.assert_parser_matches_func_signature(f'proposal add --account {settings.test_account}')
+        """Test the parsing of arguments by the ``add`` command"""
+
+        self.assert_parser_matches_func_signature(self.parser, 'add --account dummy_user')
 
     def test_subtract_service_units(self) -> None:
-        self.assert_parser_matches_func_signature(f'proposal subtract --account {settings.test_account}')
+        """Test the parsing of arguments by the ``subtract`` command"""
+
+        self.assert_parser_matches_func_signature(self.parser, 'subtract --account dummy_user')
 
     def test_overwrite_proposal_values(self) -> None:
+        """Test the parsing of arguments by the ``overwrite`` command"""
+
         date = datetime.now().strftime(settings.date_format)
-        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account}')
-        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --{settings.test_cluster} 200')
-        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --start {date} --end {date}')
-        self.assert_parser_matches_func_signature(f'proposal overwrite --account {settings.test_account} --type Proposal')
+        self.assert_parser_matches_func_signature(self.parser, 'overwrite --account dummy_user')
+        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --{settings.test_cluster} 200')
+        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --start {date} --end {date}')
+        self.assert_parser_matches_func_signature(self.parser, 'overwrite --account dummy_user --type Proposal')

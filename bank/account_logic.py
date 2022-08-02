@@ -548,7 +548,6 @@ class AccountServices:
         """
 
         self._account_name = account_name
-        self._slurm_acct = SlurmAccount(account_name)
 
         self._proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
@@ -570,6 +569,7 @@ class AccountServices:
     def _build_usage_table(self) -> PrettyTable:
         """Return a human-readable summary of the account usage and allocation"""
 
+        slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=0)
         with Session() as session:
             proposal = session.execute(self._proposal_query).scalars().first()
@@ -581,7 +581,7 @@ class AccountServices:
             usage_total = 0
             allocation_total = 0
             for allocation in proposal.allocations:
-                usage_data = self._slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
+                usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
                 total_cluster_usage = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units)
 
@@ -663,7 +663,8 @@ class AccountServices:
 
     def _notify_proposal(self, proposal):
         # Determine the next usage percentage that an email is scheduled to be sent out
-        usage = self._slurm_acct.get_total_usage()
+        slurm_acct = SlurmAccount(self._account_name)
+        usage = slurm_acct.get_total_usage()
         total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
@@ -703,6 +704,7 @@ class AccountServices:
     def renew(self, reset_usage: bool = True) -> None:
         """Archive any expired investments and rollover unused service units"""
 
+        slurm_acct = SlurmAccount(self._account_name)
         with Session() as session:
 
             # Archive any investments which are past their end date
@@ -714,7 +716,7 @@ class AccountServices:
             # Get total used and allocated service units
             current_proposal = session.get_proposal
             total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
-            total_usage = self._slurm_acct.get_total_usage()
+            total_usage = slurm_acct.get_total_usage()
 
             # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
             archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
@@ -749,8 +751,15 @@ class AccountServices:
 
         # Set RawUsage to zero and unlock the account
         if reset_usage:
-            self._slurm_acct.reset_raw_usage()
-            self._slurm_acct.set_locked_state(False)
+            slurm_acct = SlurmAccount(self._account_name)
+            slurm_acct.reset_raw_usage()
+            slurm_acct.set_locked_state(False)
+
+    def lock_account(self):
+        SlurmAccount(self._account_name).set_locked_state(True)
+
+    def unlock_account(self):
+        SlurmAccount(self._account_name).set_locked_state(True)
 
 
 class AdminServices:

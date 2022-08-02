@@ -7,6 +7,9 @@ import sqlalchemy_utils
 from . import orm
 from . import settings
 
+__version__ = 'development'
+__author__ = 'Pitt Center for Research Computing'
+
 # Temporarily disable log messages from the environment package
 logging.getLogger('environ.environ').setLevel('ERROR')
 
