@@ -1,9 +1,7 @@
 beautifulsoup4
-ldap3
 pandas
 prettytable
 python-environ
-python-ldap
 SQLAlchemy
 sqlalchemy-utils
 time-machine
