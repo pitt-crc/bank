@@ -107,10 +107,13 @@ class SlurmAccount:
             Whether the user is locked out from ANY of the given clusters
         """
 
+        if cluster and cluster not in Slurm.cluster_names():
+            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
+
         if cluster is None:
             cluster = ','.join(Slurm.cluster_names())
 
-        cmd = f'sacctmgr -n -P show assoc account={self} format=grptresrunmins clusters={cluster}'
+        cmd = f'sacctmgr -n -P show assoc account={self} format=GrpTresRunMins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
 
     def set_locked_state(self, lock_state: bool, cluster: Optional[str]) -> None:
@@ -120,6 +123,9 @@ class SlurmAccount:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
             cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
         """
+
+        if cluster and cluster not in Slurm.cluster_names():
+            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
 
         LOG.info(f'Updating lock state for Slurm account {self} to {lock_state}')
         lock_state_int = 0 if lock_state else -1
@@ -142,6 +148,8 @@ class SlurmAccount:
         """
 
         LOG.debug(f'Fetching cluster usage for {self}')
+        if cluster and cluster not in Slurm.cluster_names():
+            raise ValueError(f'Cluster {cluster} is not configured with Slurm')
 
         # Only the second and third line are necessary from the output table
         cmd = ShellCmd(f"sshare -A {self} -M {cluster} -P -a")
