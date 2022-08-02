@@ -9,7 +9,7 @@ from bank import settings
 from bank.account_logic import AccountServices
 from bank.orm import ProposalEnum, Session, Proposal, Account
 from bank.system.slurm import SlurmAccount
-from tests._utils import ProposalSetup, InvestmentSetup, EmptyAccountSetup
+from tests._utils import ProposalSetup, InvestmentSetup
 
 active_proposal_query = select(Proposal).join(Account) \
     .where(Account.name == settings.test_account) \
@@ -28,15 +28,6 @@ class CalculatePercentage(TestCase):
         """Test dividing by a positive number gives a percentage"""
 
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
-
-
-class PrintInfo(EmptyAccountSetup, TestCase):
-
-    @patch('builtins.print')
-    def test_print_warning_if_not_proposal(self, mock_print) -> None:
-        account = AccountServices(settings.test_account)
-        account.print_info()
-        mock_print.assert_called_with(f'Account {settings.test_account} has no current proposal')
 
 
 @skip('This functionality hasn\'t been fully implimented yet.')

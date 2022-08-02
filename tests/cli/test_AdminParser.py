@@ -12,11 +12,5 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     def setUpClass(cls) -> None:
         cls.parser = AdminParser()
 
-    def test_update_status(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin update_status')
-
-    def test_notify_usage(self) -> None:
-        self.assert_parser_matches_func_signature(f'admin notify_usage')
-
     def test_run_maintenance(self) -> None:
         self.assert_parser_matches_func_signature(f'admin run_maintenance')
