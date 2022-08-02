@@ -22,22 +22,6 @@ class SlurmClusterNotFoundError(Exception):
     """Raised when a Slurm cluster does not exist."""
 
 
-class SlurmAccountExistsError(Exception):
-    """Raised when a Slurm user account already exists."""
-
-
-class LdapUserNotFound(Exception):
-    """Raised when an LDAP user is referenced that does not exist."""
-
-
-class LDAPGroupNotFound(Exception):
-    """Raised when an LDAP group is referenced that does not exist."""
-
-
-class CRCUserNotFound(Exception):
-    """Raised when an LDAP group is referenced that does not exist."""
-
-
 class MissingEmailFieldsError(Exception):
     """Raised when trying to send an incomplete email template."""
 
