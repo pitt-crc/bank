@@ -5,10 +5,8 @@ from bank import settings
 from bank.exceptions import SlurmAccountNotFoundError
 from bank.system.slurm import SlurmAccount
 
-# Skip all tests in this module if slurm is not installed
-skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 
-
+@skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 class InitExceptions(TestCase):
     """Tests related to exceptions raised during instantiation"""
 
@@ -25,6 +23,7 @@ class InitExceptions(TestCase):
             SlurmAccount('fake_account_name_123')
 
 
+@skipIf(not SlurmAccount.check_slurm_installed(), 'Slurm is not installed on this machine')
 class AccountUsage(TestCase):
     """Test the retrieval of account usage values"""
 
