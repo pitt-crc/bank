@@ -138,27 +138,6 @@ class AccountParser(account_logic.AccountServices, system.SlurmAccount, BasePars
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='Name of a slurm user account', required=True)
 
-        create_account = account_subparsers.add_parser('create', help='Create a new bank account')
-        create_account.set_defaults(function=super_class.create_account)
-        create_account.add_argument('--account', dest='account_name', help='Name of a slurm user account')
-        create_account.add_argument('--pi', dest='description', help='Name of the primary account user')
-        create_account.add_argument('--department', dest='organization', help='Name of the PI\'s primary department')
-
-        delete_account = account_subparsers.add_parser('delete', help='Delete an existing bank account')
-        delete_account.set_defaults(function=super_class.delete_account)
-        delete_account.add_argument('--account', type=system.SlurmAccount, **account_definition)
-
-        add_user = account_subparsers.add_parser('add_user', help='Add an authorized user to an existing bank account')
-        add_user.set_defaults(function=super_class.add_user)
-        add_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
-        add_user.add_argument('--user', help='Name of the user account')
-        add_user.add_argument('--make_default', action='store_true', help='Make this the users default account')
-
-        remove_user = account_subparsers.add_parser('remove_user', help='Remove an authorized user to an existing bank account')
-        remove_user.set_defaults(function=super_class.remove_user)
-        remove_user.add_argument('--account', type=system.SlurmAccount, **account_definition)
-        remove_user.add_argument('--user', help='Name of the user account')
-
         slurm_lock = account_subparsers.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         slurm_lock.set_defaults(function=super_class.set_locked_state, lock_state=True)
         slurm_lock.add_argument('--account', type=system.SlurmAccount, **account_definition)
