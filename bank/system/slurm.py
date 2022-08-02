@@ -25,14 +25,17 @@ class Slurm:
         """Return whether ``sacctmgr`` is installed on the host machine"""
 
         LOG.debug('Checking for Slurm installation')
-        cmd = ShellCmd('sacctmgr -V')
-        slurm_version = cmd.out
 
-        if cmd.err or not slurm_version.startswith('slurm'):
+        try:
+            cmd = ShellCmd('sacctmgr -V')
+            cmd.raise_err()
+
+        # We catch all exceptions, but explicitly list the common cases for reference
+        except (CmdError, FileNotFoundError, Exception):
             LOG.debug('Slurm is not installed.')
             return False
 
-        version = slurm_version.lstrip('slurm ')
+        version = cmd.out.lstrip('slurm ')
         LOG.debug(f'Found Slurm version {version}')
         return True
 
