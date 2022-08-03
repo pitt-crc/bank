@@ -124,8 +124,8 @@ class AdminParser(BaseParser):
 
         update_status = parent_parser.add_parser(
             'update_status',
-            help=('Update account status and send pending notifications for '
-                  'a single account')
+            help=('Close any expired proposals/investments and lock accounts'
+                  'for all unlocked accounts')
         )
         update_status.set_defaults(
             function=AdminServices.update_account_status
@@ -457,4 +457,6 @@ class CommandLineApplication:
 
         cli_kwargs = vars(cls().parser.parse_args())
         executable = cli_kwargs.pop('function')
+        del cli_kwargs['service']
+        del cli_kwargs['command']
         executable(**cli_kwargs)
