@@ -124,7 +124,7 @@ class AdminParser(BaseParser):
 
         update_status = parent_parser.add_parser(
             'update_status',
-            help=('Update account status and send pending notifications for ',
+            help=('Update account status and send pending notifications for '
                   'a single account')
         )
         update_status.set_defaults(
@@ -133,7 +133,7 @@ class AdminParser(BaseParser):
 
         maintenance_parser = parent_parser.add_parser(
             'run_maintenance',
-            help=('Update account status and send pending notifications for ',
+            help=('Update account status and send pending notifications for '
                  'all accounts')
         )
 
@@ -183,7 +183,7 @@ class AccountParser(BaseParser):
         # Account renewals parser
         renew_parser = parent_parser.add_parser(
             'renew',
-            help=('Renew an account\'s proposal and rollover any is_expired ',
+            help=('Renew an account\'s proposal and rollover any is_expired '
                   'investments')
         )
         renew_parser.set_defaults(function=AccountServices.renew)
