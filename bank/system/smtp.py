@@ -95,8 +95,8 @@ class EmailTemplate(Formatter):
         msg["From"] = ffrom
         msg["To"] = to
 
-        with smtp or SMTP("localhost") as s:
-            s.send_message(msg)
+        with smtp or SMTP("localhost") as smtp_server:
+            smtp_server.send_message(msg)
 
         return msg
 
