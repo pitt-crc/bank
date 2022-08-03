@@ -64,7 +64,6 @@ from typing import Type
 from . import settings
 from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
 from .orm import ProposalEnum
-from .system import SlurmAccount
 
 
 class BaseParser(ArgumentParser):
