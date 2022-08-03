@@ -776,7 +776,7 @@ class AdminServices:
         # Query database for accounts that are unlocked and is_expired
         account_name_query = select(Account.name).join(Proposal).where(Proposal.end_date < date.today())
         with Session() as session:
-            account_names = session.execute(account_name_query).scalrs().all()
+            account_names = session.execute(account_name_query).scalars().all()
             return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
 
     @classmethod
