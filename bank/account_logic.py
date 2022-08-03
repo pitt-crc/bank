@@ -370,7 +370,7 @@ class InvestmentServices:
                 account = session.execute(select(Account).where(Account.name == self._account_name)).scalars().first()
                 account.investments.append(new_investment)
                 session.add(account)
-                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with allocation of `{sus}`")
+                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
 
                 session.commit()
 
@@ -699,6 +699,8 @@ class AccountServices:
                 subject=subject)
 
     def update_account_status(self) -> None:
+        """Close any expired proposals/investments and lock the account if necessary"""
+
         raise NotImplementedError
 
     def renew(self, reset_usage: bool = True) -> None:
