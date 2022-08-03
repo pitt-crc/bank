@@ -159,19 +159,29 @@ class AccountParser(BaseParser):
             type=AccountServices,
             help='Name of a slurm user account',
             required=True)
+        cluster_argument = dict(
+            metavar='cluster',
+            dest='self',
+            help='Name of a cluster',
+            default='all')
 
+        # Account locking parser
         lock_parser = parent_parser.add_parser(
             'lock',
             help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock_account)
         lock_parser.add_argument('--account', **account_argument)
+        lock_parser.add_argument('--cluster', **cluster_argument)
 
+        # Account unlocking parser
         unlock_parser = parent_parser.add_parser(
             'unlock',
             help='Allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock_account)
         unlock_parser.add_argument('--account', **account_argument)
+        unlock_parser.add_argument('--cluster', **cluster_argument)
 
+        # Account renewals parser
         renew_parser = parent_parser.add_parser(
             'renew',
             help=('Renew an account\'s proposal and rollover any is_expired ',
@@ -180,6 +190,7 @@ class AccountParser(BaseParser):
         renew_parser.set_defaults(function=AccountServices.renew)
         renew_parser.add_argument('--account', **account_argument)
 
+        # Account information parser
         info_parser = parent_parser.add_parser(
             'info',
             help='Print account usage and allocation information')
@@ -263,6 +274,7 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
+        # Add argument to specify Service Unit allotment
         for cluster in settings.clusters:
             parser.add_argument(
                 f'--{cluster}',
