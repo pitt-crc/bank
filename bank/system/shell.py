@@ -43,5 +43,5 @@ class ShellCmd:
         """
 
         if self.err:
-            LOG.debug(f'Shell command errored out with message: {self.err} ')
+            LOG.debug(f'CmdError: Shell command errored out with message: {self.err} ')
             raise CmdError(self.err)
