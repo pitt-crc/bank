@@ -1,7 +1,7 @@
 """System refactor migration
 
 Revision ID: a6c26a203bd1
-Revises: 
+Revises:
 Create Date: 2022-02-21 15:01:03.939907
 """
 
@@ -31,6 +31,8 @@ PERCENT_NOTIFIED_MAPPER = {
 
 
 def upgrade():
+    """Upgrade the database schema to the next version"""
+
     proposal_type_col_type = sa.Enum(UNKNOWN_TYPE, PROPOSAL_TYPE, CLASS_TYPE, name=PROPOSAL_TYPE_ENUM_NAME)
     with op.batch_alter_table("proposal", recreate='always') as proposal_table:
         proposal_table.alter_column('account', new_column_name='account_name', existing_type=sa.TEXT(), type_=sa.String(), nullable=False)
@@ -98,6 +100,8 @@ def upgrade():
 
 
 def downgrade():
+    """Downgrade the database schema to the previous version"""
+
     raise NotImplementedError(
         'Rollbacks for this version are not supported. '
         'Data has been dropped in the upgrade that cannot be recovered. '
