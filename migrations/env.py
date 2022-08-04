@@ -1,3 +1,5 @@
+"""Automatically generated script for managing database migrations with alembic"""
+
 import sys
 from logging.config import fileConfig
 from pathlib import Path
