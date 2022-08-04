@@ -8,6 +8,8 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+import bank.orm
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from bank import orm, settings
 
@@ -21,7 +23,7 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = orm.metadata
+target_metadata = bank.orm.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

@@ -87,11 +87,3 @@ class MessageSending(TestCase):
         with self.assertRaises(MissingEmailFieldsError):
             EmailTemplate('{x}').send_to(
                 self.to_address, self.subject, self.from_address, smtp=mock_smtp)
-
-
-class StringRepresentation(TestCase):
-    """Test the casting of email templates into strings"""
-
-    def runTest(self) -> None:
-        template = EmailTemplate('This_is_a_test')
-        self.assertEqual(template.msg, str(template))

@@ -27,7 +27,7 @@ class Slurm:
 
         try:
             cmd = ShellCmd('sacctmgr -V')
-            cmd.raise_err()
+            cmd.raise_if_err()
 
         # We catch all exceptions, but explicitly list the common cases for reference
         except (CmdError, FileNotFoundError, Exception):
@@ -47,7 +47,7 @@ class Slurm:
         """
 
         cmd = ShellCmd('sacctmgr show clusters format=Cluster  --noheader --parsable2')
-        cmd.raise_err()
+        cmd.raise_if_err()
 
         clusters = cmd.out.split()
         LOG.debug(f'Found Slurm clusters {clusters}')
@@ -97,21 +97,18 @@ class SlurmAccount:
         cmd = ShellCmd(f'sacctmgr -n show assoc account={account_name}')
         return bool(cmd.out)
 
-    def get_locked_state(self, cluster: Optional[str]) -> bool:
+    def get_locked_state(self, cluster) -> bool:
         """Return whether the user account is locked
 
         Args:
-            cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
+            cluster: Name of the cluster to get the lock state for
 
         Returns:
             Whether the user is locked out from ANY of the given clusters
         """
 
-        if cluster and cluster not in Slurm.cluster_names():
+        if cluster not in Slurm.cluster_names():
             raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
-
-        if cluster is None:
-            cluster = ','.join(Slurm.cluster_names())
 
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=GrpTresRunMins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
@@ -131,7 +128,7 @@ class SlurmAccount:
         lock_state_int = 0 if lock_state else -1
         ShellCmd(
             f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
-        ).raise_err()
+        ).raise_if_err()
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
         """Return the raw account usage on a given cluster

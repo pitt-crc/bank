@@ -35,7 +35,7 @@ class ShellCmd:
         self.out = out.decode("utf-8").strip()
         self.err = err.decode("utf-8").strip()
 
-    def raise_err(self) -> None:
+    def raise_if_err(self) -> None:
         """Raise an exception if the piped command wrote to STDERR
 
         Raises:

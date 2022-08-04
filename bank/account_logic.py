@@ -15,9 +15,10 @@ from typing import Union, Tuple, Optional
 from prettytable import PrettyTable
 from sqlalchemy import or_, select, between, delete
 
+import bank.orm
 from . import settings
 from .exceptions import *
-from .orm import Investment, Allocation, Account, Proposal, Session, ProposalEnum
+from .orm import Investment, Allocation, Account, Proposal, Session
 from .system import SlurmAccount, EmailTemplate
 
 Numeric = Union[int, float]
@@ -92,7 +93,7 @@ class ProposalServices:
 
     def create_proposal(
             self,
-            type: ProposalEnum = ProposalEnum.Proposal,
+            type: ProposalEnum = bank.orm.Proposal,
             start: date = date.today(),
             duration: int = 365,
             **kwargs: int
@@ -125,7 +126,6 @@ class ProposalServices:
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
-                proposal_type=type,
                 percent_notified=0,
                 start_date=start,
                 end_date=start + timedelta(days=duration),
@@ -165,7 +165,6 @@ class ProposalServices:
     def modify_proposal(
             self,
             pid: Optional[int] = None,
-            type: ProposalEnum = None,
             start: Optional[date] = None,
             end: Optional[date] = None,
             **kwargs: Union[int, date]
@@ -191,7 +190,6 @@ class ProposalServices:
             # Get default proposal values
             query = select(Proposal).where(Proposal.id == pid)
             proposal = session.execute(query).scalars().first()
-            type = type or proposal.proposal_type
             start = start or proposal.start_date
             end = end or proposal.end_date
             if start >= end:
@@ -290,14 +288,10 @@ class InvestmentServices:
         self._account_name = account_name
 
         with Session() as session:
-            query = select(Proposal.proposal_type).join(Account).where(Account.name == account_name)
-            proposal_type = session.execute(query).scalars().first()
-
-            if proposal_type is None:
+            query = select(Proposal).join(Account).where(Account.name == account_name)
+            proposal = session.execute(query).scalars().first()
+            if proposal is None:
                 raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
-
-            if proposal_type is ProposalEnum.Class:
-                raise ValueError('Investments cannot be added/managed for class accounts')
 
     def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account

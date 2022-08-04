@@ -20,12 +20,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         """Test the parsing of arguments by the ``create`` command"""
 
         self.assert_parser_matches_func_signature(self.parser, 'create --account dummy_user')
-        self.assert_parser_matches_func_signature(self.parser, 'create --type Proposal --account dummy_user')
-        self.assert_parser_matches_func_signature(self.parser, 'create --type Class --account dummy_user')
-
         self.assert_parser_matches_func_signature(self.parser, f'create --account dummy_user --{settings.test_cluster} 100')
-        self.assert_parser_matches_func_signature(self.parser, f'create --type Proposal --account dummy_user --{settings.test_cluster} 100')
-        self.assert_parser_matches_func_signature(self.parser, f'create --type Class --account dummy_user --{settings.test_cluster} 100')
 
     def test_delete_proposal(self) -> None:
         """Test the parsing of arguments by the ``delete`` command"""
@@ -49,4 +44,3 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         self.assert_parser_matches_func_signature(self.parser, 'overwrite --account dummy_user')
         self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --{settings.test_cluster} 200')
         self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --start {date} --end {date}')
-        self.assert_parser_matches_func_signature(self.parser, 'overwrite --account dummy_user --type Proposal')

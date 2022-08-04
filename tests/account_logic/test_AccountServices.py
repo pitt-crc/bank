@@ -5,9 +5,10 @@ from unittest.mock import patch
 import time_machine
 from sqlalchemy import select
 
+import bank.orm
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import ProposalEnum, Session, Proposal, Account
+from bank.orm import Session, Proposal, Account
 from bank.system.slurm import SlurmAccount
 from tests._utils import ProposalSetup, InvestmentSetup
 
@@ -54,7 +55,7 @@ class Renewal(ProposalSetup, InvestmentSetup, TestCase):
             self.num_proposal_sus, getattr(new_proposal, settings.test_cluster),
             'New proposal does not have same service units as the old one')
 
-        self.assertEqual(new_proposal.proposal_type, ProposalEnum.Proposal)
+        self.assertEqual(new_proposal.proposal_type, bank.orm.Proposal)
 
     def test_investments_are_rolled_over(self) -> None:
         """Test unused investment service units are rolled over"""

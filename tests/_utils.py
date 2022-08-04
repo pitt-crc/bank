@@ -2,8 +2,9 @@ from datetime import timedelta, date
 
 from sqlalchemy import select
 
+import bank.orm
 from bank import settings
-from bank.orm import Session, Proposal, Investment, Account, Allocation, ProposalEnum
+from bank.orm import Session, Proposal, Investment, Account, Allocation
 
 TODAY = date.today()
 TOMORROW = TODAY + timedelta(days=1)
@@ -49,7 +50,6 @@ class ProposalSetup(EmptyAccountSetup):
 
             allocations = [Allocation(cluster_name=settings.test_cluster, service_units=self.num_proposal_sus)]
             proposal = Proposal(
-                proposal_type=ProposalEnum.Proposal,
                 allocations=allocations,
                 start_date=start,
                 end_date=end,

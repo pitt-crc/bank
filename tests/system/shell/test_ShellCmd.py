@@ -34,17 +34,17 @@ class FileDescriptors(TestCase):
 
 
 class RaisingStdErr(TestCase):
-    """Test the ``raise_err`` method raises appropriate errors"""
+    """Test the ``raise_if_err`` method raises appropriate errors"""
 
     @staticmethod
     def test_no_error_on_empty_stderr() -> None:
         """Test no error is raised for an empty STDERR output"""
 
-        ShellCmd("echo 1").raise_err()
+        ShellCmd("echo 1").raise_if_err()
 
     def test_error_on_stderr_output(self) -> None:
         """Test a ``CmdError`` is raised for STDERR output"""
 
         with self.assertRaises(CmdError) as cm:
-            ShellCmd("ls fake_dir").raise_err()
+            ShellCmd("ls fake_dir").raise_if_err()
             self.assertEqual(str(cm.exception), "ls: cannot access 'fake_dir': No such file or directory")

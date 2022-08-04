@@ -102,7 +102,6 @@ class ModifyProposal(ProposalSetup, TestCase):
 
         with Session() as session:
             old_proposal = session.execute(active_proposal_query).scalars().first()
-            old_type = old_proposal.proposal_type
             old_start = old_proposal.start_date
             old_end = old_proposal.end_date
 
@@ -115,7 +114,6 @@ class ModifyProposal(ProposalSetup, TestCase):
             self.assertEqual(12345, new_sus)
             self.assertEqual(old_start, new_proposal.start_date)
             self.assertEqual(old_end, new_proposal.end_date)
-            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
@@ -130,14 +128,12 @@ class ModifyProposal(ProposalSetup, TestCase):
             proposal_id = old_proposal.id
             new_start_date = old_proposal.start_date + timedelta(days=100)
             new_end_date = old_proposal.end_date + timedelta(days=100)
-            old_type = old_proposal.proposal_type
 
         self.account.modify_proposal(proposal_id, start=new_start_date, end=new_end_date)
         with Session() as session:
             new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
             self.assertEqual(new_end_date, new_proposal.end_date)
-            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""

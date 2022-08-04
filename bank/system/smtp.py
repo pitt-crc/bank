@@ -61,7 +61,7 @@ class EmailTemplate(Formatter):
 
         return EmailTemplate(self._msg.format(**kwargs))
 
-    def _assert_missing_fields(self) -> None:
+    def raise_missing_fields(self) -> None:
         """Raise a ``MissingEmailFieldsError`` if the template message has any unformatted fields"""
 
         if any(field_name for _, field_name, *_ in self.parse(self.msg) if field_name is not None):
@@ -82,7 +82,7 @@ class EmailTemplate(Formatter):
         """
 
         LOG.debug(f'Sending email to {to}')
-        self._assert_missing_fields()
+        self.raise_missing_fields()
 
         # Extract the text from the email
         soup = BeautifulSoup(self._msg, "html.parser")
@@ -99,6 +99,3 @@ class EmailTemplate(Formatter):
             smtp_server.send_message(msg)
 
         return msg
-
-    def __str__(self) -> str:
-        return self._msg

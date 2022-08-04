@@ -1,21 +1,29 @@
-"""Object-oriented definition for the underlying database schema.
+"""The ``orm`` module  provides a `sqlalchemy <https://www.sqlalchemy.org/>`_
+based object relational mapper (ORM) for handling database interactions.
 
-API Reference
--------------
+SubModules
+----------
+
+.. autosummary::
+   :nosignatures:
+
+   bank.orm.enum
+   bank.orm.tables
 """
 
 from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey, select
-from sqlalchemy.ext.declarative import declarative_base
+import sqlalchemy
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, select
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import validates, relationship
+from sqlalchemy.orm import declarative_base, relationship, validates
 
-from .enum import ProposalEnum
-from .. import settings
+from . import settings
 
+engine = sqlalchemy.create_engine(settings.db_path)
+Session = sqlalchemy.orm.sessionmaker(bind=engine)
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -62,7 +70,6 @@ class Proposal(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     account_id = Column(Integer, ForeignKey(Account.id))
-    proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False, default=0)

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from bank import settings
 from bank.account_logic import InvestmentServices, ProposalServices
 from bank.exceptions import MissingInvestmentError, MissingProposalError
-from bank.orm import ProposalEnum, Investment, Session, Account
+from bank.orm import Investment, Session, Account
 from tests._utils import InvestmentSetup, ProposalSetup
 
 investments_query = select(Investment) \
@@ -23,13 +23,6 @@ class InitExceptions(InvestmentSetup, TestCase):
         """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""
 
         with self.assertRaises(MissingProposalError):
-            InvestmentServices(account_name=settings.test_account)
-
-    def test_error_proposal_is_class(self) -> None:
-        """Test a ``ValueError`` is raised when managing investments for accounts with Value2 proposals"""
-
-        ProposalServices(settings.test_account).create_proposal(type=ProposalEnum.Class)
-        with self.assertRaisesRegex(ValueError, 'Investments cannot be added/managed for class accounts'):
             InvestmentServices(account_name=settings.test_account)
 
 
