@@ -1,14 +1,5 @@
 """The ``orm`` module  provides a `sqlalchemy <https://www.sqlalchemy.org/>`_
 based object relational mapper (ORM) for handling database interactions.
-
-SubModules
-----------
-
-.. autosummary::
-   :nosignatures:
-
-   bank.orm.enum
-   bank.orm.tables
 """
 
 from __future__ import annotations
@@ -20,7 +11,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
-from . import settings
+from .system import Slurm
 
 Base = declarative_base()
 
@@ -52,7 +43,6 @@ class Proposal(Base):
     Table Fields:
       - id                 (Integer): Primary key for this table
       - account_id         (Integer): Primary key for the ``account`` table
-      - proposal_type (ProposalEnum): The proposal type
       - start_date            (Date): The date when the proposal goes into effect
       - end_date              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
@@ -93,7 +83,7 @@ class Proposal(Base):
         raise ValueError(f'Value for {key} column must be between 0 and 100 (got {value}).')
 
     @validates('end')
-    def _validate_end_date(self, key: str, value: int) -> int:
+    def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the proposal end date is after the start date
 
         Args:
@@ -104,8 +94,8 @@ class Proposal(Base):
             ValueError: If the given value does not match required criteria
         """
 
-        if value <= self.start_date:
-            raise ValueError('End date must be greater than start date')
+        if self.start_date and value <= self.start_date:
+            raise ValueError(f'Value for {key} column must come after the proposal start date')
 
         return value
 
@@ -197,7 +187,7 @@ class Allocation(Base):
         return value
 
     @validates('cluster_name')
-    def _validate_cluster_name(self, key: str, value: int) -> None:
+    def _validate_cluster_name(self, key: str, value: str) -> str:
         """Verify a cluster name is defined in application settings
 
         Args:
@@ -208,7 +198,7 @@ class Allocation(Base):
             ValueError: If the given value is not in application settings
         """
 
-        if value not in settings.clusters:
+        if value not in Slurm.cluster_names():
             raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
 
         return value
@@ -264,7 +254,7 @@ class Investment(Base):
         return value
 
     @validates('end')
-    def _validate_end_date(self, key: str, value: int) -> int:
+    def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the end date is after the start date
 
         Args:
@@ -275,8 +265,8 @@ class Investment(Base):
             ValueError: If the given value does not match required criteria
         """
 
-        if value <= self.start_date:
-            raise ValueError('End date must be greater than start date')
+        if self.start_date and value <= self.start_date:
+            raise ValueError(f'Value for {key} column must come after the proposal start date')
 
         return value
 
