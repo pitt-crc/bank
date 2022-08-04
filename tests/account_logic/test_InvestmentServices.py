@@ -4,9 +4,9 @@ from unittest import TestCase
 from sqlalchemy import select
 
 from bank import settings
-from bank.account_logic import InvestmentServices, ProposalServices
+from bank.account_logic import InvestmentServices
 from bank.exceptions import MissingInvestmentError, MissingProposalError
-from bank.orm import Investment, Session, Account
+from bank.orm import Investment, Account, DBConnection
 from tests._utils import InvestmentSetup, ProposalSetup
 
 investments_query = select(Investment) \
@@ -35,7 +35,7 @@ class CreateInvestment(ProposalSetup, TestCase):
         account = InvestmentServices(settings.test_account)
         account.create_investment(sus=12345)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             investments = session.execute(investments_query).scalars().all()
             self.assertEqual(1, len(investments))
             self.assertEqual(12345, investments[0].service_units)
@@ -66,7 +66,7 @@ class CreateInvestment(ProposalSetup, TestCase):
         account = InvestmentServices(settings.test_account)
         account.create_investment(sus=test_sus, num_inv=repeats)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             investments = session.execute(investments_query).scalars().all()
             total_sus = sum(inv.current_sus for inv in investments)
 
@@ -77,12 +77,12 @@ class CreateInvestment(ProposalSetup, TestCase):
 class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
 
     def test_investment_is_deleted(self) -> None:
-        with Session() as session:
+        with DBConnection.session() as session:
             investment = session.execute(primary_investment_query).scalars().first()
             primary_id = investment.id
 
         InvestmentServices(settings.test_account).delete_investment(primary_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             investment = session.execute(primary_investment_query).scalars().first()
             self.assertIsNone(investment)
 
@@ -98,7 +98,7 @@ class AddSus(ProposalSetup, InvestmentSetup, TestCase):
         InvestmentServices(settings.test_account).add_sus(inv_id, sus_to_add)
 
         inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             new_sus = session.execute(inv_sus_query).scalars().first()
             self.assertEqual(self.num_inv_sus + sus_to_add, new_sus)
 
@@ -124,7 +124,7 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
         InvestmentServices(settings.test_account).subtract_sus(inv_id, sus_to_subtract)
 
         inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             new_sus = session.execute(inv_sus_query).scalars().first()
             self.assertEqual(self.num_inv_sus - sus_to_subtract, new_sus)
 
@@ -155,7 +155,7 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
             .where(Account.name == settings.test_account) \
             .order_by(Investment.start_date.desc())
 
-        with Session() as session:
+        with DBConnection.session() as session:
             old_investment = session.execute(investment_query).scalars().first()
             investment_id = old_investment.id
             old_start_date = old_investment.start_date
@@ -164,7 +164,7 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
         sus_to_overwrite = 10
         InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             new_investment = session.execute(investment_query).scalars().first()
             self.assertEqual(sus_to_overwrite, new_investment.service_units)
             self.assertEqual(old_start_date, new_investment.start_date)
@@ -177,7 +177,7 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
             .where(Account.name == settings.test_account) \
             .order_by(Investment.start_date.desc())
 
-        with Session() as session:
+        with DBConnection.session() as session:
             old_investment = session.execute(investment_query).scalars().first()
             investment_id = old_investment.id
             new_start_date = old_investment.start_date + timedelta(days=5)
@@ -186,7 +186,7 @@ class OverwriteSus(ProposalSetup, InvestmentSetup, TestCase):
         sus_to_overwrite = 10
         InvestmentServices(settings.test_account).modify_investment(investment_id, sus_to_overwrite, start=new_start_date, end=new_end_date)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             new_investment = session.execute(investment_query).scalars().first()
             self.assertEqual(sus_to_overwrite, new_investment.service_units)
             self.assertEqual(new_start_date, new_investment.start_date)
@@ -213,7 +213,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             active_investment = session.execute(primary_investment_query).scalars().first()
             original_sus = active_investment.current_sus
 
@@ -221,7 +221,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
         sus_to_advance = self.num_inv_sus // 2
         self.account.advance(sus_to_advance)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             active_investment = session.execute(primary_investment_query).scalars().first()
             new_sus = active_investment.current_sus
 
@@ -230,7 +230,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_error_if_overdrawn(self) -> None:
         """Test an ``ValueError`` is raised if the account does not have enough SUs to cover the advance"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             investments = session.execute(investments_query).scalars().all()
             available_sus = sum(inv.service_units for inv in investments)
 

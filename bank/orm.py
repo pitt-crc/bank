@@ -14,18 +14,18 @@ SubModules
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Callable
 
-import sqlalchemy
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, select
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, select
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.engine import Engine, Connection
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, relationship, validates
+from sqlalchemy.orm import declarative_base, validates
+from sqlalchemy.orm import relationship, sessionmaker
 
 from . import settings
 
-engine = sqlalchemy.create_engine(settings.db_path)
-Session = sqlalchemy.orm.sessionmaker(bind=engine)
 Base = declarative_base()
-metadata = Base.metadata
 
 
 class Account(Base):
@@ -315,3 +315,29 @@ class Investment(Base):
         in_date_range = (self.start_date <= today) & (today < self.end_date)
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
         return in_date_range & has_service_units
+
+
+class DBConnection:
+    """A configurable connection to the application database"""
+
+    connection: Connection = None
+    engine: Engine = None
+    url: str = None
+    metadata: MetaData = Base.metadata
+    session = None
+
+    @classmethod
+    def configure(cls, url: str) -> None:
+        """Update the connection information for the underlying database
+
+        Changes made here will affect the entire running application
+
+        Args:
+            url: URL information for the application database
+        """
+
+        cls.url = url
+        cls.engine = create_engine(cls.url)
+        cls.metadata.create_all(cls.engine)
+        cls.connection = cls.engine.connect()
+        cls.session = sessionmaker(cls.engine)

@@ -18,7 +18,7 @@ from sqlalchemy import or_, select, between, delete
 import bank.orm
 from . import settings
 from .exceptions import *
-from .orm import Investment, Allocation, Account, Proposal, Session
+from .orm import Investment, Allocation, Account, Proposal, DBConnection
 from .system import SlurmAccount, EmailTemplate
 
 Numeric = Union[int, float]
@@ -49,7 +49,7 @@ class ProposalServices:
             .where(Account.name == self._account_name) \
             .where(Proposal.is_active)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             pid = session.execute(active_pid_query).scalars().first()
 
         if pid is None:
@@ -68,7 +68,7 @@ class ProposalServices:
         """
 
         query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
-        with Session() as session:
+        with DBConnection.session() as session:
             if session.execute(query).scalars().first() is None:
                 raise MissingProposalError(f'Account `{self._account_name}` has no proposal with ID {pid}.')
 
@@ -107,7 +107,7 @@ class ProposalServices:
             **kwargs: Service units to allocate to each cluster
         """
 
-        with Session() as session:
+        with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
             last_active_day = start + timedelta(days=duration - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
@@ -156,7 +156,7 @@ class ProposalServices:
         pid = pid or self._get_active_pid()
         self._verify_proposal_id(pid)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             session.execute(delete(Proposal).where(Proposal.id == pid))
             session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
@@ -186,7 +186,7 @@ class ProposalServices:
         self._verify_proposal_id(pid)
         self._verify_cluster_values(**kwargs)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             # Get default proposal values
             query = select(Proposal).where(Proposal.id == pid)
             proposal = session.execute(query).scalars().first()
@@ -239,7 +239,7 @@ class ProposalServices:
         self._verify_cluster_values(**kwargs)
 
         query = select(Allocation).join(Proposal).where(Proposal.id == pid)
-        with Session() as session:
+        with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
                 allocation.service_units += kwargs.get(allocation.cluster_name, 0)
@@ -263,7 +263,7 @@ class ProposalServices:
         self._verify_cluster_values(**kwargs)
 
         query = select(Allocation).join(Proposal).where(Proposal.id == pid)
-        with Session() as session:
+        with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
                 allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
@@ -287,7 +287,7 @@ class InvestmentServices:
 
         self._account_name = account_name
 
-        with Session() as session:
+        with DBConnection.session() as session:
             query = select(Proposal).join(Account).where(Account.name == account_name)
             proposal = session.execute(query).scalars().first()
             if proposal is None:
@@ -304,7 +304,7 @@ class InvestmentServices:
         """
 
         query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             if session.execute(query).scalars().first() is None:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no investment with ID {inv_id}.')
 
@@ -347,7 +347,7 @@ class InvestmentServices:
         duration = timedelta(days=duration)
         sus_per_instance = ceil(sus / num_inv)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             for i in range(num_inv):
                 start_this = start + i * duration
                 end_this = start + (i + 1) * duration
@@ -381,7 +381,7 @@ class InvestmentServices:
         """
 
         self._verify_investment_id(inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
@@ -410,7 +410,7 @@ class InvestmentServices:
             self._verify_service_units(sus)
 
         query = select(Investment).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
 
             if sus is not None:
@@ -441,7 +441,7 @@ class InvestmentServices:
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             investment.service_units += sus
             investment.current_sus += sus
@@ -464,7 +464,7 @@ class InvestmentServices:
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
-        with Session() as session:
+        with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             if investment.current_sus < sus:
                 raise ValueError(f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
@@ -485,7 +485,7 @@ class InvestmentServices:
         self._verify_service_units(sus)
         requested_withdrawal = sus
 
-        with Session() as session:
+        with DBConnection.session() as session:
             # Find the investment to add service units into
             active_investment_query = select(Investment).join(Account) \
                 .where(Account.name == self._account_name) \
@@ -565,7 +565,7 @@ class AccountServices:
 
         slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=0)
-        with Session() as session:
+        with DBConnection.session() as session:
             proposal = session.execute(self._proposal_query).scalars().first()
             investments = session.execute(self._investment_query).scalars().all()
 
@@ -619,7 +619,7 @@ class AccountServices:
         The returned string is empty if there are no investments
         """
 
-        with Session() as session:
+        with DBConnection.session() as session:
             investments = session.execute(self._investment_query).scalars().all()
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
@@ -651,7 +651,7 @@ class AccountServices:
             .where(Proposal.exhaustion_date is not None) \
             .where(Proposal.start_date < date.today())
 
-        with Session() as session:
+        with DBConnection.session() as session:
             for proposal in session.execute(proposal_query).scalars().all():
                 self._notify_proposal(proposal)
 
@@ -701,7 +701,7 @@ class AccountServices:
         """Archive any expired investments and rollover unused service units"""
 
         slurm_acct = SlurmAccount(self._account_name)
-        with Session() as session:
+        with DBConnection.session() as session:
 
             # Archive any investments which are past their end date
             investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()
@@ -771,7 +771,7 @@ class AdminServices:
 
         # Query database for accounts that are unlocked and is_expired
         account_name_query = select(Account.name).join(Proposal).where(Proposal.end_date < date.today())
-        with Session() as session:
+        with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalrs().all()
             return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
 

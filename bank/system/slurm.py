@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, Optional
+from typing import Dict
 
 from bank import settings
 from bank.exceptions import *

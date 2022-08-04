@@ -8,7 +8,7 @@ from sqlalchemy import select
 import bank.orm
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import Session, Proposal, Account
+from bank.orm import Proposal, Account
 from bank.system.slurm import SlurmAccount
 from tests._utils import ProposalSetup, InvestmentSetup
 
@@ -73,7 +73,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         super().setUp()
 
         self.account = AccountServices(settings.test_account)
-        with Session() as session:
+        with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
 
@@ -117,7 +117,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         self.assertEqual(f'Your account {self.account._account_name} has exceeded a proposal threshold', sent_email['subject'])
 
         # Ensure the percent notified is updated in the database
-        with Session() as session:
+        with DBConnection.session() as session:
             proposal = session.execute(active_proposal_query).scalars().first()
             self.assertEqual(1, proposal.percent_notified)
 
