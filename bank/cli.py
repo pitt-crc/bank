@@ -153,15 +153,14 @@ class AccountParser(BaseParser):
 
         # Reusable definitions for arguments
         account_argument = dict(
-            metavar='acc',
+            metavar='account',
             dest='self',
             type=AccountServices,
-            help='Name of a slurm user account',
-            required=True)
+            help='Name of a slurm user account')
         cluster_argument = dict(
             metavar='cluster',
             dest='self',
-            help='Name of a cluster',
+            help='Name of a cluster, the default is all',
             default='all')
 
         # Account locking parser
@@ -169,7 +168,7 @@ class AccountParser(BaseParser):
             'lock',
             help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock_account)
-        lock_parser.add_argument('--account', **account_argument)
+        lock_parser.add_argument(**account_argument)
         lock_parser.add_argument('--cluster', **cluster_argument)
 
         # Account unlocking parser
@@ -177,7 +176,7 @@ class AccountParser(BaseParser):
             'unlock',
             help='Allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock_account)
-        unlock_parser.add_argument('--account', **account_argument)
+        unlock_parser.add_argument(**account_argument)
         unlock_parser.add_argument('--cluster', **cluster_argument)
 
         # Account renewals parser
@@ -187,14 +186,14 @@ class AccountParser(BaseParser):
                   'investments')
         )
         renew_parser.set_defaults(function=AccountServices.renew)
-        renew_parser.add_argument('--account', **account_argument)
+        renew_parser.add_argument(**account_argument)
 
         # Account information parser
         info_parser = parent_parser.add_parser(
             'info',
             help='Print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.print_info)
-        info_parser.add_argument('--account', **account_argument)
+        info_parser.add_argument(**account_argument)
 
 class ProposalParser(BaseParser):
     """Commandline interface for the ``ProposalServices`` class"""
@@ -210,7 +209,7 @@ class ProposalParser(BaseParser):
         # Reusable definitions for arguments
         account_definition = dict(
             dest='self',
-            metavar='acc',
+            metavar='account',
             help='The parent slurm account')
 
         type_definition = dict(
@@ -222,7 +221,7 @@ class ProposalParser(BaseParser):
             'create',
             help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create_proposal)
-        create_parser.add_argument('--account', **account_definition)
+        create_parser.add_argument(**account_definition)
         create_parser.add_argument('--type', **type_definition)
         cls._add_cluster_args(create_parser)
 
@@ -230,27 +229,27 @@ class ProposalParser(BaseParser):
             'delete',
             help='Delete an existing account proposal')
         delete_parser.set_defaults(function=ProposalServices.delete_proposal)
-        delete_parser.add_argument('--account', **account_definition)
+        delete_parser.add_argument(**account_definition)
 
         add_parser = parent_parser.add_parser(
             'add',
             help='Add service units to an existing proposal')
         add_parser.set_defaults(function=ProposalServices.add_sus)
-        add_parser.add_argument('--account', **account_definition)
+        add_parser.add_argument(**account_definition)
         cls._add_cluster_args(add_parser)
 
         subtract_parser = parent_parser.add_parser(
             'subtract',
             help='Subtract service units from an existing proposal')
         subtract_parser.set_defaults(function=ProposalServices.subtract_sus)
-        subtract_parser.add_argument('--account', **account_definition)
+        subtract_parser.add_argument(**account_definition)
         cls._add_cluster_args(subtract_parser)
 
         overwrite_parser = parent_parser.add_parser(
             'overwrite',
             help='Overwrite properties of an existing proposal')
         overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
-        overwrite_parser.add_argument('--account', **account_definition)
+        overwrite_parser.add_argument(**account_definition)
         overwrite_parser.add_argument('--type', **type_definition)
         overwrite_parser.add_argument(
             '--start',
@@ -295,7 +294,7 @@ class InvestmentParser(BaseParser):
         # Reusable definitions for arguments
         account_definition = dict(
             dest='self',
-            metavar='acc',
+            metavar='account',
             help='The parent slurm account')
 
         investment_id_definition = dict(
@@ -315,7 +314,7 @@ class InvestmentParser(BaseParser):
             help='Create a new investment')
         create_parser.set_defaults(
             function=InvestmentServices.create_investment)
-        create_parser.add_argument('--account', **account_definition)
+        create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--sus',
             type=int,
@@ -339,14 +338,14 @@ class InvestmentParser(BaseParser):
             help='Delete an existing investment')
         delete_parser.set_defaults(
             function=InvestmentServices.delete_investment)
-        delete_parser.add_argument('--account', **account_definition)
+        delete_parser.add_argument(**account_definition)
         delete_parser.add_argument('--id', **investment_id_definition)
 
         add_parser = parent_parser.add_parser(
             'add',
             help='Add service units to an existing investment')
         add_parser.set_defaults(function=InvestmentServices.add_sus)
-        add_parser.add_argument('--account', **account_definition)
+        add_parser.add_argument(**account_definition)
         add_parser.add_argument('--id', **investment_id_definition)
         add_parser.add_argument('--sus', **service_unit_definition)
 
@@ -354,7 +353,7 @@ class InvestmentParser(BaseParser):
             'subtract',
             help='Subtract service units from an existing investment')
         subtract_parser.set_defaults(function=InvestmentServices.subtract_sus)
-        subtract_parser.add_argument('--account', **account_definition)
+        subtract_parser.add_argument(**account_definition)
         subtract_parser.add_argument('--id', **investment_id_definition)
         subtract_parser.add_argument('--sus', **service_unit_definition)
 
@@ -363,7 +362,7 @@ class InvestmentParser(BaseParser):
             help='Overwrite properties of an existing investment')
         overwrite_parser.set_defaults(
             function=InvestmentServices.modify_investment)
-        overwrite_parser.add_argument('--account', **account_definition)
+        overwrite_parser.add_argument(**account_definition)
         overwrite_parser.add_argument('--id', **investment_id_definition)
         overwrite_parser.add_argument(
             '--sus',
@@ -387,7 +386,7 @@ class InvestmentParser(BaseParser):
         )
         advance_parser.set_defaults(function=InvestmentServices.add_sus)
         advance_parser.add_argument('--id', **investment_id_definition)
-        advance_parser.add_argument('--account', **account_definition)
+        advance_parser.add_argument(**account_definition)
         advance_parser.add_argument('--sus', **service_unit_definition)
 
 
