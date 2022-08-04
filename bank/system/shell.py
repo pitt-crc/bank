@@ -14,7 +14,7 @@ LOG = getLogger('bank.system.shell')
 
 
 class ShellCmd:
-    """Executes commands using the underlying shell environment
+    """Executes commands using the underlying system shell
 
     Output to STDOUT and STDERR from the executed command are
     written to the ``out`` and ``err`` attributes respectively.
@@ -43,5 +43,5 @@ class ShellCmd:
         """
 
         if self.err:
-            LOG.debug(f'CmdError: Shell command errored out with message: {self.err} ')
+            LOG.error(f'CmdError: Shell command errored out with message: {self.err} ')
             raise CmdError(self.err)
