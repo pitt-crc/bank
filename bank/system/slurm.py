@@ -6,7 +6,6 @@ API Reference
 
 from __future__ import annotations
 
-import re
 from logging import getLogger
 from typing import Dict, Optional
 
@@ -47,12 +46,10 @@ class Slurm:
             A tuple of cluster names
         """
 
-        # Get cluster names using squeue to fetch all running jobs for a non-existent username
-        output = ShellCmd('squeue -u fakeuser -M all').out
-        regex_pattern = re.compile(r'CLUSTER: (.*)\n')
-        regex_match = re.findall(regex_pattern, output)
-        clusters = tuple(set(regex_match))
+        cmd = ShellCmd('sacctmgr show clusters format=Cluster  --noheader --parsable2')
+        cmd.raise_err()
 
+        clusters = cmd.out.split()
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
 
@@ -119,7 +116,7 @@ class SlurmAccount:
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=GrpTresRunMins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
 
-    def set_locked_state(self, lock_state: bool, cluster: Optional[str]) -> None:
+    def set_locked_state(self, lock_state: bool, cluster: str) -> None:
         """Lock or unlock the user account
 
         Args:
@@ -128,11 +125,8 @@ class SlurmAccount:
         """
 
         LOG.info(f'Updating lock state for Slurm account {self.account_name} to {lock_state}')
-        if cluster and cluster not in Slurm.cluster_names():
+        if cluster not in Slurm.cluster_names():
             raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
-
-        if cluster is None:
-            cluster = ','.join(Slurm.cluster_names())
 
         lock_state_int = 0 if lock_state else -1
         ShellCmd(
@@ -153,17 +147,13 @@ class SlurmAccount:
         if cluster and cluster not in Slurm.cluster_names():
             raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
-        # Only the second and third line are necessary from the output table
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a")
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
         header, *data = cmd.out.split('\n')[1:]
-        raw_usage_index = header.split('|').index("RawUsage")
-        username_index = header.split('|').index("User")
 
         out_data = dict()
         for line in data:
-            split_line = line.split('|')
-            user = split_line[username_index]
-            usage = int(split_line[raw_usage_index])
+            user, usage = line.split('|')
+            usage = int(usage)
             if in_hours:  # Convert from seconds to hours
                 usage //= 60
 
