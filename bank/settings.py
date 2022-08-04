@@ -86,9 +86,7 @@ from textwrap import dedent
 
 from environ import environ
 
-_ENV = environ.Env()
 _CUR_DIR = Path(__file__).resolve().parent
-_APP_PREFIX = 'BANK_'  # Prefix used to identify environmental variables as settings for this application
 
 # Settings for running the test suite.
 test_account = 'sam'
