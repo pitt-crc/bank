@@ -14,7 +14,7 @@ General Account Management
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
+   :func: CommandLineApplication
    :path: account
    :prog: crc_bank.py
 
@@ -23,7 +23,7 @@ User Proposals
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
+   :func: CommandLineApplication
    :path: proposal
    :prog: crc_bank.py
 
@@ -32,7 +32,7 @@ User Investments
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
+   :func: CommandLineApplication
    :path: investment
    :prog: crc_bank.py
 
@@ -42,6 +42,6 @@ Banking Administrative Tasks
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
+   :func: CommandLineApplication
    :path: admin
    :prog: crc_bank.py

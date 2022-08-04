@@ -93,7 +93,6 @@ class ProposalServices:
 
     def create_proposal(
             self,
-            type: ProposalEnum = bank.orm.Proposal,
             start: date = date.today(),
             duration: int = 365,
             **kwargs: int
