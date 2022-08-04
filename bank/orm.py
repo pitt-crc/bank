@@ -14,14 +14,11 @@ SubModules
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Callable
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, select
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, String, create_engine, select
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, validates
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
 from . import settings
 

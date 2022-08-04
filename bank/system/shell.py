@@ -6,7 +6,7 @@ API Reference
 
 from logging import getLogger
 from shlex import split
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 from bank.exceptions import CmdError
 

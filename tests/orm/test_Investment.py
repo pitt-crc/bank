@@ -2,7 +2,7 @@ from datetime import date
 from unittest import TestCase
 
 from bank.orm import Investment
-from tests._utils import TODAY, TOMORROW, YESTERDAY, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY
+from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, TODAY, TOMORROW, YESTERDAY
 
 
 def create_investment(

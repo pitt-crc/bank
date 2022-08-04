@@ -6,7 +6,7 @@ from sqlalchemy import select
 from bank import settings
 from bank.account_logic import InvestmentServices
 from bank.exceptions import MissingInvestmentError, MissingProposalError
-from bank.orm import Investment, Account, DBConnection
+from bank.orm import Account, DBConnection, Investment
 from tests._utils import InvestmentSetup, ProposalSetup
 
 investments_query = select(Investment) \

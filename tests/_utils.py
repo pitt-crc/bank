@@ -1,9 +1,9 @@
-from datetime import timedelta, date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 
 from bank import settings
-from bank.orm import Proposal, Investment, Account, Allocation, DBConnection
+from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
 
 TODAY = date.today()
 TOMORROW = TODAY + timedelta(days=1)

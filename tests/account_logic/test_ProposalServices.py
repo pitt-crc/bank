@@ -1,13 +1,13 @@
 from datetime import timedelta
 from unittest import TestCase
 
-from sqlalchemy import select, join
+from sqlalchemy import join, select
 
 from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
-from bank.orm import Proposal, Account, Allocation, DBConnection
-from tests._utils import ProposalSetup, EmptyAccountSetup, TODAY, TOMORROW, DAY_AFTER_TOMORROW, YESTERDAY, DAY_BEFORE_YESTERDAY
+from bank.orm import Account, Allocation, DBConnection, Proposal
+from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units) \

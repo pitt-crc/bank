@@ -10,7 +10,7 @@ from email.message import EmailMessage
 from logging import getLogger
 from smtplib import SMTP
 from string import Formatter
-from typing import Tuple, cast, Optional, Any
+from typing import Any, Optional, Tuple, cast
 
 from bs4 import BeautifulSoup
 

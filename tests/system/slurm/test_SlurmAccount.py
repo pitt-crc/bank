@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from bank import settings
 from bank.exceptions import SlurmAccountNotFoundError
-from bank.system.slurm import SlurmAccount, Slurm
+from bank.system.slurm import Slurm, SlurmAccount
 
 
 @skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')

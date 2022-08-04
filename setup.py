@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 PACKAGE_REQUIREMENTS = Path(__file__).parent / 'requirements.txt'
 DOCUMENTATION_REQUIREMENTS = Path(__file__).parent / 'docs' / 'requirements.txt'

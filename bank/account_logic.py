@@ -10,16 +10,16 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Union, Tuple, Optional
+from typing import Optional, Tuple, Union
 
 from prettytable import PrettyTable
-from sqlalchemy import or_, select, between, delete
+from sqlalchemy import between, delete, or_, select
 
 import bank.orm
 from . import settings
 from .exceptions import *
-from .orm import Investment, Allocation, Account, Proposal, DBConnection
-from .system import SlurmAccount, EmailTemplate
+from .orm import Account, Allocation, DBConnection, Investment, Proposal
+from .system import EmailTemplate, SlurmAccount
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')

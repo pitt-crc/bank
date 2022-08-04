@@ -8,9 +8,9 @@ from sqlalchemy import select
 import bank.orm
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import Proposal, Account
+from bank.orm import Account, Proposal
 from bank.system.slurm import SlurmAccount
-from tests._utils import ProposalSetup, InvestmentSetup
+from tests._utils import InvestmentSetup, ProposalSetup
 
 active_proposal_query = select(Proposal).join(Account) \
     .where(Account.name == settings.test_account) \

@@ -62,7 +62,7 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
-from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
+from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 
 
 class BaseParser(ArgumentParser):
