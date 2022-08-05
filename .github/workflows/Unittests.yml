@@ -5,10 +5,22 @@ on:
   push:
 
 jobs:
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
   python_tests:
     name: Run Tests
     runs-on: ubuntu-latest
-    container: pitt-crc/test-env-ubi8-slurm-20-02-5-1
+    needs:   login
+    container: pitt-crc/test-env-ubi8-slurm-20-02-5-1:main
+
     strategy:
       fail-fast: false
       matrix:
