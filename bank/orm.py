@@ -11,7 +11,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
-from .system import Slurm
+from bank import settings
 
 Base = declarative_base()
 
@@ -198,7 +198,7 @@ class Allocation(Base):
             ValueError: If the given value is not in application settings
         """
 
-        if value not in Slurm.cluster_names():
+        if value not in settings.clusters:
             raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
 
         return value

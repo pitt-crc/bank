@@ -1,3 +1,5 @@
+"""Tests for the ``ShellCmd`` class."""
+
 from unittest import TestCase
 
 from bank.exceptions import CmdError
@@ -8,7 +10,7 @@ class InitExceptions(TestCase):
     """Tests related to exceptions raised during instantiation"""
 
     def test_empty_init_arg(self) -> None:
-        """Test for ``ValueError`` when ``cmd`` is an empty string"""
+        """Test for a ``ValueError`` when the command is an empty string"""
 
         with self.assertRaises(ValueError):
             ShellCmd('')

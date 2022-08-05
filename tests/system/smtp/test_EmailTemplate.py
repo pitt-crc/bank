@@ -1,3 +1,5 @@
+"""Tests for the ``EmailTemplate`` class."""
+
 from unittest import TestCase
 from unittest.mock import call, patch
 
