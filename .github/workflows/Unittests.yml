@@ -24,6 +24,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: debugging
+        run: |
+          python --version
+          python3 --version
+          pip3 --version
+
       - name: Install package dependencies
         run: pip install .[tests]
 
