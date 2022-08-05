@@ -19,7 +19,7 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     needs:   login
-    container: pitt-crc/test-env-ubi8-slurm-20-02-5-1:main
+    container: pitt-crc/test-env-ubi8-slurm-20-02-5-1
 
     strategy:
       fail-fast: false
