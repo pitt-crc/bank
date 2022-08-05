@@ -22,7 +22,7 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = bank.orm.metadata
+target_metadata = bank.orm.DBConnection.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

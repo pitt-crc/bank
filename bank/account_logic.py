@@ -15,7 +15,6 @@ from typing import Optional, Tuple, Union
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
 
-import bank.orm
 from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
