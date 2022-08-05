@@ -1,9 +1,7 @@
 Command Line Interface
 ======================
 
-A command line interface is provided is provided with the source code
-for running the analysis pipeline. Command line functions are grouped
-together by the service being administered:
+Command line functions are grouped together by the service being administered:
 
 .. code-block:: bash
 
@@ -14,8 +12,7 @@ General Account Management
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
-   :path: account
+   :func: AccountParser
    :prog: crc_bank.py
 
 User Proposals
@@ -23,8 +20,7 @@ User Proposals
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
-   :path: proposal
+   :func: ProposalParser
    :prog: crc_bank.py
 
 User Investments
@@ -32,8 +28,7 @@ User Investments
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
-   :path: investment
+   :func: InvestmentParser
    :prog: crc_bank.py
 
 
@@ -42,6 +37,5 @@ Banking Administrative Tasks
 
 .. argparse::
    :module: bank.cli
-   :func: CLIParser
-   :path: admin
+   :func: AdminParser
    :prog: crc_bank.py

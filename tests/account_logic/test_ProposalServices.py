@@ -1,13 +1,13 @@
 from datetime import timedelta
 from unittest import TestCase
 
-from sqlalchemy import select, join
+from sqlalchemy import join, select
 
 from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError
-from bank.orm import Session, Proposal, Account, Allocation
-from tests._utils import ProposalSetup, EmptyAccountSetup, TODAY, TOMORROW, DAY_AFTER_TOMORROW, YESTERDAY, DAY_BEFORE_YESTERDAY
+from bank.orm import Account, Allocation, DBConnection, Proposal
+from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units) \
@@ -33,7 +33,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
         """Test proposals are created with zero service units by default"""
 
         self.account.create_proposal()
-        with Session() as session:
+        with DBConnection.session() as session:
             query = select(Proposal).join(Account).where(Account.name == settings.test_account)
             proposal = session.execute(query).scalars().first()
 
@@ -45,7 +45,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
         """Test proposals are assigned the number of sus specified by kwargs"""
 
         self.account.create_proposal(**{settings.test_cluster: 1000})
-        with Session() as session:
+        with DBConnection.session() as session:
             service_units = session.execute(sus_query).scalars().first()
             self.assertEqual(1000, service_units)
 
@@ -74,7 +74,7 @@ class DeleteProposal(ProposalSetup, TestCase):
         """Test the active proposal is deleted from the database"""
 
         self.account.delete_proposal()
-        with Session() as session:
+        with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.assertIsNone(active_proposal, 'Active proposal was not deleted')
 
@@ -84,7 +84,7 @@ class DeleteProposal(ProposalSetup, TestCase):
         delete_pid = 1
         self.account.delete_proposal(pid=delete_pid)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             query = select(Proposal).where(Proposal.id == delete_pid)
             proposal = session.execute(query).first()
             self.assertIsNone(proposal, f'Proposal {delete_pid} was not deleted')
@@ -100,14 +100,13 @@ class ModifyProposal(ProposalSetup, TestCase):
     def test_sus_are_modified(self) -> None:
         """Test sus are overwritten in the proposal"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             old_proposal = session.execute(active_proposal_query).scalars().first()
-            old_type = old_proposal.proposal_type
             old_start = old_proposal.start_date
             old_end = old_proposal.end_date
 
         self.account.modify_proposal(**{settings.test_cluster: 12345})
-        with Session() as session:
+        with DBConnection.session() as session:
             new_proposal = session.execute(active_proposal_query).scalars().first()
             new_sus = session.execute(sus_query).scalars().first()
 
@@ -115,7 +114,6 @@ class ModifyProposal(ProposalSetup, TestCase):
             self.assertEqual(12345, new_sus)
             self.assertEqual(old_start, new_proposal.start_date)
             self.assertEqual(old_end, new_proposal.end_date)
-            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
@@ -125,19 +123,17 @@ class ModifyProposal(ProposalSetup, TestCase):
             .where(Account.name == settings.test_account) \
             .order_by(Proposal.start_date.desc())
 
-        with Session() as session:
+        with DBConnection.session() as session:
             old_proposal = session.execute(proposal_query).scalars().first()
             proposal_id = old_proposal.id
             new_start_date = old_proposal.start_date + timedelta(days=100)
             new_end_date = old_proposal.end_date + timedelta(days=100)
-            old_type = old_proposal.proposal_type
 
         self.account.modify_proposal(proposal_id, start=new_start_date, end=new_end_date)
-        with Session() as session:
+        with DBConnection.session() as session:
             new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
             self.assertEqual(new_end_date, new_proposal.end_date)
-            self.assertEqual(old_type, new_proposal.proposal_type)
 
     def test_error_on_bad_cluster_name(self) -> None:
         """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
@@ -169,13 +165,13 @@ class AddSus(ProposalSetup, TestCase):
     def test_sus_are_added(self) -> None:
         """Test SUs are added to the proposal"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             original_sus = session.execute(sus_query).scalars().first()
 
         sus_to_add = 1000
         self.account.add_sus(**{settings.test_cluster: sus_to_add})
 
-        with Session() as session:
+        with DBConnection.session() as session:
             new_sus = session.execute(sus_query).scalars().first()
             self.assertEqual(original_sus + sus_to_add, new_sus)
 
@@ -203,13 +199,13 @@ class SubtractSus(ProposalSetup, TestCase):
     def test_sus_are_subtracted(self) -> None:
         """Test SUs are removed from the proposal"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             original_sus = session.execute(sus_query).scalars().first()
 
         sus_to_subtract = 1000
         self.account.subtract_sus(**{settings.test_cluster: sus_to_subtract})
 
-        with Session() as session:
+        with DBConnection.session() as session:
             new_sus = session.execute(sus_query).scalars().first()
             self.assertEqual(original_sus - sus_to_subtract, new_sus)
 

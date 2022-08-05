@@ -1,23 +1,19 @@
-"""Object-oriented definition for the underlying database schema.
-
-API Reference
--------------
+"""The ``orm`` module  provides a `sqlalchemy <https://www.sqlalchemy.org/>`_
+based object relational mapper (ORM) for handling database interactions.
 """
 
 from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, Integer, String, Enum, ForeignKey, select
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, String, create_engine, select
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import validates, relationship
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
-from .enum import ProposalEnum
-from .. import settings
+from bank import settings
 
 Base = declarative_base()
-metadata = Base.metadata
 
 
 class Account(Base):
@@ -47,7 +43,6 @@ class Proposal(Base):
     Table Fields:
       - id                 (Integer): Primary key for this table
       - account_id         (Integer): Primary key for the ``account`` table
-      - proposal_type (ProposalEnum): The proposal type
       - start_date            (Date): The date when the proposal goes into effect
       - end_date              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
@@ -62,7 +57,6 @@ class Proposal(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     account_id = Column(Integer, ForeignKey(Account.id))
-    proposal_type = Column(Enum(ProposalEnum), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False, default=0)
@@ -89,7 +83,7 @@ class Proposal(Base):
         raise ValueError(f'Value for {key} column must be between 0 and 100 (got {value}).')
 
     @validates('end')
-    def _validate_end_date(self, key: str, value: int) -> int:
+    def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the proposal end date is after the start date
 
         Args:
@@ -100,8 +94,8 @@ class Proposal(Base):
             ValueError: If the given value does not match required criteria
         """
 
-        if value <= self.start_date:
-            raise ValueError('End date must be greater than start date')
+        if self.start_date and value <= self.start_date:
+            raise ValueError(f'Value for {key} column must come after the proposal start date')
 
         return value
 
@@ -193,7 +187,7 @@ class Allocation(Base):
         return value
 
     @validates('cluster_name')
-    def _validate_cluster_name(self, key: str, value: int) -> None:
+    def _validate_cluster_name(self, key: str, value: str) -> str:
         """Verify a cluster name is defined in application settings
 
         Args:
@@ -260,7 +254,7 @@ class Investment(Base):
         return value
 
     @validates('end')
-    def _validate_end_date(self, key: str, value: int) -> int:
+    def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the end date is after the start date
 
         Args:
@@ -271,8 +265,8 @@ class Investment(Base):
             ValueError: If the given value does not match required criteria
         """
 
-        if value <= self.start_date:
-            raise ValueError('End date must be greater than start date')
+        if self.start_date and value <= self.start_date:
+            raise ValueError(f'Value for {key} column must come after the proposal start date')
 
         return value
 
@@ -308,3 +302,29 @@ class Investment(Base):
         in_date_range = (self.start_date <= today) & (today < self.end_date)
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
         return in_date_range & has_service_units
+
+
+class DBConnection:
+    """A configurable connection to the application database"""
+
+    connection: Connection = None
+    engine: Engine = None
+    url: str = None
+    metadata: MetaData = Base.metadata
+    session = None
+
+    @classmethod
+    def configure(cls, url: str) -> None:
+        """Update the connection information for the underlying database
+
+        Changes made here will affect the entire running application
+
+        Args:
+            url: URL information for the application database
+        """
+
+        cls.url = url
+        cls.engine = create_engine(cls.url)
+        cls.metadata.create_all(cls.engine)
+        cls.connection = cls.engine.connect()
+        cls.session = sessionmaker(cls.engine)

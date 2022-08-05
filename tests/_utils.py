@@ -1,9 +1,9 @@
-from datetime import timedelta, date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 
 from bank import settings
-from bank.orm import Session, Proposal, Investment, Account, Allocation, ProposalEnum
+from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
 
 TODAY = date.today()
 TOMORROW = TODAY + timedelta(days=1)
@@ -18,7 +18,7 @@ class EmptyAccountSetup:
     def setUp(self) -> None:
         """Delete any proposals and investments that may already exist for the test account"""
 
-        with Session() as session:
+        with DBConnection.session() as session:
             account = session.query(Account).filter(Account.name == settings.test_account).first()
             if account is not None:
                 session.delete(account)
@@ -49,7 +49,6 @@ class ProposalSetup(EmptyAccountSetup):
 
             allocations = [Allocation(cluster_name=settings.test_cluster, service_units=self.num_proposal_sus)]
             proposal = Proposal(
-                proposal_type=ProposalEnum.Proposal,
                 allocations=allocations,
                 start_date=start,
                 end_date=end,
@@ -57,7 +56,7 @@ class ProposalSetup(EmptyAccountSetup):
 
             proposals.append(proposal)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             account = session.execute(select(Account).where(Account.name == settings.test_account)).scalars().first()
             account.proposals.extend(proposals)
             session.commit()
@@ -91,7 +90,7 @@ class InvestmentSetup(EmptyAccountSetup):
             )
             investments.append(inv)
 
-        with Session() as session:
+        with DBConnection.session() as session:
             result = session.execute(select(Account).where(Account.name == settings.test_account))
             account = result.scalars().first()
             account.investments.extend(investments)

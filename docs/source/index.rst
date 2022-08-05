@@ -57,7 +57,7 @@ based on:
 
    api/cli.rst
    api/account_logic.rst
-   api/orm/orm.rst
-   api/settings.rst
+   api/orm.rst
    api/system/system.rst
+   api/settings.rst
    api/exceptions.rst

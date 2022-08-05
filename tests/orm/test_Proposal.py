@@ -1,8 +1,8 @@
 from unittest import TestCase
 
 from bank import settings
-from bank.orm import Proposal, Allocation
-from tests._utils import TODAY, TOMORROW, YESTERDAY, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY
+from bank.orm import Allocation, Proposal
+from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, TODAY, TOMORROW, YESTERDAY
 
 
 class PercentNotifiedValidation(TestCase):

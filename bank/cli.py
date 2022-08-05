@@ -62,9 +62,7 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
-from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
-from .orm import ProposalEnum
-from .system import SlurmAccount
+from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 
 
 class BaseParser(ArgumentParser):
@@ -141,7 +139,7 @@ class AccountParser(BaseParser):
         """
 
         # Reusable definitions for arguments
-        account_argument = dict(metavar='acc', dest='self',  type=AccountServices, help='Name of a slurm user account', required=True)
+        account_argument = dict(metavar='acc', dest='self', type=AccountServices, help='Name of a slurm user account', required=True)
 
         lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock_account)
@@ -173,12 +171,10 @@ class ProposalParser(BaseParser):
 
         # Reusable definitions for arguments
         account_definition = dict(dest='self', metavar='acc', help='The parent slurm account')
-        type_definition = dict(type=ProposalEnum.from_string, help='', choices=list(ProposalEnum))
 
         create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create_proposal)
         create_parser.add_argument('--account', **account_definition)
-        create_parser.add_argument('--type', **type_definition)
         cls._add_cluster_args(create_parser)
 
         delete_parser = parent_parser.add_parser('delete', help='Delete an existing account proposal')
@@ -198,7 +194,6 @@ class ProposalParser(BaseParser):
         overwrite_parser = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing proposal')
         overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
         overwrite_parser.add_argument('--account', **account_definition)
-        overwrite_parser.add_argument('--type', **type_definition)
         overwrite_parser.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
         overwrite_parser.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
         cls._add_cluster_args(overwrite_parser)
