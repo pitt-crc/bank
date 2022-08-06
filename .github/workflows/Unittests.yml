@@ -16,6 +16,12 @@ jobs:
         python-version: [ "3.7", "3.8", "3.9", "3.10" ]
 
     steps:
+      - name: debugging
+        run: |
+          python --version
+          python3 --version
+          pip3 --version
+
       - name: Checkout source
         uses: actions/checkout@master
 
