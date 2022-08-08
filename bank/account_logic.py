@@ -749,11 +749,17 @@ class AccountServices:
             slurm_acct.reset_raw_usage()
             slurm_acct.set_locked_state(False)
 
-    def lock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
+    def lock_account(self,clusters):
+        """Lock the slurm account on the provided clusters"""
 
-    def unlock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
+        for cluster in clusters:
+            SlurmAccount(self._account_name).set_locked_state(True, cluster)
+
+    def unlock_account(self,clusters):
+        """Unlock the slurm account on the provided clusters"""
+
+        for cluster in clusters:
+            SlurmAccount(self._account_name).set_locked_state(True, cluster)
 
 
 class AdminServices:

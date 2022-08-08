@@ -62,8 +62,8 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
-from bank.system.slurm import cluster_names
 from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
+from .system.slurm import Slurm
 
 
 class BaseParser(ArgumentParser):
@@ -168,10 +168,18 @@ class AccountParser(BaseParser):
             type=AccountServices,
             help='Name of a slurm account')
         cluster_argument = dict(
-            metavar='cluster',
-            dest='self',
-            type=list,
+            dest='clusters',
+            nargs='+',
+            choices=list(Slurm.cluster_names()),
             help='A cluster or list of clusters to lock the account on')
+        all_clusters_argument = dict(
+            metavar='\b',
+            dest='clusters',
+            action='store_const',
+            const=list(Slurm.cluster_names()),
+            help=('Use all clusters available on the system')
+        )
+
 
         # Lock Account
         lock_parser = parent_parser.add_parser(
@@ -179,9 +187,9 @@ class AccountParser(BaseParser):
             help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock_account)
         lock_parser.add_argument(**account_argument)
-        cluster = lock_parser.add_mutually_exclusive_group()
-        cluster.add_argument('--cluster', **cluster_argument)
-        cluster.add_argument('--all', cluster_names())
+        lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
+        lock_cluster.add_argument('--clusters', **cluster_argument)
+        lock_cluster.add_argument('--all', **all_clusters_argument)
 
         # Unlock Account
         unlock_parser = parent_parser.add_parser(
@@ -189,10 +197,9 @@ class AccountParser(BaseParser):
             help='Allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock_account)
         unlock_parser.add_argument(**account_argument)
-        unlock_parser.add_argument('--cluster', **cluster_argument)
-        cluster = unlock_parser.add_mutually_exclusive_group()
-        cluster.add_argument('--cluster', **cluster_argument)
-        cluster.add_argument('--all', cluster_names())
+        unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
+        unlock_cluster.add_argument('--clusters', **cluster_argument)
+        unlock_cluster.add_argument('--all', **all_clusters_argument)
 
         # Account information parser
         info_parser = parent_parser.add_parser(
@@ -218,11 +225,6 @@ class ProposalParser(BaseParser):
             dest='self',
             metavar='account',
             help='The parent slurm account')
-
-        type_definition = dict(
-            type=ProposalEnum.from_string,
-            help='',
-            choices=list(ProposalEnum))
 
         create_parser = parent_parser.add_parser(
             'create',
@@ -256,7 +258,6 @@ class ProposalParser(BaseParser):
             help='Overwrite properties of an existing proposal')
         overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
         overwrite_parser.add_argument(**account_definition)
-        overwrite_parser.add_argument('--type', **type_definition)
         overwrite_parser.add_argument(
             '--start',
             type=(lambda date:
