@@ -180,7 +180,6 @@ class AccountParser(BaseParser):
             help=('Use all clusters available on the system')
         )
 
-
         # Lock Account
         lock_parser = parent_parser.add_parser(
             'lock',
@@ -231,6 +230,18 @@ class ProposalParser(BaseParser):
             help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create_proposal)
         create_parser.add_argument(**account_definition)
+        create_parser.add_argument(
+            '--start',
+            type=(lambda date:
+                  datetime.strptime(date,settings.date_format).date()),
+            default=datetime.date.today()
+        )
+        create_parser.add_argument(
+            '--duration',
+            type=int,
+            default=12,
+            help='Duration of the proposal in months, default is 1 year'
+        )
         cls._add_cluster_args(create_parser)
 
         delete_parser = parent_parser.add_parser(
@@ -278,12 +289,19 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
+        clusters = parser.add_mutually_exclusive_group(required=True)
         # Add argument to specify Service Unit allotment
-        for cluster in settings.clusters:
-            parser.add_argument(
+        for cluster in Slurm.cluster_names():
+            clusters.add_argument(
                 f'--{cluster}',
                 type=int,
-                help=f'The {cluster} limit in CPU Hours', default=0)
+                help=f'Service Units awarded on the {cluster} cluster',
+                default=0)
+        clusters.add_argument(
+            '--all',
+            type=int,
+            help='Service Units awarded across all clusters',
+            default=0)
 
 
 class InvestmentParser(BaseParser):
