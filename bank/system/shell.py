@@ -6,7 +6,7 @@ API Reference
 
 from logging import getLogger
 from shlex import split
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 from bank.exceptions import CmdError
 
@@ -14,7 +14,7 @@ LOG = getLogger('bank.system.shell')
 
 
 class ShellCmd:
-    """Executes commands using the underlying shell environment
+    """Executes commands using the underlying system shell
 
     Output to STDOUT and STDERR from the executed command are
     written to the ``out`` and ``err`` attributes respectively.
@@ -35,7 +35,7 @@ class ShellCmd:
         self.out = out.decode("utf-8").strip()
         self.err = err.decode("utf-8").strip()
 
-    def raise_err(self) -> None:
+    def raise_if_err(self) -> None:
         """Raise an exception if the piped command wrote to STDERR
 
         Raises:
@@ -43,5 +43,5 @@ class ShellCmd:
         """
 
         if self.err:
-            LOG.debug(f'Shell command errored out with message: {self.err} ')
+            LOG.error(f'CmdError: Shell command errored out with message: {self.err} ')
             raise CmdError(self.err)

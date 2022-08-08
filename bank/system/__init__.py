@@ -1,6 +1,5 @@
 """The ``system`` module provides an object-oriented interface for various
-command line utilities (e.g., ``sacctmgr``) and system services
-(e.g., ``smtp``).
+command line utilities and system services.
 
 SubModules
 ----------

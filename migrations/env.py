@@ -5,11 +5,12 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
+
+import bank.orm
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from bank import orm, settings
+from bank import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,7 +22,7 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = orm.metadata
+target_metadata = bank.orm.DBConnection.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

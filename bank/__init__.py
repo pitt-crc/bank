@@ -4,8 +4,9 @@ import logging
 
 import sqlalchemy_utils
 
-from . import orm
+import bank.orm
 from . import settings
+from .orm import DBConnection
 
 __version__ = 'development'
 __author__ = 'Pitt Center for Research Computing'
@@ -26,6 +27,7 @@ for _log_name in ('sqlalchemy.engine', 'environ.environ', 'bank.account_services
     logging.getLogger(_log_name).setLevel(settings.log_level)
 
 # Create database if it does not exist
-if not sqlalchemy_utils.database_exists(orm.engine.url):
-    sqlalchemy_utils.create_database(orm.engine.url)
-    orm.metadata.create_all(orm.engine)
+DBConnection.configure(settings.db_path)
+if not sqlalchemy_utils.database_exists(DBConnection.url):
+    sqlalchemy_utils.create_database(DBConnection.url)
+    DBConnection.metadata.create_all(DBConnection.engine)

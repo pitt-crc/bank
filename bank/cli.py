@@ -62,9 +62,8 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
-from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
-from .orm import ProposalEnum
 from bank.system.slurm import cluster_names
+from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 
 
 class BaseParser(ArgumentParser):
@@ -141,7 +140,6 @@ class AdminParser(BaseParser):
         list_locked.set_defaults(
             function=AdminServices.list_locked_accounts)
 
-
         #List Unlocked Accounts
         list_unlocked = parent_parser.add_parser(
             'list_unlocked',
@@ -150,7 +148,6 @@ class AdminParser(BaseParser):
         )
         list_unlocked.set_defaults(
             function=AdminServices.list_unlocked_accounts)
-
 
 
 class AccountParser(BaseParser):
@@ -197,13 +194,13 @@ class AccountParser(BaseParser):
         cluster.add_argument('--cluster', **cluster_argument)
         cluster.add_argument('--all', cluster_names())
 
-
         # Account information parser
         info_parser = parent_parser.add_parser(
             'info',
             help='Print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.print_info)
         info_parser.add_argument(**account_argument)
+
 
 class ProposalParser(BaseParser):
     """Commandline interface for the ``ProposalServices`` class"""
@@ -232,7 +229,6 @@ class ProposalParser(BaseParser):
             help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create_proposal)
         create_parser.add_argument(**account_definition)
-        create_parser.add_argument('--type', **type_definition)
         cls._add_cluster_args(create_parser)
 
         delete_parser = parent_parser.add_parser(
@@ -271,7 +267,6 @@ class ProposalParser(BaseParser):
             type=lambda date:
             datetime.strptime(date, settings.date_format).date(),
             help='Set a new proposal end date')
-
         cls._add_cluster_args(overwrite_parser)
 
     @staticmethod
