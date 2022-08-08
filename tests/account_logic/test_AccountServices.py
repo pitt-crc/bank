@@ -31,7 +31,6 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
 
 
-@skip('This functionality hasn\'t been fully implimented yet.')
 class Renewal(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the renewal of investment accounts"""
 
