@@ -122,22 +122,34 @@ class AdminParser(BaseParser):
             parent_parser: Subparser action to assign parsers and arguments to
         """
 
+        #Update Account Status
         update_status = parent_parser.add_parser(
             'update_status',
-            help=('Close any expired proposals/investments and lock accounts'
+            help=('Close any expired proposals/investments and lock accounts '
                   'for all unlocked accounts')
         )
         update_status.set_defaults(
-            function=AdminServices.update_account_status
-        )
+            function=AdminServices.update_account_status)
 
-        maintenance_parser = parent_parser.add_parser(
-            'run_maintenance',
-            help=('Update account status and send pending notifications for '
-                 'all accounts')
+        #List Locked Accounts
+        list_locked = parent_parser.add_parser(
+            'list_locked',
+            help=('List all of the accounts that are currently set to the '
+                  'locked state')
         )
+        list_locked.set_defaults(
+            function=AdminServices.list_locked_accounts)
 
-        maintenance_parser.set_defaults(function=AdminServices.run_maintenance)
+
+        #List Unlocked Accounts
+        list_unlocked = parent_parser.add_parser(
+            'list_unlocked',
+            help=('List all of the accounts that are currently set to the '
+                  'unlocked state')
+        )
+        list_unlocked.set_defaults(
+            function=AdminServices.list_unlocked_accounts)
+
 
 
 class AccountParser(BaseParser):

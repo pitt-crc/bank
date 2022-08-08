@@ -20,7 +20,12 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(self.parser, 'update_status')
 
-    def test_run_maintenance(self) -> None:
-        """Test the parsing of arguments by the ``run_maintenance`` command"""
+    def test_list_locked(self) -> None:
+        """Test the parsing of arguments by the ``list_locked`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, 'run_maintenance')
+        self.assert_parser_matches_func_signature(self.parser, 'list_locked')
+
+    def test_list_unlocked(self) -> None:
+        """Test the parsing of arguments by the ``list_unlocked`` command"""
+
+        self.assert_parser_matches_func_signature(self.parser, 'list_unlocked')

@@ -776,10 +776,15 @@ class AdminServices:
         """
 
         # Query database for accounts that are unlocked and is_expired
-        account_name_query = select(Account.name).join(Proposal).where(Proposal.end_date < date.today())
+        account_name_query = (select(Account.name)
+                              .join(Proposal)
+                              .where(Proposal.end_date < date.today())
+                             )
         with Session() as session:
             account_names = session.execute(account_name_query).scalars().all()
-            return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
+            return tuple(
+                AccountServices(name) for name in account_names
+                if not SlurmAccount(name).get_locked_state())
 
     @classmethod
     def send_usage_notifications(cls) -> None:
@@ -796,8 +801,13 @@ class AdminServices:
             account.update_account_status()
 
     @classmethod
-    def run_maintenance(cls) -> None:
-        """Run regular banking system maintenance"""
+    def list_locked_accounts(cls) -> None:
+        """List all of the accounts that are currently locked"""
+        #TODO: Implement list_locked_accounts method
+        raise NotImplementedError
 
-        cls.update_account_status()
-        cls.send_usage_notifications()
+    @classmethod
+    def list_unlocked_accounts(cls) -> None:
+        """List all of the accounts that are currently unlocked"""
+        #TODO: Implement list_unlocked_accounts method
+        raise NotImplementedError
