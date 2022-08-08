@@ -224,7 +224,15 @@ class ProposalParser(BaseParser):
             dest='self',
             metavar='account',
             help='The parent slurm account')
+        proposal_id_definition = dict(
+            dest='proposal_id',
+            metavar='ID'
+            #TODO: find where to pull the active id from
+            #default=active_proposal_id
+            help='The ID associated with a specific proposal on the account'
+        )
 
+        #Proposal Creation
         create_parser = parent_parser.add_parser(
             'create',
             help='Create a new proposal for an existing slurm account')
@@ -234,7 +242,8 @@ class ProposalParser(BaseParser):
             '--start',
             type=(lambda date:
                   datetime.strptime(date,settings.date_format).date()),
-            default=datetime.date.today()
+            default=datetime.date.today() #TODO: make sure this is in the right
+                                          #format
         )
         create_parser.add_argument(
             '--duration',
@@ -244,32 +253,31 @@ class ProposalParser(BaseParser):
         )
         cls._add_cluster_args(create_parser)
 
-        delete_parser = parent_parser.add_parser(
-            'delete',
-            help='Delete an existing account proposal')
-        delete_parser.set_defaults(function=ProposalServices.delete_proposal)
-        delete_parser.add_argument(**account_definition)
-
+        #Add SUs to a Proposal
         add_parser = parent_parser.add_parser(
             'add',
             help='Add service units to an existing proposal')
         add_parser.set_defaults(function=ProposalServices.add_sus)
         add_parser.add_argument(**account_definition)
+        add_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(add_parser)
 
+        #Remove SUs from Proposal
         subtract_parser = parent_parser.add_parser(
             'subtract',
             help='Subtract service units from an existing proposal')
         subtract_parser.set_defaults(function=ProposalServices.subtract_sus)
         subtract_parser.add_argument(**account_definition)
+        add_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(subtract_parser)
 
-        overwrite_parser = parent_parser.add_parser(
-            'overwrite',
-            help='Overwrite properties of an existing proposal')
-        overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
-        overwrite_parser.add_argument(**account_definition)
-        overwrite_parser.add_argument(
+        #Modify Proposal Date
+        modify_date = parent_parser.add_parser(
+            'modify_date',
+            help='Change the start or end date of an existing proposal')
+        modify_date.set_defaults(function=ProposalServices.modify_proposal_date)
+        modify_date.add_argument(**account_definition)
+        modify_date.add_argument(
             '--start',
             type=(lambda date:
                   datetime.strptime(date, settings.date_format).date()),
@@ -332,7 +340,7 @@ class InvestmentParser(BaseParser):
             type=int,
             help='The number of SUs you want to process',
             required=True)
-
+        
         create_parser = parent_parser.add_parser(
             'create',
             help='Create a new investment')
