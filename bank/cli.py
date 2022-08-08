@@ -64,6 +64,7 @@ from typing import Type
 from . import settings
 from .account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
 from .orm import ProposalEnum
+from bank.system.slurm import cluster_names
 
 
 class BaseParser(ArgumentParser):
@@ -168,37 +169,34 @@ class AccountParser(BaseParser):
             metavar='account',
             dest='self',
             type=AccountServices,
-            help='Name of a slurm user account')
+            help='Name of a slurm account')
         cluster_argument = dict(
             metavar='cluster',
             dest='self',
-            help='Name of a cluster, the default is all',
-            default='all')
+            type=list,
+            help='A cluster or list of clusters to lock the account on')
 
-        # Account locking parser
+        # Lock Account
         lock_parser = parent_parser.add_parser(
             'lock',
             help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock_account)
         lock_parser.add_argument(**account_argument)
-        lock_parser.add_argument('--cluster', **cluster_argument)
+        cluster = lock_parser.add_mutually_exclusive_group()
+        cluster.add_argument('--cluster', **cluster_argument)
+        cluster.add_argument('--all', cluster_names())
 
-        # Account unlocking parser
+        # Unlock Account
         unlock_parser = parent_parser.add_parser(
             'unlock',
             help='Allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock_account)
         unlock_parser.add_argument(**account_argument)
         unlock_parser.add_argument('--cluster', **cluster_argument)
+        cluster = unlock_parser.add_mutually_exclusive_group()
+        cluster.add_argument('--cluster', **cluster_argument)
+        cluster.add_argument('--all', cluster_names())
 
-        # Account renewals parser
-        renew_parser = parent_parser.add_parser(
-            'renew',
-            help=('Renew an account\'s proposal and rollover any is_expired '
-                  'investments')
-        )
-        renew_parser.set_defaults(function=AccountServices.renew)
-        renew_parser.add_argument(**account_argument)
 
         # Account information parser
         info_parser = parent_parser.add_parser(
