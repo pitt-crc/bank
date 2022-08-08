@@ -19,31 +19,42 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
     def test_create_investment(self) -> None:
         """Test the parsing of arguments by the ``create`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'create --account {settings.test_account} --sus 30')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --repeat 2 --SUs 30 --duration 6')
 
     def test_delete_investment(self) -> None:
         """Test the parsing of arguments by the ``delete`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'delete --account {settings.test_account} --id 0')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'delete {settings.test_account} --ID 0')
 
     def test_add_sus(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'add --account {settings.test_account} --id 0 --sus 10')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'add {settings.test_account} --ID 0 --SUs 10')
 
     def test_subtract_sus(self) -> None:
         """Test the parsing of arguments by the ``subtract`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'subtract --account {settings.test_account} --id 0 --sus 10')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'subtract {settings.test_account} --ID 0 --SUs 10')
 
-    def test_overwrite_investment(self) -> None:
+    def test_modify_date(self) -> None:
         """Test the parsing of arguments by the ``overwrite`` command"""
 
         date = datetime.now().strftime(settings.date_format)
-        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account {settings.test_account} --id 0 --sus 10')
-        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account {settings.test_account} --id 0 --start {date} --end {date}')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'overwrite {settings.test_account} --ID 0 --start {date} --end {date}')
 
     def test_advance_sus(self) -> None:
         """Test the parsing of arguments by the ``advance`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'advance --account {settings.test_account} --id 0 --sus 10')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'advance {settings.test_account} --ID 0 --SUs 10')

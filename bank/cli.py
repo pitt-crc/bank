@@ -243,7 +243,7 @@ class ProposalParser(BaseParser):
             '--start',
             type=(lambda date:
                   datetime.strptime(date,settings.date_format).date()),
-            #default=date.today() #TODO: make sure this is in the right format
+            default=datetime.now()
         )
         create_parser.add_argument(
             '--duration',
@@ -290,7 +290,6 @@ class ProposalParser(BaseParser):
                  datetime.strptime(date, settings.date_format).date(),
             help='Set a new proposal end date'
         )
-        cls._add_cluster_args(modify_date_parser)
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:

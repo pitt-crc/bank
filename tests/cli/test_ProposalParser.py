@@ -19,28 +19,41 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
     def test_create_proposal(self) -> None:
         """Test the parsing of arguments by the ``create`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, 'create --account dummy_user')
-        self.assert_parser_matches_func_signature(self.parser, f'create --account dummy_user --{settings.test_cluster} 100')
-
-    def test_delete_proposal(self) -> None:
-        """Test the parsing of arguments by the ``delete`` command"""
-
-        self.assert_parser_matches_func_signature(self.parser, 'delete --account dummy_user')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            'create {settings.test_account}')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --all 100')
 
     def test_add_service_units(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, 'add --account dummy_user')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            'add {settings.test_account} --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'add {settings.test_account} --all 100')
 
     def test_subtract_service_units(self) -> None:
         """Test the parsing of arguments by the ``subtract`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, 'subtract --account dummy_user')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            'subtract {settings.test_account} --{settings.test_cluster} 100')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'subtract {settings.test_account} --all 100')
 
-    def test_overwrite_proposal_values(self) -> None:
-        """Test the parsing of arguments by the ``overwrite`` command"""
+
+    def test_modify_proposal_date(self) -> None:
+        """Test the parsing of arguments by the ``modify_date`` command"""
 
         date = datetime.now().strftime(settings.date_format)
-        self.assert_parser_matches_func_signature(self.parser, 'overwrite --account dummy_user')
-        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --{settings.test_cluster} 200')
-        self.assert_parser_matches_func_signature(self.parser, f'overwrite --account dummy_user --start {date} --end {date}')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'modify_date {settings.test_account} --start {date} --end {date}')
