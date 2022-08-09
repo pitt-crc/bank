@@ -122,7 +122,7 @@ class AdminParser(BaseParser):
             parent_parser: Subparser action to assign parsers and arguments to
         """
 
-        #Update Account Status
+        # Update Account Status
         update_status = parent_parser.add_parser(
             'update_status',
             help=('Close any expired proposals/investments and lock accounts '
@@ -131,7 +131,7 @@ class AdminParser(BaseParser):
         update_status.set_defaults(
             function=AdminServices.update_account_status)
 
-        #List Locked Accounts
+        # List Locked Accounts
         list_locked = parent_parser.add_parser(
             'list_locked',
             help=('List all of the accounts that are currently set to the '
@@ -140,7 +140,7 @@ class AdminParser(BaseParser):
         list_locked.set_defaults(
             function=AdminServices.list_locked_accounts)
 
-        #List Unlocked Accounts
+        # List Unlocked Accounts
         list_unlocked = parent_parser.add_parser(
             'list_unlocked',
             help=('List all of the accounts that are currently set to the '
@@ -233,7 +233,7 @@ class ProposalParser(BaseParser):
             help='The ID associated with a specific proposal on the account'
         )
 
-        #Proposal Creation
+        # Proposal Creation
         create_parser = parent_parser.add_parser(
             'create',
             help='Create a new proposal for an existing slurm account')
@@ -253,7 +253,7 @@ class ProposalParser(BaseParser):
         )
         cls._add_cluster_args(create_parser)
 
-        #Add SUs to a Proposal
+        # Add SUs to a Proposal
         add_parser = parent_parser.add_parser(
             'add',
             help='Add service units to an existing proposal')
@@ -262,7 +262,7 @@ class ProposalParser(BaseParser):
         add_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(add_parser)
 
-        #Remove SUs from Proposal
+        # Remove SUs from Proposal
         subtract_parser = parent_parser.add_parser(
             'subtract',
             help='Subtract service units from an existing proposal')
@@ -271,7 +271,7 @@ class ProposalParser(BaseParser):
         subtract_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(subtract_parser)
 
-        #Modify Proposal Date
+        # Modify Proposal Date
         modify_date_parser = parent_parser.add_parser(
             'modify_date',
             help='Change the start or end date of an existing proposal')
@@ -343,7 +343,7 @@ class InvestmentParser(BaseParser):
             help='The number of SUs you want to process',
             required=True)
 
-        #Investment Creation
+        # Investment Creation
         create_parser = parent_parser.add_parser(
             'create',
             help='Create a new investment')
@@ -365,7 +365,7 @@ class InvestmentParser(BaseParser):
             default=12,
             help='The length of each investment in months')
 
-        #Investment Deletion
+        # Investment Deletion
         delete_parser = parent_parser.add_parser(
             'delete',
             help='Delete an existing investment')
@@ -374,7 +374,7 @@ class InvestmentParser(BaseParser):
         delete_parser.add_argument(**account_definition)
         delete_parser.add_argument('--ID',**investment_id_definition)
 
-        #Add SUs to Investment
+        # Add SUs to Investment
         add_parser = parent_parser.add_parser(
             'add',
             help='Add service units to an existing investment')
@@ -383,7 +383,7 @@ class InvestmentParser(BaseParser):
         add_parser.add_argument('--ID', **investment_id_definition)
         add_parser.add_argument('--SUs', **service_unit_definition)
 
-        #Remove SUs from Investment
+        # Remove SUs from Investment
         subtract_parser = parent_parser.add_parser(
             'subtract',
             help='Subtract service units from an existing investment')
@@ -392,7 +392,7 @@ class InvestmentParser(BaseParser):
         subtract_parser.add_argument('--ID', **investment_id_definition)
         subtract_parser.add_argument('--SUs', **service_unit_definition)
 
-        #Modify Investment Dates
+        # Modify Investment Dates
         modify_date_parser = parent_parser.add_parser(
             'modify_date',
             help='Modify the start or end date of an existing investment')
