@@ -212,7 +212,7 @@ class ProposalParser(BaseParser):
         )
         proposal_id_definition = dict(
             dest='proposal_id',
-            metavar='ID',
+            metavar='proposal_ID',
             type=int,
             help=('The ID associated with a specific proposal on the account')
         )
@@ -225,7 +225,10 @@ class ProposalParser(BaseParser):
             '--start',
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
             default=datetime.today(),
-            help=('Start date for the proposal, default is today')
+            help=(
+                'Start date for the proposal, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+            )
         )
         create_parser.add_argument(
             '--duration',
@@ -259,14 +262,22 @@ class ProposalParser(BaseParser):
         )
         modify_date_parser.set_defaults(function=ProposalServices.modify_proposal)
         modify_date_parser.add_argument(**account_definition)
-        modify_date_parser.add_argument('--start',
-                                        type=(lambda date: datetime.strptime(date, settings.date_format).date()),
-                                        help=('Set a new proposal start date')
-                                       )
-        modify_date_parser.add_argument('--end',
-                                        type=lambda date: datetime.strptime(date, settings.date_format).date(),
-                                        help=('Set a new proposal end date')
-                                       )
+        modify_date_parser.add_argument(
+            '--start',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            help=(
+                'Set a new proposal start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
+        modify_date_parser.add_argument(
+            '--end',
+            type=lambda date: datetime.strptime(date, settings.date_format).date(),
+            help=(
+                'Set a new proposal end date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:
@@ -276,22 +287,29 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
-        clusters = parser.add_mutually_exclusive_group(required=True)
+        service_unit_definition=dict(
+            metavar='service_units',
+            type=int,
+            default=0
+        )
         # Add argument to specify Service Unit allotment
         for cluster in Slurm.cluster_names():
-            clusters.add_argument(
+            parser.add_argument(
                 f'--{cluster}',
-                type=int,
-                default=0,
+                **service_unit_definition,
                 help=(f'Service Units awarded on the {cluster} cluster')
             )
-        clusters.add_argument('--all_clusters', type=int, default=0, help=('Service Units awarded across all clusters'))
+        parser.add_argument(
+            '--all_clusters',
+            **service_unit_definition,
+            help=('Service Units awarded across all clusters')
+        )
 
 
 class InvestmentParser(BaseParser):
     """Commandline interface for the ``InvestmentServices`` class"""
 
-    @classmethodn
+    @classmethod
     def define_interface(cls, parent_parser) -> None:
         """Define the commandline interface of the parent parser
 
@@ -303,17 +321,16 @@ class InvestmentParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
-            required=True,
             help=('The parent slurm account')
         )
         investment_id_definition = dict(
             dest='investment_id',
-            metavar='ID',
+            metavar='investment_ID',
             type=int,
-            help=('The investment proposal id')
+            help=('The investment proposal ID number')
         )
         service_unit_definition = dict(
-            dest='sus'
+            dest='sus',
             metavar='service_units',
             type=int,
             required=True,
@@ -336,7 +353,10 @@ class InvestmentParser(BaseParser):
             '--start',
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
             default=datetime.today(),
-            help=('Start date for the investment, the default is the current date')
+            help=(
+                'Start date for the investment, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+            )
         )
         create_parser.add_argument('--duration', type=int, default=12, help=('The length of each investment in months'))
 
@@ -374,12 +394,18 @@ class InvestmentParser(BaseParser):
         modify_date_parser.add_argument(
             '--start',
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
-            help=('Set a new investment start date')
+            help=(
+                'Set a new investment start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
         )
         modify_date_parser.add_argument(
             '--end',
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
-            help=('Set a new investment end date')
+            help=(
+                'Set a new investment start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
         )
 
         advance_parser = parent_parser.add_parser(
