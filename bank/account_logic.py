@@ -749,40 +749,40 @@ class AccountServices:
             slurm_acct.reset_raw_usage()
             slurm_acct.set_locked_state(False)
 
-    def _set_account_lock(self, lock_state: bool, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+    def _set_account_lock(self, lock_state: bool, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Update the lock/unlocked states for the current account
 
         Args:
             lock_state: The new account lock state
             clusters: Name of the clusters to lock the account on. Defaults to all clusters.
-            all_: Lock the user on all clusters
+            all_clusters: Lock the user on all clusters
         """
 
-        if all_:
+        if all_clusters:
             clusters = Slurm.cluster_names()
 
         for cluster in clusters:
             SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
 
-    def lock(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+    def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
 
         Args:
             clusters: Name of the clusters to lock the account on. Defaults to all clusters.
-            all_: Lock the user on all clusters
+            all_clusters: Lock the user on all clusters
         """
 
-        self._set_account_lock(True, clusters, all_)
+        self._set_account_lock(True, clusters, all_clusters)
 
-    def unlock(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+    def unlock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Unlock the account on the given clusters
 
         Args:
             clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
-            all_: Lock the user on all clusters
+            all_clusters: Lock the user on all clusters
         """
 
-        self._set_account_lock(False, clusters, all_)
+        self._set_account_lock(False, clusters, all_clusters)
 
 
 class AdminServices:
