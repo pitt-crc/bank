@@ -146,7 +146,7 @@ class AccountParser(BaseParser):
         lock_parser.add_argument('--account', **account_argument)
 
         unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
-        unlock_parser.set_defaults(function=AccountServices.unlock_account)
+        unlock_parser.set_defaults(function=AccountServices.unlock)
         unlock_parser.add_argument('--account', **account_argument)
 
         renew_parser = parent_parser.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')

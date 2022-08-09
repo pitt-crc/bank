@@ -31,6 +31,30 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
 
 
+class AccountLocking(TestCase):
+    """Test (un)locking the account on the test cluster"""
+
+    def test_account_is_locked(self) -> None:
+        """Test the ``lock`` method locks the account on a given cluster"""
+
+        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account.set_locked_state(False, settings.test_cluster)
+
+        account_services = AccountServices(settings.test_account)
+        account_services.lock(clusters=[settings.test_cluster])
+        self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
+
+    def test_account_is_unlocked(self) -> None:
+        """Test the ``unlock`` method unlocks the account on a given cluster"""
+
+        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account.set_locked_state(True, settings.test_cluster)
+
+        account_services = AccountServices(settings.test_account)
+        account_services.unlock(clusters=[settings.test_cluster])
+        self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
+
+
 @skip('This functionality hasn\'t been fully implimented yet.')
 class Renewal(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the renewal of investment accounts"""

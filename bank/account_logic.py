@@ -774,7 +774,7 @@ class AccountServices:
 
         self._set_account_lock(True, clusters, all_)
 
-    def unlock_account(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+    def unlock(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
         """Unlock the account on the given clusters
 
         Args:
