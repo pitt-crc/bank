@@ -228,8 +228,6 @@ class ProposalParser(BaseParser):
             dest='proposal_id',
             metavar='ID',
             type=int,
-            #TODO: find where to pull the active id from
-            #default=active_proposal_id
             help='The ID associated with a specific proposal on the account'
         )
 
@@ -335,8 +333,6 @@ class InvestmentParser(BaseParser):
             metavar='ID',
             type=int,
             required=True,
-            #TODO: find where to pull the active id from
-            #default=active_investment_id,
             help='The investment proposal id')
         service_unit_definition = dict(
             type=int,
