@@ -456,12 +456,11 @@ class CommandLineApplication:
             title='Investment actions',
             help_text='Administrative tools for user investments')
 
-    def add_subparser_to_app(
-        self,
-        command: str,
-        parser_class: Type[BaseParser],
-        title: str,
-        help_text: str) -> None:
+    def add_subparser_to_app(self,
+                             command: str,
+                             parser_class: Type[BaseParser],
+                             title: str,
+                             help_text: str) -> None:
         """Add a parser object to the parent commandline application as a subparser
 
         Args:
