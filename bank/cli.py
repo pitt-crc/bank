@@ -243,7 +243,7 @@ class ProposalParser(BaseParser):
             '--start',
             type=(lambda date:
                   datetime.strptime(date,settings.date_format).date()),
-            default=datetime.now()
+            default=datetime.today()
         )
         create_parser.add_argument(
             '--duration',
