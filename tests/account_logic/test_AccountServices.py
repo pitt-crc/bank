@@ -5,10 +5,9 @@ from unittest.mock import patch
 import time_machine
 from sqlalchemy import select
 
-import bank.orm
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import Account, Proposal
+from bank.orm import Account, DBConnection, Proposal
 from bank.system.slurm import SlurmAccount
 from tests._utils import InvestmentSetup, ProposalSetup
 
@@ -29,39 +28,6 @@ class CalculatePercentage(TestCase):
         """Test dividing by a positive number gives a percentage"""
 
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
-
-
-@skip('This functionality hasn\'t been fully implimented yet.')
-class Renewal(ProposalSetup, InvestmentSetup, TestCase):
-    """Tests for the renewal of investment accounts"""
-
-    @patch.object(SlurmAccount, "get_cluster_usage", return_value={'user1': 100, 'user2': 200})
-    def setUp(self, *args) -> None:
-        super().setUp()
-
-        # Fast-forward in time to after the end of the first investment
-        investments = self.account._get_investment(self.session)
-        end_of_first_inv = investments[0].end_date
-        with time_machine.travel(end_of_first_inv + timedelta(days=1)):
-            self.account.renew(reset_usage=False)
-
-    def test_new_proposal_is_created(self) -> None:
-        """Test a new user proposal is created"""
-
-        # Compare the id of the current proposal with the id of the original proposal
-        new_proposal = self.account.get_proposal(self.session)
-        self.assertNotEqual(new_proposal.id, self.proposal_id, 'New proposal has same ID as the old one')
-        self.assertEqual(
-            self.num_proposal_sus, getattr(new_proposal, settings.test_cluster),
-            'New proposal does not have same service units as the old one')
-
-        self.assertEqual(new_proposal.proposal_type, bank.orm.Proposal)
-
-    def test_investments_are_rolled_over(self) -> None:
-        """Test unused investment service units are rolled over"""
-
-        current_investment = self.account._get_investment(self.session)[0]
-        self.assertEqual(self.num_inv_sus * settings.inv_rollover_fraction, current_investment.rollover_sus)
 
 
 @skip('This functionality hasn\'t been fully implimented yet.')
