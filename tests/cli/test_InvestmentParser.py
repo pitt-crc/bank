@@ -45,12 +45,16 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
             f'subtract {settings.test_account} --ID 0 --SUs 10')
 
     def test_modify_date(self) -> None:
-        """Test the parsing of arguments by the ``overwrite`` command"""
+        """Test the parsing of arguments by the ``modify_date`` command"""
 
         date = datetime.now().strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'overwrite {settings.test_account} --ID 0 --start {date} --end {date}')
+            f'modify_date {settings.test_account} --ID 0')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'modify_date {settings.test_account} --ID 0 --start {date} --end {date}')
+
 
     def test_advance_sus(self) -> None:
         """Test the parsing of arguments by the ``advance`` command"""
