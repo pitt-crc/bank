@@ -26,6 +26,24 @@ class InitExceptions(TestCase):
 
 
 @skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
+class AccountLocking(TestCase):
+    """Test the account is locked/unlocked by the appropriate getters/setters"""
+
+    def runTest(self) -> None:
+        """Test the (un)locking of the slurm account"""
+
+        account = SlurmAccount(settings.test_account)
+        account.set_locked_state(False, settings.test_cluster)
+        self.assertFalse(account.get_locked_state(settings.test_cluster))
+
+        account.set_locked_state(True, settings.test_cluster)
+        self.assertTrue(account.get_locked_state(settings.test_cluster))
+
+        account.set_locked_state(False, settings.test_cluster)
+        self.assertFalse(account.get_locked_state(settings.test_cluster))
+
+
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class AccountUsage(TestCase):
     """Test the retrieval of account usage values"""
 

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest import TestCase, skip
+from unittest import TestCase, skip, skipIf
 from unittest.mock import patch
 
 import time_machine
@@ -9,7 +9,7 @@ import bank.orm
 from bank import settings
 from bank.account_logic import AccountServices
 from bank.orm import Account, Proposal
-from bank.system.slurm import SlurmAccount
+from bank.system.slurm import Slurm, SlurmAccount
 from tests._utils import InvestmentSetup, ProposalSetup
 
 active_proposal_query = select(Proposal).join(Account) \
@@ -31,11 +31,12 @@ class CalculatePercentage(TestCase):
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
 
 
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class AccountLocking(TestCase):
-    """Test (un)locking the account on the test cluster"""
+    """Test locking the account via the ``lock`` method"""
 
-    def test_account_is_locked(self) -> None:
-        """Test the ``lock`` method locks the account on a given cluster"""
+    def test_account_locked_on_cluster(self) -> None:
+        """Test the account is locked on a given cluster"""
 
         slurm_account = SlurmAccount(settings.test_account)
         slurm_account.set_locked_state(False, settings.test_cluster)
@@ -44,8 +45,13 @@ class AccountLocking(TestCase):
         account_services.lock(clusters=[settings.test_cluster])
         self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
 
-    def test_account_is_unlocked(self) -> None:
-        """Test the ``unlock`` method unlocks the account on a given cluster"""
+
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
+class AccountUnlocking(TestCase):
+    """Test unlocking the account"""
+
+    def test_account_unlocked_on_cluster(self) -> None:
+        """Test the account is unlocked on a given cluster"""
 
         slurm_account = SlurmAccount(settings.test_account)
         slurm_account.set_locked_state(True, settings.test_cluster)
