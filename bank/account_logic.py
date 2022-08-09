@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Optional, Tuple, Union
+from typing import Collection, Optional, Tuple, Union
 
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
@@ -18,7 +18,7 @@ from sqlalchemy import between, delete, or_, select
 from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
-from .system import EmailTemplate, SlurmAccount
+from .system import EmailTemplate, Slurm, SlurmAccount
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -749,11 +749,40 @@ class AccountServices:
             slurm_acct.reset_raw_usage()
             slurm_acct.set_locked_state(False)
 
-    def lock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
+    def _set_account_lock(self, lock_state: bool, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+        """Update the lock/unlocked states for the current account
 
-    def unlock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
+        Args:
+            lock_state: The new account lock state
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_: Lock the user on all clusters
+        """
+
+        if all_:
+            clusters = Slurm.cluster_names()
+
+        for cluster in clusters:
+            SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
+
+    def lock(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+        """Lock the account on the given clusters
+
+        Args:
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_: Lock the user on all clusters
+        """
+
+        self._set_account_lock(True, clusters, all_)
+
+    def unlock_account(self, clusters: Optional[Collection[str]] = None, all_=False) -> None:
+        """Unlock the account on the given clusters
+
+        Args:
+            clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
+            all_: Lock the user on all clusters
+        """
+
+        self._set_account_lock(False, clusters, all_)
 
 
 class AdminServices:

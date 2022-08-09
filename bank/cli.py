@@ -142,7 +142,7 @@ class AccountParser(BaseParser):
         account_argument = dict(metavar='acc', dest='self', type=AccountServices, help='Name of a slurm user account', required=True)
 
         lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
-        lock_parser.set_defaults(function=AccountServices.lock_account)
+        lock_parser.set_defaults(function=AccountServices.lock)
         lock_parser.add_argument('--account', **account_argument)
 
         unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
