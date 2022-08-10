@@ -1,13 +1,15 @@
 """Tests for the ``AccountParser`` class"""
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from bank import settings
 from bank.cli import AccountParser
+from bank.system import Slurm
 from tests._utils import ProposalSetup
 from tests.cli._utils import CLIAsserts
 
 
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     """Test parser arguments match the signatures of the corresponding executable"""
 

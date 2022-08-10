@@ -4,7 +4,7 @@ from unittest import TestCase, skipIf
 from unittest.mock import patch
 
 from bank import settings
-from bank.exceptions import SlurmAccountNotFoundError
+from bank.exceptions import SlurmAccountNotFoundError, SlurmClusterNotFoundError
 from bank.system.slurm import Slurm, SlurmAccount
 
 
@@ -23,6 +23,41 @@ class InitExceptions(TestCase):
 
         with patch.object(SlurmAccount, 'check_slurm_installed', return_value=False), self.assertRaises(SystemError):
             SlurmAccount('fake_account_name_123')
+
+
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
+class AccountLocking(TestCase):
+    """Test the account is locked/unlocked by the appropriate getters/setters"""
+
+    def test_account_status_updated(self) -> None:
+        """Test the account is successfully locked/unlocked"""
+
+        account = SlurmAccount(settings.test_account)
+        account.set_locked_state(False, settings.test_cluster)
+        self.assertFalse(account.get_locked_state(settings.test_cluster))
+
+        account.set_locked_state(True, settings.test_cluster)
+        self.assertTrue(account.get_locked_state(settings.test_cluster))
+
+        account.set_locked_state(False, settings.test_cluster)
+        self.assertFalse(account.get_locked_state(settings.test_cluster))
+
+    def test_set_invalid_cluster(self) -> None:
+        """Test an error is raised when setting the lock state for a nonexistent cluster"""
+
+        account = SlurmAccount(settings.test_account)
+        with self.assertRaises(SlurmClusterNotFoundError):
+            account.set_locked_state(True, 'fake_cluster')
+
+        with self.assertRaises(SlurmClusterNotFoundError):
+            account.set_locked_state(False, 'fake_cluster')
+
+    def test_get_invalid_cluster(self) -> None:
+        """Test an error is raised when getting the lock state for a nonexistent cluster"""
+
+        account = SlurmAccount(settings.test_account)
+        with self.assertRaises(SlurmClusterNotFoundError):
+            account.get_locked_state('fake_cluster')
 
 
 @skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')

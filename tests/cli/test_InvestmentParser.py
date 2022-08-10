@@ -1,13 +1,15 @@
 """Tests for the ``InvestmentParser`` class"""
 
 from datetime import datetime
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from bank import settings
 from bank.cli import InvestmentParser
+from bank.system import Slurm
 from tests.cli._utils import CLIAsserts
 
 
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class SignatureMatchesCLI(TestCase, CLIAsserts):
     """Test parser arguments match the signatures of the corresponding executable"""
 
