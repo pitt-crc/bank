@@ -120,21 +120,21 @@ class AdminParser(BaseParser):
         # Update Account Status
         update_status = parent_parser.add_parser(
             'update_status',
-            help=('Close any expired proposals/investments and lock accounts for all unlocked accounts')
+            help='Close any expired proposals/investments and lock accounts for all unlocked accounts'
         )
         update_status.set_defaults(function=AdminServices.update_account_status)
 
         # List Locked Accounts
         list_locked = parent_parser.add_parser(
             'list_locked',
-            help=('List all of the accounts that are currently set to the locked state')
+            help='List all of the accounts that are currently set to the locked state'
         )
         list_locked.set_defaults(function=AdminServices.list_locked_accounts)
 
         # List Unlocked Accounts
         list_unlocked = parent_parser.add_parser(
             'list_unlocked',
-            help=('List all of the accounts that are currently set to the unlocked state')
+            help='List all of the accounts that are currently set to the unlocked state'
         )
         list_unlocked.set_defaults(function=AdminServices.list_unlocked_accounts)
 
@@ -155,24 +155,24 @@ class AccountParser(BaseParser):
             metavar='account',
             dest='self',
             type=AccountServices,
-            help=('Name of a slurm account')
+            help='Name of a slurm account'
         )
         cluster_argument = dict(
             dest='clusters',
             nargs='+',
             choices=list(Slurm.cluster_names()),
-            help=('A cluster or list of clusters to lock the account on')
+            help='A cluster or list of clusters to lock the account on'
         )
         all_clusters_argument = dict(
             metavar='\b',
             dest='clusters',
             action='store_const',
             const=list(Slurm.cluster_names()),
-            help=('Use all clusters available on the system')
+            help='Use all clusters available on the system'
         )
 
         # Lock Account
-        lock_parser = parent_parser.add_parser('lock', help=('Lock a slurm account from submitting any jobs'))
+        lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
         lock_parser.set_defaults(function=AccountServices.lock)
         lock_parser.add_argument(**account_argument)
         lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
@@ -180,7 +180,7 @@ class AccountParser(BaseParser):
         lock_cluster.add_argument('--all_clusters', **all_clusters_argument)
 
         # Unlock Account
-        unlock_parser = parent_parser.add_parser('unlock', help=('Allow a slurm account to resume submitting jobs'))
+        unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock)
         unlock_parser.add_argument(**account_argument)
         unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
@@ -188,7 +188,7 @@ class AccountParser(BaseParser):
         unlock_cluster.add_argument('--all_clusters', **all_clusters_argument)
 
         # Account information parser
-        info_parser = parent_parser.add_parser('info', help=('Print account usage and allocation information'))
+        info_parser = parent_parser.add_parser('info', help='Print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.print_info)
         info_parser.add_argument(**account_argument)
 
@@ -208,17 +208,17 @@ class ProposalParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
-            help=('The parent slurm account')
+            help='The parent slurm account'
         )
         proposal_id_definition = dict(
             dest='proposal_id',
             metavar='proposal_ID',
             type=int,
-            help=('The ID associated with a specific proposal on the account')
+            help='The ID associated with a specific proposal on the account'
         )
 
         # Proposal Creation
-        create_parser = parent_parser.add_parser('create', help=('Create a new proposal for an existing slurm account'))
+        create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create_proposal)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
@@ -227,19 +227,19 @@ class ProposalParser(BaseParser):
             default=datetime.today(),
             help=(
                 'Start date for the proposal, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}, the default is today'
             )
         )
         create_parser.add_argument(
             '--duration',
             type=int,
             default=12,
-            help=('Duration of the proposal in months, default is 1 year (12 months)')
+            help='Duration of the proposal in months, default is 1 year (12 months)'
         )
         cls._add_cluster_args(create_parser)
 
         # Add SUs to a Proposal
-        add_parser = parent_parser.add_parser('add_sus', help=('Add service units to an existing proposal'))
+        add_parser = parent_parser.add_parser('add_sus', help='Add service units to an existing proposal')
         add_parser.set_defaults(function=ProposalServices.add_sus)
         add_parser.add_argument(**account_definition)
         add_parser.add_argument('--ID', **proposal_id_definition)
@@ -248,7 +248,7 @@ class ProposalParser(BaseParser):
         # Remove SUs from Proposal
         subtract_parser = parent_parser.add_parser(
             'subtract_sus',
-            help=('Subtract service units from an existing proposal')
+            help='Subtract service units from an existing proposal'
         )
         subtract_parser.set_defaults(function=ProposalServices.subtract_sus)
         subtract_parser.add_argument(**account_definition)
@@ -258,7 +258,7 @@ class ProposalParser(BaseParser):
         # Modify Proposal Date
         modify_date_parser = parent_parser.add_parser(
             'modify_date',
-            help=('Change the start or end date of an existing proposal')
+            help='Change the start or end date of an existing proposal'
         )
         modify_date_parser.set_defaults(function=ProposalServices.modify_proposal)
         modify_date_parser.add_argument(**account_definition)
@@ -267,7 +267,7 @@ class ProposalParser(BaseParser):
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
             help=(
                 'Set a new proposal start date, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
             )
         )
         modify_date_parser.add_argument(
@@ -275,7 +275,7 @@ class ProposalParser(BaseParser):
             type=lambda date: datetime.strptime(date, settings.date_format).date(),
             help=(
                 'Set a new proposal end date, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
             )
         )
 
@@ -287,7 +287,7 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
-        service_unit_definition=dict(
+        service_unit_definition = dict(
             metavar='service_units',
             type=int,
             default=0
@@ -297,12 +297,12 @@ class ProposalParser(BaseParser):
             parser.add_argument(
                 f'--{cluster}',
                 **service_unit_definition,
-                help=(f'Service Units awarded on the {cluster} cluster')
+                help=f'Service Units awarded on the {cluster} cluster'
             )
         parser.add_argument(
             '--all_clusters',
             **service_unit_definition,
-            help=('Service Units awarded across all clusters')
+            help='Service Units awarded across all clusters'
         )
 
 
@@ -321,24 +321,24 @@ class InvestmentParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
-            help=('The parent slurm account')
+            help='The parent slurm account'
         )
         investment_id_definition = dict(
             dest='investment_id',
             metavar='investment_ID',
             type=int,
-            help=('The investment proposal ID number')
+            help='The investment proposal ID number'
         )
         service_unit_definition = dict(
             dest='sus',
             metavar='service_units',
             type=int,
             required=True,
-            help=('The number of SUs to process')
+            help='The number of SUs to process'
         )
 
         # Investment Creation
-        create_parser = parent_parser.add_parser('create', help=('Create a new investment'))
+        create_parser = parent_parser.add_parser('create', help='Create a new investment')
         create_parser.set_defaults(function=InvestmentServices.create_investment)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument('--SUs', **service_unit_definition)
@@ -347,7 +347,7 @@ class InvestmentParser(BaseParser):
             metavar='REP',
             type=int,
             default=5,
-            help=('Divide the service units across REP sequential investments')
+            help='Divide the service units across REP sequential investments'
         )
         create_parser.add_argument(
             '--start',
@@ -355,19 +355,19 @@ class InvestmentParser(BaseParser):
             default=datetime.today(),
             help=(
                 'Start date for the investment, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}, the default is today'
             )
         )
-        create_parser.add_argument('--duration', type=int, default=12, help=('The length of each investment in months'))
+        create_parser.add_argument('--duration', type=int, default=12, help='The length of each investment in months')
 
         # Investment Deletion
-        delete_parser = parent_parser.add_parser('delete', help=('Delete an existing investment'))
+        delete_parser = parent_parser.add_parser('delete', help='Delete an existing investment')
         delete_parser.set_defaults(function=InvestmentServices.delete_investment)
         delete_parser.add_argument(**account_definition)
-        delete_parser.add_argument('--ID',**investment_id_definition, required=True)
+        delete_parser.add_argument('--ID', **investment_id_definition, required=True)
 
         # Add SUs to Investment
-        add_parser = parent_parser.add_parser('add_sus', help=('Add service units to an existing investment'))
+        add_parser = parent_parser.add_parser('add_sus', help='Add service units to an existing investment')
         add_parser.set_defaults(function=InvestmentServices.add_sus)
         add_parser.add_argument(**account_definition)
         add_parser.add_argument('--ID', **investment_id_definition)
@@ -376,7 +376,7 @@ class InvestmentParser(BaseParser):
         # Remove SUs from Investment
         subtract_parser = parent_parser.add_parser(
             'subtract_sus',
-            help=('Subtract service units from an existing investment')
+            help='Subtract service units from an existing investment'
         )
         subtract_parser.set_defaults(function=InvestmentServices.subtract_sus)
         subtract_parser.add_argument(**account_definition)
@@ -386,7 +386,7 @@ class InvestmentParser(BaseParser):
         # Modify Investment Dates
         modify_date_parser = parent_parser.add_parser(
             'modify_date',
-            help=('Modify the start or end date of an existing investment')
+            help='Modify the start or end date of an existing investment'
         )
         modify_date_parser.set_defaults(function=InvestmentServices.modify_investment)
         modify_date_parser.add_argument(**account_definition)
@@ -396,7 +396,7 @@ class InvestmentParser(BaseParser):
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
             help=(
                 'Set a new investment start date, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
             )
         )
         modify_date_parser.add_argument(
@@ -404,13 +404,13 @@ class InvestmentParser(BaseParser):
             type=(lambda date: datetime.strptime(date, settings.date_format).date()),
             help=(
                 'Set a new investment start date, '
-                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+                f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
             )
         )
 
         advance_parser = parent_parser.add_parser(
             'advance',
-            help=('Move service units from future investments to the current allocation')
+            help='Move service units from future investments to the current allocation'
         )
         advance_parser.set_defaults(function=InvestmentServices.add_sus)
         advance_parser.add_argument(**account_definition)
