@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Collection, Optional, Union
+from typing import Collection, Iterable, Optional, Union
 
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
@@ -740,7 +740,7 @@ class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
-    def _list_locked_status(status: bool, cluster: str) -> tuple:
+    def _list_locked_status(status: bool, cluster: str) -> Iterable[str]:
         """Return a collection of account names matching the lock state on the given cluster
 
         Args:
@@ -752,15 +752,13 @@ class AdminServices:
         """
 
         # Query database for accounts that are unlocked and is_expired
-        account_name_query = (select(Account.name)
-                              .join(Proposal)
-                              .where(Proposal.end_date < date.today())
-                              )
+        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
 
-        check_lock_state = lambda account: SlurmAccount(account).get_locked_state(cluster) == status
-        return tuple(filter(check_lock_state, account_names))
+        for account in account_names:
+            if SlurmAccount(account).get_locked_state(cluster) == status:
+                yield account
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:
