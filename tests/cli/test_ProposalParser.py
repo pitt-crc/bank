@@ -1,13 +1,15 @@
 """Tests for the ``ProposalParser`` class"""
 
 from datetime import datetime
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from bank import settings
 from bank.cli import ProposalParser
+from bank.system import Slurm
 from tests.cli._utils import CLIAsserts
 
 
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class SignatureMatchesCLI(TestCase, CLIAsserts):
     """Test parser arguments match the signatures of the corresponding executable"""
 
@@ -37,7 +39,6 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
 
         # Create a proposal, specifying a duration
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --duration 6')
-
 
     def test_add_service_units(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
@@ -90,7 +91,6 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
             f'subtract_sus {settings.test_account} --ID 0 --all_clusters 100'
         )
 
-
     def test_modify_proposal_date(self) -> None:
         """Test the parsing of arguments by the ``modify_date`` command"""
 
@@ -99,7 +99,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Modify the active proposal's date, changing only the start date
         self.assert_parser_matches_func_signature(self.parser, f'modify_date {settings.test_account} --start {date}')
 
-         # Modify a specific proposal's date, changing only the start date
+        # Modify a specific proposal's date, changing only the start date
         self.assert_parser_matches_func_signature(
             self.parser,
             f'modify_date {settings.test_account} --ID 0 --start {date}'

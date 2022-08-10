@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest import TestCase, skip
+from unittest import TestCase, skip, skipIf
 from unittest.mock import patch
 
 import time_machine
@@ -8,7 +8,7 @@ from sqlalchemy import select
 from bank import settings
 from bank.account_logic import AccountServices
 from bank.orm import Account, DBConnection, Proposal
-from bank.system.slurm import SlurmAccount
+from bank.system.slurm import Slurm, SlurmAccount
 from tests._utils import InvestmentSetup, ProposalSetup
 
 active_proposal_query = select(Proposal).join(Account) \
@@ -28,6 +28,36 @@ class CalculatePercentage(TestCase):
         """Test dividing by a positive number gives a percentage"""
 
         self.assertEqual(50, AccountServices._calculate_percentage(1, 2))
+
+
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
+class AccountLocking(TestCase):
+    """Test locking the account via the ``lock`` method"""
+
+    def test_account_locked_on_cluster(self) -> None:
+        """Test the account is locked on a given cluster"""
+
+        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account.set_locked_state(False, settings.test_cluster)
+
+        account_services = AccountServices(settings.test_account)
+        account_services.lock(clusters=[settings.test_cluster])
+        self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
+
+
+@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
+class AccountUnlocking(TestCase):
+    """Test unlocking the account"""
+
+    def test_account_unlocked_on_cluster(self) -> None:
+        """Test the account is unlocked on a given cluster"""
+
+        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account.set_locked_state(True, settings.test_cluster)
+
+        account_services = AccountServices(settings.test_account)
+        account_services.unlock(clusters=[settings.test_cluster])
+        self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
 
 @skip('This functionality hasn\'t been fully implimented yet.')

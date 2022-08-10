@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Optional, Union
+from typing import Collection, Optional, Union
 
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
@@ -18,7 +18,7 @@ from sqlalchemy import between, delete, or_, select
 from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
-from .system import EmailTemplate, SlurmAccount
+from .system import EmailTemplate, Slurm, SlurmAccount
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -695,17 +695,45 @@ class AccountServices:
 
         raise NotImplementedError
 
-    def lock_account(self, clusters):
-        """Lock the slurm account on the provided clusters"""
+    def _set_account_lock(
+            self,
+            lock_state: bool,
+            clusters: Optional[Collection[str]] = None,
+            all_clusters: bool = False
+    ) -> None:
+        """Update the lock/unlocked states for the current account
+
+        Args:
+            lock_state: The new account lock state
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
+
+        if all_clusters:
+            clusters = Slurm.cluster_names()
 
         for cluster in clusters:
-            SlurmAccount(self._account_name).set_locked_state(True, cluster)
+            SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
 
-    def unlock_account(self, clusters):
-        """Unlock the slurm account on the provided clusters"""
+    def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
+        """Lock the account on the given clusters
 
-        for cluster in clusters:
-            SlurmAccount(self._account_name).set_locked_state(True, cluster)
+        Args:
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
+
+        self._set_account_lock(True, clusters, all_clusters)
+
+    def unlock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
+        """Unlock the account on the given clusters
+
+        Args:
+            clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
+
+        self._set_account_lock(False, clusters, all_clusters)
 
 
 class AdminServices:
@@ -724,7 +752,10 @@ class AdminServices:
         """
 
         # Query database for accounts that are unlocked and is_expired
-        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
+        account_name_query = (select(Account.name)
+                              .join(Proposal)
+                              .where(Proposal.end_date < date.today())
+                              )
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
 
