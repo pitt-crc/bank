@@ -695,7 +695,12 @@ class AccountServices:
 
         raise NotImplementedError
 
-    def _set_account_lock(self, lock_state: bool, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
+    def _set_account_lock(
+            self,
+            lock_state: bool,
+            clusters: Optional[Collection[str]] = None,
+            all_clusters: bool = False
+    ) -> None:
         """Update the lock/unlocked states for the current account
 
         Args:
@@ -746,7 +751,7 @@ class AdminServices:
         account_name_query = (select(Account.name)
                               .join(Proposal)
                               .where(Proposal.end_date < date.today())
-                             )
+                              )
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
             return tuple(
@@ -770,11 +775,11 @@ class AdminServices:
     @classmethod
     def list_locked_accounts(cls) -> None:
         """List all of the accounts that are currently locked"""
-        #TODO: Implement list_locked_accounts method
+        # TODO: Implement list_locked_accounts method
         raise NotImplementedError
 
     @classmethod
     def list_unlocked_accounts(cls) -> None:
         """List all of the accounts that are currently unlocked"""
-        #TODO: Implement list_unlocked_accounts method
+        # TODO: Implement list_unlocked_accounts method
         raise NotImplementedError
