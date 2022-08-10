@@ -19,37 +19,28 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     def test_account_info(self) -> None:
         """Test the parsing of arguments by the ``info`` command"""
 
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'info --account {settings.test_account}')
+        self.assert_parser_matches_func_signature(self.parser, f'info {settings.test_account}')
 
     def test_lock_list_clusters(self) -> None:
-        """Test argument parsing by the ``lock`` command with `--clusters`"""
+        """Test argument parsing for the ``lock`` command`"""
 
+        # Lock on a specific cluster
         self.assert_parser_matches_func_signature(
             self.parser,
-            (f'lock --account {settings.test_account} '
-             f'--cluster {settings.test_cluster}')
+            f'lock {settings.test_account} --cluster {settings.test_cluster}'
         )
 
-    def test_lock_all_clusters(self) -> None:
-        """ Test argument parsing by the ``lock`` command with `--all`"""
+        # Lock on all clusters
+        self.assert_parser_matches_func_signature(self.parser, f'lock {settings.test_account} --all_clusters')
 
+    def test_unlock_clusters(self) -> None:
+        """Test argument parsing for the ``unlock`` command """
+
+        # Unlock on a specific cluster
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'lock --account {settings.test_account} --all')
-
-    def test_unlock_list_clusters(self) -> None:
-        """Test argument parsing by the ``unlock`` command with `--clusters`"""
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            (f'unlock --account {settings.test_account} '
-             f'--cluster {settings.test_cluster}')
+            f'unlock {settings.test_account} --cluster {settings.test_cluster}'
         )
 
-    def test_unlock_all_clusters(self) -> None:
-        """Test arguments parsing by the ``unlock`` command with `--all`"""
-
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'unlock --account {settings.test_account} --all')
+        # Unlock on a specific cluster
+        self.assert_parser_matches_func_signature(self.parser, f'unlock {settings.test_account} --all_clusters')
