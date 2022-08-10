@@ -1,6 +1,5 @@
-"""The ``cli`` module defines the commandline interface for the parent
-application. This module is effectively a wrapper around existing functionality
-defined in the ``account_logic`` module.
+"""The ``cli`` module defines the commandline interface for the parent application. This module is effectively
+a wrapper around existing functionality defined in the ``account_logic`` module.
 
 Commandline functions are grouped together by the service being administered.
 
@@ -8,10 +7,9 @@ Commandline functions are grouped together by the service being administered.
 
    application.py <service> <action> --arguments
 
-Each service is represented by a distinct class which handles the parsing
-of commands and arguments related to that service. These classes are ultimetly
-called by the ``CommandLineApplication`` class, which acts as the primary
-commandline interface for the parent application.
+Each service is represented by a distinct class which handles the parsing of commands and arguments related to
+that service. These classes are ultimatly called by the ``CommandLineApplication`` class, which acts as the
+primary commandline interface for the parent application.
 
 .. note::
    Parser classes in this module are based on the ``ArgumentParser``
@@ -63,14 +61,14 @@ from typing import Type
 
 from . import settings
 from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
+from .system.slurm import Slurm
 
 
 class BaseParser(ArgumentParser):
     """Abstract base class to use when building commandline parser objects
 
-    Subclasses must define the commandline interface (i.e., any commandline
-    subparsers or arguments) by implementing the ``define_interface`` method.
-    The interface is automatically added to the parser object at installation.
+    Subclasses must define the commandline interface (i.e., any commandline subparsers or arguments) by implementing
+    the ``define_interface`` method. The interface is automatically added to the parser object at installation.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -100,9 +98,8 @@ class BaseParser(ArgumentParser):
     def define_interface(cls, parent_parser) -> None:
         """Define the commandline interface of the parent parser
 
-        Adds parsers and commandline arguments to the given subparser action.
-        The ``parent_parser`` object is the same object returned by the
-        ``add_subparsers`` method.
+        Adds parsers and commandline arguments to the given subparser action. The ``parent_parser`` object is the
+        same object returned by the ``add_subparsers`` method.
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -120,11 +117,26 @@ class AdminParser(BaseParser):
             parent_parser: Subparser action to assign parsers and arguments to
         """
 
-        update_status = parent_parser.add_parser('update_status', help='Update account status and send pending notifications for a single account')
+        # Update Account Status
+        update_status = parent_parser.add_parser(
+            'update_status',
+            help=('Close any expired proposals/investments and lock accounts for all unlocked accounts')
+        )
         update_status.set_defaults(function=AdminServices.update_account_status)
 
-        maintenance_parser = parent_parser.add_parser('run_maintenance', help='Update account status and send pending notifications for all accounts')
-        maintenance_parser.set_defaults(function=AdminServices.run_maintenance)
+        # List Locked Accounts
+        list_locked = parent_parser.add_parser(
+            'list_locked',
+            help=('List all of the accounts that are currently set to the locked state')
+        )
+        list_locked.set_defaults(function=AdminServices.list_locked_accounts)
+
+        # List Unlocked Accounts
+        list_unlocked = parent_parser.add_parser(
+            'list_unlocked',
+            help=('List all of the accounts that are currently set to the unlocked state')
+        )
+        list_unlocked.set_defaults(function=AdminServices.list_unlocked_accounts)
 
 
 class AccountParser(BaseParser):
@@ -139,23 +151,46 @@ class AccountParser(BaseParser):
         """
 
         # Reusable definitions for arguments
-        account_argument = dict(metavar='acc', dest='self', type=AccountServices, help='Name of a slurm user account', required=True)
+        account_argument = dict(
+            metavar='account',
+            dest='self',
+            type=AccountServices,
+            help=('Name of a slurm account')
+        )
+        cluster_argument = dict(
+            dest='clusters',
+            nargs='+',
+            choices=list(Slurm.cluster_names()),
+            help=('A cluster or list of clusters to lock the account on')
+        )
+        all_clusters_argument = dict(
+            metavar='\b',
+            dest='clusters',
+            action='store_const',
+            const=list(Slurm.cluster_names()),
+            help=('Use all clusters available on the system')
+        )
 
-        lock_parser = parent_parser.add_parser('lock', help='Lock a slurm account from submitting any jobs')
+        # Lock Account
+        lock_parser = parent_parser.add_parser('lock', help=('Lock a slurm account from submitting any jobs'))
         lock_parser.set_defaults(function=AccountServices.lock_account)
-        lock_parser.add_argument('--account', **account_argument)
+        lock_parser.add_argument(**account_argument)
+        lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
+        lock_cluster.add_argument('--clusters', **cluster_argument)
+        lock_cluster.add_argument('--all_clusters', **all_clusters_argument)
 
-        unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        # Unlock Account
+        unlock_parser = parent_parser.add_parser('unlock', help=('Allow a slurm account to resume submitting jobs'))
         unlock_parser.set_defaults(function=AccountServices.unlock_account)
-        unlock_parser.add_argument('--account', **account_argument)
+        unlock_parser.add_argument(**account_argument)
+        unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
+        unlock_cluster.add_argument('--clusters', **cluster_argument)
+        unlock_cluster.add_argument('--all_clusters', **all_clusters_argument)
 
-        renew_parser = parent_parser.add_parser('renew', help='Renew an account\'s proposal and rollover any is_expired investments')
-        renew_parser.set_defaults(function=AccountServices.renew)
-        renew_parser.add_argument('--account', **account_argument)
-
-        info_parser = parent_parser.add_parser('info', help='Print account usage and allocation information')
+        # Account information parser
+        info_parser = parent_parser.add_parser('info', help=('Print account usage and allocation information'))
         info_parser.set_defaults(function=AccountServices.print_info)
-        info_parser.add_argument('--account', **account_argument)
+        info_parser.add_argument(**account_argument)
 
 
 class ProposalParser(BaseParser):
@@ -170,33 +205,79 @@ class ProposalParser(BaseParser):
         """
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', help='The parent slurm account')
+        account_definition = dict(
+            dest='self',
+            metavar='account',
+            help=('The parent slurm account')
+        )
+        proposal_id_definition = dict(
+            dest='proposal_id',
+            metavar='proposal_ID',
+            type=int,
+            help=('The ID associated with a specific proposal on the account')
+        )
 
-        create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
+        # Proposal Creation
+        create_parser = parent_parser.add_parser('create', help=('Create a new proposal for an existing slurm account'))
         create_parser.set_defaults(function=ProposalServices.create_proposal)
-        create_parser.add_argument('--account', **account_definition)
+        create_parser.add_argument(**account_definition)
+        create_parser.add_argument(
+            '--start',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            default=datetime.today(),
+            help=(
+                'Start date for the proposal, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+            )
+        )
+        create_parser.add_argument(
+            '--duration',
+            type=int,
+            default=12,
+            help=('Duration of the proposal in months, default is 1 year (12 months)')
+        )
         cls._add_cluster_args(create_parser)
 
-        delete_parser = parent_parser.add_parser('delete', help='Delete an existing account proposal')
-        delete_parser.set_defaults(function=ProposalServices.delete_proposal)
-        delete_parser.add_argument('--account', **account_definition)
-
-        add_parser = parent_parser.add_parser('add', help='Add service units to an existing proposal')
+        # Add SUs to a Proposal
+        add_parser = parent_parser.add_parser('add_sus', help=('Add service units to an existing proposal'))
         add_parser.set_defaults(function=ProposalServices.add_sus)
-        add_parser.add_argument('--account', **account_definition)
+        add_parser.add_argument(**account_definition)
+        add_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(add_parser)
 
-        subtract_parser = parent_parser.add_parser('subtract', help='Subtract service units from an existing proposal')
+        # Remove SUs from Proposal
+        subtract_parser = parent_parser.add_parser(
+            'subtract_sus',
+            help=('Subtract service units from an existing proposal')
+        )
         subtract_parser.set_defaults(function=ProposalServices.subtract_sus)
-        subtract_parser.add_argument('--account', **account_definition)
+        subtract_parser.add_argument(**account_definition)
+        subtract_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(subtract_parser)
 
-        overwrite_parser = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing proposal')
-        overwrite_parser.set_defaults(function=ProposalServices.modify_proposal)
-        overwrite_parser.add_argument('--account', **account_definition)
-        overwrite_parser.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal start date')
-        overwrite_parser.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new proposal end date')
-        cls._add_cluster_args(overwrite_parser)
+        # Modify Proposal Date
+        modify_date_parser = parent_parser.add_parser(
+            'modify_date',
+            help=('Change the start or end date of an existing proposal')
+        )
+        modify_date_parser.set_defaults(function=ProposalServices.modify_proposal)
+        modify_date_parser.add_argument(**account_definition)
+        modify_date_parser.add_argument(
+            '--start',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            help=(
+                'Set a new proposal start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
+        modify_date_parser.add_argument(
+            '--end',
+            type=lambda date: datetime.strptime(date, settings.date_format).date(),
+            help=(
+                'Set a new proposal end date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:
@@ -206,8 +287,23 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
-        for cluster in settings.clusters:
-            parser.add_argument(f'--{cluster}', type=int, help=f'The {cluster} limit in CPU Hours', default=0)
+        service_unit_definition=dict(
+            metavar='service_units',
+            type=int,
+            default=0
+        )
+        # Add argument to specify Service Unit allotment
+        for cluster in Slurm.cluster_names():
+            parser.add_argument(
+                f'--{cluster}',
+                **service_unit_definition,
+                help=(f'Service Units awarded on the {cluster} cluster')
+            )
+        parser.add_argument(
+            '--all_clusters',
+            **service_unit_definition,
+            help=('Service Units awarded across all clusters')
+        )
 
 
 class InvestmentParser(BaseParser):
@@ -222,47 +318,104 @@ class InvestmentParser(BaseParser):
         """
 
         # Reusable definitions for arguments
-        account_definition = dict(dest='self', metavar='acc', help='The parent slurm account')
-        investment_id_definition = dict(dest='inv_id', metavar='id', type=int, required=True, help='The investment proposal id')
-        service_unit_definition = dict(type=int, help='The number of SUs you want to process', required=True)
+        account_definition = dict(
+            dest='self',
+            metavar='account',
+            help=('The parent slurm account')
+        )
+        investment_id_definition = dict(
+            dest='investment_id',
+            metavar='investment_ID',
+            type=int,
+            help=('The investment proposal ID number')
+        )
+        service_unit_definition = dict(
+            dest='sus',
+            metavar='service_units',
+            type=int,
+            required=True,
+            help=('The number of SUs to process')
+        )
 
-        create_parser = parent_parser.add_parser('create', help='Create a new investment')
+        # Investment Creation
+        create_parser = parent_parser.add_parser('create', help=('Create a new investment'))
         create_parser.set_defaults(function=InvestmentServices.create_investment)
-        create_parser.add_argument('--account', **account_definition)
-        create_parser.add_argument('--sus', type=int, help='The number of SUs you want to insert', required=True)
-        create_parser.add_argument('--num_inv', type=int, default=5, help='Optionally divide service units across n sequential investments')
-        create_parser.add_argument('--duration', type=int, default=365, help='The length of each investment')
+        create_parser.add_argument(**account_definition)
+        create_parser.add_argument('--SUs', **service_unit_definition)
+        create_parser.add_argument(
+            '--repeat',
+            metavar='REP',
+            type=int,
+            default=5,
+            help=('Divide the service units across REP sequential investments')
+        )
+        create_parser.add_argument(
+            '--start',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            default=datetime.today(),
+            help=(
+                'Start date for the investment, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}, the default is today'
+            )
+        )
+        create_parser.add_argument('--duration', type=int, default=12, help=('The length of each investment in months'))
 
-        delete_parser = parent_parser.add_parser('delete', help='Delete an existing investment')
+        # Investment Deletion
+        delete_parser = parent_parser.add_parser('delete', help=('Delete an existing investment'))
         delete_parser.set_defaults(function=InvestmentServices.delete_investment)
-        delete_parser.add_argument('--account', **account_definition)
-        delete_parser.add_argument('--id', **investment_id_definition)
+        delete_parser.add_argument(**account_definition)
+        delete_parser.add_argument('--ID',**investment_id_definition, required=True)
 
-        add_parser = parent_parser.add_parser('add', help='Add service units to an existing investment')
+        # Add SUs to Investment
+        add_parser = parent_parser.add_parser('add_sus', help=('Add service units to an existing investment'))
         add_parser.set_defaults(function=InvestmentServices.add_sus)
-        add_parser.add_argument('--account', **account_definition)
-        add_parser.add_argument('--id', **investment_id_definition)
-        add_parser.add_argument('--sus', **service_unit_definition)
+        add_parser.add_argument(**account_definition)
+        add_parser.add_argument('--ID', **investment_id_definition)
+        add_parser.add_argument('--SUs', **service_unit_definition)
 
-        subtract_parser = parent_parser.add_parser('subtract', help='Subtract service units from an existing investment')
+        # Remove SUs from Investment
+        subtract_parser = parent_parser.add_parser(
+            'subtract_sus',
+            help=('Subtract service units from an existing investment')
+        )
         subtract_parser.set_defaults(function=InvestmentServices.subtract_sus)
-        subtract_parser.add_argument('--account', **account_definition)
-        subtract_parser.add_argument('--id', **investment_id_definition)
-        subtract_parser.add_argument('--sus', **service_unit_definition)
+        subtract_parser.add_argument(**account_definition)
+        subtract_parser.add_argument('--ID', **investment_id_definition)
+        subtract_parser.add_argument('--SUs', **service_unit_definition)
 
-        overwrite_parser = parent_parser.add_parser('overwrite', help='Overwrite properties of an existing investment')
-        overwrite_parser.set_defaults(function=InvestmentServices.modify_investment)
-        overwrite_parser.add_argument('--account', **account_definition)
-        overwrite_parser.add_argument('--id', **investment_id_definition)
-        overwrite_parser.add_argument('--sus', type=int, help='The new number of SUs in the investment')
-        overwrite_parser.add_argument('--start', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment start date')
-        overwrite_parser.add_argument('--end', type=lambda date: datetime.strptime(date, settings.date_format).date(), help='Set a new investment end date')
+        # Modify Investment Dates
+        modify_date_parser = parent_parser.add_parser(
+            'modify_date',
+            help=('Modify the start or end date of an existing investment')
+        )
+        modify_date_parser.set_defaults(function=InvestmentServices.modify_investment)
+        modify_date_parser.add_argument(**account_definition)
+        modify_date_parser.add_argument('--ID', **investment_id_definition)
+        modify_date_parser.add_argument(
+            '--start',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            help=(
+                'Set a new investment start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
+        modify_date_parser.add_argument(
+            '--end',
+            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            help=(
+                'Set a new investment start date, '
+                f'format: {datetime.strftime(datetime.today(),settings.date_format)}'
+            )
+        )
 
-        advance_parser = parent_parser.add_parser('advance', help='Move service units from future investments to the current allocation')
+        advance_parser = parent_parser.add_parser(
+            'advance',
+            help=('Move service units from future investments to the current allocation')
+        )
         advance_parser.set_defaults(function=InvestmentServices.add_sus)
-        advance_parser.add_argument('--id', **investment_id_definition)
-        advance_parser.add_argument('--account', **account_definition)
-        advance_parser.add_argument('--sus', **service_unit_definition)
+        advance_parser.add_argument(**account_definition)
+        advance_parser.add_argument('--ID', **investment_id_definition)
+        advance_parser.add_argument('--SUs', **service_unit_definition)
 
 
 class CommandLineApplication:
@@ -272,15 +425,40 @@ class CommandLineApplication:
         """Initialize the application's commandline interface"""
 
         self.parser = ArgumentParser()
-        self.subparsers = self.parser.add_subparsers(parser_class=ArgumentParser)
+        self.subparsers = self.parser.add_subparsers(parser_class=ArgumentParser, dest='service', required=True)
 
         # Add desired parsers to the commandline application
-        self.add_subparser_to_app('admin', AdminParser, title='Admin actions', help_text='Tools for general account management')
-        self.add_subparser_to_app('account', AccountParser, title='Account actions', help_text='Tools for general account management')
-        self.add_subparser_to_app('proposal', ProposalParser, title='Proposal actions', help_text='Administrative tools for user proposals')
-        self.add_subparser_to_app('investment', InvestmentParser, title='Investment actions', help_text='Administrative tools for user investments')
+        self.add_subparser_to_app(
+            'admin',
+            AdminParser,
+            title='Admin actions',
+            help_text='Tools for general account management'
+        )
+        self.add_subparser_to_app(
+            'account',
+            AccountParser,
+            title='Account actions',
+            help_text='Tools for general account management'
+        )
+        self.add_subparser_to_app(
+            'proposal',
+            ProposalParser,
+            title='Proposal actions',
+            help_text='Administrative tools for user proposals'
+        )
+        self.add_subparser_to_app(
+            'investment',
+            InvestmentParser,
+            title='Investment actions',
+            help_text='Administrative tools for user investments'
+        )
 
-    def add_subparser_to_app(self, command: str, parser_class: Type[BaseParser], title: str, help_text: str) -> None:
+    def add_subparser_to_app(
+            self,
+            command: str,
+            parser_class: Type[BaseParser],
+            title: str,
+            help_text: str) -> None:
         """Add a parser object to the parent commandline application as a subparser
 
         Args:
@@ -291,7 +469,7 @@ class CommandLineApplication:
         """
 
         parser = self.subparsers.add_parser(command, help=help_text)
-        subparsers = parser.add_subparsers(title=title)
+        subparsers = parser.add_subparsers(title=title, dest='command', required=True)
         parser_class.define_interface(subparsers)
 
     @classmethod
@@ -304,4 +482,10 @@ class CommandLineApplication:
 
         cli_kwargs = vars(cls().parser.parse_args())
         executable = cli_kwargs.pop('function')
+
+        # Remove arguments unused in app logic
+        del cli_kwargs['service']
+        del cli_kwargs['command']
+
+        # Execute app logic with relevant arguments
         executable(**cli_kwargs)
