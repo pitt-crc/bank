@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
@@ -695,13 +695,13 @@ class AccountServices:
 
         raise NotImplementedError
 
-    def lock_account(self,clusters):
+    def lock_account(self, clusters):
         """Lock the slurm account on the provided clusters"""
 
         for cluster in clusters:
             SlurmAccount(self._account_name).set_locked_state(True, cluster)
 
-    def unlock_account(self,clusters):
+    def unlock_account(self, clusters):
         """Unlock the slurm account on the provided clusters"""
 
         for cluster in clusters:
@@ -712,23 +712,44 @@ class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
-    def find_unlocked() -> Tuple[AccountServices]:
-        """Return the names for all unexpired proposals with unlocked accounts
+    def _list_locked_status(status: bool, cluster: str) -> tuple:
+        """Return a collection of account names matching the lock state on the given cluster
+
+        Args:
+            status: The lock state to check for
+            cluster: The name of the cluster to check the lock state on
 
         Returns:
             A tuple of account names
         """
 
         # Query database for accounts that are unlocked and is_expired
-        account_name_query = (select(Account.name)
-                              .join(Proposal)
-                              .where(Proposal.end_date < date.today())
-                             )
+        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
-            return tuple(
-                AccountServices(name) for name in account_names
-                if not SlurmAccount(name).get_locked_state())
+
+        match_lock_state = lambda account: SlurmAccount(account).get_locked_state(cluster) == status
+        return tuple(filter(match_lock_state, account_names))
+
+    @classmethod
+    def list_locked_accounts(cls, cluster: str) -> None:
+        """Print account names that are locked on a given cluster
+
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._list_locked_status(True, cluster), sep='\n')
+
+    @classmethod
+    def list_unlocked_accounts(cls, cluster:str) -> None:
+        """Print account names that are unlocked on a given cluster
+
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._list_locked_status(False, cluster), sep='\n')
 
     @classmethod
     def send_usage_notifications(cls) -> None:
@@ -743,15 +764,3 @@ class AdminServices:
 
         for account in cls.find_unlocked():
             account.update_account_status()
-
-    @classmethod
-    def list_locked_accounts(cls) -> None:
-        """List all of the accounts that are currently locked"""
-        #TODO: Implement list_locked_accounts method
-        raise NotImplementedError
-
-    @classmethod
-    def list_unlocked_accounts(cls) -> None:
-        """List all of the accounts that are currently unlocked"""
-        #TODO: Implement list_unlocked_accounts method
-        raise NotImplementedError
