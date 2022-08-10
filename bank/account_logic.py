@@ -695,60 +695,6 @@ class AccountServices:
 
         raise NotImplementedError
 
-    def renew(self, reset_usage: bool = True) -> None:
-        """Archive any expired investments and rollover unused service units"""
-
-        slurm_acct = SlurmAccount(self._account_name)
-        with DBConnection.session() as session:
-
-            # Archive any investments which are past their end date
-            investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()
-            for investor_row in investments_to_archive:
-                session.add(investor_row.to_archive_object())
-                session.delete(investor_row)
-
-            # Get total used and allocated service units
-            current_proposal = session.get_proposal
-            total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
-            total_usage = slurm_acct.get_total_usage()
-
-            # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
-            archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
-            effective_usage = max(0, total_usage - total_proposal_sus)
-            available_for_rollover = max(0, archived_inv_sus - effective_usage)
-            to_rollover = int(available_for_rollover * settings.inv_rollover_fraction)
-
-            # Add rollover service units to whatever the next available investment
-            # If the conditional false then there are no more investments and the
-            # service units that would have been rolled over are lost
-            next_investment = self.get_investment(session)
-            if next_investment:
-                next_investment.rollover_sus += to_rollover
-
-            # Create a new user proposal and archive the old one
-            new_proposal = Proposal(
-                account_name=current_proposal._account_name,
-                proposal_type=current_proposal.proposal_type,
-                start_date=date.today(),
-                end_date=date.today() + timedelta(days=365),
-                percent_notified=0
-            )
-            for cluster in settings.clusters:
-                setattr(new_proposal, cluster, getattr(current_proposal, cluster))
-
-            session.add(new_proposal)
-            arx = current_proposal.to_archive_object()
-            session.add(arx)
-            session.delete(current_proposal)
-
-            session.commit()
-
-        # Set RawUsage to zero and unlock the account
-        if reset_usage:
-            slurm_acct = SlurmAccount(self._account_name)
-            slurm_acct.reset_raw_usage()
-            slurm_acct.set_locked_state(False)
-
     def lock_account(self,clusters):
         """Lock the slurm account on the provided clusters"""
 
