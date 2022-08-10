@@ -728,8 +728,8 @@ class AdminServices:
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
 
-        match_lock_state = lambda account: SlurmAccount(account).get_locked_state(cluster) == status
-        return tuple(filter(match_lock_state, account_names))
+        check_lock_state = lambda account: SlurmAccount(account).get_locked_state(cluster) == status
+        return tuple(filter(check_lock_state, account_names))
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:
@@ -742,7 +742,7 @@ class AdminServices:
         print(*cls._list_locked_status(True, cluster), sep='\n')
 
     @classmethod
-    def list_unlocked_accounts(cls, cluster:str) -> None:
+    def list_unlocked_accounts(cls, cluster: str) -> None:
         """Print account names that are unlocked on a given cluster
 
         Args:
@@ -750,13 +750,6 @@ class AdminServices:
         """
 
         print(*cls._list_locked_status(False, cluster), sep='\n')
-
-    @classmethod
-    def send_usage_notifications(cls) -> None:
-        """Send any pending usage notifications to unlocked bank accounts"""
-
-        for account in cls.find_unlocked():
-            account.notify()
 
     @classmethod
     def update_account_status(cls) -> None:
