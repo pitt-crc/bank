@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Collection, Optional, Tuple, Union
+from typing import Collection, Iterable, Optional, Union
 
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
@@ -740,30 +740,45 @@ class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
-    def find_unlocked() -> Tuple[AccountServices]:
-        """Return the names for all unexpired proposals with unlocked accounts
+    def _iter_accounts_by_lock_state(status: bool, cluster: str) -> Iterable[str]:
+        """Return a collection of account names matching the lock state on the given cluster
+
+        Args:
+            status: The lock state to check for
+            cluster: The name of the cluster to check the lock state on
 
         Returns:
             A tuple of account names
         """
 
-        # Query database for accounts that are unlocked and is_expired
-        account_name_query = (select(Account.name)
-                              .join(Proposal)
-                              .where(Proposal.end_date < date.today())
-                              )
+        # Query database for accounts that are unlocked and expired
+        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
-            return tuple(
-                AccountServices(name) for name in account_names
-                if not SlurmAccount(name).get_locked_state())
+
+        for account in account_names:
+            if SlurmAccount(account).get_locked_state(cluster) == status:
+                yield account
 
     @classmethod
-    def send_usage_notifications(cls) -> None:
-        """Send any pending usage notifications to unlocked bank accounts"""
+    def list_locked_accounts(cls, cluster: str) -> None:
+        """Print account names that are locked on a given cluster
 
-        for account in cls.find_unlocked():
-            account.notify()
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._iter_accounts_by_lock_state(True, cluster), sep='\n')
+
+    @classmethod
+    def list_unlocked_accounts(cls, cluster: str) -> None:
+        """Print account names that are unlocked on a given cluster
+
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
     def update_account_status(cls) -> None:
@@ -771,15 +786,3 @@ class AdminServices:
 
         for account in cls.find_unlocked():
             account.update_account_status()
-
-    @classmethod
-    def list_locked_accounts(cls) -> None:
-        """List all of the accounts that are currently locked"""
-        # TODO: Implement list_locked_accounts method
-        raise NotImplementedError
-
-    @classmethod
-    def list_unlocked_accounts(cls) -> None:
-        """List all of the accounts that are currently unlocked"""
-        # TODO: Implement list_unlocked_accounts method
-        raise NotImplementedError

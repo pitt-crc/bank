@@ -117,6 +117,13 @@ class AdminParser(BaseParser):
             parent_parser: Subparser action to assign parsers and arguments to
         """
 
+        cluster_argument = dict(
+            dest='clusters',
+            nargs='+',
+            choices=list(Slurm.cluster_names()),
+            help='A cluster or list of clusters to lock the account on'
+        )
+
         # Update Account Status
         update_status = parent_parser.add_parser(
             'update_status',
@@ -129,6 +136,7 @@ class AdminParser(BaseParser):
             'list_locked',
             help='List all of the accounts that are currently set to the locked state'
         )
+        list_locked.add_argument('--clusters', **cluster_argument)
         list_locked.set_defaults(function=AdminServices.list_locked_accounts)
 
         # List Unlocked Accounts
@@ -136,6 +144,7 @@ class AdminParser(BaseParser):
             'list_unlocked',
             help='List all of the accounts that are currently set to the unlocked state'
         )
+        list_unlocked.add_argument('--clusters', **cluster_argument)
         list_unlocked.set_defaults(function=AdminServices.list_unlocked_accounts)
 
 
