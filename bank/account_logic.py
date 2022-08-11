@@ -751,7 +751,7 @@ class AdminServices:
             A tuple of account names
         """
 
-        # Query database for accounts that are unlocked and is_expired
+        # Query database for accounts that are unlocked and expired
         account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
