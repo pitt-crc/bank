@@ -740,7 +740,7 @@ class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
-    def _list_locked_status(status: bool, cluster: str) -> Iterable[str]:
+    def _iter_accounts_by_lock_state(status: bool, cluster: str) -> Iterable[str]:
         """Return a collection of account names matching the lock state on the given cluster
 
         Args:
@@ -768,7 +768,7 @@ class AdminServices:
             cluster: The name of the cluster to check the lock state on
         """
 
-        print(*cls._list_locked_status(True, cluster), sep='\n')
+        print(*cls._iter_accounts_by_lock_state(True, cluster), sep='\n')
 
     @classmethod
     def list_unlocked_accounts(cls, cluster: str) -> None:
@@ -778,7 +778,7 @@ class AdminServices:
             cluster: The name of the cluster to check the lock state on
         """
 
-        print(*cls._list_locked_status(False, cluster), sep='\n')
+        print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
     def update_account_status(cls) -> None:
