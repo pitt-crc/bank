@@ -40,3 +40,6 @@ class MissingInvestmentError(Exception):
 
 class InvestmentExistsError(Exception):
     """Raised when trying to create an investment that already exists."""
+
+class BadDateFormatError(Exception):
+    """Raised when the date provided is in the incorrect format."""

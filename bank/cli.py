@@ -60,6 +60,7 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
+from .exceptions import BadDateFormatError
 from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 from .system.slurm import Slurm
 
@@ -93,13 +94,23 @@ class BaseParser(ArgumentParser):
         else:
             super().error(message)
 
+    @staticmethod
+    def valid_date(date_string: str) -> datetime.date():
+        """Print a useful error if the user provided date does not conform to `settings.date_format`."""
+        try:
+            date = datetime.strptime(date_string, settings.date_format).date()
+        except ValueError:
+            raise BadDateFormatError(f'The provided date {date_string} is not in the correct format.')
+
+        return date
+
     @classmethod
     @abc.abstractmethod
     def define_interface(cls, parent_parser) -> None:
         """Define the commandline interface of the parent parser
 
-        Adds parsers and commandline arguments to the given subparser action. The ``parent_parser`` object is the
-        same object returned by the ``add_subparsers`` method.
+        Adds parsers and commandline arguments to the given subparser action.
+        The ``parent_parser`` object is the same object returned by the ``add_subparsers`` method.
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -233,7 +244,7 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            type=lambda date: datetime.strptime(date, settings.date_format).date(),
             default=datetime.today(),
             help=(
                 'Start date for the proposal, '
@@ -335,7 +346,7 @@ class InvestmentParser(BaseParser):
             help='The parent slurm account'
         )
         investment_id_definition = dict(
-            dest='investment_id',
+            dest='inv_id',
             metavar='investment_ID',
             type=int,
             help='The investment proposal ID number'
@@ -363,7 +374,8 @@ class InvestmentParser(BaseParser):
         )
         create_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar=f'{settings.date_format}',
+            type=lambda date: cls.valid_date(date),
             default=datetime.today(),
             help=(
                 'Start date for the investment, '
