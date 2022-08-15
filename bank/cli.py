@@ -217,6 +217,7 @@ class ProposalParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
+            type=ProposalServices,
             help='The parent slurm account'
         )
         proposal_id_definition = dict(
@@ -330,6 +331,7 @@ class InvestmentParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
+            type=InvestmentServices,
             help='The parent slurm account'
         )
         investment_id_definition = dict(
@@ -352,11 +354,12 @@ class InvestmentParser(BaseParser):
         create_parser.add_argument(**account_definition)
         create_parser.add_argument('--SUs', **service_unit_definition)
         create_parser.add_argument(
-            '--repeat',
-            metavar='REP',
-            type=int,
+            '--disbursements',
+            dest='disbursements',
+            metavar='N',
+            type=lambda N: (int(N) > 0) and int(N),
             default=5,
-            help='Divide the service units across REP sequential investments'
+            help='Divide the service units across N sequential investments'
         )
         create_parser.add_argument(
             '--start',

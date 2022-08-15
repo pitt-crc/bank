@@ -8,6 +8,7 @@ API Reference
 from __future__ import annotations
 
 from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
@@ -93,7 +94,7 @@ class ProposalServices:
     def create_proposal(
             self,
             start: date = date.today(),
-            duration: int = 365,
+            duration: int = 12,
             **kwargs: int
     ) -> None:
         """Create a new proposal for the account
@@ -107,7 +108,8 @@ class ProposalServices:
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            last_active_day = start + timedelta(days=duration - 1)
+            expiration_date = start + relativedelta(months=12)
+            last_active_day = expiration_date - timedelta(days=1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
@@ -126,7 +128,7 @@ class ProposalServices:
             new_proposal = Proposal(
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration),
+                end_date=expiration_date,
                 allocations=[
                     Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
                 ]
@@ -320,35 +322,38 @@ class InvestmentServices:
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
-        """Add a new investment(s) for the given account
+    def create_investment(self, sus: int, start: date = date.today(), duration: int = 12, disbursements: int = 1) -> None:
+        """Add new investment(s) to the given account
 
-        ``num_inv`` reflects the number of investments to create. If the argument
-        is greater than one, repeating investments are created sequentially such
-        that a new investment begins as each investment ends. The ``start``
-        argument represents the start date of the first investment in the sequence.
-        The given number of service units (``sus``) are allocated equally across
-        each investment in the series.
+        ``disbursements`` reflects the number of investments the investment total should be split into.
+        If the argument is greater than one, investments are created sequentially such
+        that a new investment begins as the previous investment ends.
+
+        The ``start`` argument represents the start date of the first investment in the sequence.
+
+        The given number of service units (``sus``) are allocated equally across each investment in the series.
 
         Args:
-            sus: The number of service units to add
-            start: The start date of the proposal
-            duration: How many days before the investment expires
-            num_inv: Spread out the given service units equally across given number of instances
-        """
+            sus: The total number of service units added to the investment
+            start: The start date of the proposal, the format is MM/DD/YY
+            duration: How many months before the investment expires
+            disbursements: Spread out the given service units equally across given number of instances
+            """
 
         self._verify_service_units(sus)
-        if num_inv < 1:
+        if disbursements < 1:
             raise ValueError('Argument ``repeat`` must be >= 1')
 
         # Calculate number of service units per each investment
-        duration = timedelta(days=duration)
-        sus_per_instance = ceil(sus / num_inv)
+        duration = relativedelta(months=duration)
+        sus_per_instance = ceil(sus / disbursements)
 
         with DBConnection.session() as session:
-            for i in range(num_inv):
-                start_this = start + i * duration
-                end_this = start + (i + 1) * duration
+            for i in range(disbursements):
+
+                # Determine the start and end of the current disbursement
+                start_this = start + (i * duration)
+                end_this = start + ((i + 1) * duration)
 
                 new_investment = Investment(
                     start_date=start_this,
