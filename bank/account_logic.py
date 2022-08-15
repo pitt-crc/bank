@@ -293,6 +293,27 @@ class InvestmentServices:
             if proposal is None:
                 raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
 
+    def _get_active_inv_id(self) -> None:
+        """Return the active investment ID for the current account
+
+        Raises:
+            MissingInvestmentError: If no active investment is found
+        """
+
+        active_inv_id_query = select(Investment.id) \
+            .join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Investment.is_active)
+
+        with DBConnection.session() as session:
+            inv_id = session.execute(active_inv_id_query).scalars().first()
+
+        if inv_id is None:
+            raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
+
+        return inv_id
+
+
     def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
@@ -391,7 +412,7 @@ class InvestmentServices:
 
     def modify_investment(
             self,
-            inv_id: int,
+            inv_id: Optional[int] = None,
             sus: Optional[int] = None,
             start: Optional[date] = None,
             end: Optional[date] = None
@@ -408,7 +429,9 @@ class InvestmentServices:
             MissingInvestmentError: If the account does not have a proposal
         """
 
+        inv_id = inv_id or self._get_active_inv_id()
         self._verify_investment_id(inv_id)
+
         if sus:
             self._verify_service_units(sus)
 
