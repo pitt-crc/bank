@@ -316,7 +316,7 @@ class InvestmentServices:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
             return active_inv_id
 
-    def _validate_investment_id(self, inv_id: int) -> None:
+    def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
         Args:
@@ -332,7 +332,7 @@ class InvestmentServices:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no investment with ID {inv_id}.')
 
     @staticmethod
-    def _validate_service_units(sus: int) -> None:
+    def _verify_service_units(sus: int) -> None:
         """Raise an error if given service units are invalid
 
         Args:
