@@ -447,7 +447,7 @@ class InvestmentServices:
         if (start and end) and start > end:
             raise ValueError('``start`` needs to be a date before ``end``')
 
-        inv_id = inv_id or self._get_active_inv_id()
+        inv_id = inv_id or self._get_active_investment_id()
 
         self._verify_investment_id(inv_id)
 
@@ -486,7 +486,7 @@ class InvestmentServices:
 
         self._verify_service_units(sus)
 
-        inv_id = inv_id or self._get_active_inv_id()
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
@@ -515,7 +515,7 @@ class InvestmentServices:
 
         self._verify_service_units(sus)
 
-        inv_id = inv_id or self._get_active_inv_id()
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
@@ -542,7 +542,7 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
-        inv_id = self._get_active_inv_id()
+        inv_id = self._get_active_investment_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
