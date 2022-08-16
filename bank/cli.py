@@ -198,7 +198,7 @@ class AccountParser(BaseParser):
 
         # Account information parser
         info_parser = parent_parser.add_parser('info', help='Print account usage and allocation information')
-        info_parser.set_defaults(function=AccountServices.print_info)
+        info_parser.set_defaults(function=AccountServices.info)
         info_parser.add_argument(**account_argument)
 
 

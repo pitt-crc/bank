@@ -628,7 +628,7 @@ class AccountServices:
 
         return table
 
-    def print_info(self) -> None:
+    def info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         try:
