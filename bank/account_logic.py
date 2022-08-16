@@ -436,7 +436,9 @@ class InvestmentServices:
             end: Optionally set a new end date for the investment
 
         Raises:
-            MissingInvestmentError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have an investment
+            ValueError: If neither a start date or end date are provided, and if provided start/end dates are not in
+            chronological order with amongst themselves or with the existing DB values.
         """
 
         # Validate Arguments
@@ -462,7 +464,7 @@ class InvestmentServices:
                     f'If providing ``end`` alone, it needs to be later than the current start date: {investment.start_date}')
 
             # Make provided changes
-            if start
+            if start:
                 investment.start_date = start
                 LOG.info('Overwriting start date on investment %s for account %s', investment.id, self._account_name)
             if end:
