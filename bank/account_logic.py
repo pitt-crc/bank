@@ -276,44 +276,47 @@ class InvestmentServices:
     """Administrative tool for managing account Investments"""
 
     def __init__(self, account_name: str) -> None:
-        """Administrate investment data for the given user account
-
+        """Create or administrate investment data for the given Slurm account
         Args:
-            account_name: The name of the account to administrate
+            account_name: The name of the Slurm account to administrate
 
         Raises:
-            ValueError: If administrating an account for a class
+            MissingProposalError: If the account does not have an associated proposal
+            MissingInvestmentError: If the account does not have an active investment, and the operation being executed
+            is not trying to create one.
         """
 
         self._account_name = account_name
 
         with DBConnection.session() as session:
-            query = select(Proposal).join(Account).where(Account.name == account_name)
-            proposal = session.execute(query).scalars().first()
+
+            # Check if the Account has an associated proposal
+            proposal_query = select(Proposal).join(Account).where(Account.name == account_name)
+            proposal = session.execute(proposal_query).scalars().first()
             if proposal is None:
                 raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
 
-    def _get_active_inv_id(self) -> None:
+    def _get_active_investment_id(self) -> None:
         """Return the active investment ID for the current account
 
         Raises:
             MissingInvestmentError: If no active investment is found
         """
 
-        active_inv_id_query = select(Investment.id) \
-            .join(Account) \
-            .where(Account.name == self._account_name) \
-            .where(Investment.is_active)
-
         with DBConnection.session() as session:
-            inv_id = session.execute(active_inv_id_query).scalars().first()
 
-        if inv_id is None:
-            raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
+        # Determine the active investment ID
+            active_inv_id_query = select(Investment.id) \
+                .join(Account) \
+                .where(Account.name == self._account_name) \
+                .where(Investment.is_active)
 
-        return inv_id
+            active_inv_id = session.execute(active_inv_id_query).scalars().first()
+            if active_inv_id is None:
+                raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
+            return active_inv_id
 
-    def _verify_investment_id(self, inv_id: int) -> None:
+    def _validate_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
         Args:
@@ -329,7 +332,7 @@ class InvestmentServices:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no investment with ID {inv_id}.')
 
     @staticmethod
-    def _verify_service_units(sus: int) -> None:
+    def _validate_service_units(sus: int) -> None:
         """Raise an error if given service units are invalid
 
         Args:
@@ -345,40 +348,43 @@ class InvestmentServices:
     def create_investment(
         self,
         sus: int,
-        start: date = date.today(),
-        duration: int = 12,
-        disbursements: int = 1) -> None:
-        """Add new investment(s) to the given account
-
-        ``disbursements`` reflects the number of investments the investment total should be split into.
-        If the argument is greater than one, investments are created sequentially such
-        that a new investment begins as the previous investment ends.
-
-        The ``start`` argument represents the start date of the first investment in the sequence.
-
-        The given number of service units (``sus``) are allocated equally across each investment in the series.
+        start: Optional[date] = date.today(),
+        end: Optional[date] = start + relativedelta(months=12),
+        num_inv: Optional[int] = 1) -> None:
+        """Add a new investment or series of investments to the given account
 
         Args:
-            sus: The total number of service units added to the investment
-            start: The start date of the proposal, the format is MM/DD/YY
-            duration: How many months before the investment expires
-            disbursements: Spread out the given service units equally across given number of instances
-            """
+            sus: The total number of service units to be added to the investment, or split equally across multiple investments
+            with ``num_inv``
+            start: The start date of the investment, or first in the sequence of investments, defaulting to today
+            end: The expiration date of the investment, or first in the sequence of investments, defaulting to 12 months
+            from ``start``
+            num_inv: Divide ``sus`` equally across a number of sequential investments
 
+        Raises:
+            ValueError: If the SUs provided are less than 0, if the start date is later than the end date, or if the
+            number of investments is less than 1.
+        """
+
+        # Validate arguments
         self._verify_service_units(sus)
-        if disbursements < 1:
+
+        if start < end:
+            raise ValueError('Argument ``start`` must be an earlier date than than ``end``')
+
+        if num_inv < 1:
             raise ValueError('Argument ``repeat`` must be >= 1')
 
         # Calculate number of service units per each investment
-        duration = relativedelta(months=duration)
-        sus_per_instance = ceil(sus / disbursements)
+        duration = relativedelta(end,start)
+        sus_per_instance = ceil(sus / num_inv)
 
         with DBConnection.session() as session:
-            for i in range(disbursements):
+            for i in range(num_inv):
 
                 # Determine the start and end of the current disbursement
                 start_this = start + (i * duration)
-                end_this = start + ((i + 1) * duration)
+                end_this = start_this + duration
 
                 new_investment = Investment(
                     start_date=start_this,
@@ -412,18 +418,16 @@ class InvestmentServices:
             MissingInvestmentError: If the given ID does not match the current account
         """
 
+        # Validate Arguments
         self._verify_investment_id(inv_id)
+
+        # Delete the investment with the provided ID
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
             LOG.info('Deleted investment %d for %s', inv_id, self._account_name)
 
-    def modify_date(
-            self,
-            inv_id: Optional[int] = None,
-            start: Optional[date] = None,
-            end: Optional[date] = None
-    ) -> None:
+    def modify_date(self, inv_id: Optional[int] = None, start: Optional[date] = None, end: Optional[date] = None) -> None:
         """Overwrite the start or end date of a given investment
 
         Args:
@@ -435,17 +439,32 @@ class InvestmentServices:
             MissingInvestmentError: If the account does not have a proposal
         """
 
+        # Validate Arguments
+        if not start or end:
+            raise ValueError('``modify_date`` requires either a new ``start`` or new ``end`` date')
+        if (start and end) and start > end:
+            raise ValueError('``start`` needs to be a date before ``end``')
+
         inv_id = inv_id or self._get_active_inv_id()
+
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
 
-            if start:
+            # Validate provided start/end against DB entries
+            if (start and not end) and start > investment.end_date:
+                raise ValueError(
+                    f'If providing ``start`` alone, it needs to be earlier than the current end date: {investment.end_date}')
+            if (end and not start) and end < investment.start_date:
+                raise ValueError(
+                    f'If providing ``end`` alone, it needs to be later than the current start date: {investment.start_date}')
+
+            # Make provided changes
+            if start
                 investment.start_date = start
                 LOG.info('Overwriting start date on investment %s for account %s', investment.id, self._account_name)
-
             if end:
                 investment.end_date = end
                 LOG.info('Overwriting end date on investment %s for account %s', investment.id, self._account_name)
