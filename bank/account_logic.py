@@ -94,7 +94,7 @@ class ProposalServices:
     def create_proposal(
             self,
             start: date = date.today(),
-            duration: int = 12,
+            duration: int = 365,
             **kwargs: int
     ) -> None:
         """Create a new proposal for the account
@@ -108,8 +108,7 @@ class ProposalServices:
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            expiration_date = start + relativedelta(months=12)
-            last_active_day = expiration_date - timedelta(days=1)
+            last_active_day = start + timedelta(days=duration - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
@@ -128,7 +127,7 @@ class ProposalServices:
             new_proposal = Proposal(
                 percent_notified=0,
                 start_date=start,
-                end_date=expiration_date,
+                end_date=start + timedelta(days=duration),
                 allocations=[
                     Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
                 ]
