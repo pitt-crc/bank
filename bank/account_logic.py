@@ -419,7 +419,7 @@ class InvestmentServices:
         """Overwrite the start or end date of a given investment
 
         Args:
-            inv_id: The id of the investment to change, default is the active investment
+            inv_id: The ID of the investment to change, default is the active investment ID
             start: Optionally set a new start date for the investment
             end: Optionally set a new end date for the investment
 
@@ -444,11 +444,12 @@ class InvestmentServices:
 
             session.commit()
 
-    def add_sus(self, inv_id: int, sus: int) -> None:
+
+    def add_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Add service units to the given investment
 
         Args:
-            inv_id: The id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to add
 
         Raises:
@@ -456,6 +457,8 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_inv_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
@@ -467,11 +470,11 @@ class InvestmentServices:
             session.commit()
             LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def subtract_sus(self, inv_id: int, sus: int) -> None:
+    def subtract_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Subtract service units from the given investment
 
         Args:
-            inv_id: The inv_id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to remove
 
         Raises:
@@ -479,6 +482,8 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_inv_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
