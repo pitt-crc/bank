@@ -361,12 +361,11 @@ class InvestmentParser(BaseParser):
 
         # Investment Creation
         create_parser = parent_parser.add_parser('create', help='Create a new investment')
-        create_parser.set_defaults(function=InvestmentServices.create_investment)
+        create_parser.set_defaults(function=InvestmentServices.create)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument('--SUs', **service_unit_definition)
         create_parser.add_argument(
-            '--disbursements',
-            dest='disbursements',
+            '--num_inv',
             metavar='N',
             type=lambda N: (int(N) > 0) and int(N),
             default=5,
@@ -382,11 +381,17 @@ class InvestmentParser(BaseParser):
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}, the default is today'
             )
         )
-        create_parser.add_argument('--duration', type=int, default=12, help='The length of each investment in months')
+        create_parser.add_argument(
+            '--end',
+            metavar=f'{settings.date_format}',
+            type=lambda date: cls.valid_date(date),
+            help=('The expiration date of the investment / first investment in a series. The default is a year '
+                  'from the start date')
+        )
 
         # Investment Deletion
         delete_parser = parent_parser.add_parser('delete', help='Delete an existing investment')
-        delete_parser.set_defaults(function=InvestmentServices.delete_investment)
+        delete_parser.set_defaults(function=InvestmentServices.delete)
         delete_parser.add_argument(**account_definition)
         delete_parser.add_argument('--ID', **investment_id_definition, required=True)
 

@@ -3,6 +3,8 @@
 from datetime import datetime
 from unittest import TestCase, skipIf
 
+from dateutil.relativedelta import relativedelta
+
 from bank import settings
 from bank.cli import InvestmentParser
 from bank.system import Slurm
@@ -25,17 +27,29 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100')
 
         # Create an investment, splitting SUs over multiple repetitions 
-        self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100 --repeat 2')
-
-        # Create an investment, providing a custom start date
-        date = datetime.now().strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'create {settings.test_account} --SUs 100 --start {date}'
+            f'create {settings.test_account} --SUs 100 --num_inv 2')
+
+        # Create an investment, providing a custom start date
+        start_date = datetime.now()
+        start_date_str = start_date.strftime(settings.date_format)
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --SUs 100 --start {start_date_str}'
         )
 
-        # Create an investment, specifying a custom duration
-        self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100 --duration 6')
+        # Create an investment, specifying a custom end date
+        end_date = start_date + relativedelta(months=6)
+        end_date_str = end_date.strftime(settings.date_format)
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --SUs 100 --end {end_date_str}')
+
+        # Create an investment, specifying a custom start and date
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --SUs 100 --start {start_date_str} --end {end_date_str}')
 
     def test_delete_investment(self) -> None:
         """Test the parsing of arguments by the ``delete`` command"""
@@ -59,7 +73,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         self.assert_parser_matches_func_signature(self.parser, f'subtract_sus {settings.test_account} --SUs 100')
 
         # Remove SUs from a specific investment
-        self.assert_parser_matches_func_signature(self.parser, f'subtract {settings.test_account} --ID 0 --SUs 100')
+        self.assert_parser_matches_func_signature(self.parser, f'subtract_sus {settings.test_account} --ID 0 --SUs 100')
 
     def test_modify_date(self) -> None:
         """Test the parsing of arguments by the ``modify_date`` command"""
