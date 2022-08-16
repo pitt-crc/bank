@@ -8,11 +8,11 @@ API Reference
 from __future__ import annotations
 
 from datetime import date, timedelta
-from dateutil.relativedelta import relativedelta
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
 
+from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
 
@@ -141,7 +141,7 @@ class ProposalServices:
 
             session.add(account)
             session.commit()
-            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+            LOG.info('Created proposal %d for %s', new_proposal.id, self._account_name)
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
@@ -160,7 +160,7 @@ class ProposalServices:
             session.execute(delete(Proposal).where(Proposal.id == pid))
             session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
-            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
+            LOG.info('Deleted proposal %d for %s', pid, self._account_name)
 
     def modify_proposal(
             self,
@@ -313,7 +313,6 @@ class InvestmentServices:
 
         return inv_id
 
-
     def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
@@ -343,7 +342,12 @@ class InvestmentServices:
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 12, disbursements: int = 1) -> None:
+    def create_investment(
+        self,
+        sus: int,
+        start: date = date.today(),
+        duration: int = 12,
+        disbursements: int = 1) -> None:
         """Add new investment(s) to the given account
 
         ``disbursements`` reflects the number of investments the investment total should be split into.
@@ -388,11 +392,15 @@ class InvestmentServices:
                 account = session.execute(select(Account).where(Account.name == self._account_name)).scalars().first()
                 account.investments.append(new_investment)
                 session.add(account)
-                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
+                LOG.debug(
+                    'Inserting investment %d for %s with %d service units',
+                    new_investment.id,
+                    self._account_name,
+                    sus)
 
                 session.commit()
 
-            LOG.info(f"Invested {sus} service units for account {self._account_name}")
+            LOG.info('Invested %d service units for account %s', sus, self._account_name)
 
     def delete_investment(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
@@ -408,7 +416,7 @@ class InvestmentServices:
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
-            LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
+            LOG.info('Deleted investment %d for %s', inv_id, self._account_name)
 
     def modify_date(
             self,
@@ -444,7 +452,6 @@ class InvestmentServices:
 
             session.commit()
 
-
     def add_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Add service units to the given investment
 
@@ -468,7 +475,11 @@ class InvestmentServices:
             investment.current_sus += sus
 
             session.commit()
-            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+            LOG.info(
+                'Added %d service units to investment %d for account %s',
+                sus,
+                investment.id,
+                self._account_name)
 
     def subtract_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Subtract service units from the given investment
@@ -490,13 +501,17 @@ class InvestmentServices:
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             if investment.current_sus < sus:
-                raise ValueError(f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
+                raise ValueError(
+                    f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
             investment.current_sus -= sus
 
             session.commit()
-            LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
+            LOG.info(
+                'Removed %d service units from investment %d for account %s',
+                sus,
+                investment.id, self._account_name)
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
@@ -506,14 +521,12 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+        inv_id = self._get_active_inv_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
             # Find the investment to add service units into
-            active_investment_query = select(Investment).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(Investment.is_active)
-
+            active_investment_query = select(Investment).where(Investment.id == inv_id)
             active_investment = session.execute(active_investment_query).scalars().first()
             if not active_investment:
                 raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
@@ -527,19 +540,20 @@ class InvestmentServices:
 
             usable_investments = session.execute(usable_investment_query).scalars().all()
             if not usable_investments:
-                raise MissingInvestmentError(f'Account has no investments to adv ance service units from.')
+                raise MissingInvestmentError(f'Account has no investments to advance service units from.')
 
             # Make sure there are enough service units to cover the withdrawal
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in usable_investments)
             if sus > available_sus:
-                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
+                raise ValueError(
+                    f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from future investments into the current investment
             for investment in usable_investments:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
 
-                LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
+                LOG.info('Withdrawing %d service units from investment %d', to_withdraw, investment.id)
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 active_investment.current_sus += to_withdraw
@@ -551,7 +565,7 @@ class InvestmentServices:
 
             session.commit()
 
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+        LOG.info('Advanced %d service units for account %s', (requested_withdrawal - sus), self._account_name)
 
 
 class AccountServices:
@@ -647,9 +661,15 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table = PrettyTable(
+                fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
-                table.add_row([inv.service_units, inv.start_date.strftime(settings.date_format), inv.current_sus, inv.withdrawn_sus, inv.withdrawn_sus])
+                table.add_row([
+                    inv.service_units,
+                    inv.start_date.strftime(settings.date_format),
+                    inv.current_sus,
+                    inv.withdrawn_sus,
+                    inv.withdrawn_sus])
 
         return table
 
