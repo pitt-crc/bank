@@ -410,18 +410,16 @@ class InvestmentServices:
             session.commit()
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
-    def modify_investment(
+    def modify_date(
             self,
             inv_id: Optional[int] = None,
-            sus: Optional[int] = None,
             start: Optional[date] = None,
             end: Optional[date] = None
     ) -> None:
-        """Overwrite service units allocated to the given investment
+        """Overwrite the start or end date of a given investment
 
         Args:
-            inv_id: The id of the investment to change
-            sus: New number of service units to assign to the investment
+            inv_id: The id of the investment to change, default is the active investment
             start: Optionally set a new start date for the investment
             end: Optionally set a new end date for the investment
 
@@ -432,25 +430,19 @@ class InvestmentServices:
         inv_id = inv_id or self._get_active_inv_id()
         self._verify_investment_id(inv_id)
 
-        if sus:
-            self._verify_service_units(sus)
-
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
 
-            if sus is not None:
-                self._verify_service_units(sus)
-                investment.service_units = sus
-
             if start:
                 investment.start_date = start
+                LOG.info('Overwriting start date on investment %s for account %s', investment.id, self._account_name)
 
             if end:
                 investment.end_date = end
+                LOG.info('Overwriting end date on investment %s for account %s', investment.id, self._account_name)
 
             session.commit()
-            LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
     def add_sus(self, inv_id: int, sus: int) -> None:
         """Add service units to the given investment
