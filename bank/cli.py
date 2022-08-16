@@ -412,7 +412,7 @@ class InvestmentParser(BaseParser):
             'modify_date',
             help='Modify the start or end date of an existing investment'
         )
-        modify_date_parser.set_defaults(function=InvestmentServices.modify_investment)
+        modify_date_parser.set_defaults(function=InvestmentServices.modify_date)
         modify_date_parser.add_argument(**account_definition)
         modify_date_parser.add_argument('--ID', **investment_id_definition)
         modify_date_parser.add_argument(

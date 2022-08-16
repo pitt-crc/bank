@@ -371,11 +371,11 @@ class InvestmentServices:
 
         if not end:
             end = start + relativedelta(months=12)
-        if start < end:
-            raise ValueError('Argument ``start`` must be an earlier date than than ``end``')
+        if start > end:
+            raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
 
         if num_inv < 1:
-            raise ValueError('Argument ``repeat`` must be >= 1')
+            raise ValueError(f'Argument num_inv: {num_inv} must be >= 1')
 
         # Calculate number of service units per each investment
         duration = relativedelta(end,start)
@@ -444,10 +444,10 @@ class InvestmentServices:
         """
 
         # Validate Arguments
-        if not start or end:
-            raise ValueError('``modify_date`` requires either a new ``start`` or new ``end`` date')
+        if not (start or end):
+            raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
         if (start and end) and start > end:
-            raise ValueError('``start`` needs to be a date before ``end``')
+            raise ValueError(f'start: {start} needs to be a date before end: {end}')
 
         inv_id = inv_id or self._get_active_investment_id()
 
@@ -460,10 +460,10 @@ class InvestmentServices:
             # Validate provided start/end against DB entries
             if (start and not end) and start > investment.end_date:
                 raise ValueError(
-                    f'If providing ``start`` alone, it needs to be earlier than the current end date: {investment.end_date}')
+                    f'If providing start alone, it needs to be earlier than the current end date: {investment.end_date}')
             if (end and not start) and end < investment.start_date:
                 raise ValueError(
-                    f'If providing ``end`` alone, it needs to be later than the current start date: {investment.start_date}')
+                    f'If providing end alone, it needs to be later than the current start date: {investment.start_date}')
 
             # Make provided changes
             if start:
