@@ -345,11 +345,11 @@ class InvestmentServices:
         if sus <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(
+    def create(
         self,
         sus: int,
         start: Optional[date] = date.today(),
-        end: Optional[date] = start + relativedelta(months=12),
+        end: Optional[date] = None,
         num_inv: Optional[int] = 1) -> None:
         """Add a new investment or series of investments to the given account
 
@@ -369,6 +369,8 @@ class InvestmentServices:
         # Validate arguments
         self._verify_service_units(sus)
 
+        if not end:
+            end = start + relativedelta(months=12)
         if start < end:
             raise ValueError('Argument ``start`` must be an earlier date than than ``end``')
 
@@ -408,7 +410,7 @@ class InvestmentServices:
 
             LOG.info('Invested %d service units for account %s', sus, self._account_name)
 
-    def delete_investment(self, inv_id: int) -> None:
+    def delete(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
 
         Args:
