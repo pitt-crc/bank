@@ -179,7 +179,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
         """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
-             .where(Account.name == settings.test_account) \
+            .where(Account.name == settings.test_account) \
             .order_by(Investment.start_date.desc())
 
         with DBConnection.session() as session:
@@ -204,7 +204,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
         """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
-             .where(Account.name == settings.test_account) \
+            .where(Account.name == settings.test_account) \
             .order_by(Investment.start_date.desc())
 
         with DBConnection.session() as session:
