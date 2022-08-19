@@ -29,7 +29,7 @@ class ProposalServices:
 
     def __init__(self, account_name: str) -> None:
         """Administrate proposal data for the given user account
-
+        
         Args:
             account_name: The name of the account to administrate
         """
@@ -38,7 +38,7 @@ class ProposalServices:
 
     def _get_active_pid(self) -> None:
         """Return the active proposal ID for the current account
-
+        
         Raises:
             MissingProposalError: If no active proposal is found
         """
@@ -58,10 +58,9 @@ class ProposalServices:
 
     def _verify_proposal_id(self, pid: int) -> None:
         """Raise an error if a given ID does not belong to the current account
-
+        
         Args:
             pid: The ID of a proposal
-
         Raises:
             MissingProposalError: If the proposal ID does not match the current account
         """
@@ -72,18 +71,17 @@ class ProposalServices:
                 raise MissingProposalError(f'Account `{self._account_name}` has no proposal with ID {pid}.')
 
     @staticmethod
-    def _verify_cluster_values(**kwargs: int) -> None:
+    def _verify_cluster_values(**clusters_sus: int) -> None:
         """Raise an error if given cluster names or service units are invalid
-
+        
         Args:
-            **kwargs: Service units for each cluster
-
+            **clusters_sus: Service units for each cluster
         Raises:
             ValueError: If a cluster name is not defined in settings
             ValueError: If service units are negative
         """
 
-        for cluster, sus in kwargs.items():
+        for cluster, sus in clusters_sus.items():
             if cluster not in settings.clusters:
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
@@ -93,21 +91,23 @@ class ProposalServices:
     def create_proposal(
             self,
             start: date = date.today(),
-            duration: int = 365,
-            **kwargs: int
+            duration_days: int = 365,
+            all_clusters: bool,
+            **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
-
+        
         Args:
             type: The type of the proposal
             start: The start date of the proposal
-            duration: How many days before the proposal expires
-            **kwargs: Service units to allocate to each cluster
+            duration_days: How many days before the proposal expires
+            all_clusters: SUs requested on all clusters
+            **clusters_sus: Service units to allocate to each cluster
         """
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            last_active_day = start + timedelta(days=duration - 1)
+            last_active_day = start + timedelta(days=duration_days - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
@@ -126,9 +126,9 @@ class ProposalServices:
             new_proposal = Proposal(
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration),
+                end_date=start + timedelta(days=duration_days),
                 allocations=[
-                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
+                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in clusters_sus.items()
                 ]
             )
 
@@ -143,10 +143,9 @@ class ProposalServices:
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
-
+        
         Args:
             pid: ID of the proposal to delete (Defaults to currently active proposal)
-
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
@@ -165,25 +164,32 @@ class ProposalServices:
             pid: Optional[int] = None,
             start: Optional[date] = None,
             end: Optional[date] = None,
-            **kwargs: Union[int, date]
+            **clusters_sus: int
     ) -> None:
         """Overwrite the properties of an account proposal
-
+        
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             type: Optionally change the type of the proposal
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
-            **kwargs: New service unit values to assign for each cluster
-
+            **clusters_sus: New service unit values to assign for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
+            ValueError: If neither a start date or end date are provided, and if provided start/end dates are not in
+            chronological order with amongst themselves or with the existing DB values.
         """
 
         pid = pid or self._get_active_pid()
         self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        self._verify_cluster_values(**clusters_sus)
 
+        # Validate start and end times
+        if not (start or end):
+            raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
+        if (start and end) and start > end:
+            raise ValueError(f'start: {start} needs to be a date before end: {end}')
+        
         with DBConnection.session() as session:
             # Get default proposal values
             query = select(Proposal).where(Proposal.id == pid)
@@ -216,58 +222,58 @@ class ProposalServices:
             proposal.start_date = start
             proposal.end_date = end
             for allocation in proposal.allocations:
-                allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
+                allocation.service_units = clusters_sus.get(allocation.cluster_name, allocation.service_units)
 
             session.commit()
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
 
-    def add_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+    def add_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
         """Add service units to an account proposal
-
+        
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            **kwargs: Service units to add for each cluster
-
+            all_clusters: Specifies if all clusters are affected
+            **clusters_sus: Service units to add for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
         pid = pid or self._get_active_pid()
         self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        self._verify_cluster_values(**clusters_sus)
 
         query = select(Allocation).join(Proposal).where(Proposal.id == pid)
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units += kwargs.get(allocation.cluster_name, 0)
+                allocation.service_units += clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {kwargs}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {clusters_sus}")
 
-    def subtract_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+    def subtract_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
         """Subtract service units from an account proposal
-
+        
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            **kwargs: Service units to subtract from each cluster
-
+            all_clusters: Specifies if all clusters are affected
+            **clusters_sus: Service units to add for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
         pid = pid or self._get_active_pid()
         self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        self._verify_cluster_values(**clusters_sus)
 
         query = select(Allocation).join(Proposal).where(Proposal.id == pid)
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
+                allocation.service_units -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {kwargs}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {clusters_sus}")
 
 
 class InvestmentServices:
