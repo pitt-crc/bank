@@ -5,14 +5,14 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-CURRENT_DIR = Path(__file__).resolve().parent
-PACKAGE_REQUIREMENTS = CURRENT_DIR / 'requirements.txt'
-DOCUMENTATION_REQUIREMENTS = CURRENT_DIR / 'docs' / 'requirements.txt'
-INIT_PATH = CURRENT_DIR / 'bank' / '__init__.py'
-README_PATH = CURRENT_DIR / 'README.md'
+_current_dir = Path(__file__).resolve().parent
+_requirements_path = _current_dir / 'requirements.txt'
+_doc_requirements_path = _current_dir / 'docs' / 'requirements.txt'
+_init_path = _current_dir / 'bank' / '__init__.py'
+_readme_path = _current_dir / 'README.md'
 
 
-def get_long_description(readme_file=README_PATH):
+def get_long_description(readme_file=_readme_path):
     """Return a long description of tha parent package"""
 
     return readme_file.read_text()
@@ -25,7 +25,7 @@ def get_requirements(path):
         return req_file.read().splitlines()
 
 
-def get_init_variable(variable, init_path=INIT_PATH):
+def get_init_variable(variable, init_path=_init_path):
     """Return package version from the init file"""
 
     init_text = init_path.read_text()
@@ -43,9 +43,9 @@ setup(
         [console_scripts]
         crc-bank=bank.cli:CommandLineApplication.execute
     """,
-    install_requires=get_requirements(PACKAGE_REQUIREMENTS),
+    install_requires=get_requirements(_requirements_path),
     extras_require={
-        'docs': get_requirements(DOCUMENTATION_REQUIREMENTS),
+        'docs': get_requirements(_doc_requirements_path),
         'tests': ['coverage'],
     },
     author=get_init_variable('__author__'),
