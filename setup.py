@@ -25,28 +25,18 @@ def get_requirements(path):
         return req_file.read().splitlines()
 
 
-def get_meta(init_path=INIT_PATH):
-    """Return package author, version, and license from the init file"""
+def get_init_variable(variable, init_path=INIT_PATH):
+    """Return package version from the init file"""
 
     init_text = init_path.read_text()
-
-    version_regex = re.compile("__version__ = '(.*?)'")
-    version = version_regex.findall(init_text)[0]
-
-    author_regex = re.compile("__author__ = '(.*?)'")
-    author = author_regex.findall(init_text)[0]
-
-    license_regex = re.compile("__license__ = '(.*?)'")
-    license_type = license_regex.findall(init_text)[0]
-
-    return author, version, license_type
+    version_regex = re.compile(f"{variable} = '(.*?)'")
+    return version_regex.findall(init_text)[0]
 
 
-_author, _version, _license_type = get_meta()
 setup(
     name='crc-bank',
     description='Banking application for resource allocation in Slurm based HPC systems.',
-    version=_version,
+    version=get_init_variable('__version__'),
     packages=find_packages(),
     python_requires='>=3.7',
     entry_points="""
@@ -58,12 +48,11 @@ setup(
         'docs': get_requirements(DOCUMENTATION_REQUIREMENTS),
         'tests': ['coverage'],
     },
-    author=_author,
-    maintainer=_author,
+    author=get_init_variable('__author__'),
     keywords='pitt,crc,hpc,banking,slurm',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    license=_license_type,
+    license=get_init_variable('__license__'),
     classifiers=[
         'Intended Audience :: System Administrators',
         'Natural Language :: English',
