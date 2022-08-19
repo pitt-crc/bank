@@ -29,7 +29,7 @@ class ProposalServices:
 
     def __init__(self, account_name: str) -> None:
         """Administrate proposal data for the given user account
-        
+    
         Args:
             account_name: The name of the account to administrate
         """
@@ -187,7 +187,7 @@ class ProposalServices:
         # Validate start and end times
         if not (start or end):
             raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
-        if (start and end) and start > end:
+        if (start and end) and start >= end:
             raise ValueError(f'start: {start} needs to be a date before end: {end}')
         
         with DBConnection.session() as session:
