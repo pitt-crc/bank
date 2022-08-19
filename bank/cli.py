@@ -60,7 +60,6 @@ from datetime import datetime
 from typing import Type
 
 from . import settings
-from .exceptions import BadDateFormatError
 from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 from .system.slurm import Slurm
 
@@ -97,12 +96,19 @@ class BaseParser(ArgumentParser):
     @staticmethod
     def valid_date(date_string: str) -> datetime.date():
         """Print a useful error if the user provided date does not conform to `settings.date_format`."""
-        try:
-            date = datetime.strptime(date_string, settings.date_format).date()
-        except ValueError:
-            raise BadDateFormatError(f'The provided date {date_string} is not in the correct format.')
+
+        date = datetime.strptime(date_string, settings.date_format).date()
 
         return date
+
+    @staticmethod
+    def non_negative_int(number: int) -> int:
+        """Print an error if a negative integer is supplied to applicable arguments."""
+
+        if number < 0:
+            raise ValueError("The value provided can not be negative")
+
+        return number
 
     @classmethod
     @abc.abstractmethod
@@ -348,13 +354,13 @@ class InvestmentParser(BaseParser):
         investment_id_definition = dict(
             dest='inv_id',
             metavar='investment_ID',
-            type=int,
+            type=cls.non_negative_int,
             help='The investment proposal ID number'
         )
         service_unit_definition = dict(
             dest='sus',
             metavar='service_units',
-            type=int,
+            type=cls.non_negative_int,
             required=True,
             help='The number of SUs to process'
         )
@@ -367,14 +373,14 @@ class InvestmentParser(BaseParser):
         create_parser.add_argument(
             '--num_inv',
             metavar='N',
-            type=lambda N: (int(N) > 0) and int(N),
+            type=cls.non_negative_int,
             default=5,
             help='Divide the service units across N sequential investments'
         )
         create_parser.add_argument(
             '--start',
-            metavar=f'{settings.date_format}',
-            type=lambda date: cls.valid_date(date),
+            metavar='DATE',
+            type=cls.valid_date,
             default=datetime.today(),
             help=(
                 'Start date for the investment, '
@@ -383,8 +389,8 @@ class InvestmentParser(BaseParser):
         )
         create_parser.add_argument(
             '--end',
-            metavar=f'{settings.date_format}',
-            type=lambda date: cls.valid_date(date),
+            metavar='DATE',
+            type=cls.valid_date,
             help=('The expiration date of the investment / first investment in a series. The default is a year '
                   'from the start date')
         )
@@ -422,7 +428,8 @@ class InvestmentParser(BaseParser):
         modify_date_parser.add_argument('--ID', **investment_id_definition)
         modify_date_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar='DATE',
+            type=cls.valid_date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -430,7 +437,8 @@ class InvestmentParser(BaseParser):
         )
         modify_date_parser.add_argument(
             '--end',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar='DATE',
+            type=cls.valid_date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'

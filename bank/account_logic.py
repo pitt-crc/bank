@@ -304,7 +304,7 @@ class InvestmentServices:
 
         with DBConnection.session() as session:
 
-        # Determine the active investment ID
+            # Determine the active investment ID
             active_inv_id_query = select(Investment.id) \
                 .join(Account) \
                 .where(Account.name == self._account_name) \
@@ -370,7 +370,7 @@ class InvestmentServices:
 
         if not end:
             end = start + relativedelta(months=12)
-        if start > end:
+        if start >= end:
             raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
 
         if num_inv < 1:
@@ -440,8 +440,10 @@ class InvestmentServices:
 
         # Validate Arguments
         if not (start or end):
-            raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
-        if (start and end) and start > end:
+            print('No start or end provided, nothing changed')
+            return
+
+        if (start and end) and start >= end:
             raise ValueError(f'start: {start} needs to be a date before end: {end}')
 
         inv_id = inv_id or self._get_active_investment_id()
