@@ -5,14 +5,16 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-PACKAGE_REQUIREMENTS = Path(__file__).parent / 'requirements.txt'
-DOCUMENTATION_REQUIREMENTS = Path(__file__).parent / 'docs' / 'requirements.txt'
+_current_dir = Path(__file__).resolve().parent
+_requirements_path = _current_dir / 'requirements.txt'
+_doc_requirements_path = _current_dir / 'docs' / 'requirements.txt'
+_init_path = _current_dir / 'bank' / '__init__.py'
+_readme_path = _current_dir / 'README.md'
 
 
-def get_long_description():
+def get_long_description(readme_file=_readme_path):
     """Return a long description of tha parent package"""
 
-    readme_file = Path(__file__).parent / 'README.md'
     return readme_file.read_text()
 
 
@@ -23,50 +25,41 @@ def get_requirements(path):
         return req_file.read().splitlines()
 
 
-def get_meta():
-    """Return package metadata including the:
-        - author
-        - version
-        - license
-    """
+def get_init_variable(variable, init_path=_init_path):
+    """Return package version from the init file"""
 
-    init_path = Path(__file__).resolve().parent / 'bank/__init__.py'
     init_text = init_path.read_text()
-
-    version_regex = re.compile("__version__ = '(.*?)'")
-    version = version_regex.findall(init_text)[0]
-
-    author_regex = re.compile("__author__ = '(.*?)'")
-    author = author_regex.findall(init_text)[0]
-
-    # license_regex = re.compile("__license__ = '(.*?)'")
-    # license_type = license_regex.findall(init_text)[0]
-
-    return author, version
+    version_regex = re.compile(f"{variable} = '(.*?)'")
+    return version_regex.findall(init_text)[0]
 
 
-_author, _version = get_meta()
 setup(
     name='crc-bank',
     description='Banking application for resource allocation in Slurm based HPC systems.',
-    version=_version,
+    version=get_init_variable('__version__'),
     packages=find_packages(),
     python_requires='>=3.7',
     entry_points="""
         [console_scripts]
         crc-bank=bank.cli:CommandLineApplication.execute
     """,
-    install_requires=get_requirements(PACKAGE_REQUIREMENTS),
+    install_requires=get_requirements(_requirements_path),
     extras_require={
-        'docs': get_requirements(DOCUMENTATION_REQUIREMENTS),
+        'docs': get_requirements(_doc_requirements_path),
         'tests': ['coverage'],
     },
-    author=_author,
-    keywords='Pitt, CRC, HPC',
+    author=get_init_variable('__author__'),
+    keywords='pitt,crc,hpc,banking,slurm',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    # license=_license_type,
+    license=get_init_variable('__license__'),
     classifiers=[
+        'Intended Audience :: System Administrators',
+        'Natural Language :: English',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Topic :: Scientific/Engineering',
+        'Topic :: System :: Systems Administration'
     ]
 )
