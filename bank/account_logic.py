@@ -140,7 +140,7 @@ class ProposalServices:
 
             session.add(account)
             session.commit()
-            LOG.info('Created proposal %d for %s', new_proposal.id, self._account_name)
+            LOG.info(f'Created proposal {new_proposal.id} for {self._account_name}')
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
@@ -159,7 +159,7 @@ class ProposalServices:
             session.execute(delete(Proposal).where(Proposal.id == pid))
             session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
-            LOG.info('Deleted proposal %d for %s', pid, self._account_name)
+            LOG.info(f'Deleted proposal {pid} for {self._account_name}')
 
     def modify_proposal(
             self,
@@ -399,15 +399,11 @@ class InvestmentServices:
                 account = session.execute(select(Account).where(Account.name == self._account_name)).scalars().first()
                 account.investments.append(new_investment)
                 session.add(account)
-                LOG.debug(
-                    'Inserting investment %d for %s with %d service units',
-                    new_investment.id,
-                    self._account_name,
-                    sus)
+                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
 
                 session.commit()
 
-            LOG.info('Invested %d service units for account %s', sus, self._account_name)
+            LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
     def delete(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
@@ -426,7 +422,7 @@ class InvestmentServices:
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
-            LOG.info('Deleted investment %d for %s', inv_id, self._account_name)
+            LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
     def modify_date(self, inv_id: Optional[int] = None, start: Optional[date] = None, end: Optional[date] = None) -> None:
         """Overwrite the start or end date of a given investment
@@ -467,10 +463,10 @@ class InvestmentServices:
             # Make provided changes
             if start:
                 investment.start_date = start
-                LOG.info('Overwriting start date on investment %s for account %s', investment.id, self._account_name)
+                LOG.info(f"Overwriting start date on investment {investment.id} for account {self._account_name}")
             if end:
                 investment.end_date = end
-                LOG.info('Overwriting end date on investment %s for account %s', investment.id, self._account_name)
+                LOG.info(f"Overwriting end date on investment {investment.id} for account {self._account_name}")
 
             session.commit()
 
@@ -497,11 +493,7 @@ class InvestmentServices:
             investment.current_sus += sus
 
             session.commit()
-            LOG.info(
-                'Added %d service units to investment %d for account %s',
-                sus,
-                investment.id,
-                self._account_name)
+            LOG.info(f"Added {sus} service units to investment {investment.id} for account {self._account_name}")
 
     def subtract_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Subtract service units from the given investment
@@ -530,10 +522,7 @@ class InvestmentServices:
             investment.current_sus -= sus
 
             session.commit()
-            LOG.info(
-                'Removed %d service units from investment %d for account %s',
-                sus,
-                investment.id, self._account_name)
+            LOG.info(f"Removed {sus} service units from investment {investment.id} for account {self._account_name}")
 
     def advance(self, sus: int) -> None:
         """Withdraw service units from future investments
@@ -575,7 +564,7 @@ class InvestmentServices:
                 maximum_withdrawal = investment.service_units - investment.withdrawn_sus
                 to_withdraw = min(sus, maximum_withdrawal)
 
-                LOG.info('Withdrawing %d service units from investment %d', to_withdraw, investment.id)
+                LOG.info(f"Withdrawing {to_withdraw} service units from investment {investment.id}")
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 active_investment.current_sus += to_withdraw
@@ -587,7 +576,7 @@ class InvestmentServices:
 
             session.commit()
 
-        LOG.info('Advanced %d service units for account %s', (requested_withdrawal - sus), self._account_name)
+        LOG.info(f"Advanced {(requested_withdrawal - sus)} service units for account {self._account_name}")
 
 
 class AccountServices:
