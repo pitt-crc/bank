@@ -12,12 +12,12 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - test-env-ubi8-slurm-20-11-9-1-python38
-          - test-env-ubi8-slurm-20-11-9-1-python39
-          - test-env-ubi8-slurm-20-02-5-1-python38
-          - test-env-ubi8-slurm-20-02-5-1-python39
-          - test-env-ubi8-slurm-22-05-2-1-python38
-          - test-env-ubi8-slurm-22-05-2-1-python39
+          - test-env-rocky8-slurm-20-11-9-1-python38
+          - test-env-rocky8-slurm-20-11-9-1-python39
+          - test-env-rocky8-slurm-20-02-5-1-python38
+          - test-env-rocky8-slurm-20-02-5-1-python39
+          - test-env-rocky8-slurm-22-05-2-1-python38
+          - test-env-rocky8-slurm-22-05-2-1-python39
 
     container:
       image: ghcr.io/pitt-crc/${{ matrix.container }}
