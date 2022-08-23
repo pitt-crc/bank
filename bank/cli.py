@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import abc
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from datetime import datetime
 from typing import Type
 
@@ -96,7 +96,6 @@ class BaseParser(ArgumentParser):
     @staticmethod
     def valid_date(date_string: str) -> datetime.date():
         """Print a useful error if the user provided date does not conform to `settings.date_format`."""
-
         date = datetime.strptime(date_string, settings.date_format).date()
 
         return date
@@ -105,8 +104,8 @@ class BaseParser(ArgumentParser):
     def non_negative_int(number: int) -> int:
         """Print an error if a negative integer is supplied to applicable arguments."""
 
-        if number < 0:
-            raise ValueError("The value provided can not be negative")
+        if int(number) < 0:
+            raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
 
         return number
 
