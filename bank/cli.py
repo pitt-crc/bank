@@ -249,7 +249,7 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--start',
-            type=lambda date: datetime.strptime(date, settings.date_format).date(),
+            type=cls.valid_date,
             default=datetime.today(),
             help=(
                 'Start date for the proposal, '
@@ -290,7 +290,7 @@ class ProposalParser(BaseParser):
         modify_date_parser.add_argument(**account_definition)
         modify_date_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            type=cls.valid_date,
             help=(
                 'Set a new proposal start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -298,7 +298,7 @@ class ProposalParser(BaseParser):
         )
         modify_date_parser.add_argument(
             '--end',
-            type=lambda date: datetime.strptime(date, settings.date_format).date(),
+            type=cls.valid_date,
             help=(
                 'Set a new proposal end date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
