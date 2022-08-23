@@ -341,7 +341,7 @@ class InvestmentServices:
             ValueError: If service units are not positive
         """
 
-        if sus <= 0:
+        if int(sus) <= 0:
             raise ValueError('Service units must be greater than zero.')
 
     def create(
@@ -453,20 +453,20 @@ class InvestmentServices:
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
+            start = start or investment.start_date
+            end = end or investment.end_date
 
             # Validate provided start/end against DB entries
-            if (start and not end) and start > investment.end_date:
+            if start >= end:
                 raise ValueError(
-                    f'If providing start alone, it needs to be earlier than the current end date: {investment.end_date}')
-            if (end and not start) and end < investment.start_date:
-                raise ValueError(
-                    f'If providing end alone, it needs to be later than the current start date: {investment.start_date}')
+                    f'If providing start or end alone, they need to be values that make chronological sense: {start} >= {end}')
 
             # Make provided changes
-            if start:
+            if start != investment.start_date:
                 investment.start_date = start
                 LOG.info(f"Overwriting start date on investment {investment.id} for account {self._account_name}")
-            if end:
+
+            if end != investment.end_date:
                 investment.end_date = end
                 LOG.info(f"Overwriting end date on investment {investment.id} for account {self._account_name}")
 

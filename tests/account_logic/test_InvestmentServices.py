@@ -160,7 +160,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
 
         investment_query = select(Investment).join(Account) \
             .where(Account.name == settings.test_account) \
-            .order_by(Investment.start_date.desc())
+            .where(Investment.is_active)
 
         with DBConnection.session() as session:
             old_investment = session.execute(investment_query).scalars().first()
@@ -170,59 +170,79 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
 
         InvestmentServices(settings.test_account).modify_date(investment_id, start=new_start_date, end=new_end_date)
 
+        investment_query = select(Investment).join(Account) \
+            .where(Account.name == settings.test_account) \
+            .where(Investment.id == investment_id)
+
         with DBConnection.session() as session:
             new_investment = session.execute(investment_query).scalars().first()
             self.assertEqual(new_start_date, new_investment.start_date)
             self.assertEqual(new_end_date, new_investment.end_date)
 
     def test_error_on_bad_dates(self) -> None:
-        """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
+        """Test a ``ValueError`` is raised when assigning chronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
             .where(Account.name == settings.test_account) \
-            .order_by(Investment.start_date.desc())
+            .where(Investment.is_active)
 
         with DBConnection.session() as session:
             old_investment = session.execute(investment_query).scalars().first()
 
-            bad_start_date = old_investment.end_date + timedelta(days=1)
-            bad_end_date = old_investment.start_date - timedelta(days=1)
+            start_date = old_investment.start_date
+            end_date = old_investment.end_date
+            bad_start_date = end_date + timedelta(days=1)
+            bad_end_date = start_date - timedelta(days=1)
 
         # No start or end date
-        with self.assertRaises(ValueError):
+        self.assertFalse(
             InvestmentServices(settings.test_account).modify_date()
+        )
 
         # Start date after end date
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_account).modify_date(bad_start_date)
+            InvestmentServices(settings.test_account).modify_date(start=bad_start_date, end=end_date)
 
-        # End date before start date
+        # Start date after end date, providing start date alone
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_account).modify_date(bad_end_date)
+            InvestmentServices(settings.test_account).modify_date(start=bad_start_date)
+
+        # End date before start date, providing end date alone
+        with self.assertRaises(ValueError):
+            InvestmentServices(settings.test_account).modify_date(end=bad_end_date)
+
 
     def test_error_on_bad_dates_with_id(self) -> None:
         """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
             .where(Account.name == settings.test_account) \
-            .order_by(Investment.start_date.desc())
+            .where(Investment.is_active)
 
         with DBConnection.session() as session:
             investment = session.execute(investment_query).scalars().first()
             investment_id = investment.id
+            start_date = investment.start_date
+            end_date = investment.end_date
+            bad_start_date = end_date + timedelta(days=1)
+            bad_end_date = start_date - timedelta(days=1)
 
-        with self.assertRaises(ValueError):
+        # Attempt to modify date without specifying a date
+        self.assertFalse(
             InvestmentServices(settings.test_account).modify_date(investment_id)
+        )
 
+        # Start date after end date
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).modify_date(
                 investment_id,
-                start=investment.end_date + timedelta(days=1))
+                bad_start_date, end_date)
 
+        # End date before start date
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).modify_date(
                 investment_id,
-                end=investment.start_date - timedelta(days=1))
+                start_date, bad_end_date)
 
 
 class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
