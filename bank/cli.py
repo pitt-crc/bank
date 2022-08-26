@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import abc
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from datetime import datetime
 from typing import Type
 
@@ -93,13 +93,29 @@ class BaseParser(ArgumentParser):
         else:
             super().error(message)
 
+    @staticmethod
+    def valid_date(date_string: str) -> datetime.date():
+        """Print a useful error if the user provided date does not conform to `settings.date_format`."""
+        date = datetime.strptime(date_string, settings.date_format).date()
+
+        return date
+
+    @staticmethod
+    def non_negative_int(number: int) -> int:
+        """Print an error if a negative integer is supplied to applicable arguments."""
+
+        if int(number) < 0:
+            raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
+
+        return number
+
     @classmethod
     @abc.abstractmethod
     def define_interface(cls, parent_parser) -> None:
         """Define the commandline interface of the parent parser
 
-        Adds parsers and commandline arguments to the given subparser action. The ``parent_parser`` object is the
-        same object returned by the ``add_subparsers`` method.
+        Adds parsers and commandline arguments to the given subparser action.
+        The ``parent_parser`` object is the same object returned by the ``add_subparsers`` method.
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -217,6 +233,7 @@ class ProposalParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
+            type=ProposalServices,
             help='The parent slurm account'
         )
         proposal_id_definition = dict(
@@ -232,7 +249,7 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            type=cls.valid_date,
             default=datetime.today(),
             help=(
                 'Start date for the proposal, '
@@ -273,7 +290,7 @@ class ProposalParser(BaseParser):
         modify_date_parser.add_argument(**account_definition)
         modify_date_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            type=cls.valid_date,
             help=(
                 'Set a new proposal start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -281,7 +298,7 @@ class ProposalParser(BaseParser):
         )
         modify_date_parser.add_argument(
             '--end',
-            type=lambda date: datetime.strptime(date, settings.date_format).date(),
+            type=cls.valid_date,
             help=(
                 'Set a new proposal end date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -330,48 +347,56 @@ class InvestmentParser(BaseParser):
         account_definition = dict(
             dest='self',
             metavar='account',
+            type=InvestmentServices,
             help='The parent slurm account'
         )
         investment_id_definition = dict(
-            dest='investment_id',
+            dest='inv_id',
             metavar='investment_ID',
-            type=int,
+            type=cls.non_negative_int,
             help='The investment proposal ID number'
         )
         service_unit_definition = dict(
             dest='sus',
             metavar='service_units',
-            type=int,
+            type=cls.non_negative_int,
             required=True,
             help='The number of SUs to process'
         )
 
         # Investment Creation
         create_parser = parent_parser.add_parser('create', help='Create a new investment')
-        create_parser.set_defaults(function=InvestmentServices.create_investment)
+        create_parser.set_defaults(function=InvestmentServices.create)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument('--SUs', **service_unit_definition)
         create_parser.add_argument(
-            '--repeat',
-            metavar='REP',
-            type=int,
+            '--num_inv',
+            metavar='N',
+            type=cls.non_negative_int,
             default=5,
-            help='Divide the service units across REP sequential investments'
+            help='Divide the service units across N sequential investments'
         )
         create_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar='DATE',
+            type=cls.valid_date,
             default=datetime.today(),
             help=(
                 'Start date for the investment, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}, the default is today'
             )
         )
-        create_parser.add_argument('--duration', type=int, default=12, help='The length of each investment in months')
+        create_parser.add_argument(
+            '--end',
+            metavar='DATE',
+            type=cls.valid_date,
+            help=('The expiration date of the investment / first investment in a series. The default is a year '
+                  'from the start date')
+        )
 
         # Investment Deletion
         delete_parser = parent_parser.add_parser('delete', help='Delete an existing investment')
-        delete_parser.set_defaults(function=InvestmentServices.delete_investment)
+        delete_parser.set_defaults(function=InvestmentServices.delete)
         delete_parser.add_argument(**account_definition)
         delete_parser.add_argument('--ID', **investment_id_definition, required=True)
 
@@ -397,12 +422,13 @@ class InvestmentParser(BaseParser):
             'modify_date',
             help='Modify the start or end date of an existing investment'
         )
-        modify_date_parser.set_defaults(function=InvestmentServices.modify_investment)
+        modify_date_parser.set_defaults(function=InvestmentServices.modify_date)
         modify_date_parser.add_argument(**account_definition)
         modify_date_parser.add_argument('--ID', **investment_id_definition)
         modify_date_parser.add_argument(
             '--start',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar='DATE',
+            type=cls.valid_date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -410,7 +436,8 @@ class InvestmentParser(BaseParser):
         )
         modify_date_parser.add_argument(
             '--end',
-            type=(lambda date: datetime.strptime(date, settings.date_format).date()),
+            metavar='DATE',
+            type=cls.valid_date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
