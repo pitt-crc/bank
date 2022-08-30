@@ -98,10 +98,8 @@ class ProposalServices:
         """Create a new proposal for the account
         
         Args:
-            type: The type of the proposal
             start: The start date of the proposal
             duration_days: How many days before the proposal expires
-            all_clusters: SUs requested on all clusters
             **clusters_sus: Service units to allocate to each cluster
         """
 
@@ -139,7 +137,8 @@ class ProposalServices:
 
             session.add(account)
             session.commit()
-            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+
+        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
@@ -157,7 +156,8 @@ class ProposalServices:
             session.execute(delete(Proposal).where(Proposal.id == pid))
             session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
-            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
+
+        LOG.info(f"Deleted proposal {pid} for {self._account_name}")
 
     def modify_proposal(
             self,
@@ -225,7 +225,8 @@ class ProposalServices:
                 allocation.service_units = clusters_sus.get(allocation.cluster_name, allocation.service_units)
 
             session.commit()
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
+
+        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
 
     def add_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
         """Add service units to an account proposal
@@ -249,7 +250,8 @@ class ProposalServices:
                 allocation.service_units += clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {clusters_sus}")
+
+        LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {clusters_sus}")
 
     def subtract_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
         """Subtract service units from an account proposal
@@ -273,7 +275,8 @@ class ProposalServices:
                 allocation.service_units -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {clusters_sus}")
+
+        LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {clusters_sus}")
 
 
 class InvestmentServices:
