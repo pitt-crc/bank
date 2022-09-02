@@ -12,6 +12,7 @@ from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
 
+from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
 
@@ -29,7 +30,7 @@ class ProposalServices:
 
     def __init__(self, account_name: str) -> None:
         """Administrate proposal data for the given user account
-    
+
         Args:
             account_name: The name of the account to administrate
         """
@@ -38,7 +39,7 @@ class ProposalServices:
 
     def _get_active_pid(self) -> None:
         """Return the active proposal ID for the current account
-        
+
         Raises:
             MissingProposalError: If no active proposal is found
         """
@@ -58,9 +59,10 @@ class ProposalServices:
 
     def _verify_proposal_id(self, pid: int) -> None:
         """Raise an error if a given ID does not belong to the current account
-        
+
         Args:
             pid: The ID of a proposal
+
         Raises:
             MissingProposalError: If the proposal ID does not match the current account
         """
@@ -73,7 +75,7 @@ class ProposalServices:
     @staticmethod
     def _verify_cluster_values(**clusters_sus: int) -> None:
         """Raise an error if given cluster names or service units are invalid
-        
+
         Args:
             **clusters_sus: Service units for each cluster
         Raises:
@@ -95,7 +97,7 @@ class ProposalServices:
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
-        
+
         Args:
             start: The start date of the proposal
             duration_days: How many days before the proposal expires
@@ -141,9 +143,10 @@ class ProposalServices:
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
-        
+
         Args:
             pid: ID of the proposal to delete (Defaults to currently active proposal)
+
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
@@ -166,10 +169,9 @@ class ProposalServices:
             **clusters_sus: int
     ) -> None:
         """Overwrite the date of an account proposal
-        
+
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            type: Optionally change the type of the proposal
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
             **clusters_sus: New service unit values to assign for each cluster
@@ -188,7 +190,7 @@ class ProposalServices:
             raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
         if (start and end) and start >= end:
             raise ValueError(f'start: {start} needs to be a date before end: {end}')
-        
+
         with DBConnection.session() as session:
             # Get default proposal values
             query = select(Proposal).where(Proposal.id == pid)
@@ -229,7 +231,7 @@ class ProposalServices:
 
     def add_sus(self, pid: Optional[int] = None, **clusters_sus: int) -> None:
         """Add service units to an account proposal
-        
+
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             all_clusters: Specifies if all clusters are affected
@@ -254,7 +256,7 @@ class ProposalServices:
 
     def subtract_sus(self, pid: Optional[int] = None, **clusters_sus: int) -> None:
         """Subtract service units from an account proposal
-        
+
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             all_clusters: Specifies if all clusters are affected
@@ -282,22 +284,44 @@ class InvestmentServices:
     """Administrative tool for managing account Investments"""
 
     def __init__(self, account_name: str) -> None:
-        """Administrate investment data for the given user account
-
+        """Create or administrate investment data for the given Slurm account
         Args:
-            account_name: The name of the account to administrate
+            account_name: The name of the Slurm account to administrate
 
         Raises:
-            ValueError: If administrating an account for a class
+            MissingProposalError: If the account does not have an associated proposal
+            MissingInvestmentError: If the account does not have an active investment, and the operation being executed
+            is not trying to create one.
         """
 
         self._account_name = account_name
 
         with DBConnection.session() as session:
-            query = select(Proposal).join(Account).where(Account.name == account_name)
-            proposal = session.execute(query).scalars().first()
+            # Check if the Account has an associated proposal
+            proposal_query = select(Proposal).join(Account).where(Account.name == account_name)
+            proposal = session.execute(proposal_query).scalars().first()
             if proposal is None:
                 raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
+
+    def _get_active_investment_id(self) -> None:
+        """Return the active investment ID for the current account
+
+        Raises:
+            MissingInvestmentError: If no active investment is found
+        """
+
+        with DBConnection.session() as session:
+            # Determine the active investment ID
+            active_inv_id_query = select(Investment.id) \
+                .join(Account) \
+                .where(Account.name == self._account_name) \
+                .where(Investment.is_active)
+
+            active_inv_id = session.execute(active_inv_id_query).scalars().first()
+            if active_inv_id is None:
+                raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
+
+            return active_inv_id
 
     def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
@@ -309,7 +333,11 @@ class InvestmentServices:
             MissingInvestmentError: If the investment ID does not match the current account
         """
 
-        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.id == inv_id)
+        query = select(Investment) \
+            .join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Investment.id == inv_id)
+
         with DBConnection.session() as session:
             if session.execute(query).scalars().first() is None:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no investment with ID {inv_id}.')
@@ -325,38 +353,50 @@ class InvestmentServices:
             ValueError: If service units are not positive
         """
 
-        if sus <= 0:
+        if int(sus) <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
-        """Add a new investment(s) for the given account
-
-        ``num_inv`` reflects the number of investments to create. If the argument
-        is greater than one, repeating investments are created sequentially such
-        that a new investment begins as each investment ends. The ``start``
-        argument represents the start date of the first investment in the sequence.
-        The given number of service units (``sus``) are allocated equally across
-        each investment in the series.
+    def create(
+            self,
+            sus: int,
+            start: Optional[date] = date.today(),
+            end: Optional[date] = None,
+            num_inv: Optional[int] = 1) -> None:
+        """Add a new investment or series of investments to the given account
 
         Args:
-            sus: The number of service units to add
-            start: The start date of the proposal
-            duration: How many days before the investment expires
-            num_inv: Spread out the given service units equally across given number of instances
+            sus: The total number of service units to be added to the investment, or split equally across multiple
+            investments with ``num_inv``
+            start: The start date of the investment, or first in the sequence of investments, defaulting to today
+            end: The expiration date of the investment, or first in the sequence of investments, defaulting to 12 months
+            from ``start``
+            num_inv: Divide ``sus`` equally across a number of sequential investments
+
+        Raises:
+            ValueError: If the SUs provided are less than 0, if the start date is later than the end date, or if the
+            number of investments is less than 1.
         """
 
+        # Validate arguments
         self._verify_service_units(sus)
+
+        if not end:
+            end = start + relativedelta(months=12)
+        if start >= end:
+            raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
+
         if num_inv < 1:
-            raise ValueError('Argument ``repeat`` must be >= 1')
+            raise ValueError(f'Argument num_inv: {num_inv} must be >= 1')
 
         # Calculate number of service units per each investment
-        duration = timedelta(days=duration)
+        duration = relativedelta(end, start)
         sus_per_instance = ceil(sus / num_inv)
 
         with DBConnection.session() as session:
             for i in range(num_inv):
-                start_this = start + i * duration
-                end_this = start + (i + 1) * duration
+                # Determine the start and end of the current disbursement
+                start_this = start + (i * duration)
+                end_this = start_this + duration
 
                 new_investment = Investment(
                     start_date=start_this,
@@ -377,7 +417,7 @@ class InvestmentServices:
 
                 LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
-    def delete_investment(self, inv_id: int) -> None:
+    def delete(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
 
         Args:
@@ -387,59 +427,69 @@ class InvestmentServices:
             MissingInvestmentError: If the given ID does not match the current account
         """
 
+        # Validate Arguments
         self._verify_investment_id(inv_id)
+
+        # Delete the investment with the provided ID
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
 
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
-    def modify_investment(
+    def modify_date(
             self,
-            inv_id: int,
-            sus: Optional[int] = None,
+            inv_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None
-    ) -> None:
-        """Overwrite service units allocated to the given investment
+            end: Optional[date] = None) -> None:
+        """Overwrite the start or end date of a given investment
 
         Args:
-            inv_id: The id of the investment to change
-            sus: New number of service units to assign to the investment
+            inv_id: The ID of the investment to change, default is the active investment ID
             start: Optionally set a new start date for the investment
             end: Optionally set a new end date for the investment
 
         Raises:
-            MissingInvestmentError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have an investment
+            ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
+            chronological order with amongst themselves or with the existing DB values.
         """
 
+        inv_id = inv_id or self._get_active_investment_id()
+
         self._verify_investment_id(inv_id)
-        if sus:
-            self._verify_service_units(sus)
 
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
+            start = start or investment.start_date
+            end = end or investment.end_date
 
-            if sus is not None:
-                self._verify_service_units(sus)
-                investment.service_units = sus
+            # Validate provided start/end against DB entries
+            if start >= end:
+                raise ValueError(
+                    f'Start and end dates need to be in proper chronological order: {start} >= {end}. If providing '
+                    'start or end alone, this comparison is between the provided date and the investment\'s existing '
+                    'value')
 
-            if start:
+            # Make provided changes
+            if start != investment.start_date:
                 investment.start_date = start
+                LOG.info(f"Overwriting start date on investment {investment.id} for account {self._account_name}")
 
-            if end:
+            if end != investment.end_date:
                 investment.end_date = end
+                LOG.info(f"Overwriting end date on investment {investment.id} for account {self._account_name}")
 
             session.commit()
 
             LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
-    def add_sus(self, inv_id: int, sus: int) -> None:
+    def add_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Add service units to the given investment
 
         Args:
-            inv_id: The id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to add
 
         Raises:
@@ -447,6 +497,8 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
@@ -457,13 +509,13 @@ class InvestmentServices:
 
             session.commit()
 
-            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
+            LOG.info(f"Added {sus} service units to investment {investment.id} for account {self._account_name}")
 
-    def subtract_sus(self, inv_id: int, sus: int) -> None:
+    def subtract_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Subtract service units from the given investment
 
         Args:
-            inv_id: The inv_id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to remove
 
         Raises:
@@ -471,13 +523,16 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             if investment.current_sus < sus:
-                raise ValueError(f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
+                raise ValueError(
+                    f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
             investment.current_sus -= sus
@@ -494,14 +549,12 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+        inv_id = self._get_active_investment_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
             # Find the investment to add service units into
-            active_investment_query = select(Investment).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(Investment.is_active)
-
+            active_investment_query = select(Investment).where(Investment.id == inv_id)
             active_investment = session.execute(active_investment_query).scalars().first()
             if not active_investment:
                 raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
@@ -509,18 +562,19 @@ class InvestmentServices:
             # Find investments to take service units out of
             usable_investment_query = select(Investment).join(Account) \
                 .where(Account.name == self._account_name) \
-                .where(not Investment.is_expired == False) \
+                .where(Investment.is_expired is not False) \
                 .where(Investment.id != active_investment.id) \
                 .order_by(Investment.start_date.desc())
 
             usable_investments = session.execute(usable_investment_query).scalars().all()
             if not usable_investments:
-                raise MissingInvestmentError(f'Account has no investments to adv ance service units from.')
+                raise MissingInvestmentError(f'Account has no investments to advance service units from.')
 
             # Make sure there are enough service units to cover the withdrawal
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in usable_investments)
             if sus > available_sus:
-                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
+                raise ValueError(
+                    f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from future investments into the current investment
             for investment in usable_investments:
@@ -540,7 +594,8 @@ class InvestmentServices:
 
             session.commit()
 
-            LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+            LOG.info(f"Advanced {(requested_withdrawal - sus)} service units for account {self._account_name}")
+
 
 
 class AccountServices:
@@ -636,13 +691,19 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table = PrettyTable(
+                fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
-                table.add_row([inv.service_units, inv.start_date.strftime(settings.date_format), inv.current_sus, inv.withdrawn_sus, inv.withdrawn_sus])
+                table.add_row([
+                    inv.service_units,
+                    inv.start_date.strftime(settings.date_format),
+                    inv.current_sus,
+                    inv.withdrawn_sus,
+                    inv.withdrawn_sus])
 
         return table
 
-    def print_info(self) -> None:
+    def info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         try:
