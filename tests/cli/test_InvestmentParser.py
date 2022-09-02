@@ -1,6 +1,5 @@
 """Tests for the ``InvestmentParser`` class"""
 
-from argparse import ArgumentError, ArgumentTypeError
 from datetime import datetime
 from unittest import TestCase, skipIf
 
@@ -27,7 +26,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Create an investment, providing only required arguments
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100')
 
-        # Create an investment, providing a negative SU ammount
+        # Create an investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs -100')
 
@@ -36,7 +35,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
             self.parser,
             f'create {settings.test_account} --SUs 100 --num_inv 2')
 
-        # Create an investment, providing a negative num_inv ammount
+        # Create an investment, providing a negative num_inv amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
