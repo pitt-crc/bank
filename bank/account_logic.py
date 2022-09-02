@@ -92,7 +92,6 @@ class ProposalServices:
             self,
             start: date = date.today(),
             duration_days: int = 365,
-            all_clusters: bool,
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
@@ -138,7 +137,7 @@ class ProposalServices:
             session.add(account)
             session.commit()
 
-        LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
+            LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
     def delete_proposal(self, pid: Optional[int] = None) -> None:
         """Delete a proposal from the current account
@@ -157,16 +156,16 @@ class ProposalServices:
             session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
             session.commit()
 
-        LOG.info(f"Deleted proposal {pid} for {self._account_name}")
+            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
 
-    def modify_proposal(
+    def modify_date(
             self,
             pid: Optional[int] = None,
             start: Optional[date] = None,
             end: Optional[date] = None,
             **clusters_sus: int
     ) -> None:
-        """Overwrite the properties of an account proposal
+        """Overwrite the date of an account proposal
         
         Args:
             pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
@@ -226,9 +225,9 @@ class ProposalServices:
 
             session.commit()
 
-        LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
 
-    def add_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
+    def add_sus(self, pid: Optional[int] = None, **clusters_sus: int) -> None:
         """Add service units to an account proposal
         
         Args:
@@ -251,9 +250,9 @@ class ProposalServices:
 
             session.commit()
 
-        LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {clusters_sus}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {clusters_sus}")
 
-    def subtract_sus(self, pid: Optional[int] = None, all_clusters: bool, **clusters_sus: int) -> None:
+    def subtract_sus(self, pid: Optional[int] = None, **clusters_sus: int) -> None:
         """Subtract service units from an account proposal
         
         Args:
@@ -276,7 +275,7 @@ class ProposalServices:
 
             session.commit()
 
-        LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {clusters_sus}")
+            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {clusters_sus}")
 
 
 class InvestmentServices:
@@ -371,11 +370,12 @@ class InvestmentServices:
                 account = session.execute(select(Account).where(Account.name == self._account_name)).scalars().first()
                 account.investments.append(new_investment)
                 session.add(account)
+
                 LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
 
                 session.commit()
 
-            LOG.info(f"Invested {sus} service units for account {self._account_name}")
+                LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
     def delete_investment(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
@@ -391,6 +391,7 @@ class InvestmentServices:
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
+
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
     def modify_investment(
@@ -431,6 +432,7 @@ class InvestmentServices:
                 investment.end_date = end
 
             session.commit()
+
             LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
     def add_sus(self, inv_id: int, sus: int) -> None:
@@ -454,6 +456,7 @@ class InvestmentServices:
             investment.current_sus += sus
 
             session.commit()
+
             LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def subtract_sus(self, inv_id: int, sus: int) -> None:
@@ -480,6 +483,7 @@ class InvestmentServices:
             investment.current_sus -= sus
 
             session.commit()
+
             LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def advance(self, sus: int) -> None:
@@ -524,6 +528,7 @@ class InvestmentServices:
                 to_withdraw = min(sus, maximum_withdrawal)
 
                 LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
+
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 active_investment.current_sus += to_withdraw
@@ -535,7 +540,7 @@ class InvestmentServices:
 
             session.commit()
 
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+            LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
 
 
 class AccountServices:
