@@ -6,6 +6,7 @@ from unittest import TestCase, skipIf
 from dateutil.relativedelta import relativedelta
 
 from bank import settings
+from bank.exceptions import SlurmAccountNotFoundError
 from bank.cli import InvestmentParser
 from bank.system import Slurm
 from tests.cli._utils import CLIAsserts
@@ -25,6 +26,12 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
 
         # Create an investment, providing only required arguments
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100')
+
+        # Attempt to create an investment with a nonexistent slurm account
+        with self.assertRaises(SlurmAccountNotFoundError):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.non_existent_account} --SUs 100')
 
         # Create an investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
@@ -68,7 +75,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
                 self.parser,
                 f'create {settings.test_account} --SUs 100 --end 09/01/2500')
 
-        # Create an investment, specifying a custom start and date
+        # Create an investment, specifying a custom start and end date
         self.assert_parser_matches_func_signature(
             self.parser,
             f'create {settings.test_account} --SUs 100 --start {start_date_str} --end {end_date_str}')
@@ -85,7 +92,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Add SUs to the active investment
         self.assert_parser_matches_func_signature(self.parser, f'add_sus {settings.test_account} --SUs 100')
 
-        # Add SUs to the active investment, providing a negative SU ammount
+        # Add SUs to the active investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
@@ -94,7 +101,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Add SUs a specific investment
         self.assert_parser_matches_func_signature(self.parser, f'add_sus {settings.test_account} --ID 0 --SUs 100')
 
-        # Add SUs to a specific investment, providing a negative SU ammount
+        # Add SUs to a specific investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
@@ -106,7 +113,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Remove SUs from the active investment
         self.assert_parser_matches_func_signature(self.parser, f'subtract_sus {settings.test_account} --SUs 100')
 
-        # Remove SUs from the active investment, providing a negative SU ammount
+        # Remove SUs from the active investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
