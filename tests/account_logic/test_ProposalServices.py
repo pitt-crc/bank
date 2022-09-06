@@ -5,7 +5,7 @@ from sqlalchemy import join, select
 
 from bank import settings
 from bank.account_logic import ProposalServices
-from bank.exceptions import MissingProposalError, ProposalExistsError
+from bank.exceptions import MissingProposalError, ProposalExistsError, SlurmAccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
 from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
@@ -20,6 +20,15 @@ active_proposal_query = select(Proposal) \
     .join(Account) \
     .where(Account.name == settings.test_account) \
     .where(Proposal.is_active)
+
+
+class InitExceptions(EmptyAccountSetup, TestCase):
+    """Tests to ensure proposals report that provided account does not exist"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        with self.assertRaises(SlurmAccountNotFoundError):
+            self.account = ProposalServices(settings.non_existent_account)
 
 
 class CreateProposal(EmptyAccountSetup, TestCase):
@@ -74,7 +83,7 @@ class DeleteProposal(ProposalSetup, TestCase):
         """Test a specific proposal is deleted when an id is given"""
 
         delete_pid = 1
-        self.account.delete(pid=delete_pid)
+        self.account.delete(proposal_id=delete_pid)
 
         with DBConnection.session() as session:
             query = select(Proposal).where(Proposal.id == delete_pid)
