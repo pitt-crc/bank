@@ -294,7 +294,7 @@ class ProposalParser(BaseParser):
             'modify_date',
             help='Change the start or end date of an existing proposal'
         )
-        modify_date_parser.set_defaults(function=ProposalServices.modify_proposal)
+        modify_date_parser.set_defaults(function=ProposalServices.modify_date)
         modify_date_parser.add_argument(**account_definition)
         modify_date_parser.add_argument('--ID', **proposal_id_definition)
         modify_date_parser.add_argument(
