@@ -90,7 +90,7 @@ class ProposalServices:
             if sus < 0:
                 raise ValueError('Service units cannot be negative.')
 
-    def create_proposal(
+    def create(
             self,
             start: Optional[date] = date.today(),
             end: Optional[date] = date.today()+relativedelta(years=1),
@@ -140,17 +140,16 @@ class ProposalServices:
 
             LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
-    def delete_proposal(self, pid: Optional[int] = None) -> None:
+    def delete(self, pid: int = None) -> None:
         """Delete a proposal from the current account
 
         Args:
-            pid: ID of the proposal to delete (Defaults to currently active proposal)
+            pid: ID of the proposal to delete
 
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
-        pid = pid or self._get_active_pid()
         self._verify_proposal_id(pid)
 
         with DBConnection.session() as session:
@@ -597,7 +596,6 @@ class InvestmentServices:
             session.commit()
 
             LOG.info(f"Advanced {(requested_withdrawal - sus)} service units for account {self._account_name}")
-
 
 
 class AccountServices:

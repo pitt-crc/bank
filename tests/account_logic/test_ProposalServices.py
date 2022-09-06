@@ -23,7 +23,7 @@ active_proposal_query = select(Proposal) \
 
 
 class CreateProposal(EmptyAccountSetup, TestCase):
-    """Test the creation of proposals via the ``create_proposal`` method"""
+    """Test the creation of proposals via the ``create`` method"""
 
     def setUp(self) -> None:
         super().setUp()
@@ -32,7 +32,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
-        self.account.create_proposal()
+        self.account.create()
         with DBConnection.session() as session:
             query = select(Proposal).join(Account).where(Account.name == settings.test_account)
             proposal = session.execute(query).scalars().first()
@@ -44,7 +44,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
     def test_non_default_sus_are_set(self) -> None:
         """Test proposals are assigned the number of sus specified by kwargs"""
 
-        self.account.create_proposal(**{settings.test_cluster: 1000})
+        self.account.create(**{settings.test_cluster: 1000})
         with DBConnection.session() as session:
             service_units = session.execute(sus_query).scalars().first()
             self.assertEqual(1000, service_units)
@@ -52,37 +52,29 @@ class CreateProposal(EmptyAccountSetup, TestCase):
     def test_error_if_already_exists(self) -> None:
         """Test a ``ProposalExistsError`` error is raised if the proposal already exists"""
 
-        self.account.create_proposal()
+        self.account.create()
         with self.assertRaises(ProposalExistsError):
-            self.account.create_proposal()
+            self.account.create()
 
     def test_error_on_negative_sus(self) -> None:
         """Test an error is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.create_proposal(**{settings.test_cluster: -1})
+            self.account.create(**{settings.test_cluster: -1})
 
 
 class DeleteProposal(ProposalSetup, TestCase):
-    """Test the deletion of proposals via the ``delete_proposal`` method"""
+    """Test the deletion of proposals via the ``delete`` method"""
 
     def setUp(self) -> None:
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
-    def test_delete_active_proposal(self) -> None:
-        """Test the active proposal is deleted from the database"""
-
-        self.account.delete_proposal()
-        with DBConnection.session() as session:
-            active_proposal = session.execute(active_proposal_query).scalars().first()
-            self.assertIsNone(active_proposal, 'Active proposal was not deleted')
-
-    def test_delete_proposal_by_id(self) -> None:
+    def test_delete_by_id(self) -> None:
         """Test a specific proposal is deleted when an id is given"""
 
         delete_pid = 1
-        self.account.delete_proposal(pid=delete_pid)
+        self.account.delete(pid=delete_pid)
 
         with DBConnection.session() as session:
             query = select(Proposal).where(Proposal.id == delete_pid)
@@ -90,13 +82,12 @@ class DeleteProposal(ProposalSetup, TestCase):
             self.assertIsNone(proposal, f'Proposal {delete_pid} was not deleted')
 
 
-class ModifyProposal(ProposalSetup, TestCase):
-    """Test the modification of allocated sus via the ``set_cluster_allocation`` method"""
+class ModifyDate(ProposalSetup, TestCase):
+    """Test the modification of start/end dates via the ``modify_date`` method"""
 
     def setUp(self) -> None:
         super().setUp()
         self.account = ProposalServices(settings.test_account)
-
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
@@ -117,7 +108,6 @@ class ModifyProposal(ProposalSetup, TestCase):
             new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
             self.assertEqual(new_end_date, new_proposal.end_date)
-
 
     def test_error_on_inverted_dates(self) -> None:
         """Test a ``ValueError`` is raised for start when the start date comes before the end date"""
@@ -207,10 +197,10 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         self.account = ProposalServices(settings.test_account)
 
     def test_error_on_delete(self) -> None:
-        """Test for a ``MissingProposalError`` error when deleting a missing proposal"""
+        """Test for a ``MissingProposalError`` error when deleting without a proposal ID"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.delete_proposal()
+            self.account.delete()
 
     def test_error_on_modify(self) -> None:
         """Test a ``MissingProposalError`` error is raised when modifying a missing proposal"""
@@ -241,23 +231,23 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     def test_neighboring_proposals_ar_allowed(self):
         """Test that proposals with neighboring durations are allowed"""
 
-        self.account.create_proposal(start=TODAY, end=TODAY+timedelta(days=1), **{settings.test_cluster: 100})
-        self.account.create_proposal(start=TOMORROW, end=TOMORROW+timedelta(days=1), **{settings.test_cluster: 100})
+        self.account.create(start=TODAY, end=TODAY+timedelta(days=1), **{settings.test_cluster: 100})
+        self.account.create(start=TOMORROW, end=TOMORROW+timedelta(days=1), **{settings.test_cluster: 100})
 
     def test_error_on_proposal_creation(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
 
-        self.account.create_proposal(start=TODAY)
+        self.account.create(start=TODAY)
         with self.assertRaises(ProposalExistsError):
-            self.account.create_proposal(start=TODAY)
+            self.account.create(start=TODAY)
 
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
         su_kwargs = {settings.test_cluster: 1}
 
-        self.account.create_proposal(start=YESTERDAY, end=YESTERDAY+timedelta(days=2), **{settings.test_cluster: 100})
-        self.account.create_proposal(start=TOMORROW, end=TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create(start=YESTERDAY, end=YESTERDAY+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create(start=TOMORROW, end=TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
             self.account.modify_date(end=DAY_AFTER_TOMORROW)

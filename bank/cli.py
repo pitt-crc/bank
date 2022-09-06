@@ -246,7 +246,7 @@ class ProposalParser(BaseParser):
 
         # Proposal Creation
         create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
-        create_parser.set_defaults(function=ProposalServices.create_proposal)
+        create_parser.set_defaults(function=ProposalServices.create)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--start',
