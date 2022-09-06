@@ -97,23 +97,6 @@ class ModifyProposal(ProposalSetup, TestCase):
         super().setUp()
         self.account = ProposalServices(settings.test_account)
 
-    def test_sus_are_modified(self) -> None:
-        """Test sus are overwritten in the proposal"""
-
-        with DBConnection.session() as session:
-            old_proposal = session.execute(active_proposal_query).scalars().first()
-            old_start = old_proposal.start_date
-            old_end = old_proposal.end_date
-
-        self.account.modify_proposal(**{settings.test_cluster: 12345})
-        with DBConnection.session() as session:
-            new_proposal = session.execute(active_proposal_query).scalars().first()
-            new_sus = session.execute(sus_query).scalars().first()
-
-            # Check only service units are overwritten
-            self.assertEqual(12345, new_sus)
-            self.assertEqual(old_start, new_proposal.start_date)
-            self.assertEqual(old_end, new_proposal.end_date)
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
@@ -129,30 +112,18 @@ class ModifyProposal(ProposalSetup, TestCase):
             new_start_date = old_proposal.start_date + timedelta(days=100)
             new_end_date = old_proposal.end_date + timedelta(days=100)
 
-        self.account.modify_proposal(proposal_id, start=new_start_date, end=new_end_date)
+        self.account.modify_date(proposal_id, start=new_start_date, end=new_end_date)
         with DBConnection.session() as session:
             new_proposal = session.execute(proposal_query).scalars().first()
             self.assertEqual(new_start_date, new_proposal.start_date)
             self.assertEqual(new_end_date, new_proposal.end_date)
 
-    def test_error_on_bad_cluster_name(self) -> None:
-        """Test a ``ValueError`` is raised if the cluster name is not defined in application settings"""
-
-        fake_cluster_name = 'fake_cluster'
-        with self.assertRaises(ValueError):
-            self.account.modify_proposal(**{fake_cluster_name: 1000})
-
-    def test_error_on_negative_sus(self) -> None:
-        """Test a ``ValueError`` is raised when assigning negative service units"""
-
-        with self.assertRaises(ValueError):
-            self.account.modify_proposal(**{settings.test_cluster: -1})
 
     def test_error_on_inverted_dates(self) -> None:
         """Test a ``ValueError`` is raised for start when the start date comes before the end date"""
 
         with self.assertRaises(ValueError):
-            self.account.modify_proposal(end=DAY_BEFORE_YESTERDAY)
+            self.account.modify_date(end=DAY_BEFORE_YESTERDAY)
 
 
 class AddSus(ProposalSetup, TestCase):
@@ -245,7 +216,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         """Test a ``MissingProposalError`` error is raised when modifying a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.modify_proposal(**{settings.test_cluster: 1, 'pid': 1000})
+            self.account.modify_date(**{'start':TODAY, 'pid': 1000})
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingProposalError`` error is raised when adding to a missing proposal"""
@@ -268,8 +239,10 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
         self.account = ProposalServices(settings.test_account)
 
     def test_neighboring_proposals_ar_allowed(self):
-        self.account.create_proposal(start=TODAY, duration=1)
-        self.account.create_proposal(start=TOMORROW, duration=1)
+        """Test that proposals with neighboring durations are allowed"""
+
+        self.account.create_proposal(start=TODAY, end=TODAY+timedelta(days=1), **{settings.test_cluster: 100})
+        self.account.create_proposal(start=TOMORROW, end=TOMORROW+timedelta(days=1), **{settings.test_cluster: 100})
 
     def test_error_on_proposal_creation(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
@@ -282,8 +255,9 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
         su_kwargs = {settings.test_cluster: 1}
-        self.account.create_proposal(start=YESTERDAY, duration=2, **su_kwargs)
-        self.account.create_proposal(start=TOMORROW, duration=2, **su_kwargs)
+
+        self.account.create_proposal(start=YESTERDAY, end=YESTERDAY+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create_proposal(start=TOMORROW, end=TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
-            self.account.modify_proposal(end=DAY_AFTER_TOMORROW)
+            self.account.modify_date(end=DAY_AFTER_TOMORROW)

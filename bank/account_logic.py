@@ -92,29 +92,28 @@ class ProposalServices:
 
     def create_proposal(
             self,
-            start: date = date.today(),
-            duration_days: int = 365,
+            start: Optional[date] = date.today(),
+            end: Optional[date] = date.today()+relativedelta(years=1),
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
 
         Args:
-            start: The start date of the proposal
-            duration_days: How many days before the proposal expires
+            start: The start date of the proposal, default is today
+            end: Date of the proposal expiration, default is 1 year
             **clusters_sus: Service units to allocate to each cluster
         """
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            last_active_day = start + timedelta(days=duration_days - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
                 or_(
                     between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(last_active_day, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, last_active_day),
-                    between(Proposal.last_active_date, start, last_active_day)
+                    between(end, Proposal.start_date, Proposal.last_active_date),
+                    between(Proposal.start_date, start, end),
+                    between(Proposal.last_active_date, start, end)
                 )
             )
 
@@ -125,7 +124,7 @@ class ProposalServices:
             new_proposal = Proposal(
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration_days),
+                end_date=end,
                 allocations=[
                     Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in clusters_sus.items()
                 ]
@@ -197,8 +196,11 @@ class ProposalServices:
             proposal = session.execute(query).scalars().first()
             start = start or proposal.start_date
             end = end or proposal.end_date
+
             if start >= end:
-                raise ValueError('Proposal start date must be before the end date.')
+                raise ValueError(f'Start and end dates need to be in proper chronological order: {start} >= {end}. '
+                                 f'If providing start or end alone, this comparison is between the provided date and '
+                                 f'the proposals\'s existing value')
 
             last_active_date = end - timedelta(days=1)
 
