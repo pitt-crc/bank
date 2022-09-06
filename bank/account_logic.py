@@ -35,7 +35,8 @@ class ProposalServices:
             account_name: The name of the account to administrate
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
     def _get_active_pid(self) -> None:
         """Return the active proposal ID for the current account
@@ -140,24 +141,24 @@ class ProposalServices:
 
             LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
-    def delete(self, pid: int = None) -> None:
+    def delete(self, proposal_id: int = None) -> None:
         """Delete a proposal from the current account
 
         Args:
-            pid: ID of the proposal to delete
+            proposal_id: ID of the proposal to delete
 
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
-        self._verify_proposal_id(pid)
+        self._verify_proposal_id(proposal_id)
 
         with DBConnection.session() as session:
-            session.execute(delete(Proposal).where(Proposal.id == pid))
-            session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
+            session.execute(delete(Proposal).where(Proposal.id == proposal_id))
+            session.execute(delete(Allocation).where(Allocation.proposal_id == proposal_id))
             session.commit()
 
-            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
+            LOG.info(f"Deleted proposal {proposal_id} for {self._account_name}")
 
     def modify_date(
             self,
@@ -291,11 +292,10 @@ class InvestmentServices:
 
         Raises:
             MissingProposalError: If the account does not have an associated proposal
-            MissingInvestmentError: If the account does not have an active investment, and the operation being executed
-            is not trying to create one.
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
         with DBConnection.session() as session:
             # Check if the Account has an associated proposal
@@ -361,7 +361,7 @@ class InvestmentServices:
             self,
             sus: int,
             start: Optional[date] = date.today(),
-            end: Optional[date] = None,
+            end: Optional[date] = date.today() + relativedelta(years=1),
             num_inv: Optional[int] = 1) -> None:
         """Add a new investment or series of investments to the given account
 
@@ -382,7 +382,7 @@ class InvestmentServices:
         self._verify_service_units(sus)
 
         if not end:
-            end = start + relativedelta(months=12)
+            end = start + relativedelta(years=1)
         if start >= end:
             raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
 
@@ -483,8 +483,6 @@ class InvestmentServices:
                 LOG.info(f"Overwriting end date on investment {investment.id} for account {self._account_name}")
 
             session.commit()
-
-            LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
     def add_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Add service units to the given investment
@@ -608,7 +606,8 @@ class AccountServices:
             account_name: The name of the account to administrate
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
         self._proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
