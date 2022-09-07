@@ -122,7 +122,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Remove SUs from a specific investment
         self.assert_parser_matches_func_signature(self.parser, f'subtract_sus {settings.test_account} --ID 0 --SUs 100')
 
-        # Remove SUs from a specific investment, providing a negative SU ammount
+        # Remove SUs from a specific investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
@@ -160,7 +160,9 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
                 f'create {settings.test_account} --ID 0 --start 09/01/2500')
 
         # Modify the active investment's date, changing only the end date
-        self.assert_parser_matches_func_signature(self.parser, f'modify_date {settings.test_account} --end {end_date_str}')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'modify_date {settings.test_account} --end {end_date_str}')
 
         # Modify the active investment's date, changing only the end date, but with the wrong format
         with self.assertRaises(SystemExit):
@@ -180,7 +182,6 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
                 self.parser,
                 f'create {settings.test_account} --end 09/01/2500')
 
-
         # Modify the active investment's date, changing the start and end dates
         self.assert_parser_matches_func_signature(
             self.parser,
@@ -199,18 +200,17 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Advance the active investment
         self.assert_parser_matches_func_signature(self.parser, f'advance {settings.test_account} --SUs 100')
 
-        # Advance the active investment, providing a negative SU ammount
+        # Advance the active investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
                 f'advance {settings.test_account} --SUs -100')
 
         # Advance a specific investment
-        self.assert_parser_matches_func_signature(self.parser,f'advance {settings.test_account} --ID 0 --SUs 100')
+        self.assert_parser_matches_func_signature(self.parser, f'advance {settings.test_account} --ID 0 --SUs 100')
 
-        # Advance a specific investment, providing a negative SU ammount
+        # Advance a specific investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
                 f'advance {settings.test_account} --ID 0 --SUs -100')
-

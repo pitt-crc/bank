@@ -24,7 +24,6 @@ class InitExceptions(InvestmentSetup, TestCase):
         with self.assertRaises(SlurmAccountNotFoundError):
             self.account = InvestmentServices(account_name=settings.non_existent_account)
 
-
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""
 
@@ -160,7 +159,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
             InvestmentServices(settings.test_account).modify_date(end=bad_end_date)
 
     def test_error_on_bad_dates_with_id(self) -> None:
-        """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
+        """Test a ``ValueError`` is raised when assigning chronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
             .where(Account.name == settings.test_account) \
@@ -293,7 +292,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
 
 
 class MissingInvestmentErrors(ProposalSetup, TestCase):
-    """Tests for errors when manipulating an account that does not have a investment"""
+    """Tests for errors when manipulating an account that does not have an investment"""
 
     def setUp(self) -> None:
         """Delete any investments that may already exist for the test account"""
@@ -311,7 +310,7 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
         """Test a ``MissingInvestmentError`` error is raised when modifying a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.modify_date(inv_id=100, start = datetime.today())
+            self.account.modify_date(inv_id=100, start=datetime.today())
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingInvestmentError`` error is raised when adding to a missing investment"""
