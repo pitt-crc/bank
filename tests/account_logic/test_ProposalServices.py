@@ -215,7 +215,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         """Test a ``MissingProposalError`` error is raised when modifying a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.modify_date(**{'start':TODAY, 'pid': 1000})
+            self.account.modify_date(**{'start':TODAY, 'proposal_id': 1000})
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingProposalError`` error is raised when adding to a missing proposal"""

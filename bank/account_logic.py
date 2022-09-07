@@ -162,27 +162,24 @@ class ProposalServices:
 
     def modify_date(
             self,
-            pid: Optional[int] = None,
+            proposal_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None,
-            **clusters_sus: int
+            end: Optional[date] = None
     ) -> None:
         """Overwrite the date of an account proposal
 
         Args:
-            pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
+            proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
-            **clusters_sus: New service unit values to assign for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
             ValueError: If neither a start date or end date are provided, and if provided start/end dates are not in
             chronological order with amongst themselves or with the existing DB values.
         """
 
-        pid = pid or self._get_active_pid()
-        self._verify_proposal_id(pid)
-        self._verify_cluster_values(**clusters_sus)
+        proposal_id = proposal_id or self._get_active_pid()
+        self._verify_proposal_id(proposal_id)
 
         # Validate start and end times
         if not (start or end):
@@ -192,7 +189,7 @@ class ProposalServices:
 
         with DBConnection.session() as session:
             # Get default proposal values
-            query = select(Proposal).where(Proposal.id == pid)
+            query = select(Proposal).where(Proposal.id == proposal_id)
             proposal = session.execute(query).scalars().first()
             start = start or proposal.start_date
             end = end or proposal.end_date
@@ -207,7 +204,7 @@ class ProposalServices:
             # Find any overlapping proposals (not including the proposal being modified)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
-                .where(Proposal.id != pid) \
+                .where(Proposal.id != proposal_id) \
                 .where(
                 or_(
                     between(start, Proposal.start_date, Proposal.last_active_date),
@@ -221,15 +218,12 @@ class ProposalServices:
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
             # Update the proposal record
-            proposal.proposal_type = type
             proposal.start_date = start
             proposal.end_date = end
-            for allocation in proposal.allocations:
-                allocation.service_units = clusters_sus.get(allocation.cluster_name, allocation.service_units)
 
             session.commit()
 
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {clusters_sus}")
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}.")
 
     def add_sus(self, pid: Optional[int] = None, **clusters_sus: int) -> None:
         """Add service units to an account proposal
