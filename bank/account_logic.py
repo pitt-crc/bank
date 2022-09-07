@@ -94,7 +94,7 @@ class ProposalServices:
     def create(
             self,
             start: Optional[date] = date.today(),
-            end: Optional[date] = date.today()+relativedelta(years=1),
+            end: Optional[date] = None,
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
@@ -104,6 +104,8 @@ class ProposalServices:
             end: Date of the proposal expiration, default is 1 year
             **clusters_sus: Service units to allocate to each cluster
         """
+
+        end = end or (start + relativedelta(years=1))
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
@@ -180,12 +182,6 @@ class ProposalServices:
 
         proposal_id = proposal_id or self._get_active_pid()
         self._verify_proposal_id(proposal_id)
-
-        # Validate start and end times
-        if not (start or end):
-            raise ValueError(f'modify_date requires either a new start: {start} or new end: {end} date')
-        if (start and end) and start >= end:
-            raise ValueError(f'start: {start} needs to be a date before end: {end}')
 
         with DBConnection.session() as session:
             # Get default proposal values
@@ -355,7 +351,7 @@ class InvestmentServices:
             self,
             sus: int,
             start: Optional[date] = date.today(),
-            end: Optional[date] = date.today() + relativedelta(years=1),
+            end: Optional[date] = None,
             num_inv: Optional[int] = 1) -> None:
         """Add a new investment or series of investments to the given account
 
@@ -375,8 +371,7 @@ class InvestmentServices:
         # Validate arguments
         self._verify_service_units(sus)
 
-        if not end:
-            end = start + relativedelta(years=1)
+        end = end or (start + relativedelta(years=1))
         if start >= end:
             raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
 
