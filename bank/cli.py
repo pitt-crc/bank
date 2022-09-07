@@ -243,7 +243,6 @@ class ProposalParser(BaseParser):
             help='The ID associated with a specific proposal on the account'
         )
 
-
         # Proposal Creation
         create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
         create_parser.set_defaults(function=ProposalServices.create)
