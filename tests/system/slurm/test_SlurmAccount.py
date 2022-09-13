@@ -21,7 +21,7 @@ class InitExceptions(TestCase):
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
 
-        with patch.object(SlurmAccount, 'check_slurm_installed', return_value=False), self.assertRaises(SystemError):
+        with patch.object(Slurm, 'is_installed', return_value=False), self.assertRaises(SystemError):
             SlurmAccount('fake_account_name_123')
 
 

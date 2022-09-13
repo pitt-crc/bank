@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.account_logic import InvestmentServices
-from bank.exceptions import MissingInvestmentError, MissingProposalError
+from bank.exceptions import MissingInvestmentError, MissingProposalError, SlurmAccountNotFoundError
 from bank.orm import Account, DBConnection, Investment
 from tests._utils import InvestmentSetup, ProposalSetup
 
@@ -13,11 +13,16 @@ investments_query = select(Investment) \
     .join(Account) \
     .where(Account.name == settings.test_account)
 
-primary_investment_query = investments_query.where(Investment.is_active == True)
+primary_investment_query = investments_query.where(Investment.is_active)
 
 
 class InitExceptions(InvestmentSetup, TestCase):
     """Test for errors raised during account status checks at instantiation"""
+
+    def test_error_on_non_existent_account(self) -> None:
+        # Attempt to create an investment for a nonexistent slurm account
+        with self.assertRaises(SlurmAccountNotFoundError):
+            self.account = InvestmentServices(account_name=settings.non_existent_account)
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""
@@ -40,8 +45,8 @@ class CreateInvestment(ProposalSetup, TestCase):
             self.assertEqual(1, len(investments))
             self.assertEqual(12345, investments[0].service_units)
 
-    def test_error_on_nonpositive_sus(self) -> None:
-        """Test an error is raised when creating an investment with non-positive sus"""
+    def test_error_on_negative_sus(self) -> None:
+        """Test an error is raised when creating an investment with negative sus"""
 
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).create(sus=0)
@@ -49,7 +54,7 @@ class CreateInvestment(ProposalSetup, TestCase):
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).create(sus=-1)
 
-    def test_error_on_nonpositive_repeate(self) -> None:
+    def test_error_on_negative_repeat(self) -> None:
         """Test an error is raised when creating an investment with less than one repeat"""
 
         with self.assertRaises(ValueError):
@@ -92,64 +97,6 @@ class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(primary_investment_query).scalars().first()
 
             self.assertIsNone(investment)
-
-
-class AddSus(ProposalSetup, InvestmentSetup, TestCase):
-    """Tests for the addition of sus via the ``add`` method"""
-
-    def test_sus_are_added(self) -> None:
-        """Test SUs are added to the investment"""
-
-        inv_id = 1
-        sus_to_add = 1000
-        InvestmentServices(settings.test_account).add_sus(inv_id, sus_to_add)
-
-        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
-        with DBConnection.session() as session:
-            new_sus = session.execute(inv_sus_query).scalars().first()
-            self.assertEqual(self.num_inv_sus + sus_to_add, new_sus)
-
-    def test_error_on_negative_sus(self) -> None:
-        """Test a ``ValueError`` is raised when assigning negative service units"""
-
-        account = InvestmentServices(settings.test_account)
-        with self.assertRaises(ValueError):
-            account.add_sus(1, -1)
-
-        with self.assertRaises(ValueError):
-            account.add_sus(1, 0)
-
-
-class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
-    """Tests for the subtraction of sus via the ``subtract`` method"""
-
-    def test_sus_are_subtracted(self) -> None:
-        """Test SUs are removed from the proposal"""
-
-        inv_id = 1
-        sus_to_subtract = 100
-        InvestmentServices(settings.test_account).subtract_sus(inv_id, sus_to_subtract)
-
-        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
-        with DBConnection.session() as session:
-            new_sus = session.execute(inv_sus_query).scalars().first()
-            self.assertEqual(self.num_inv_sus - sus_to_subtract, new_sus)
-
-    def test_error_on_negative_sus(self) -> None:
-        """Test a ``ValueError`` is raised when assigning negative service units"""
-
-        account = InvestmentServices(settings.test_account)
-        with self.assertRaises(ValueError):
-            account.subtract_sus(1, -1)
-
-        with self.assertRaises(ValueError):
-            account.subtract_sus(1, 0)
-
-    def test_error_on_over_subtract(self) -> None:
-        """Test for a ``ValueError`` if more service units are subtracted than available"""
-
-        with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_account).subtract_sus(1, self.num_inv_sus + 1000)
 
 
 class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
@@ -211,9 +158,8 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).modify_date(end=bad_end_date)
 
-
     def test_error_on_bad_dates_with_id(self) -> None:
-        """Test a ``ValueError`` is raised when assigning cronologically wrong start/end dates"""
+        """Test a ``ValueError`` is raised when assigning chronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
             .where(Account.name == settings.test_account) \
@@ -243,6 +189,64 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
             InvestmentServices(settings.test_account).modify_date(
                 investment_id,
                 start_date, bad_end_date)
+
+
+class AddSus(ProposalSetup, InvestmentSetup, TestCase):
+    """Tests for the addition of sus via the ``add`` method"""
+
+    def test_sus_are_added(self) -> None:
+        """Test SUs are added to the investment"""
+
+        inv_id = 1
+        sus_to_add = 1000
+        InvestmentServices(settings.test_account).add_sus(inv_id, sus_to_add)
+
+        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
+        with DBConnection.session() as session:
+            new_sus = session.execute(inv_sus_query).scalars().first()
+            self.assertEqual(self.num_inv_sus + sus_to_add, new_sus)
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test a ``ValueError`` is raised when assigning negative service units"""
+
+        account = InvestmentServices(settings.test_account)
+        with self.assertRaises(ValueError):
+            account.add_sus(1, -1)
+
+        with self.assertRaises(ValueError):
+            account.add_sus(1, 0)
+
+
+class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
+    """Tests for the subtraction of sus via the ``subtract`` method"""
+
+    def test_sus_are_subtracted(self) -> None:
+        """Test SUs are removed from the proposal"""
+
+        inv_id = 1
+        sus_to_subtract = 100
+        InvestmentServices(settings.test_account).subtract_sus(inv_id, sus_to_subtract)
+
+        inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
+        with DBConnection.session() as session:
+            new_sus = session.execute(inv_sus_query).scalars().first()
+            self.assertEqual(self.num_inv_sus - sus_to_subtract, new_sus)
+
+    def test_error_on_negative_sus(self) -> None:
+        """Test a ``ValueError`` is raised when assigning negative service units"""
+
+        account = InvestmentServices(settings.test_account)
+        with self.assertRaises(ValueError):
+            account.subtract_sus(1, -1)
+
+        with self.assertRaises(ValueError):
+            account.subtract_sus(1, 0)
+
+    def test_error_on_over_subtract(self) -> None:
+        """Test for a ``ValueError`` if more service units are subtracted than available"""
+
+        with self.assertRaises(ValueError):
+            InvestmentServices(settings.test_account).subtract_sus(1, self.num_inv_sus + 1000)
 
 
 class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
@@ -279,8 +283,8 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
         with self.assertRaises(ValueError):
             InvestmentServices(settings.test_account).advance(available_sus + 1)
 
-    def test_error_on_nonpositive_argument(self) -> None:
-        """Test an ``ValueError`` is raised for non-positive arguments"""
+    def test_error_on_negative_argument(self) -> None:
+        """Test an ``ValueError`` is raised for negative arguments"""
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
@@ -288,7 +292,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
 
 
 class MissingInvestmentErrors(ProposalSetup, TestCase):
-    """Tests for errors when manipulating an account that does not have a investment"""
+    """Tests for errors when manipulating an account that does not have an investment"""
 
     def setUp(self) -> None:
         """Delete any investments that may already exist for the test account"""
@@ -306,7 +310,7 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
         """Test a ``MissingInvestmentError`` error is raised when modifying a missing investment"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.modify_date(inv_id=100, start = datetime.today())
+            self.account.modify_date(inv_id=100, start=datetime.today())
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingInvestmentError`` error is raised when adding to a missing investment"""
