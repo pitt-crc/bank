@@ -749,7 +749,38 @@ class AccountServices:
     def update_account_status(self) -> None:
         """Close any expired proposals/investments and lock the account if necessary"""
 
-        raise NotImplementedError
+        slurm_acct = SlurmAccount(self._account_name)
+        with DBConnection.session() as session:
+            proposal = session.execute(self._proposal_query).scalars().first()
+            investments = session.execute(self._investment_query).scalars().all()
+
+
+            #TODO: update account status test with no existing proposal
+            if not proposal:
+                raise MissingProposalError(f'Account {self._account_name} has no proposal')
+
+            # Check if proposal is past its expiration date or if it has fully exhausted its allocations
+            if proposal.is_expired:
+                self.lock(all_clusters=True)
+            else:
+                lock_clusters = []
+                residual_sus = 0
+                for allocation in proposal.allocations:
+
+                    if allocation.cluster_name is 'all_clusters':
+                        has_all_cluster_units = True
+                        residual_sus = residual_sus - allocation.service_units
+                        continue
+
+                    usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
+                    if usage_data >= allocation.service_units:
+                        residual_sus += (usage_data - allocation.service_units)
+                        lock_clusters.append(allocation.cluster_name)
+
+                if has_all_cluster_units and residual_sus >= 0:
+                    self.lock(all_clusters=True)
+                else:
+                    self.lock(clusters=lock_clusters)
 
     def _set_account_lock(
             self,
