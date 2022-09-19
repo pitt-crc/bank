@@ -116,7 +116,7 @@ def get_usage_for_account(account):
 
 
 def find_next_notification(usage):
-    members = list(PercentNotified)
+    members = [PercentNotified.SeventyFive, PercentNotified.Hundred]
     percentages = [x.to_percentage() for x in members]
     if usage in percentages:
         return members[percentages.index(usage)]
