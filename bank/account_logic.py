@@ -10,15 +10,16 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Optional, Tuple, Union
+from typing import Collection, Iterable, Optional, Union
 
+from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
 from sqlalchemy import between, delete, or_, select
 
 from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
-from .system import EmailTemplate, SlurmAccount
+from .system import EmailTemplate, Slurm, SlurmAccount
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -34,88 +35,92 @@ class ProposalServices:
             account_name: The name of the account to administrate
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
-    def _get_active_pid(self) -> None:
+    def _get_active_proposal_id(self) -> None:
         """Return the active proposal ID for the current account
 
         Raises:
             MissingProposalError: If no active proposal is found
         """
 
-        active_pid_query = select(Proposal.id) \
+        active_proposal_id_query = select(Proposal.id) \
             .join(Account) \
             .where(Account.name == self._account_name) \
             .where(Proposal.is_active)
 
         with DBConnection.session() as session:
-            pid = session.execute(active_pid_query).scalars().first()
+            proposal_id = session.execute(active_proposal_id_query).scalars().first()
 
-        if pid is None:
+        if proposal_id is None:
             raise MissingProposalError(f'Account `{self._account_name}` has no active proposal.')
 
-        return pid
+        return proposal_id
 
-    def _verify_proposal_id(self, pid: int) -> None:
+    def _verify_proposal_id(self, proposal_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
         Args:
-            pid: The ID of a proposal
+            proposal_id: The ID of a proposal
 
         Raises:
             MissingProposalError: If the proposal ID does not match the current account
         """
 
-        query = select(Proposal).join(Account).where(Account.name == self._account_name).where(Proposal.id == pid)
+        query = select(Proposal) \
+            .join(Account) \
+            .where(Account.name == self._account_name)\
+            .where(Proposal.id == proposal_id)
+
         with DBConnection.session() as session:
             if session.execute(query).scalars().first() is None:
-                raise MissingProposalError(f'Account `{self._account_name}` has no proposal with ID {pid}.')
+                raise MissingProposalError(f'Account `{self._account_name}` has no proposal with ID {proposal_id}.')
 
     @staticmethod
-    def _verify_cluster_values(**kwargs: int) -> None:
+    def _verify_cluster_values(**clusters_sus: int) -> None:
         """Raise an error if given cluster names or service units are invalid
 
         Args:
-            **kwargs: Service units for each cluster
-
+            **clusters_sus: Service units for each cluster
         Raises:
             ValueError: If a cluster name is not defined in settings
             ValueError: If service units are negative
         """
 
-        for cluster, sus in kwargs.items():
+        for cluster, sus in clusters_sus.items():
             if cluster not in settings.clusters:
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
             if sus < 0:
                 raise ValueError('Service units cannot be negative.')
 
-    def create_proposal(
+    def create(
             self,
-            start: date = date.today(),
-            duration: int = 365,
-            **kwargs: int
+            start: Optional[date] = date.today(),
+            end: Optional[date] = None,
+            **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
 
         Args:
-            type: The type of the proposal
-            start: The start date of the proposal
-            duration: How many days before the proposal expires
-            **kwargs: Service units to allocate to each cluster
+            start: The start date of the proposal, default is today
+            end: Date of the proposal expiration, default is 1 year
+            **clusters_sus: Service units to allocate to each cluster
         """
+
+        end = end or (start + relativedelta(years=1))
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            last_active_day = start + timedelta(days=duration - 1)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(
                 or_(
                     between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(last_active_day, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, last_active_day),
-                    between(Proposal.last_active_date, start, last_active_day)
+                    between(end, Proposal.start_date, Proposal.last_active_date),
+                    between(Proposal.start_date, start, end),
+                    between(Proposal.last_active_date, start, end)
                 )
             )
 
@@ -126,9 +131,9 @@ class ProposalServices:
             new_proposal = Proposal(
                 percent_notified=0,
                 start_date=start,
-                end_date=start + timedelta(days=duration),
+                end_date=end,
                 allocations=[
-                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in kwargs.items()
+                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in clusters_sus.items()
                 ]
             )
 
@@ -139,66 +144,67 @@ class ProposalServices:
 
             session.add(account)
             session.commit()
+
             LOG.info(f"Created proposal {new_proposal.id} for {self._account_name}")
 
-    def delete_proposal(self, pid: Optional[int] = None) -> None:
+    def delete(self, proposal_id: int = None) -> None:
         """Delete a proposal from the current account
 
         Args:
-            pid: ID of the proposal to delete (Defaults to currently active proposal)
+            proposal_id: ID of the proposal to delete
 
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
-        pid = pid or self._get_active_pid()
-        self._verify_proposal_id(pid)
+        self._verify_proposal_id(proposal_id)
 
         with DBConnection.session() as session:
-            session.execute(delete(Proposal).where(Proposal.id == pid))
-            session.execute(delete(Allocation).where(Allocation.proposal_id == pid))
+            session.execute(delete(Proposal).where(Proposal.id == proposal_id))
+            session.execute(delete(Allocation).where(Allocation.proposal_id == proposal_id))
             session.commit()
-            LOG.info(f"Deleted proposal {pid} for {self._account_name}")
 
-    def modify_proposal(
+            LOG.info(f"Deleted proposal {proposal_id} for {self._account_name}")
+
+    def modify_date(
             self,
-            pid: Optional[int] = None,
+            proposal_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None,
-            **kwargs: Union[int, date]
+            end: Optional[date] = None
     ) -> None:
-        """Overwrite the properties of an account proposal
+        """Overwrite the date of an account proposal
 
         Args:
-            pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            type: Optionally change the type of the proposal
+            proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
-            **kwargs: New service unit values to assign for each cluster
-
         Raises:
             MissingProposalError: If the proposal ID does not match the account
+            ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
+            chronological order with amongst themselves or with the existing DB values.
         """
 
-        pid = pid or self._get_active_pid()
-        self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        proposal_id = proposal_id or self._get_active_proposal_id()
+        self._verify_proposal_id(proposal_id)
 
         with DBConnection.session() as session:
             # Get default proposal values
-            query = select(Proposal).where(Proposal.id == pid)
+            query = select(Proposal).where(Proposal.id == proposal_id)
             proposal = session.execute(query).scalars().first()
             start = start or proposal.start_date
             end = end or proposal.end_date
+
             if start >= end:
-                raise ValueError('Proposal start date must be before the end date.')
+                raise ValueError(f'Start and end dates need to be in proper chronological order: {start} >= {end}. '
+                                 f'If providing start or end alone, this comparison is between the provided date and '
+                                 f'the proposals\'s existing value')
 
             last_active_date = end - timedelta(days=1)
 
             # Find any overlapping proposals (not including the proposal being modified)
             overlapping_proposal_query = select(Proposal).join(Account) \
                 .where(Account.name == self._account_name) \
-                .where(Proposal.id != pid) \
+                .where(Proposal.id != proposal_id) \
                 .where(
                 or_(
                     between(start, Proposal.start_date, Proposal.last_active_date),
@@ -212,84 +218,108 @@ class ProposalServices:
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
             # Update the proposal record
-            proposal.proposal_type = type
-            proposal.start_date = start
-            proposal.end_date = end
-            for allocation in proposal.allocations:
-                allocation.service_units = kwargs.get(allocation.cluster_name, allocation.service_units)
+            if start != proposal.start_date:
+                proposal.start_date = start
+                LOG.info(f"Overwriting start date on investment {proposal.id} for account {self._account_name}")
+
+            if end != proposal.end_date:
+                proposal.end_date = end
+                LOG.info(f"Overwriting end date on investment {proposal.id} for account {self._account_name}")
 
             session.commit()
-            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}. Overwrote {kwargs}")
 
-    def add_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+            LOG.info(f"Modified proposal {proposal.id} for account {self._account_name}.")
+
+    def add_sus(self, proposal_id: Optional[int] = None, **clusters_sus: int) -> None:
         """Add service units to an account proposal
 
         Args:
-            pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            **kwargs: Service units to add for each cluster
-
+            proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
+            **clusters_sus: Service units to add for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
-        pid = pid or self._get_active_pid()
-        self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        proposal_id = proposal_id or self._get_active_proposal_id()
+        self._verify_proposal_id(proposal_id)
+        self._verify_cluster_values(**clusters_sus)
 
-        query = select(Allocation).join(Proposal).where(Proposal.id == pid)
+        query = select(Allocation).join(Proposal).where(Proposal.id == proposal_id)
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units += kwargs.get(allocation.cluster_name, 0)
+                allocation.service_units += clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Added {kwargs}")
 
-    def subtract_sus(self, pid: Optional[int] = None, **kwargs) -> None:
+            LOG.info(f"Modified proposal {proposal_id} for account {self._account_name}. Added {clusters_sus}")
+
+    def subtract_sus(self, proposal_id: Optional[int] = None, **clusters_sus: int) -> None:
         """Subtract service units from an account proposal
 
         Args:
-            pid: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
-            **kwargs: Service units to subtract from each cluster
-
+            proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
+            **clusters_sus: Service units to add for each cluster
         Raises:
             MissingProposalError: If the proposal ID does not match the account
         """
 
-        pid = pid or self._get_active_pid()
-        self._verify_proposal_id(pid)
-        self._verify_cluster_values(**kwargs)
+        proposal_id = proposal_id or self._get_active_proposal_id()
+        self._verify_proposal_id(proposal_id)
+        self._verify_cluster_values(**clusters_sus)
 
-        query = select(Allocation).join(Proposal).where(Proposal.id == pid)
+        query = select(Allocation).join(Proposal).where(Proposal.id == proposal_id)
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units -= kwargs.get(allocation.cluster_name, 0)
+                allocation.service_units -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
-            LOG.info(f"Modified proposal {pid} for account {self._account_name}. Removed {kwargs}")
+
+            LOG.info(f"Modified proposal {proposal_id} for account {self._account_name}. Removed {clusters_sus}")
 
 
 class InvestmentServices:
     """Administrative tool for managing account Investments"""
 
     def __init__(self, account_name: str) -> None:
-        """Administrate investment data for the given user account
-
+        """Create or administrate investment data for the given Slurm account
         Args:
-            account_name: The name of the account to administrate
+            account_name: The name of the Slurm account to administrate
 
         Raises:
-            ValueError: If administrating an account for a class
+            MissingProposalError: If the account does not have an associated proposal
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
         with DBConnection.session() as session:
-            query = select(Proposal).join(Account).where(Account.name == account_name)
-            proposal = session.execute(query).scalars().first()
+            # Check if the Account has an associated proposal
+            proposal_query = select(Proposal).join(Account).where(Account.name == account_name)
+            proposal = session.execute(proposal_query).scalars().first()
             if proposal is None:
                 raise MissingProposalError(f'Account {account_name} does not hav an associated proposal')
+
+    def _get_active_investment_id(self) -> int:
+        """Return the active investment ID for the current account
+
+        Raises:
+            MissingInvestmentError: If no active investment is found
+        """
+
+        with DBConnection.session() as session:
+            # Determine the active investment ID
+            active_inv_id_query = select(Investment.id) \
+                .join(Account) \
+                .where(Account.name == self._account_name) \
+                .where(Investment.is_active)
+
+            active_inv_id = session.execute(active_inv_id_query).scalars().first()
+            if active_inv_id is None:
+                raise MissingInvestmentError(f'Account `{self._account_name}` has no active investment.')
+
+            return active_inv_id
 
     def _verify_investment_id(self, inv_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
@@ -301,7 +331,11 @@ class InvestmentServices:
             MissingInvestmentError: If the investment ID does not match the current account
         """
 
-        query = select(Investment).join(Account).where(Account.name == self._account_name).where(Investment.id == inv_id)
+        query = select(Investment) \
+            .join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Investment.id == inv_id)
+
         with DBConnection.session() as session:
             if session.execute(query).scalars().first() is None:
                 raise MissingInvestmentError(f'Account `{self._account_name}` has no investment with ID {inv_id}.')
@@ -317,38 +351,49 @@ class InvestmentServices:
             ValueError: If service units are not positive
         """
 
-        if sus <= 0:
+        if int(sus) <= 0:
             raise ValueError('Service units must be greater than zero.')
 
-    def create_investment(self, sus: int, start: date = date.today(), duration: int = 365, num_inv: int = 1) -> None:
-        """Add a new investment(s) for the given account
-
-        ``num_inv`` reflects the number of investments to create. If the argument
-        is greater than one, repeating investments are created sequentially such
-        that a new investment begins as each investment ends. The ``start``
-        argument represents the start date of the first investment in the sequence.
-        The given number of service units (``sus``) are allocated equally across
-        each investment in the series.
+    def create(
+            self,
+            sus: int,
+            start: Optional[date] = date.today(),
+            end: Optional[date] = None,
+            num_inv: Optional[int] = 1) -> None:
+        """Add a new investment or series of investments to the given account
 
         Args:
-            sus: The number of service units to add
-            start: The start date of the proposal
-            duration: How many days before the investment expires
-            num_inv: Spread out the given service units equally across given number of instances
+            sus: The total number of service units to be added to the investment, or split equally across multiple
+            investments with ``num_inv``
+            start: The start date of the investment, or first in the sequence of investments, defaulting to today
+            end: The expiration date of the investment, or first in the sequence of investments, defaulting to 12 months
+            from ``start``
+            num_inv: Divide ``sus`` equally across a number of sequential investments
+
+        Raises:
+            ValueError: If the SUs provided are less than 0, if the start date is later than the end date, or if the
+            number of investments is less than 1.
         """
 
+        # Validate arguments
         self._verify_service_units(sus)
+
+        end = end or (start + relativedelta(years=1))
+        if start >= end:
+            raise ValueError(f'Argument start: {start} must be an earlier date than than end: {end}')
+
         if num_inv < 1:
-            raise ValueError('Argument ``repeat`` must be >= 1')
+            raise ValueError(f'Argument num_inv: {num_inv} must be >= 1')
 
         # Calculate number of service units per each investment
-        duration = timedelta(days=duration)
+        duration = relativedelta(end, start)
         sus_per_instance = ceil(sus / num_inv)
 
         with DBConnection.session() as session:
             for i in range(num_inv):
-                start_this = start + i * duration
-                end_this = start + (i + 1) * duration
+                # Determine the start and end of the current disbursement
+                start_this = start + (i * duration)
+                end_this = start_this + duration
 
                 new_investment = Investment(
                     start_date=start_this,
@@ -362,13 +407,14 @@ class InvestmentServices:
                 account = session.execute(select(Account).where(Account.name == self._account_name)).scalars().first()
                 account.investments.append(new_investment)
                 session.add(account)
+
                 LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
 
                 session.commit()
 
-            LOG.info(f"Invested {sus} service units for account {self._account_name}")
+                LOG.info(f"Invested {sus} service units for account {self._account_name}")
 
-    def delete_investment(self, inv_id: int) -> None:
+    def delete(self, inv_id: int) -> None:
         """Delete one of the account's associated investments
 
         Args:
@@ -378,57 +424,67 @@ class InvestmentServices:
             MissingInvestmentError: If the given ID does not match the current account
         """
 
+        # Validate Arguments
         self._verify_investment_id(inv_id)
+
+        # Delete the investment with the provided ID
         with DBConnection.session() as session:
             session.execute(delete(Investment).where(Investment.id == inv_id))
             session.commit()
+
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
-    def modify_investment(
+    def modify_date(
             self,
-            inv_id: int,
-            sus: Optional[int] = None,
+            inv_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None
-    ) -> None:
-        """Overwrite service units allocated to the given investment
+            end: Optional[date] = None) -> None:
+        """Overwrite the start or end date of a given investment
 
         Args:
-            inv_id: The id of the investment to change
-            sus: New number of service units to assign to the investment
+            inv_id: The ID of the investment to change, default is the active investment ID
             start: Optionally set a new start date for the investment
             end: Optionally set a new end date for the investment
 
         Raises:
-            MissingInvestmentError: If the account does not have a proposal
+            MissingInvestmentError: If the account does not have an investment
+            ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
+            chronological order with amongst themselves or with the existing DB values.
         """
 
+        inv_id = inv_id or self._get_active_investment_id()
+
         self._verify_investment_id(inv_id)
-        if sus:
-            self._verify_service_units(sus)
 
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
+            start = start or investment.start_date
+            end = end or investment.end_date
 
-            if sus is not None:
-                self._verify_service_units(sus)
-                investment.service_units = sus
+            # Validate provided start/end against DB entries
+            if start >= end:
+                raise ValueError(
+                    f'Start and end dates need to be in proper chronological order: {start} >= {end}. If providing '
+                    'start or end alone, this comparison is between the provided date and the investment\'s existing '
+                    'value')
 
-            if start:
+            # Make provided changes
+            if start != investment.start_date:
                 investment.start_date = start
+                LOG.info(f"Overwriting start date on investment {investment.id} for account {self._account_name}")
 
-            if end:
+            if end != investment.end_date:
                 investment.end_date = end
+                LOG.info(f"Overwriting end date on investment {investment.id} for account {self._account_name}")
 
             session.commit()
-            LOG.info(f'Overwrote service units on investment {investment.id} to {sus} for account {self._account_name}')
 
-    def add_sus(self, inv_id: int, sus: int) -> None:
+    def add_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Add service units to the given investment
 
         Args:
-            inv_id: The id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to add
 
         Raises:
@@ -436,6 +492,8 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
@@ -445,13 +503,14 @@ class InvestmentServices:
             investment.current_sus += sus
 
             session.commit()
-            LOG.info(f'Added {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def subtract_sus(self, inv_id: int, sus: int) -> None:
+            LOG.info(f"Added {sus} service units to investment {investment.id} for account {self._account_name}")
+
+    def subtract_sus(self, inv_id: Optional[int], sus: int) -> None:
         """Subtract service units from the given investment
 
         Args:
-            inv_id: The inv_id of the investment to change
+            inv_id: The ID of the investment to change, default is the active investment ID
             sus: Number of service units to remove
 
         Raises:
@@ -459,18 +518,22 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+
+        inv_id = inv_id or self._get_active_investment_id()
         self._verify_investment_id(inv_id)
 
         query = select(Investment).where(Investment.id == inv_id)
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             if investment.current_sus < sus:
-                raise ValueError(f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
+                raise ValueError(
+                    f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
             investment.current_sus -= sus
 
             session.commit()
+
             LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
     def advance(self, sus: int) -> None:
@@ -481,14 +544,12 @@ class InvestmentServices:
         """
 
         self._verify_service_units(sus)
+        inv_id = self._get_active_investment_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
             # Find the investment to add service units into
-            active_investment_query = select(Investment).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(Investment.is_active)
-
+            active_investment_query = select(Investment).where(Investment.id == inv_id)
             active_investment = session.execute(active_investment_query).scalars().first()
             if not active_investment:
                 raise MissingInvestmentError(f'Account does not have a currently active investment to advance into.')
@@ -496,18 +557,19 @@ class InvestmentServices:
             # Find investments to take service units out of
             usable_investment_query = select(Investment).join(Account) \
                 .where(Account.name == self._account_name) \
-                .where(not Investment.is_expired == False) \
+                .where(Investment.is_expired is not False) \
                 .where(Investment.id != active_investment.id) \
                 .order_by(Investment.start_date.desc())
 
             usable_investments = session.execute(usable_investment_query).scalars().all()
             if not usable_investments:
-                raise MissingInvestmentError(f'Account has no investments to adv ance service units from.')
+                raise MissingInvestmentError(f'Account has no investments to advance service units from.')
 
             # Make sure there are enough service units to cover the withdrawal
             available_sus = sum(inv.service_units - inv.withdrawn_sus for inv in usable_investments)
             if sus > available_sus:
-                raise ValueError(f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
+                raise ValueError(
+                    f"Requested to withdraw {sus} but the account only has {available_sus} SUs available.")
 
             # Move service units from future investments into the current investment
             for investment in usable_investments:
@@ -515,6 +577,7 @@ class InvestmentServices:
                 to_withdraw = min(sus, maximum_withdrawal)
 
                 LOG.info(f'Withdrawing {to_withdraw} service units from investment {investment.id}')
+
                 investment.current_sus -= to_withdraw
                 investment.withdrawn_sus += to_withdraw
                 active_investment.current_sus += to_withdraw
@@ -526,7 +589,7 @@ class InvestmentServices:
 
             session.commit()
 
-        LOG.info(f'Advanced {requested_withdrawal - sus} service units for account {self._account_name}')
+            LOG.info(f"Advanced {(requested_withdrawal - sus)} service units for account {self._account_name}")
 
 
 class AccountServices:
@@ -539,7 +602,8 @@ class AccountServices:
             account_name: The name of the account to administrate
         """
 
-        self._account_name = account_name
+        account = SlurmAccount(account_name)
+        self._account_name = account.account_name
 
         self._proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
@@ -622,13 +686,19 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table = PrettyTable(
+                fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
-                table.add_row([inv.service_units, inv.start_date.strftime(settings.date_format), inv.current_sus, inv.withdrawn_sus, inv.withdrawn_sus])
+                table.add_row([
+                    inv.service_units,
+                    inv.start_date.strftime(settings.date_format),
+                    inv.current_sus,
+                    inv.withdrawn_sus,
+                    inv.withdrawn_sus])
 
         return table
 
-    def print_info(self) -> None:
+    def info(self) -> None:
         """Print a summary of service units allocated to and used by the account"""
 
         try:
@@ -695,90 +765,90 @@ class AccountServices:
 
         raise NotImplementedError
 
-    def renew(self, reset_usage: bool = True) -> None:
-        """Archive any expired investments and rollover unused service units"""
+    def _set_account_lock(
+            self,
+            lock_state: bool,
+            clusters: Optional[Collection[str]] = None,
+            all_clusters: bool = False
+    ) -> None:
+        """Update the lock/unlocked states for the current account
 
-        slurm_acct = SlurmAccount(self._account_name)
-        with DBConnection.session() as session:
+        Args:
+            lock_state: The new account lock state
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
 
-            # Archive any investments which are past their end date
-            investments_to_archive = session.query(Investment).filter(Investment.end_date <= date.today()).all()
-            for investor_row in investments_to_archive:
-                session.add(investor_row.to_archive_object())
-                session.delete(investor_row)
+        if all_clusters:
+            clusters = Slurm.cluster_names()
 
-            # Get total used and allocated service units
-            current_proposal = session.get_proposal
-            total_proposal_sus = sum(getattr(current_proposal, c) for c in settings.clusters)
-            total_usage = slurm_acct.get_total_usage()
+        for cluster in clusters:
+            SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
 
-            # Calculate number of investment SUs to roll over after applying SUs from the primary proposal
-            archived_inv_sus = sum(inv.current_sus for inv in investments_to_archive)
-            effective_usage = max(0, total_usage - total_proposal_sus)
-            available_for_rollover = max(0, archived_inv_sus - effective_usage)
-            to_rollover = int(available_for_rollover * settings.inv_rollover_fraction)
+    def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
+        """Lock the account on the given clusters
 
-            # Add rollover service units to whatever the next available investment
-            # If the conditional false then there are no more investments and the
-            # service units that would have been rolled over are lost
-            next_investment = self.get_investment(session)
-            if next_investment:
-                next_investment.rollover_sus += to_rollover
+        Args:
+            clusters: Name of the clusters to lock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
 
-            # Create a new user proposal and archive the old one
-            new_proposal = Proposal(
-                account_name=current_proposal._account_name,
-                proposal_type=current_proposal.proposal_type,
-                start_date=date.today(),
-                end_date=date.today() + timedelta(days=365),
-                percent_notified=0
-            )
-            for cluster in settings.clusters:
-                setattr(new_proposal, cluster, getattr(current_proposal, cluster))
+        self._set_account_lock(True, clusters, all_clusters)
 
-            session.add(new_proposal)
-            arx = current_proposal.to_archive_object()
-            session.add(arx)
-            session.delete(current_proposal)
+    def unlock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
+        """Unlock the account on the given clusters
 
-            session.commit()
+        Args:
+            clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
+            all_clusters: Lock the user on all clusters
+        """
 
-        # Set RawUsage to zero and unlock the account
-        if reset_usage:
-            slurm_acct = SlurmAccount(self._account_name)
-            slurm_acct.reset_raw_usage()
-            slurm_acct.set_locked_state(False)
-
-    def lock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
-
-    def unlock_account(self):
-        SlurmAccount(self._account_name).set_locked_state(True)
+        self._set_account_lock(False, clusters, all_clusters)
 
 
 class AdminServices:
     """Administrative tasks for managing the banking system as a whole"""
 
     @staticmethod
-    def find_unlocked() -> Tuple[AccountServices]:
-        """Return the names for all unexpired proposals with unlocked accounts
+    def _iter_accounts_by_lock_state(status: bool, cluster: str) -> Iterable[str]:
+        """Return a collection of account names matching the lock state on the given cluster
+
+        Args:
+            status: The lock state to check for
+            cluster: The name of the cluster to check the lock state on
 
         Returns:
             A tuple of account names
         """
 
-        # Query database for accounts that are unlocked and is_expired
-        account_name_query = select(Account.name).join(Proposal).where(Proposal.end_date < date.today())
+        # Query database for accounts that are unlocked and expired
+        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
         with DBConnection.session() as session:
-            account_names = session.execute(account_name_query).scalrs().all()
-            return tuple(AccountServices(name) for name in account_names if not SlurmAccount(name).get_locked_state())
+            account_names = session.execute(account_name_query).scalars().all()
+
+        for account in account_names:
+            if SlurmAccount(account).get_locked_state(cluster) == status:
+                yield account
 
     @classmethod
-    def send_usage_notifications(cls) -> None:
-        """Send any pending usage notifications to unlocked bank accounts"""
+    def list_locked_accounts(cls, cluster: str) -> None:
+        """Print account names that are locked on a given cluster
 
-        for account in cls.find_unlocked():
-            account.notify()
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._iter_accounts_by_lock_state(True, cluster), sep='\n')
+
+    @classmethod
+    def list_unlocked_accounts(cls, cluster: str) -> None:
+        """Print account names that are unlocked on a given cluster
+
+        Args:
+            cluster: The name of the cluster to check the lock state on
+        """
+
+        print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
     def update_account_status(cls) -> None:
@@ -786,10 +856,3 @@ class AdminServices:
 
         for account in cls.find_unlocked():
             account.update_account_status()
-
-    @classmethod
-    def run_maintenance(cls) -> None:
-        """Run regular banking system maintenance"""
-
-        cls.update_account_status()
-        cls.send_usage_notifications()

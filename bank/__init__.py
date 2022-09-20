@@ -10,6 +10,7 @@ from .orm import DBConnection
 
 __version__ = 'development'
 __author__ = 'Pitt Center for Research Computing'
+__license__ = 'All rights reserved'
 
 # Temporarily disable log messages from the environment package
 logging.getLogger('environ.environ').setLevel('ERROR')
