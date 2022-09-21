@@ -29,7 +29,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         with self.assertRaises(SlurmAccountNotFoundError):
             self.assert_parser_matches_func_signature(
                 self.parser,
-                f'create {settings.test_account} --{settings.test_cluster} 100')
+                f'create {settings.nonexistent_account} --{settings.test_cluster} 100')
 
         # Create proposal, adding SUs to a specific cluster
         self.assert_parser_matches_func_signature(

@@ -30,7 +30,7 @@ class InitExceptions(EmptyAccountSetup, TestCase):
     def test_error_on_non_existent_account(self) -> None:
         super().setUp()
         with self.assertRaises(SlurmAccountNotFoundError):
-            self.account = ProposalServices(settings.test_account)
+            self.account = ProposalServices(settings.nonexistent_account)
 
 
 class CreateProposal(EmptyAccountSetup, TestCase):

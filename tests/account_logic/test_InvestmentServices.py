@@ -22,7 +22,7 @@ class InitExceptions(InvestmentSetup, TestCase):
     def test_error_on_non_existent_account(self) -> None:
         # Attempt to create an investment for a nonexistent slurm account
         with self.assertRaises(SlurmAccountNotFoundError):
-            self.account = InvestmentServices(account_name=settings.test_account)
+            self.account = InvestmentServices(account_name=settings.nonexistent_account)
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""

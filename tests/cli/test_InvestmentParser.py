@@ -29,7 +29,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         with self.assertRaises(SlurmAccountNotFoundError):
             self.assert_parser_matches_func_signature(
                 self.parser,
-                f'create {settings.test_account} --SUs 100')
+                f'create {settings.nonexistent_account} --SUs 100')
 
         # Create an investment, providing a negative SU amount
         with self.assertRaises(SystemExit):
