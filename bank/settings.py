@@ -84,15 +84,11 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
-from environ import environ
-
 _CUR_DIR = Path(__file__).resolve().parent
 
 # Settings for running the test suite.
 test_account = 'account1'
 test_cluster = 'development'
-non_existent_account = 'account1'
-non_existent_cluster = 'development'
 
 # Define how dates should be displayed as strings (in errors, emails, and STDOUT messages)
 date_format = '%m/%d/%y'
