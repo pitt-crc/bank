@@ -16,9 +16,7 @@ jobs:
           - test-env-slurm-20-02-5-1
           - test-env-slurm-22-05-2-1
 
-    container:
-      image: ghcr.io/pitt-crc/${{ matrix.container }}
-      options: --entrypoint /usr/local/bin/entrypoint.sh
+    container: ghcr.io/pitt-crc/${{ matrix.container }}
 
     steps:
       - name: Checkout source
