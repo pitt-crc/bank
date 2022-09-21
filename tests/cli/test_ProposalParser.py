@@ -1,18 +1,16 @@
 """Tests for the ``ProposalParser`` class"""
 
 from datetime import datetime
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
 from dateutil.relativedelta import relativedelta
 
 from bank import settings
-from bank.exceptions import SlurmAccountNotFoundError
 from bank.cli import ProposalParser
-from bank.system import Slurm
+from bank.exceptions import SlurmAccountNotFoundError
 from tests.cli._utils import CLIAsserts
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class SignatureMatchesCLI(TestCase, CLIAsserts):
     """Test parser arguments match the signatures of the corresponding executable"""
 
@@ -31,7 +29,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         with self.assertRaises(SlurmAccountNotFoundError):
             self.assert_parser_matches_func_signature(
                 self.parser,
-                f'create {settings.non_existent_account} --{settings.test_cluster} 100')
+                f'create {settings.nonexistent_account} --{settings.test_cluster} 100')
 
         # Create proposal, adding SUs to a specific cluster
         self.assert_parser_matches_func_signature(

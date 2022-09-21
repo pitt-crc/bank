@@ -84,15 +84,12 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
-from environ import environ
-
 _CUR_DIR = Path(__file__).resolve().parent
 
 # Settings for running the test suite.
-test_account = 'sam'
-test_cluster = 'smp'
-non_existent_account = 'dummy'
-non_existent_cluster = 'dummy'
+test_account = 'account1'
+test_cluster = 'development'
+nonexistent_account = 'fake_account'
 
 # Define how dates should be displayed as strings (in errors, emails, and STDOUT messages)
 date_format = '%m/%d/%y'
@@ -106,7 +103,7 @@ log_level = 'INFO'
 db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = ('smp', 'mpi', 'gpu', 'htc')
+clusters = ('smp', 'mpi', 'gpu', 'htc', 'development')
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1
