@@ -19,6 +19,9 @@ jobs:
     container: ghcr.io/pitt-crc/${{ matrix.container }}
 
     steps:
+      - name: Setup environment
+        run: /usr/local/bin/entrypoint.sh
+
       - name: Checkout source
         uses: actions/checkout@master
 
