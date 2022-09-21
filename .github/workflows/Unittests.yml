@@ -18,6 +18,8 @@ jobs:
 
     container:
       image: ghcr.io/pitt-crc/${{ matrix.container }}
+      options:
+        entrypoint: /usr/local/bin/entrypoint.sh
 
     steps:
       - name: Checkout source
