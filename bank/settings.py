@@ -102,7 +102,7 @@ log_level = 'INFO'
 db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = ('smp', 'mpi', 'gpu', 'htc')
+clusters = ('smp', 'mpi', 'gpu', 'htc', 'development')
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1

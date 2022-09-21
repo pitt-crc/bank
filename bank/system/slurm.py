@@ -73,10 +73,9 @@ class SlurmAccount:
             LOG.error('SystemError: Slurm is not installed')
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
-        cmd = ShellCmd(f'sacctmgr -n show assoc account={account_name}')
-        if not cmd.out:
+        if not self.check_account_exists(account_name):
             LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
-            raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}- {cmd.out}|{cmd.err}')
+            raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
     def account_name(self) -> str:
