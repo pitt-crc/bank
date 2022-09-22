@@ -34,12 +34,6 @@ jobs:
           coverage report
           coverage xml -o ${{ matrix.container }}.xml
 
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v2
-        with:
-          name: code-coverage-report
-          path: ${{ matrix.container }}.xml
-
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r ${{ matrix.container }}.xml
