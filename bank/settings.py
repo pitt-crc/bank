@@ -42,14 +42,6 @@ Application Settings
      - The email template to use when a user's propsal is a given number of days from expiring
    * - expired_proposal_notice
      - The email template to use when a user's propsal has expired
-   * - ldap_username
-     - Username to use when running LDAP queries
-   * - ldap_password_path
-     - Plain text password corresponding to the configured LDAP userid
-   * - ad_server
-     - Microsoft's Active Directory (AD) for user authentication and authorization
-   * - ldap_hostname
-     - Fully resolved LDAP hostname
 
 Usage Example
 -------------
@@ -103,7 +95,7 @@ log_level = 'INFO'
 db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = ('smp', 'mpi', 'gpu', 'htc', 'development')
+clusters = ('development',)
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1
@@ -113,12 +105,6 @@ inv_rollover_fraction = 0.5
 # field of each account in ``sacctmgr`` contains the prefix.
 user_email_suffix = '@pitt.edu'
 from_address = 'noreply@pitt.edu'
-
-# LDAP variables
-ldap_username = 'crcquery'
-ldap_password_path = '/ihome/crc/scripts/crcquery.txt'
-ldap_hostname = 'ldap://sam-ldap-prod-01.cssd.pitt.edu'
-ad_server = 'pittad.univ.pitt.edu'
 
 # An email to send when a user has exceeded a proposal usage threshold
 notify_levels = (90,)
