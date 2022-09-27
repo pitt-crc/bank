@@ -50,7 +50,8 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 
             self.assertTrue(proposal)
             for alloc in proposal.allocations:
-                self.assertEqual(0, alloc.service_units)
+                self.assertEqual(0, alloc.service_units_total)
+                self.assertEqual(0, alloc.service_units_used)
 
     def test_non_default_sus_are_set(self) -> None:
         """Test proposals are assigned the number of sus specified by kwargs"""
