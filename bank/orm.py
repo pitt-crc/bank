@@ -123,6 +123,16 @@ class Proposal(Base):
 
         return is_expired
 
+    @is_expired.expression
+    def is_expired(cls) -> bool:
+        today = date.today()
+        subquery = select(Proposal.id).join(Allocation) \
+            .where(Proposal.start_date < today) \
+            .where(Proposal.end_date >= today) \
+            .where(Allocation.final_usage != None)
+
+        return cls.id.in_(subquery)
+
     @hybrid_property
     def is_active(self) -> bool:
         """Whether the proposal is within its active date range and has available service units"""
