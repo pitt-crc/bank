@@ -118,7 +118,10 @@ class Proposal(Base):
 
         has_allocations = bool(self.allocations)
         has_service_units = any(alloc.final_usage is None for alloc in self.allocations)
-        return not (has_allocations and has_service_units)
+
+        is_expired =  not (has_allocations and has_service_units)
+
+        return is_expired
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -166,7 +169,7 @@ class Allocation(Base):
     proposal_id = Column(Integer, ForeignKey(Proposal.id))
     cluster_name = Column(String, nullable=False)
     service_units_total = Column(Integer, nullable=False)
-    service_units_used = Column(Integer, nullable=False)
+    service_units_used = Column(Integer, nullable=True)
     final_usage = Column(Integer, nullable=True)
 
     proposal = relationship('Proposal', back_populates='allocations')
