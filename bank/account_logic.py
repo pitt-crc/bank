@@ -133,7 +133,7 @@ class ProposalServices:
                 start_date=start,
                 end_date=end,
                 allocations=[
-                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in clusters_sus.items()
+                    Allocation(cluster_name=cluster, service_units_total=sus) for cluster, sus in clusters_sus.items()
                 ]
             )
 
