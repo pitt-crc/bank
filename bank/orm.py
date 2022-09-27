@@ -119,7 +119,7 @@ class Proposal(Base):
         has_allocations = bool(self.allocations)
         has_service_units = any(alloc.final_usage is None for alloc in self.allocations)
 
-        is_expired =  not (has_allocations and has_service_units)
+        is_expired = not (has_allocations and has_service_units)
 
         return is_expired
 

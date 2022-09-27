@@ -12,7 +12,7 @@ from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountS
     ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
-sus_query = select(Allocation.service_units) \
+sus_query = select(Allocation.service_units_total) \
     .select_from(joined_tables) \
     .where(Account.name == settings.test_account) \
     .where(Allocation.cluster_name == settings.test_cluster) \
