@@ -171,7 +171,7 @@ class Allocation(Base):
 
     proposal = relationship('Proposal', back_populates='allocations')
 
-    @validates('service_units')
+    @validates('service_units_total', 'service_units_used')
     def _validate_service_units(self, key: str, value: int) -> int:
         """Verify whether a numerical value is non-negative
 
