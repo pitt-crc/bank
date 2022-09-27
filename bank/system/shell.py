@@ -31,7 +31,7 @@ class ShellCmd:
             raise ValueError('Command string cannot be empty')
 
         LOG.debug(f'executing `{cmd}`')
-        out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()
+        out, err = Popen(split(cmd), stdout=PIPE, stderr=PIPE, shell=True).communicate()
         self.out = out.decode("utf-8").strip()
         self.err = err.decode("utf-8").strip()
 
