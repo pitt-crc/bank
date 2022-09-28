@@ -727,7 +727,7 @@ class AccountServices:
         # Determine the next usage percentage that an email is scheduled to be sent out
         slurm_acct = SlurmAccount(self._account_name)
         usage = slurm_acct.get_total_usage()
-        total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
+        total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
 
