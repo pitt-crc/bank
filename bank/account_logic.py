@@ -133,7 +133,7 @@ class ProposalServices:
                 start_date=start,
                 end_date=end,
                 allocations=[
-                    Allocation(cluster_name=cluster, service_units=sus) for cluster, sus in clusters_sus.items()
+                    Allocation(cluster_name=cluster, service_units_total=sus) for cluster, sus in clusters_sus.items()
                 ]
             )
 
@@ -248,7 +248,7 @@ class ProposalServices:
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units += clusters_sus.get(allocation.cluster_name, 0)
+                allocation.service_units_total += clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
 
@@ -272,7 +272,7 @@ class ProposalServices:
         with DBConnection.session() as session:
             allocations = session.execute(query).scalars().all()
             for allocation in allocations:
-                allocation.service_units -= clusters_sus.get(allocation.cluster_name, 0)
+                allocation.service_units_total -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
 
@@ -639,21 +639,21 @@ class AccountServices:
             for allocation in proposal.allocations:
                 usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
                 total_cluster_usage = sum(usage_data.values())
-                total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units)
+                total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units_total)
 
                 # Build an inner table of individual user usage on the current cluster
                 user_usage_table = PrettyTable(border=False, field_names=['User', 'SUs Used', 'Percentage of Total'])
                 for user, user_usage in usage_data.items():
-                    user_percentage = self._calculate_percentage(user_usage, allocation.service_units) or ''
+                    user_percentage = self._calculate_percentage(user_usage, allocation.service_units_total) or ''
                     user_usage_table.add_row([user, user_usage, user_percentage])
 
                 # Add the table created above to the outer table that will eventually be returned
-                output_table.add_row(f"Cluster: {allocation.cluster_name}, Available SUs: {allocation.service_units}")
+                output_table.add_row(f"Cluster: {allocation.cluster_name}, Available SUs: {allocation.service_units_total}")
                 output_table.add_row(user_usage_table)
                 output_table.add_row(['Overall', total_cluster_usage, total_cluster_percent])
 
                 usage_total += total_cluster_usage
-                allocation_total += allocation.service_units
+                allocation_total += allocation.service_units_total
 
             usage_percentage = self._calculate_percentage(usage_total, allocation_total)
             investment_total = sum(inv.service_units for inv in investments)
@@ -727,7 +727,7 @@ class AccountServices:
         # Determine the next usage percentage that an email is scheduled to be sent out
         slurm_acct = SlurmAccount(self._account_name)
         usage = slurm_acct.get_total_usage()
-        total_allocated = sum(alloc.service_units for alloc in proposal.allocations)
+        total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
 
