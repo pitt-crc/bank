@@ -1,6 +1,6 @@
 """Tests for the ``SlurmAccount`` class."""
 
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import patch
 
 from bank import settings
@@ -8,7 +8,6 @@ from bank.exceptions import SlurmAccountNotFoundError, SlurmClusterNotFoundError
 from bank.system.slurm import Slurm, SlurmAccount
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class InitExceptions(TestCase):
     """Tests for exceptions raised during instantiation"""
 
@@ -21,11 +20,10 @@ class InitExceptions(TestCase):
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
 
-        with patch.object(SlurmAccount, 'check_slurm_installed', return_value=False), self.assertRaises(SystemError):
+        with patch.object(Slurm, 'is_installed', return_value=False), self.assertRaises(SystemError):
             SlurmAccount('fake_account_name_123')
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class AccountLocking(TestCase):
     """Test the account is locked/unlocked by the appropriate getters/setters"""
 
@@ -60,7 +58,6 @@ class AccountLocking(TestCase):
             account.get_locked_state('fake_cluster')
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class AccountUsage(TestCase):
     """Test the retrieval of account usage values"""
 

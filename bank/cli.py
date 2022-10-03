@@ -245,10 +245,11 @@ class ProposalParser(BaseParser):
 
         # Proposal Creation
         create_parser = parent_parser.add_parser('create', help='Create a new proposal for an existing slurm account')
-        create_parser.set_defaults(function=ProposalServices.create_proposal)
+        create_parser.set_defaults(function=ProposalServices.create)
         create_parser.add_argument(**account_definition)
         create_parser.add_argument(
             '--start',
+            metavar='DATE',
             type=cls.valid_date,
             default=datetime.today(),
             help=(
@@ -257,12 +258,18 @@ class ProposalParser(BaseParser):
             )
         )
         create_parser.add_argument(
-            '--duration',
-            type=int,
-            default=12,
+            '--end',
+            metavar='DATE',
+            type=cls.valid_date,
             help='Duration of the proposal in months, default is 1 year (12 months)'
         )
         cls._add_cluster_args(create_parser)
+
+        # Proposal Deletion
+        delete_parser = parent_parser.add_parser('delete', help='Delete an existing proposal')
+        delete_parser.set_defaults(function=ProposalServices.delete)
+        delete_parser.add_argument(**account_definition)
+        delete_parser.add_argument('--ID', **proposal_id_definition, required=True)
 
         # Add SUs to a Proposal
         add_parser = parent_parser.add_parser('add_sus', help='Add service units to an existing proposal')
@@ -281,15 +288,17 @@ class ProposalParser(BaseParser):
         subtract_parser.add_argument('--ID', **proposal_id_definition)
         cls._add_cluster_args(subtract_parser)
 
-        # Modify Proposal Date
+        # Modify Proposal Dates
         modify_date_parser = parent_parser.add_parser(
             'modify_date',
             help='Change the start or end date of an existing proposal'
         )
-        modify_date_parser.set_defaults(function=ProposalServices.modify_proposal)
+        modify_date_parser.set_defaults(function=ProposalServices.modify_date)
         modify_date_parser.add_argument(**account_definition)
+        modify_date_parser.add_argument('--ID', **proposal_id_definition)
         modify_date_parser.add_argument(
             '--start',
+            metavar='DATE',
             type=cls.valid_date,
             help=(
                 'Set a new proposal start date, '
@@ -298,6 +307,7 @@ class ProposalParser(BaseParser):
         )
         modify_date_parser.add_argument(
             '--end',
+            metavar='DATE',
             type=cls.valid_date,
             help=(
                 'Set a new proposal end date, '
@@ -315,7 +325,7 @@ class ProposalParser(BaseParser):
 
         service_unit_definition = dict(
             metavar='service_units',
-            type=int,
+            type=BaseParser.non_negative_int,
             default=0
         )
         # Add argument to specify Service Unit allotment

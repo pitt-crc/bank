@@ -1,12 +1,10 @@
 """Tests for the ``CommandLineApplication`` class"""
 
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
 from bank.cli import CommandLineApplication
-from bank.system import Slurm
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class HasSubparsers(TestCase):
     """Test the application parser has subparsers for each banking service"""
 

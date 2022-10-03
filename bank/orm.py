@@ -120,7 +120,20 @@ class Proposal(Base):
 
         has_allocations = bool(self.allocations)
         has_service_units = any(alloc.final_usage is None for alloc in self.allocations)
-        return not (has_allocations and has_service_units)
+
+        is_expired = not (has_allocations and has_service_units)
+
+        return is_expired
+
+    @is_expired.expression
+    def is_expired(cls) -> bool:
+        today = date.today()
+        subquery = select(Proposal.id).join(Allocation) \
+            .where(Proposal.start_date < today) \
+            .where(Proposal.end_date >= today) \
+            .where(Allocation.final_usage != None)
+
+        return cls.id.in_(subquery)
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -151,11 +164,12 @@ class Allocation(Base):
     has run out.
 
     Table Fields:
-      - id             (Integer): Primary key for this table
-      - proposal_id (ForeignKey): Primary key for the ``proposal`` table
-      - cluster_name    (String): Name of the allocated cluster
-      - service_units  (Integer): Number of allocated service units
-      - final_usage    (Integer): Total service units utilized at proposal expiration
+      - id                   (Integer): Primary key for this table
+      - proposal_id          (ForeignKey): Primary key for the ``proposal`` table
+      - cluster_name         (String): Name of the allocated cluster
+      - service_units_total  (Integer): Number of allocated service units
+      - service_units_used   (Integer): Number of used service units
+      - final_usage          (Integer): Total service units utilized at proposal expiration
 
     Relationships:
       - proposal (Proposal): Many to one
@@ -166,12 +180,13 @@ class Allocation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     proposal_id = Column(Integer, ForeignKey(Proposal.id))
     cluster_name = Column(String, nullable=False)
-    service_units = Column(Integer, nullable=False)
+    service_units_total = Column(Integer, nullable=False)
+    service_units_used = Column(Integer, nullable=True)
     final_usage = Column(Integer, nullable=True)
 
     proposal = relationship('Proposal', back_populates='allocations')
 
-    @validates('service_units')
+    @validates('service_units_total', 'service_units_used')
     def _validate_service_units(self, key: str, value: int) -> int:
         """Verify whether a numerical value is non-negative
 
