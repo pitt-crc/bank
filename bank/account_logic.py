@@ -777,16 +777,21 @@ class AccountServices:
             if proposal.is_expired:
                 self.lock(all_clusters=True)
             else:
+
                 lock_clusters = []
                 residual_sus = 0
+
                 for allocation in proposal.allocations:
 
+                    # If the proposal has floating SUs, compare against SUs used over the awarded amounts to see if any
+                    # remain
                     if allocation.cluster_name is 'all_clusters':
                         has_all_cluster_units = True
                         residual_sus = residual_sus - allocation.service_units
                         continue
 
                     usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
+                    # Keep track of which clusters are over their limit
                     if usage_data >= allocation.service_units:
                         residual_sus += (usage_data - allocation.service_units)
                         lock_clusters.append(allocation.cluster_name)
