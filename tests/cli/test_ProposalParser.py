@@ -1,15 +1,16 @@
 """Tests for the ``ProposalParser`` class"""
 
 from datetime import datetime
-from unittest import TestCase, skipIf
+from unittest import TestCase
+
+from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import ProposalParser
-from bank.system import Slurm
+from bank.exceptions import SlurmAccountNotFoundError
 from tests.cli._utils import CLIAsserts
 
 
-@skipIf(not Slurm.is_installed(), 'Slurm is not installed on this machine')
 class SignatureMatchesCLI(TestCase, CLIAsserts):
     """Test parser arguments match the signatures of the corresponding executable"""
 
@@ -24,21 +25,71 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Create a proposal with default values
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account}')
 
+        # Attempt to create a proposal for a nonexistent slurm account
+        with self.assertRaises(SlurmAccountNotFoundError):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.nonexistent_account} --{settings.test_cluster} 100')
+
         # Create proposal, adding SUs to a specific cluster
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'create {settings.test_account} --{settings.test_cluster} 100'
-        )
+            f'create {settings.test_account} --{settings.test_cluster} 100')
+
+        # Create proposal, adding a negative amount of SUs to a specific cluster
+        with self.assertRaises(SystemExit):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.test_account} --{settings.test_cluster} -100')
 
         # Create a proposal, adding SUs to 'all' clusters
-        self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --all_clusters 100')
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --all_clusters 100')
+
+        # Create proposal, adding a negative amount of SUs to a specific cluster
+        with self.assertRaises(SystemExit):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.test_account} --all_clusters -100')
 
         # Create a proposal, specifying a start date
-        date = datetime.now().strftime(settings.date_format)
-        self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --start {date} ')
+        start_date = datetime.now()
+        start_date_str = start_date.strftime(settings.date_format)
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --start {start_date_str}')
 
-        # Create a proposal, specifying a duration
-        self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --duration 6')
+        # Create a proposal, providing a custom start date with the wrong format
+        with self.assertRaises(SystemExit):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.test_account} --{settings.test_cluster} 100 --start 09/01/2500')
+
+        # Create a proposal, specifying a custom end date
+        end_date = start_date + relativedelta(months=6)
+        end_date_str = end_date.strftime(settings.date_format)
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --{settings.test_cluster} 100 --end {end_date_str}')
+
+        # Create a proposal, providing a custom end date with the wrong format
+        with self.assertRaises(SystemExit):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'create {settings.test_account} --{settings.test_cluster} 100 --end 09/01/2500')
+
+        # Create a proposal, specifying a custom start and end date
+        self.assert_parser_matches_func_signature(
+            self.parser,
+            f'create {settings.test_account} --{settings.test_cluster} 100 '
+            f'--start {start_date_str} --end {end_date_str}')
+
+    def test_delete_proposal(self) -> None:
+        """Test the parsing of arguments by the ``delete`` command"""
+
+        # Delete a specific proposal
+        self.assert_parser_matches_func_signature(self.parser, f'delete {settings.test_account} --ID 0')
 
     def test_add_service_units(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
@@ -72,6 +123,12 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
             self.parser,
             f'subtract_sus {settings.test_account} --{settings.test_cluster} 100'
         )
+
+        # Remove SUs from the active proposal, providing a negative SU amount
+        with self.assertRaises(SystemExit):
+            self.assert_parser_matches_func_signature(
+                self.parser,
+                f'subtract_sus {settings.test_account} --{settings.test_cluster} -100')
 
         # Subtract SUs from a specific proposal, removing from a specific cluster
         self.assert_parser_matches_func_signature(

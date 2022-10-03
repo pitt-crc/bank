@@ -7,18 +7,24 @@ from bank.orm import Allocation
 class ServiceUnitsValidation(TestCase):
     """Tests for the validation of the ``service_units`` column"""
 
-    def test_negative_service_units(self) -> None:
-        """Test for a ``ValueError`` when the number of service units are negative"""
+    def test_negative_service_units_total(self) -> None:
+        """Test for a ``ValueError`` when the total number of service units is negative"""
 
         with self.assertRaises(ValueError):
-            Allocation(service_units=-1)
+            Allocation(service_units_total=-1)
+
+    def test_negative_service_units_used(self) -> None:
+        """Test for a ``ValueError`` when the number of service units used are negative"""
+
+        with self.assertRaises(ValueError):
+            Allocation(service_units_total=-1)
 
     def test_value_is_assigned(self) -> None:
         """Test the validated value is assigned to the table instance"""
 
         for num_sus in (0, 10):
-            allocation = Allocation(service_units=num_sus)
-            self.assertEqual(num_sus, allocation.service_units)
+            allocation = Allocation(service_units_total=num_sus)
+            self.assertEqual(num_sus, allocation.service_units_total)
 
 
 class ClusterNameValidation(TestCase):

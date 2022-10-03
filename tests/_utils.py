@@ -47,7 +47,7 @@ class ProposalSetup(EmptyAccountSetup):
             if end <= TODAY:
                 exhausted = end
 
-            allocations = [Allocation(cluster_name=settings.test_cluster, service_units=self.num_proposal_sus)]
+            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_total=self.num_proposal_sus)]
             proposal = Proposal(
                 allocations=allocations,
                 start_date=start,
