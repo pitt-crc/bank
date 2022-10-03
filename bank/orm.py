@@ -109,10 +109,12 @@ class Proposal(Base):
     def is_expired(self) -> bool:
         """Whether the proposal is past its end date or has exhausted its allocation"""
 
+        # The proposal expired today
         today = date.today()
         if today >= self.end_date:
             return True
 
+        # Proposal has not started yet
         if today < self.start_date:
             return False
 
