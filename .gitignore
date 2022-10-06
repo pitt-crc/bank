@@ -23,4 +23,3 @@ docs/build
 *.log
 *.db
 *.json
-.tox/
