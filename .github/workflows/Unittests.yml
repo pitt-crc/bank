@@ -42,7 +42,7 @@ jobs:
           build-args: SLURM_TAG=${{ matrix.slurm }}
 
       - name: Run tests
-        run: docker run -v $(pwd):/app -t py-${{ matrix.python }}-${{ matrix.slurm }} .github/test_with_coverage.sh ${{ matrix.python }}
+        run: docker run -v $(pwd):/app -t py-${{ matrix.python }}-${{ matrix.slurm }} /app/.github/test_with_coverage.sh ${{ matrix.python }}
 
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
