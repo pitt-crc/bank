@@ -35,8 +35,8 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_expired, 'Proposal is not expired despite missing allocation')
         self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
@@ -49,14 +49,14 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_active)
 
     def test_current_date_in_range(self) -> None:
-        """Test the proposal is unexpired during the proposal date range"""
+        """Test the proposal is not expired during the proposal date range"""
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
         self.assertTrue(proposal.is_active)
 
@@ -75,8 +75,8 @@ class ProposalStatus(TestCase):
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
@@ -95,8 +95,8 @@ class ProposalStatus(TestCase):
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
         self.assertTrue(proposal.is_active)
 
@@ -115,8 +115,8 @@ class ProposalStatus(TestCase):
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
         self.assertFalse(proposal.is_active)
 
