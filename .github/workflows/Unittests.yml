@@ -42,14 +42,7 @@ jobs:
           build-args: SLURM_TAG=${{ matrix.slurm }}
 
       - name: Run tests
-        uses: addnab/docker-run-action@v3
-        with:
-          image: py-${{ matrix.python }}-${{ matrix.slurm }}
-          options: -v ${{ github.workspace }}:/app
-          run: |
-            coverage-${{ matrix.python }} run -m unittest discover /app
-            coverage-${{ matrix.python }} report --include="/app/bank/*"
-            coverage-${{ matrix.python }} xml --include="/app/bank/*" -o app/coverage.xml
+        run: docker run -v $(pwd):/app -t py-${{ matrix.python }}-${{ matrix.slurm }} .github/test_with_coverage.sh ${{ matrix.python }}
 
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
