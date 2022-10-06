@@ -31,8 +31,7 @@ jobs:
         with:
           context: .
           tags: py-${{ matrix.python }}-${{ matrix.slurm }}
-          build-args: |
-            SLURM_TAG=${{ matrix.slurm-tag }}
+          build-args: SLURM_TAG=${{ matrix.slurm }}
 
       - name: Run tests
         run: docker run -v $(pwd):/app -t py-${{ matrix.python }}-${{ matrix.slurm }} .github/test_with_coverage.sh ${{ matrix.python }}
