@@ -51,13 +51,9 @@ jobs:
             coverage-${{ matrix.python }} run -m unittest discover /app
             status=$?
 
-            # Generate a coverage report
             coverage-${{ matrix.python }} report --include="/app/bank/*"
             coverage-${{ matrix.python }} xml --include="/app/bank/*" -o app/coverage.xml
             exit $status  # Exit with the appropriate status
-
-      - name: Run tests
-        run: docker run -v $(pwd):/app -t py-${{ matrix.python }}-${{ matrix.slurm }} /app/.github/test_with_coverage.sh ${{ matrix.python }}
 
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
