@@ -860,24 +860,17 @@ class AccountServices:
             # If usage on some clusters are exceeding the awarded amount
             if lock_clusters:
 
-                # Determine if exceeding SUs can be covered by floating or investment SUs
-                floating_sus = floating_alloc.service_units_total
-
-
-
-
-
-                    # Check if usage is covered by floating or investment SUs
-                    if floating_sus or investment_sus:
+                # Check if usage is covered by floating or investment SUs
+                if floating_alloc.service_units_total or investment.current_sus:
                         exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
 
                         # Lock if floating and Investment SUs can't cover the usage
-                        if (exceeding_sus_total - floating_sus) - investment_sus >= 0:
+                        if (exceeding_sus_total - floating_alloc.service_units_total) - investment.current_sus >= 0:
                             self.lock(clusters=[cluster['name'] for cluster in lock_clusters])
 
-                    # No floating or investment SUs, lock clusters exceeding their limits
-                    else:
-                        self.lock(clusters=[cluster['name'] for cluster in lock_clusters])
+                # No floating or investment SUs, lock clusters exceeding their limits
+                else:
+                    self.lock(clusters=[cluster['name'] for cluster in lock_clusters])
 
             if lock_on_all_clusters:
                 LOG.info(f"Locking {self._account_name} on all clusters, no active proposal or investment")
@@ -885,7 +878,6 @@ class AccountServices:
 
             session.commit()
             # TODO: Perform some kind of final check to see if any locking that was done would otherwise exhaust the proposal?
-
 
     def _set_account_lock(
             self,
