@@ -1,6 +1,6 @@
 """Tests for the ``AdminParser`` class"""
 
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from bank.cli import AdminParser
 from tests._utils import ProposalSetup
@@ -20,11 +20,13 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(self.parser, 'update_status')
 
+    @skip('Functionality not implemented')
     def test_list_locked(self) -> None:
         """Test the parsing of arguments by the ``list_locked`` command"""
 
         self.assert_parser_matches_func_signature(self.parser, 'list_locked')
 
+    @skip('Functionality not implemented')
     def test_list_unlocked(self) -> None:
         """Test the parsing of arguments by the ``list_unlocked`` command"""
 
