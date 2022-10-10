@@ -1,5 +1,5 @@
 ARG SLURM_TAG
-FROM ghcr.io/pitt-crc/test-env-$SLURM_TAG:v0.2.0
+FROM ghcr.io/pitt-crc/test-env-$SLURM_TAG:v0.2.1
 
 COPY requirements.txt requirements.txt
 RUN pip-3.6 install -r requirements.txt && \

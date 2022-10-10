@@ -47,6 +47,8 @@ jobs:
           image: py-${{ matrix.python }}-${{ matrix.slurm }}
           options: -v ${{ github.workspace }}:/app
           run: |
+            bash /usr/local/bin/entrypoint.sh
+
             # Run tests with coverage and catch the exit status
             coverage-${{ matrix.python }} run -m unittest discover /app
             status=$?

@@ -56,22 +56,3 @@ class AccountLocking(TestCase):
         account = SlurmAccount(settings.test_account)
         with self.assertRaises(SlurmClusterNotFoundError):
             account.get_locked_state('fake_cluster')
-
-
-class AccountUsage(TestCase):
-    """Test the retrieval of account usage values"""
-
-    def test_get_usage_hours(self) -> None:
-        """Test the recovered account usage in hours matches the value in seconds"""
-
-        account = SlurmAccount(settings.test_account)
-        cluster = settings.clusters[0]
-        usage_seconds = account.get_cluster_usage(cluster)
-        usage_hours = account.get_cluster_usage(cluster, in_hours=True)
-
-        test_user = next(iter(usage_seconds.keys()))
-        test_usage_seconds = usage_seconds[test_user]
-        test_usage_hours = usage_hours[test_user]
-
-        self.assertGreater(test_usage_seconds, 0)
-        self.assertEqual(int(test_usage_seconds // 60), test_usage_hours)
