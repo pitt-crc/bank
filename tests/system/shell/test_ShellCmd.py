@@ -17,7 +17,7 @@ class InitExceptions(TestCase):
 
 
 class FileDescriptors(TestCase):
-    """Test STDOUT and STDERR are captured as attributes"""
+    """Test STDOUT and STDERR are captured and returned"""
 
     def test_capture_on_success(self) -> None:
         """Test for command writing to STDOUT"""
@@ -33,6 +33,13 @@ class FileDescriptors(TestCase):
         cmd = ShellCmd("ls fake_dr")
         self.assertFalse(cmd.out)
         self.assertTrue(cmd.err)
+
+    def test_output_decoded(self) -> None:
+        """Test file descriptor values are decoded"""
+
+        cmd = ShellCmd('echo hello world')
+        self.assertIsInstance(cmd.out, str)
+        self.assertIsInstance(cmd.err, str)
 
 
 class RaisingStdErr(TestCase):

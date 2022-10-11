@@ -14,17 +14,20 @@ LOG = getLogger('bank.system.shell')
 
 
 class ShellCmd:
-    """Executes commands using the underlying system shell
+    """Execute commands using the underlying shell
 
-    Output to STDOUT and STDERR from the executed command are
-    written to the ``out`` and ``err`` attributes respectively.
+    Outputs to STDOUT and STDERR are exposed via the ``out`` and ``err``
+    attributes respectively.
     """
 
     def __init__(self, cmd: str) -> None:
         """Execute the given command in the underlying shell
 
         Args:
-            cmd: The command to be run in a new pipe
+            cmd: The command to run
+
+        Raises:
+            ValueError: When the ``cmd`` argument is empty
         """
 
         if not cmd:
