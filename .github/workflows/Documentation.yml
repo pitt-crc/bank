@@ -16,6 +16,9 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
+      - name: Setup environment
+        run: /usr/local/bin/entrypoint.sh
+
       - name: Checkout
         uses: actions/checkout@v3
 
