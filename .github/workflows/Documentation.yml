@@ -18,7 +18,7 @@ jobs:
       image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.2.1
       credentials:
         username: ${{ github.actor }}
-        password: ${{ secrets.github_token }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
