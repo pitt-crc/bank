@@ -5,11 +5,6 @@ on:
   push:
     branches: [ development ]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
   build:
     name: Build Documentation
