@@ -6,7 +6,7 @@ import time_machine
 from sqlalchemy import select
 
 from bank import settings
-from bank.account_logic import AccountServices
+from bank.account_logic import AccountServices, AdminServices
 from bank.orm import Account, DBConnection, Proposal
 from bank.system.slurm import SlurmAccount
 from tests._utils import InvestmentSetup, ProposalSetup
@@ -119,3 +119,35 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         # Note: ``assert_called_once`` includes earlier calls in the test
         self.account.notify()
         mock_send_message.assert_called_once()
+
+
+class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
+    """Test update_status functionality for an individual account"""
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        self.account = AccountServices(settings.test_account)
+        with DBConnection.session() as session:
+            active_proposal = session.execute(active_proposal_query).scalars().first()
+            self.proposal_end_date = active_proposal.end_date
+
+    @patch.object(SlurmAccount, "get_total_usage",
+                  lambda self: 100)  # Ensure account usage is a reproducible value for testing
+    def test_locked_on_single_cluster(self) -> None:
+        pass
+
+    def test_locked_on_multiple_clusters(self) -> None:
+        pass
+
+    def test_locked_on_all_clusters(self) -> None:
+        pass
+
+    def test_floating_sus_applied(self) -> None:
+        pass
+
+    def test_investment_sus_applied(self) -> None:
+        pass
+
+
+
