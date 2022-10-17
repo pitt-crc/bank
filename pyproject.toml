@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=64", ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crc-bank"
+dynamic = ["version"]
+requires-python = ">=3.8"
+authors = [{ name = "Pitt Center for Research Computing" }]
+readme = { file = "README.md", content-type = "text/markdown" }
+description = "Banking application for resource allocation in Slurm based HPC systems."
+keywords = ["Pitt", "CRC", "HPC", "banking", "slurm"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed"
+]
+dependencies = [
+    "beautifulsoup4",
+    "pandas",
+    "prettytable",
+    "python-environ",
+    "SQLAlchemy",
+    "sqlalchemy-utils",
+    "time-machine",
+]
+
+[project.optional-dependencies]
+tests = ["coverage"]
+docs = [
+    "sphinx",
+    "sphinx_autodoc_typehints",
+    "sphinx-copybutton",
+    "sphinx-rtd-theme",
+    "sphinx-argparse",
+]
+
+[tool.setuptools]
+packages = ["bank"]
+
+[tool.setuptools.dynamic]
+version = { attr = "bank.__version__" }

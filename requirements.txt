@@ -1,7 +1,0 @@
-beautifulsoup4
-pandas
-prettytable
-python-environ
-SQLAlchemy
-sqlalchemy-utils
-time-machine
