@@ -135,18 +135,25 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
     @patch.object(SlurmAccount, "get_total_usage",
                   lambda self: 100)  # Ensure account usage is a reproducible value for testing
     def test_locked_on_single_cluster(self) -> None:
-        pass
+        """Test that update_status locks the account on a single cluster that is exceeding usage limits"""
+        self.account.update_status
 
+    @patch.object(SlurmAccount, "get_total_usage",
+                  lambda self: 100)  # Ensure account usage is a reproducible value for testing
     def test_locked_on_multiple_clusters(self) -> None:
+        """Test that update_status locks the account on multiple clusters that are exceeding usage limits"""
         pass
 
     def test_locked_on_all_clusters(self) -> None:
+        """Test that update_status locks the account on all clusters"""
         pass
 
     def test_floating_sus_applied(self) -> None:
+        """Test that update_status uses floating SUs to cover usage over limits"""
         pass
 
     def test_investment_sus_applied(self) -> None:
+        """Test that update_status uses investment SUs to cover usage over limits"""
         pass
 
 

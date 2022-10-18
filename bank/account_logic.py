@@ -768,6 +768,8 @@ class AccountServices:
         Update the current usage for each allocation in the proposal from the values in the slurm database,
         then reset the slurm database values.
 
+        Using these values, determine which clusters the account is exceeding usage limits on, and determine if that
+        usage can be covered by floating/investment service units, locking on the cluster if not.
 
         Makes sure a recently expired proposal is closed out if no active proposal is found.
         Makes sure any recently expired investments are closed out if no active investments are found.
