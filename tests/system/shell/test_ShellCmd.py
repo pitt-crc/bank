@@ -16,6 +16,13 @@ class InitExceptions(TestCase):
         with self.assertRaisesRegex(ValueError, 'Command string cannot be empty'):
             ShellCmd('')
 
+    def test_whitespace_cmd(self) -> None:
+        """Test for a ``ValueError`` when the command is only whitespace"""
+
+        for char in string.whitespace:
+            with self.assertRaisesRegex(ValueError, 'Command string cannot be empty'):
+                ShellCmd(char)
+
 
 class FileDescriptors(TestCase):
     """Test STDOUT and STDERR are captured and returned"""
