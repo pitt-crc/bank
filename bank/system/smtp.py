@@ -68,7 +68,7 @@ class EmailTemplate:
             A copy of the parent instance with a formatted message
 
         Raises:
-            FormatError: One missing or extra fields
+            FormattingError: One missing or extra fields
         """
 
         passed_fields = set(kwargs)
