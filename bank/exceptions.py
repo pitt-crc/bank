@@ -14,11 +14,11 @@ class CmdError(Exception):
     """Raised when a piped command writes to STDERR in the underlying shell."""
 
 
-class SlurmAccountNotFoundError(Exception):
+class AccountNotFoundError(Exception):
     """Raised when a Slurm user account does not exist."""
 
 
-class SlurmClusterNotFoundError(Exception):
+class ClusterNotFoundError(Exception):
     """Raised when a Slurm cluster does not exist."""
 
 

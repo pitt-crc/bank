@@ -4,7 +4,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from bank import settings
-from bank.exceptions import SlurmAccountNotFoundError, SlurmClusterNotFoundError
+from bank.exceptions import AccountNotFoundError, ClusterNotFoundError
 from bank.system.slurm import Slurm, SlurmAccount
 
 
@@ -12,9 +12,9 @@ class Instantiation(TestCase):
     """Tests for the instantiation of new instances"""
 
     def test_error_on_missing_account(self) -> None:
-        """Test a ``SlurmAccountNotFoundError`` error is raised if the specified user account does not exist"""
+        """Test a ``AccountNotFoundError`` error is raised if the specified user account does not exist"""
 
-        with self.assertRaises(SlurmAccountNotFoundError):
+        with self.assertRaises(AccountNotFoundError):
             SlurmAccount('fake_account')
 
     def test_valid_account_name(self) -> None:
@@ -39,7 +39,7 @@ class CheckAccountExists(TestCase):
         self.assertTrue(SlurmAccount.check_account_exists('account1'))
 
     def test_invalid_account(self) -> None:
-        """Test the return value is ``True`` for a nonexistant existing account"""
+        """Test the return value is ``True`` for a non-existant existing account"""
 
         self.assertFalse(SlurmAccount.check_account_exists('fake_account'))
 
@@ -64,15 +64,15 @@ class AccountLocking(TestCase):
         """Test an error is raised when setting the lock state for a nonexistent cluster"""
 
         account = SlurmAccount(settings.test_account)
-        with self.assertRaises(SlurmClusterNotFoundError):
+        with self.assertRaises(ClusterNotFoundError):
             account.set_locked_state(True, 'fake_cluster')
 
-        with self.assertRaises(SlurmClusterNotFoundError):
+        with self.assertRaises(ClusterNotFoundError):
             account.set_locked_state(False, 'fake_cluster')
 
     def test_get_invalid_cluster(self) -> None:
         """Test an error is raised when getting the lock state for a nonexistent cluster"""
 
         account = SlurmAccount(settings.test_account)
-        with self.assertRaises(SlurmClusterNotFoundError):
+        with self.assertRaises(ClusterNotFoundError):
             account.get_locked_state('fake_cluster')

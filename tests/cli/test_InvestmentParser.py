@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import InvestmentParser
-from bank.exceptions import SlurmAccountNotFoundError
+from bank.exceptions import AccountNotFoundError
 from tests.cli._utils import CLIAsserts
 
 
@@ -26,7 +26,7 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         self.assert_parser_matches_func_signature(self.parser, f'create {settings.test_account} --SUs 100')
 
         # Attempt to create an investment with a nonexistent slurm account
-        with self.assertRaises(SlurmAccountNotFoundError):
+        with self.assertRaises(AccountNotFoundError):
             self.assert_parser_matches_func_signature(
                 self.parser,
                 f'create {settings.nonexistent_account} --SUs 100')

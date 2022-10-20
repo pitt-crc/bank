@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.account_logic import ProposalServices
-from bank.exceptions import MissingProposalError, ProposalExistsError, SlurmAccountNotFoundError
+from bank.exceptions import MissingProposalError, ProposalExistsError, AccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
 from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
     ProposalSetup, TODAY, TOMORROW, YESTERDAY
@@ -29,7 +29,7 @@ class InitExceptions(EmptyAccountSetup, TestCase):
 
     def test_error_on_non_existent_account(self) -> None:
         super().setUp()
-        with self.assertRaises(SlurmAccountNotFoundError):
+        with self.assertRaises(AccountNotFoundError):
             self.account = ProposalServices(settings.nonexistent_account)
 
 
