@@ -13,12 +13,12 @@ class FieldIdentification(TestCase):
     def test_all_fields_found(self) -> None:
         """Test the template instance is aware of all fields"""
 
-        self.assertSequenceEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
+        self.assertCountEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
 
     def test_duplicate_fields(self) -> None:
         """Test fields with duplicate keys are returned as a single value"""
 
-        self.assertSequenceEqual(('x',), EmailTemplate('{x} {x}').fields)
+        self.assertEqual(('x',), EmailTemplate('{x} {x}').fields)
 
     def test_empty_return_for_no_fields(self) -> None:
         """Test the return is empty when there are no fields"""
