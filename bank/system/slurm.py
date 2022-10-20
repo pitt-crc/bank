@@ -150,7 +150,7 @@ class SlurmAccount:
             ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
-        if cluster and cluster not in Slurm.cluster_names():
+        if cluster not in Slurm.cluster_names():
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
