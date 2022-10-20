@@ -8,20 +8,26 @@ from bank.exceptions import SlurmAccountNotFoundError, SlurmClusterNotFoundError
 from bank.system.slurm import Slurm, SlurmAccount
 
 
-class InitExceptions(TestCase):
-    """Tests for exceptions raised during instantiation"""
+class Instantiation(TestCase):
+    """Tests for the instantiation of new instances"""
 
     def test_error_on_missing_account(self) -> None:
         """Test a ``SlurmAccountNotFoundError`` error is raised if the specified user account does not exist"""
 
         with self.assertRaises(SlurmAccountNotFoundError):
-            SlurmAccount('fake_account_name_123')
+            SlurmAccount('fake_account')
+
+    def test_valid_account_name(self) -> None:
+        """Tet an instance is created successfully for a valid account name"""
+
+        test_account_name = 'account1'
+        self.assertEqual(test_account_name, SlurmAccount(test_account_name).account_name)
 
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
 
         with patch.object(Slurm, 'is_installed', return_value=False), self.assertRaises(SystemError):
-            SlurmAccount('fake_account_name_123')
+            SlurmAccount('fake_account')
 
 
 class AccountLocking(TestCase):

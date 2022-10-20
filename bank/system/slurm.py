@@ -191,5 +191,5 @@ class SlurmAccount:
         # RawUsage to any value other than zero
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
-        clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        clusters_str = ','.join(settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_str} set RawUsage=0')
