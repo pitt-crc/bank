@@ -86,7 +86,7 @@ class EmailTemplate:
         """Raise an error if the template message has any unformatted fields
 
         Raises:
-            MissingEmailFieldsError: If the email template has unformatted fields
+            FormattingError: If the email template has unformatted fields
         """
 
         if any(self.fields):
@@ -106,7 +106,7 @@ class EmailTemplate:
             A copy of the email message
 
         Raises:
-            MissingEmailFieldsError: If the email template has unformatted fields
+            FormattingError: If the email template has unformatted fields
         """
 
         LOG.debug(f'Sending email to {to}')

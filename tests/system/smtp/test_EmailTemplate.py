@@ -88,16 +88,11 @@ class MessageSending(TestCase):
     def test_message_is_sent(self) -> None:
         """Test the smtp server is given the email message to send"""
 
-        # Note that one of expected calls is ``call()`` from the __enter__ context manager
-        self.assertEqual(
-            self.mock_smtp.__enter__.mock_calls,
-            [call(), call().send_message(self.sent)]
-        )
+        self.assertIn(call().send_message(self.sent), self.mock_smtp.__enter__.mock_calls)
 
     @patch('smtplib.SMTP')
     def test_error_on_incomplete_message(self, mock_smtp) -> None:
         """Test a ``RuntimeError`` is raised when sending an incomplete email message"""
 
         with self.assertRaises(FormattingError):
-            EmailTemplate('{x}').send_to(
-                self.to_address, self.subject, self.from_address, smtp=mock_smtp)
+            EmailTemplate('{x}').send_to(self.to_address, self.subject, self.from_address, smtp=mock_smtp)
