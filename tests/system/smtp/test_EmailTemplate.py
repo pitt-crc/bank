@@ -7,6 +7,26 @@ from bank.exceptions import MissingEmailFieldsError
 from bank.system.smtp import EmailTemplate
 
 
+class FieldIdentification(TestCase):
+    """Test the identification of fields"""
+
+    def test_all_fields_found(self) -> None:
+        """Test the template instance is aware of all fields"""
+
+        self.assertSequenceEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
+
+    def test_duplicate_fields(self) -> None:
+        """Test fields with duplicate keys are returned as a single key"""
+
+        self.assertSequenceEqual(('x',), EmailTemplate('{x} {x}').fields)
+
+    def test_empty_return_for_no_fields(self) -> None:
+        """Test the return is empty when there are no fields"""
+
+        fields = EmailTemplate('there are no fields here').fields
+        self.assertEqual(0, len(fields), f'Found fields: {fields}')
+
+
 class Formatting(TestCase):
     """Test the formatting of the email template"""
 
@@ -28,21 +48,6 @@ class Formatting(TestCase):
 
         template = EmailTemplate('Value: {x}').format(x=0, y=1)
         self.assertEqual('Value: 0', template.msg)
-
-
-class FieldIdentification(TestCase):
-    """Test the identification of fields"""
-
-    def test_all_fields_found(self) -> None:
-        """Test the template instance is aware of all fields"""
-
-        self.assertEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
-
-    def test_empty_return_for_no_fields(self) -> None:
-        """Test the return is empty when there are no fields"""
-
-        fields = EmailTemplate('there are no fields here').fields
-        self.assertEqual(0, len(fields), f'Found fields: {fields}')
 
 
 class MessageSending(TestCase):
