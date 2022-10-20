@@ -3,7 +3,7 @@
 from unittest import TestCase
 from unittest.mock import call, patch
 
-from bank.exceptions import MissingEmailFieldsError
+from bank.exceptions import FormattingError
 from bank.system.smtp import EmailTemplate
 
 
@@ -46,13 +46,13 @@ class Formatting(TestCase):
     def test_partial_format_error(self) -> None:
         """Test for a ``ValueError`` when partially formatting a message"""
 
-        with self.assertRaisesRegex(ValueError, 'Missing field names'):
+        with self.assertRaisesRegex(FormattingError, 'Missing field names'):
             EmailTemplate('First Value: {x}, Second Value: {y}').format(x=0)
 
     def test_error_on_invalid_keys(self) -> None:
         """Test for a value error when given invalid field names"""
 
-        with self.assertRaisesRegex(ValueError, 'Invalid field names'):
+        with self.assertRaisesRegex(FormattingError, 'Invalid field names'):
             EmailTemplate('Value: {x}').format(x=0, y=1)
 
 
@@ -98,6 +98,6 @@ class MessageSending(TestCase):
     def test_error_on_incomplete_message(self, mock_smtp) -> None:
         """Test a ``RuntimeError`` is raised when sending an incomplete email message"""
 
-        with self.assertRaises(MissingEmailFieldsError):
+        with self.assertRaises(FormattingError):
             EmailTemplate('{x}').send_to(
                 self.to_address, self.subject, self.from_address, smtp=mock_smtp)

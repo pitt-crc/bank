@@ -14,7 +14,7 @@ from typing import Any, Optional, Tuple, cast
 
 from bs4 import BeautifulSoup
 
-from bank.exceptions import MissingEmailFieldsError
+from bank.exceptions import FormattingError
 
 LOG = getLogger('bank.system.smtp')
 
@@ -68,17 +68,17 @@ class EmailTemplate:
             A copy of the parent instance with a formatted message
 
         Raises:
-            ValueError: One missing or extra fields
+            FormatError: One missing or extra fields
         """
 
         passed_fields = set(kwargs)
         extra_fields = passed_fields - set(self.fields)
         if extra_fields:
-            raise ValueError(f'Invalid field names: {extra_fields}')
+            raise FormattingError(f'Invalid field names: {extra_fields}')
 
         missing_fields = set(self.fields) - passed_fields
         if missing_fields:
-            raise ValueError(f'Missing field names: {missing_fields}')
+            raise FormattingError(f'Missing field names: {missing_fields}')
 
         return EmailTemplate(self._msg.format(**kwargs))
 
@@ -91,7 +91,7 @@ class EmailTemplate:
 
         if any(self.fields):
             LOG.error('Could not send email. Missing fields found')
-            raise MissingEmailFieldsError(f'Message has unformatted fields: {self.fields}')
+            raise FormattingError(f'Message has unformatted fields: {self.fields}')
 
     def send_to(self, to: str, subject: str, ffrom: str, smtp: Optional[SMTP] = None) -> EmailMessage:
         """Send the email template to the given address
