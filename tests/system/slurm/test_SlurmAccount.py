@@ -20,8 +20,7 @@ class Instantiation(TestCase):
     def test_valid_account_name(self) -> None:
         """Tet an instance is created successfully for a valid account name"""
 
-        test_account_name = 'account1'
-        self.assertEqual(test_account_name, SlurmAccount(test_account_name).account_name)
+        self.assertEqual(settings.test_account, SlurmAccount(settings.test_account).account_name)
 
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
@@ -36,7 +35,7 @@ class CheckAccountExists(TestCase):
     def test_valid_account(self) -> None:
         """Test the return value is ``True`` for an existing account"""
 
-        self.assertTrue(SlurmAccount.check_account_exists('account1'))
+        self.assertTrue(SlurmAccount.check_account_exists(settings.test_account))
 
     def test_invalid_account(self) -> None:
         """Test the return value is ``True`` for a non-existant existing account"""
