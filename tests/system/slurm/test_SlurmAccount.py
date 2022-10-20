@@ -30,6 +30,20 @@ class Instantiation(TestCase):
             SlurmAccount('fake_account')
 
 
+class CheckAccountExists(TestCase):
+    """Tests for the ``check_account_exists`` method"""
+
+    def test_valid_account(self) -> None:
+        """Test the return value is ``True`` for an existing account"""
+
+        self.assertTrue(SlurmAccount.check_account_exists('account1'))
+
+    def test_invalid_account(self) -> None:
+        """Test the return value is ``True`` for a nonexistant existing account"""
+
+        self.assertFalse(SlurmAccount.check_account_exists('fake_account'))
+
+
 class AccountLocking(TestCase):
     """Test the account is locked/unlocked by the appropriate getters/setters"""
 
