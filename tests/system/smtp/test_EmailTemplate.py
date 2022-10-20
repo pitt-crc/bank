@@ -8,7 +8,7 @@ from bank.system.smtp import EmailTemplate
 
 
 class FieldIdentification(TestCase):
-    """Test the identification of fields"""
+    """Test the identification of formattable fields"""
 
     def test_all_fields_found(self) -> None:
         """Test the template instance is aware of all fields"""
@@ -16,7 +16,7 @@ class FieldIdentification(TestCase):
         self.assertSequenceEqual(('x', 'y'), EmailTemplate('{x} {y}').fields)
 
     def test_duplicate_fields(self) -> None:
-        """Test fields with duplicate keys are returned as a single key"""
+        """Test fields with duplicate keys are returned as a single value"""
 
         self.assertSequenceEqual(('x',), EmailTemplate('{x} {x}').fields)
 
@@ -30,24 +30,30 @@ class FieldIdentification(TestCase):
 class Formatting(TestCase):
     """Test the formatting of the email template"""
 
+    def test_message_is_formatted(self) -> None:
+        """Test the returned instance has a formatted message"""
+
+        formatted_template = EmailTemplate('Value: {x}').format(x=0)
+        self.assertEqual('Value: 0', formatted_template.msg)
+
     def test_returns_copy(self) -> None:
         """Test formatting a message returns a copy"""
 
         original = EmailTemplate('Value: {x}')
-        new = original.format(x=1)
+        new = original.format(x=0)
         self.assertNotEqual(id(original), id(new))
 
-    def test_message_is_formatted(self) -> None:
-        """Test the email message is formatted after the function call"""
+    def test_partial_format_error(self) -> None:
+        """Test for a ``ValueError`` when partially formatting a message"""
 
-        formatted_template = EmailTemplate('Value: {x}').format(x=1)
-        self.assertEqual('Value: 1', formatted_template.msg)
+        with self.assertRaisesRegex(ValueError, 'Missing field names'):
+            EmailTemplate('First Value: {x}, Second Value: {y}').format(x=0)
 
-    def test_no_error_for_incorrect_keys(self) -> None:
-        """Test argument names that don't match fields are ignored"""
+    def test_error_on_invalid_keys(self) -> None:
+        """Test for a value error when given invalid field names"""
 
-        template = EmailTemplate('Value: {x}').format(x=0, y=1)
-        self.assertEqual('Value: 0', template.msg)
+        with self.assertRaisesRegex(ValueError, 'Invalid field names'):
+            EmailTemplate('Value: {x}').format(x=0, y=1)
 
 
 class MessageSending(TestCase):
@@ -55,6 +61,8 @@ class MessageSending(TestCase):
 
     @patch('smtplib.SMTP')
     def setUp(self, mock_smtp) -> None:
+        """Set up and send a mock ``EmailTemplate``  instance"""
+
         self.template = EmailTemplate('This_is_a_test')
         self.from_address = 'fake_sender@fake_domain.com'
         self.to_address = 'fake_recipient@fake_domain.com'
@@ -66,13 +74,12 @@ class MessageSending(TestCase):
     def test_message_matches_template(self) -> None:
         """Test the email message matches the template"""
 
-        # The rstrip removes a newline character that is added automatically in the sent message
-        # noinspection PyUnresolvedReferences
+        # The rstrip removes a newline character that is added automatically in the delivered message
         sent_message = self.sent.get_body().get_content().rstrip()
         self.assertEqual(self.template.msg, sent_message)
 
     def test_address_fields_are_set(self) -> None:
-        """Test the address/subject fields have been set in the sent email"""
+        """Test the address/subject fields have been set in the delivered email"""
 
         self.assertEqual(self.to_address, self.sent['To'])
         self.assertEqual(self.from_address, self.sent['From'])

@@ -63,7 +63,22 @@ class EmailTemplate:
 
         Args:
             kwargs: Values used to format each field in the template
+
+        Returns:
+            A copy of the parent instance with a formatted message
+
+        Raises:
+            ValueError: One missing or extra fields
         """
+
+        passed_fields = set(kwargs)
+        extra_fields = passed_fields - set(self.fields)
+        if extra_fields:
+            raise ValueError(f'Invalid field names: {extra_fields}')
+
+        missing_fields = set(self.fields) - passed_fields
+        if missing_fields:
+            raise ValueError(f'Missing field names: {missing_fields}')
 
         return EmailTemplate(self._msg.format(**kwargs))
 
