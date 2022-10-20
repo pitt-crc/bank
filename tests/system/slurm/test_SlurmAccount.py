@@ -9,7 +9,7 @@ from bank.system.slurm import Slurm, SlurmAccount
 
 
 class Instantiation(TestCase):
-    """Tests for the instantiation of new instances"""
+    """Test the instantiation of new instances"""
 
     def test_error_on_missing_account(self) -> None:
         """Test a ``AccountNotFoundError`` error is raised if the specified user account does not exist"""
@@ -59,6 +59,10 @@ class AccountLocking(TestCase):
         account.set_locked_state(False, settings.test_cluster)
         self.assertFalse(account.get_locked_state(settings.test_cluster))
 
+
+class SetLockedState(TestCase):
+    """Tests for the ``set_locked_state`` method"""
+
     def test_set_invalid_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when setting a nonexistent cluster"""
 
@@ -78,6 +82,10 @@ class AccountLocking(TestCase):
 
         with self.assertRaises(ClusterNotFoundError):
             account.set_locked_state(False, '')
+
+
+class GetLockedState(TestCase):
+    """Tests for the ``get_locked_state`` method"""
 
     def test_get_invalid_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when getting a nonexistent cluster"""
