@@ -56,13 +56,14 @@ class ClusterNameValidation(TestCase):
         allocation = Allocation(cluster_name=settings.test_cluster)
         self.assertEqual(settings.test_cluster, allocation.cluster_name)
 
-    def test_invalid_cluster_name(self) -> None:
+    def test_missing_cluster(self) -> None:
         """Test for a ``ValueError`` when the cluster name is not defined in settings"""
 
-        fake_name = 'fake_cluster'
-        self.assertNotIn(
-            fake_name, settings.clusters,
-            'Cannot run this test with a real cluster name.')
+        with self.assertRaisesRegex(ValueError, 'not a cluster name defined in application settings'):
+            Allocation(cluster_name='fake_cluster')
 
-        with self.assertRaises(ValueError):
-            Allocation(cluster_name=fake_name)
+    def test_blank_name(self) -> None:
+        """Test for a ``ValueError`` when the cluster name is blank"""
+
+        with self.assertRaisesRegex(ValueError, 'not a cluster name defined in application settings'):
+            Allocation(cluster_name='')
