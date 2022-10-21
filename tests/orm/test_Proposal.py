@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from unittest import TestCase
 
 from bank import settings
@@ -25,8 +26,34 @@ class PercentNotifiedValidation(TestCase):
             self.assertEqual(perc, proposal.percent_notified)
 
 
+class EndDateValidation(TestCase):
+    """Test the validation of the ``end_date``` column"""
+
+    def test_error_before_start_date(self) -> None:
+        """Test for a ``ValueError`` when the end date is before the start date"""
+
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        with self.assertRaisesRegex(ValueError, 'Value for .* column must come after the proposal start date'):
+            Proposal(start_date=today, end_date=yesterday)
+
+    def test_error_on_start_date(self) -> None:
+        """Test for a ``ValueError`` when the end date equals the start date"""
+
+        with self.assertRaisesRegex(ValueError, 'Value for .* column must come after the proposal start date'):
+            Proposal(start_date=date.today(), end_date=date.today())
+
+    def test_value_is_assigned(self) -> None:
+        """Test the validated value is assigned to the table instance"""
+
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+        proposal = Proposal(start_date=today, end_date=tomorrow)
+        self.assertEqual(tomorrow, proposal.end_date)
+
+
 class ProposalStatus(TestCase):
-    """Test boolean result for the ``is_expired`` property"""
+    """Test boolean result for the ``is_active`` and ``is_expired`` properties"""
 
     def test_current_date_before_range(self) -> None:
         """Test the proposal is unexpired before the proposal date range"""
