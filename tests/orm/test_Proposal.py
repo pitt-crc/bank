@@ -1,3 +1,5 @@
+"""Tests for the `Proposal`` class."""
+
 from datetime import date, timedelta
 from unittest import TestCase
 
@@ -52,105 +54,141 @@ class EndDateValidation(TestCase):
         self.assertEqual(tomorrow, proposal.end_date)
 
 
-class ProposalStatus(TestCase):
-    """Test boolean result for the ``is_active`` and ``is_expired`` properties"""
+class ExpiredStatus(TestCase):
+    """Test boolean result for the ``is_expired`` property"""
 
     def test_current_date_before_range(self) -> None:
-        """Test the proposal is unexpired before the proposal date range"""
+        """Test the proposal is unexpired before the proposal date range
+
+        Before the proposal start date, the proposal should not return as
+        being expired under any circumstances.
+        """
 
         proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
-        self.assertFalse(proposal.is_expired, 'Proposal is not expired despite missing allocation')
-        self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
+        self.assertFalse(proposal.is_expired)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations[0].final_usage = 1_000
         self.assertFalse(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
-
-        proposal.allocations[1].final_usage = 1_000
-        self.assertFalse(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
     def test_current_date_in_range(self) -> None:
-        """Test the proposal is not expired during the proposal date range"""
+        """Test the proposal is not expired during the proposal date range
+
+        When the proposal is active, the proposal should only be expired if
+        there are no available allocations.
+        """
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        self.assertFalse(proposal.is_expired)
         self.assertTrue(proposal.is_active)
 
         proposal.allocations[0].final_usage = 1_000
-        self.assertFalse(proposal.is_expired)
-        self.assertTrue(proposal.is_active)
-
-        proposal.allocations[1].final_usage = 1_000
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
     def test_current_date_after_range(self) -> None:
-        """Test the proposal is expired after the proposal date range"""
+        """Test the proposal is expired after the proposal date range
+
+        The proposal should always return as being expired after the end date
+        has passed, no matter the status of associated allocations.
+        """
 
         proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations[0].final_usage = 1_000
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
-
-        proposal.allocations[1].final_usage = 1_000
-        self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
     def test_current_date_at_start(self) -> None:
         """Test the proposal is unexpired on the start date"""
 
         proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
-        self.assertTrue(proposal.is_active)
 
         proposal.allocations[0].final_usage = 1_000
-        self.assertFalse(proposal.is_expired)
-        self.assertTrue(proposal.is_active)
-
-        proposal.allocations[1].final_usage = 1_000
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
     def test_current_date_at_end(self) -> None:
         """Test the proposal is expired on the end date"""
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
-        self.assertFalse(proposal.is_active)
 
         proposal.allocations[0].final_usage = 1_000
         self.assertTrue(proposal.is_expired)
+
+
+class ProposalStatus(TestCase):
+    """Test boolean result for the ``is_active`` property"""
+
+    def test_current_date_before_range(self) -> None:
+        """Test the proposal is unexpired before the proposal date range"""
+
+        proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
+        self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
+
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations[1].final_usage = 1_000
-        self.assertTrue(proposal.is_expired)
+        proposal.allocations[0].final_usage = 1_000
+        self.assertFalse(proposal.is_active)
+
+    def test_current_date_in_range(self) -> None:
+        """Test the proposal is not expired during the proposal date range"""
+
+        proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        self.assertTrue(proposal.is_active)
+
+        proposal.allocations[0].final_usage = 1_000
+        self.assertFalse(proposal.is_active)
+
+    def test_current_date_after_range(self) -> None:
+        """Test the proposal is expired after the proposal date range"""
+
+        proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations[0].final_usage = 1_000
+        self.assertFalse(proposal.is_active)
+
+    def test_current_date_at_start(self) -> None:
+        """Test the proposal is unexpired on the start date"""
+
+        proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        self.assertTrue(proposal.is_active)
+
+        proposal.allocations[0].final_usage = 1_000
+        self.assertFalse(proposal.is_active)
+
+    def test_current_date_at_end(self) -> None:
+        """Test the proposal is expired on the end date"""
+
+        proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        self.assertFalse(proposal.is_active)
+
+        proposal.allocations[0].final_usage = 1_000
         self.assertFalse(proposal.is_active)
