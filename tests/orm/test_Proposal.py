@@ -25,7 +25,7 @@ class PercentNotifiedValidation(TestCase):
 
         for perc in (0, 50, 100):
             proposal = Proposal(percent_notified=perc)
-            self.assertEqual(perc, proposal.percent_notified)
+            self.assertEqual(perc, proposal.percent_notified, f'Value {perc} was not assigned')
 
 
 class EndDateValidation(TestCase):
@@ -54,11 +54,11 @@ class EndDateValidation(TestCase):
         self.assertEqual(tomorrow, proposal.end_date)
 
 
-class ExpiredStatus(TestCase):
-    """Test boolean result for the ``is_expired`` property"""
+class ExpiredProperty(TestCase):
+    """Test boolean ``is_expired`` property"""
 
     def test_current_date_before_range(self) -> None:
-        """Test the proposal is unexpired before the proposal date range
+        """Test the proposal is always unexpired before the proposal start
 
         Before the proposal start date, the proposal should not return as
         being expired under any circumstances.
@@ -74,23 +74,23 @@ class ExpiredStatus(TestCase):
         self.assertFalse(proposal.is_expired)
 
     def test_current_date_in_range(self) -> None:
-        """Test the proposal is not expired during the proposal date range
+        """Test the proposal is only expired when missing active allocations
 
-        When the proposal is active, the proposal should only be expired if
-        there are no available allocations.
+        When the proposal is within the start/end dates, the proposal should
+        only be expired if there are no available allocations.
         """
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
         self.assertTrue(proposal.is_expired)
 
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
-        self.assertTrue(proposal.is_active)
+        self.assertFalse(proposal.is_expired)
 
         proposal.allocations[0].final_usage = 1_000
         self.assertTrue(proposal.is_expired)
 
     def test_current_date_after_range(self) -> None:
-        """Test the proposal is expired after the proposal date range
+        """Test the proposal is always expired after the proposal date range
 
         The proposal should always return as being expired after the end date
         has passed, no matter the status of associated allocations.
@@ -130,11 +130,15 @@ class ExpiredStatus(TestCase):
         self.assertTrue(proposal.is_expired)
 
 
-class ProposalStatus(TestCase):
-    """Test boolean result for the ``is_active`` property"""
+class ActiveProperty(TestCase):
+    """Test the boolean ``is_active`` property"""
 
     def test_current_date_before_range(self) -> None:
-        """Test the proposal is unexpired before the proposal date range"""
+        """Test the proposal is not active before the start date
+
+        Before the start date, the proposal should not be active, even if
+        there is an associated allocation.
+        """
 
         proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
         self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
@@ -146,7 +150,11 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_active)
 
     def test_current_date_in_range(self) -> None:
-        """Test the proposal is not expired during the proposal date range"""
+        """Test the proposal is active during the proposal date range
+
+        Proposals within the start/end dates should be active if they have
+        unexpired allocations.
+        """
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
         self.assertFalse(proposal.is_active)
@@ -158,7 +166,10 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_active)
 
     def test_current_date_after_range(self) -> None:
-        """Test the proposal is expired after the proposal date range"""
+        """Test the proposal is not active after the end date
+
+        A proposal should never return as active after the end date.
+        """
 
         proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
         self.assertFalse(proposal.is_active)
@@ -170,7 +181,7 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_active)
 
     def test_current_date_at_start(self) -> None:
-        """Test the proposal is unexpired on the start date"""
+        """Test the proposal is active on the start date"""
 
         proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
         self.assertFalse(proposal.is_active)
@@ -182,7 +193,7 @@ class ProposalStatus(TestCase):
         self.assertFalse(proposal.is_active)
 
     def test_current_date_at_end(self) -> None:
-        """Test the proposal is expired on the end date"""
+        """Test the proposal is not active on the end date"""
 
         proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
         self.assertFalse(proposal.is_active)
