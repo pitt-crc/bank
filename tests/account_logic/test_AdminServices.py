@@ -36,7 +36,7 @@ class FindUnlockedAccounts(TestCase):
 
 
 class UpdateAccountStatus(ProposalSetup, InvestmentSetup, TestCase):
-    """Test update_account_status functionality"""
+    """Test update_account_status functionality over multiple accounts"""
 
     def setUp(self) -> None:
         super().setUp()
@@ -46,6 +46,8 @@ class UpdateAccountStatus(ProposalSetup, InvestmentSetup, TestCase):
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
 
-
+    def test_lock_multiple_accounts(self) -> None:
+        # TODO: implement
+        pass
 
 
