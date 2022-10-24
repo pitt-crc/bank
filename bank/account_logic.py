@@ -787,8 +787,10 @@ class AccountServices:
 
             # No active investments in date range with SUs to spend, check that any recently
             # active investments are closed out and move on to proposals
-            if not investment:
-                investment_sus = 0
+            if investment:
+                investment_sus = investment.current_sus
+            else:
+                investment_sus = None
                 # Check for a recently active investment, and that it was updated in the DB
                 # TODO: Should this handle multiple investments that have not yet had their exhaustion date set?
                 recent_expired_investment = session.execute(select(Investment).join(Account)
@@ -801,8 +803,6 @@ class AccountServices:
                     # TODO: only accurate if update_account_status is run every day
                     recent_expired_investment.exhaustion_date = date.today()
                     LOG.info(f"Closed out recently expired investment under {self._account_name}")
-            else:
-                investment_sus = investment.current_sus
 
             # No proposal in date range with SUs to spend, check that any recently active proposals
             # are closed out and move on to locking
@@ -817,7 +817,7 @@ class AccountServices:
                 # An account that is unlocked on some cluster should have an active or recently active proposal
                 if not recent_expired_proposal:
                     # TODO: test for this but assume it wouldn't happen normally?
-                    LOG.info(f"No active or recently expired proposal found when account status for "
+                    LOG.debug(f"No active or recently expired proposal found when account status for "
                              f"account {self._account_name}")
 
                 # Set exhaustion date and alloc final usages
@@ -833,10 +833,9 @@ class AccountServices:
                 if not investment:
                     LOG.info(f"Locking {self._account_name} on all clusters, no active proposal or investment")
                     self.lock(all_clusters=True)
-                    slurm_acct.reset_raw_usage()
             else:
 
-                floating_sus = 0
+                floating_sus = None
 
                 # Update Cluster usage in the bank database and determine which clusters may need to be locked
                 for alloc in proposal.allocations:
@@ -847,6 +846,7 @@ class AccountServices:
                         floating_sus = alloc.service_units_total - alloc.service_units_used
                         continue
 
+                    # TODO: cluster usage errors on empty output from sshare
                     alloc.service_units_used += slurm_acct.get_cluster_usage(alloc.cluster_name, in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
@@ -855,15 +855,13 @@ class AccountServices:
 
                     if exceeding_sus >= 0:
                         lock_clusters.append({"alloc": alloc,
-                                              "cluster": alloc.cluster_name,
+                                              "name": alloc.cluster_name,
                                               "exceeding_sus": exceeding_sus})
-
-            # Reset the raw usage now that the session values to be committed to the DB reflect the SLURM DB
-            slurm_acct.reset_raw_usage()
 
             # If usage on some clusters are exceeding the awarded amount
             if lock_clusters:
 
+                cluster_names = [cluster['name'] for cluster in lock_clusters]
                 exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
 
                 # Check if floating or investment SUs are available to cover
@@ -874,28 +872,31 @@ class AccountServices:
                         floating_alloc.service_units_used += exceeding_sus_total
                         for cluster in lock_clusters:
                             cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
-                        LOG.info(f" Using floating service units to cover usage over limit for {self._account_name} "
-                                 f"on {lock_clusters}")
+                        LOG.debug(f" Using floating service units to cover usage over limit for {self._account_name} "
+                                  f"on {cluster_names}")
 
                     # Investment SUs can cover
                     elif exceeding_sus_total - floating_sus < investment_sus:
                         remaining_sus = exceeding_sus - floating_sus
                         floating_alloc.service_units_used = floating_alloc.service_units_total
                         investment.current_sus -= remaining_sus
-                        LOG.info(f" Using investment service units to cover usage over limit for {self._account_name} "
-                                 f"on {lock_clusters}")
+                        LOG.debug(f" Using investment service units to cover usage over limit for {self._account_name} "
+                                 f"on {cluster_names}")
 
                     # Neither can cover
                     else:
-                        self.lock(clusters=[cluster['name'] for cluster in lock_clusters])
-                        LOG.info(f"Locking {self._account_name} on {lock_clusters} due to exceeding limits")
+                        self.lock(clusters=cluster_names)
+                        LOG.info(f"Locking {self._account_name} on {cluster_names} due to exceeding limits")
 
                 # No SUs to cover exceeding SUs, lock on all clusters
                 else:
-                    self.lock(clusters=[cluster['name'] for cluster in lock_clusters])
-                    LOG.info(f"Locking {self._account_name} on {lock_clusters} due to exceeding limits")
+                    self.lock(clusters=cluster_names)
+                    LOG.info(f"Locking {self._account_name} on {cluster_names} due to exceeding limits")
 
             session.commit()
+
+        # Reset the raw usage now that the session values to be committed to the DB reflect the SLURM DB
+        slurm_acct.reset_raw_usage()
 
     def _set_account_lock(
             self,
