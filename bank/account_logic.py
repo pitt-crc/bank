@@ -89,7 +89,7 @@ class ProposalServices:
         """
 
         for cluster, sus in clusters_sus.items():
-            if cluster not in settings.clusters:
+            if cluster not in settings.clusters and cluster != "all_clusters":
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
             if sus < 0:
@@ -785,12 +785,13 @@ class AccountServices:
             # TODO: Multiple investments? scalars().all()?
             lock_clusters = []
 
+
             # No active investments in date range with SUs to spend, check that any recently
             # active investments are closed out and move on to proposals
             if investment:
                 investment_sus = investment.current_sus
             else:
-                investment_sus = None
+                investment_sus = 0
                 # Check for a recently active investment, and that it was updated in the DB
                 # TODO: Should this handle multiple investments that have not yet had their exhaustion date set?
                 recent_expired_investment = session.execute(select(Investment).join(Account)
@@ -819,15 +820,15 @@ class AccountServices:
                     # TODO: test for this but assume it wouldn't happen normally?
                     LOG.debug(f"No active or recently expired proposal found when account status for "
                              f"account {self._account_name}")
+                else:
+                    # Set exhaustion date and alloc final usages
+                    # TODO: this only stays accurate if update_account_status runs daily
+                    recent_expired_proposal.exhaustion_date = date.today()
 
-                # Set exhaustion date and alloc final usages
-                # TODO: this only stays accurate if update_account_status runs daily
-                recent_expired_proposal.exhaustion_date = date.today()
+                    for alloc in recent_expired_proposal.allocations:
+                        alloc.final_usage = slurm_acct.get_cluster_usage(alloc.cluster_name, in_hours=True) + alloc.service_units_used
 
-                for alloc in recent_expired_proposal.allocations:
-                    alloc.final_usage = slurm_acct.get_cluster_usage(alloc.cluster_name, in_hours=True) + alloc.service_units_used
-
-                LOG.info(f"Closed out recently expired proposal under {self._account_name}")
+                    LOG.info(f"Closed out recently expired proposal under {self._account_name}")
 
                 # No proposal or investment SUs, lock on all clusters
                 if not investment:
@@ -835,7 +836,8 @@ class AccountServices:
                     self.lock(all_clusters=True)
             else:
 
-                floating_sus = None
+                floating_sus_remaining = 0
+                floating_alloc = None
 
                 # Update Cluster usage in the bank database and determine which clusters may need to be locked
                 for alloc in proposal.allocations:
@@ -843,7 +845,7 @@ class AccountServices:
                     # Skip floating SUs, noting how many are available
                     if alloc.cluster_name == 'all_clusters':
                         floating_alloc = alloc
-                        floating_sus = alloc.service_units_total - alloc.service_units_used
+                        floating_sus_remaining = alloc.service_units_total - alloc.service_units_used
                         continue
 
                     # TODO: cluster usage errors on empty output from sshare
@@ -864,34 +866,30 @@ class AccountServices:
                 cluster_names = [cluster['name'] for cluster in lock_clusters]
                 exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
 
-                # Check if floating or investment SUs are available to cover
-                if floating_sus or investment_sus:
+                # Floating SUs can cover
+                if exceeding_sus_total < floating_sus_remaining:
+                    floating_alloc.service_units_used += exceeding_sus_total
+                    for cluster in lock_clusters:
+                        cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
+                        LOG.debug(f"Using floating service units to cover usage over limit for {self._account_name} "
+                                  f"on {cluster['name']}")
 
-                    # Floating SUs can cover
-                    if exceeding_sus_total < floating_sus:
-                        floating_alloc.service_units_used += exceeding_sus_total
-                        for cluster in lock_clusters:
-                            cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
-                        LOG.debug(f" Using floating service units to cover usage over limit for {self._account_name} "
-                                  f"on {cluster_names}")
-
-                    # Investment SUs can cover
-                    elif exceeding_sus_total - floating_sus < investment_sus:
-                        remaining_sus = exceeding_sus - floating_sus
+                # Investment SUs can cover
+                elif exceeding_sus_total - floating_sus_remaining < investment_sus:
+                    remaining_sus = exceeding_sus - floating_sus_remaining
+                    if floating_alloc:
                         floating_alloc.service_units_used = floating_alloc.service_units_total
-                        investment.current_sus -= remaining_sus
-                        LOG.debug(f" Using investment service units to cover usage over limit for {self._account_name} "
-                                 f"on {cluster_names}")
+                    investment.current_sus -= remaining_sus
+                    # TODO: do withdrawn SUs need to be changed?
+                    for cluster in lock_clusters:
+                        cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
+                        LOG.debug(f"Using investment service units to cover usage over limit for {self._account_name} "
+                                  f"on {cluster['name']}")
 
-                    # Neither can cover
-                    else:
-                        self.lock(clusters=cluster_names)
-                        LOG.info(f"Locking {self._account_name} on {cluster_names} due to exceeding limits")
-
-                # No SUs to cover exceeding SUs, lock on all clusters
+                # Neither can cover
                 else:
                     self.lock(clusters=cluster_names)
-                    LOG.info(f"Locking {self._account_name} on {cluster_names} due to exceeding limits")
+                    LOG.info(f"Locking {self._account_name} due to exceeding limits")
 
             session.commit()
 

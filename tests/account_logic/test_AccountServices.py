@@ -132,16 +132,17 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         super().setUp()
 
         self.account = AccountServices(settings.test_account)
+
         with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
 
     # Ensure account usage is a reproducible value for testing
     @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
-    def test_locking_single_cluster(self) -> None:
+    def test_status_locked_on_single_cluster(self) -> None:
         """Test that update_status locks the account on a single cluster that is exceeding usage limits"""
 
-        # Unlock the account
+        # Unlock SLURM account
         slurm_acct = SlurmAccount(settings.test_account)
         slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
 
@@ -158,22 +159,24 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             session.commit()
 
-        self.account.update_status
+        self.account.update_status()
 
         # cluster should be locked due to exceeding usage
         self.assertTrue(slurm_acct.get_locked_state(cluster=settings.test_cluster))
 
-    @patch.object(SlurmAccount, "get_total_usage",
-                  lambda self: 100)  # Ensure account usage is a reproducible value for testing
-    def test_locking_multiple_clusters(self) -> None:
+    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    def test_status_locked_on_multiple_clusters(self) -> None:
         """Test that update_status locks the account on one or more clusters but not all clusters"""
         # TODO: Test environment only has a single cluster
         pass
 
-    def test_locked_on_all_clusters(self) -> None:
+    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    def test_status_locked_on_all_clusters(self) -> None:
         """Test that update_status locks the account on all clusters"""
-        slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(0, cluster=settings.test_cluster)
+
+        # Unlock SLURM account
+        slurm_acct = SlurmAccount(settings.test_account)
+        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is expired
@@ -187,16 +190,19 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             session.commit()
 
-        self.account.update_status
+        self.account.update_status()
 
         # clusters should be locked due to lacking an active proposal or investment
-        for cluster_name in settings.clusters:
-            self.assertTrue(slurm_account.get_locked_state(cluster=cluster_name))
+        #cluster_names = [cluster for cluster in settings.clusters if cluster != "all_clusters"]
+        for cluster in settings.clusters:
+            self.assertTrue(slurm_acct.get_locked_state(cluster=cluster))
 
-    def test_floating_sus_applied(self) -> None:
+    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    def test_status_unlocked_with_floating_sus_applied(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
-        slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(0, cluster=settings.test_cluster)
+
+        slurm_acct = SlurmAccount(settings.test_account)
+        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is active and has floating service units
@@ -205,7 +211,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal.allocations[0].service_units_used = 11_000
             proposal.allocations.append(Allocation(
                 cluster_name="all_clusters",
-                service_units_total=1_000,
+                service_units_total=10_000,
                 service_units_used=0))
 
             # Investment is expired
@@ -215,7 +221,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             session.commit()
 
-        self.account.update_status
+        self.account.update_status()
 
         # cluster should be unlocked due to exceeding usage being covered by floating SUs
 
@@ -230,44 +236,56 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal = session.execute(active_proposal_query).scalars().first()
             floating_sus_used = session.execute(floating_alloc_used_query).scalars().first()
 
-            self.assertEqual(1000, floating_sus_used)
+            self.assertEqual(1100, floating_sus_used)
             self.assertEqual(proposal.allocations[0].service_units_used, proposal.allocations[0].service_units_total)
 
-        self.assertFalse(slurm_account.get_locked_state(cluster=settings.test_cluster))
+        self.assertFalse(slurm_acct.get_locked_state(cluster=settings.test_cluster))
 
-    def test_floating_sus_applied_multiple_clusters(self) -> None:
-            """Test that update_status uses floating SUs to cover usage over limits"""
-            slurm_account = SlurmAccount(settings.test_account)
-            slurm_account.set_locked_state(0, cluster=settings.test_cluster)
+    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    def test_status_unlocked_with_floating_sus_applied_multiple_clusters(self) -> None:
+        """Test that update_status uses floating SUs to cover usage over limits"""
 
-            with DBConnection.session() as session:
-                # Proposal is active and has floating service units
-                proposal = session.execute(active_proposal_query).scalars().first()
-                # TODO Add floating allocation
+        slurm_acct = SlurmAccount(settings.test_account)
+        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
 
-                # Investment is expired
-                investment = session.execute(active_investment_query).scalars().first()
-                investment.current_sus = 0
-                investment.withdrawn_sus = investment.service_units
+        with DBConnection.session() as session:
+            # Proposal is active and has floating service units
+            proposal = session.execute(active_proposal_query).scalars().first()
+            proposal.allocations[0].service_units_total = 10_000
+            proposal.allocations[0].service_units_used = 11_000
+            #TODO: need a second allocation on another cluster
 
-                session.commit()
+            proposal.allocations.append(Allocation(
+                cluster_name="all_clusters",
+                service_units_total=10_000,
+                service_units_used=0))
 
-            self.account.update_status
+            # Investment is expired
+            investment = session.execute(active_investment_query).scalars().first()
+            investment.current_sus = 0
+            investment.withdrawn_sus = investment.service_units
 
-            # cluster should be locked due to exceeding usage
-            # TODO: loop over settings.clusters
-            self.assertFalse(slurm_account.get_locked_state(cluster=settings.test_cluster))
+            session.commit()
 
-    def test_investment_sus_applied(self) -> None:
+        self.account.update_status()
+
+        # clusters should be unlocked due to exceeding usage being covered by floating SUs
+        cluster_names = [cluster for cluster in settings.clusters if cluster != "all_clusters"]
+        for cluster in cluster_names:
+            self.assertFalse(slurm_acct.get_locked_state(cluster=cluster))
+
+    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    def test_status_unlocked_with_investment_sus_applied(self) -> None:
         """Test that update_status uses investment SUs to cover usage over limits"""
 
         slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(1, cluster=settings.test_cluster)
+        slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is expired
             proposal = session.execute(active_proposal_query).scalars().first()
-            proposal.allocations[0].final_usage = 10_000
+            proposal.allocations[0].service_units_total = 10_000
+            proposal.allocations[0].service_units_used = 10_000
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -275,14 +293,18 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             session.commit()
 
-        self.account.update_status
+        self.account.update_status()
 
-        # cluster should be locked due to exceeding usage
-        # TODO: loop over settings.clusters
+        # cluster should be unlocked due to exceeding usage being covered by investment
         self.assertFalse(slurm_account.get_locked_state(cluster=settings.test_cluster))
 
         with DBConnection.session() as session:
-            # TODO: check that investment SUs were used to cover usage
-            pass
+            # check that investment SUs were used to cover usage
+            investment = session.execute(active_investment_query).scalars().first()
+            proposal = session.execute(active_proposal_query).scalars().first()
+
+            self.assertEqual(900, investment.current_sus)
+            self.assertEqual(proposal.allocations[0].service_units_used, proposal.allocations[0].service_units_total)
+
 
 
