@@ -67,8 +67,8 @@ class AccountUsage(TestCase):
 
         account = SlurmAccount(settings.test_account)
         cluster = settings.test_cluster
-        usage_seconds = account.get_cluster_usage(cluster)
-        usage_hours = account.get_cluster_usage(cluster, in_hours=True)
+        usage_seconds = account.get_cluster_usage_per_user(cluster)
+        usage_hours = account.get_cluster_usage_per_user(cluster, in_hours=True)
 
         test_user = next(iter(usage_seconds.keys()))
         test_usage_seconds = usage_seconds[test_user]

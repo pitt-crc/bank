@@ -637,7 +637,7 @@ class AccountServices:
             usage_total = 0
             allocation_total = 0
             for allocation in proposal.allocations:
-                usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
+                usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
                 total_cluster_usage = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units_total)
 
@@ -727,7 +727,7 @@ class AccountServices:
     def _notify_proposal(self, proposal):
         # Determine the next usage percentage that an email is scheduled to be sent out
         slurm_acct = SlurmAccount(self._account_name)
-        usage = slurm_acct.get_total_usage()
+        usage = slurm_acct.get_cluster_usage_total()
         total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
@@ -826,7 +826,7 @@ class AccountServices:
                     recent_expired_proposal.exhaustion_date = date.today()
 
                     for alloc in recent_expired_proposal.allocations:
-                        alloc.final_usage = slurm_acct.get_cluster_usage(alloc.cluster_name, in_hours=True) + alloc.service_units_used
+                        alloc.final_usage = slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True) + alloc.service_units_used
 
                     LOG.info(f"Closed out recently expired proposal under {self._account_name}")
 
@@ -849,7 +849,7 @@ class AccountServices:
                         continue
 
                     # TODO: cluster usage errors on empty output from sshare
-                    alloc.service_units_used += slurm_acct.get_cluster_usage(alloc.cluster_name, in_hours=True)
+                    alloc.service_units_used += slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
                     # within-cluster limits
