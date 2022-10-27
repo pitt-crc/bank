@@ -138,7 +138,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             self.proposal_end_date = active_proposal.end_date
 
     # Ensure account usage is a reproducible value for testing
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_locked_on_single_cluster(self) -> None:
         """Test that update_status locks the account on a single cluster that is exceeding usage limits"""
 
@@ -164,13 +164,13 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         # cluster should be locked due to exceeding usage
         self.assertTrue(slurm_acct.get_locked_state(cluster=settings.test_cluster))
 
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_locked_on_multiple_clusters(self) -> None:
         """Test that update_status locks the account on one or more clusters but not all clusters"""
         # TODO: Test environment only has a single cluster
         pass
 
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_locked_on_all_clusters(self) -> None:
         """Test that update_status locks the account on all clusters"""
 
@@ -197,7 +197,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         for cluster in settings.clusters:
             self.assertTrue(slurm_acct.get_locked_state(cluster=cluster))
 
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_floating_sus_applied(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
 
@@ -241,7 +241,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
         self.assertFalse(slurm_acct.get_locked_state(cluster=settings.test_cluster))
 
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_floating_sus_applied_multiple_clusters(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
 
@@ -274,7 +274,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         for cluster in cluster_names:
             self.assertFalse(slurm_acct.get_locked_state(cluster=cluster))
 
-    @patch.object(SlurmAccount, "get_cluster_usage", lambda self, cluster, in_hours: 100)
+    @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_investment_sus_applied(self) -> None:
         """Test that update_status uses investment SUs to cover usage over limits"""
 
