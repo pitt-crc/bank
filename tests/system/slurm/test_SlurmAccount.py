@@ -1,6 +1,6 @@
 """Tests for the ``SlurmAccount`` class."""
 
-from unittest import TestCase
+from unittest import TestCase, skip
 from unittest.mock import patch
 
 from bank import settings
@@ -61,7 +61,7 @@ class AccountLocking(TestCase):
 class AccountUsage(TestCase):
     """Test the retrieval of account usage values"""
 
-    @skip('This functionality relies on setting up SLURM account with no zero usage.')
+    @skip('This functionality relies on setting up SLURM account with non-zero usage in the DB.')
     def test_get_usage_hours(self) -> None:
         """Test the recovered account usage in hours matches the value in seconds"""
 
