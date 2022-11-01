@@ -826,7 +826,8 @@ class AccountServices:
                     recent_expired_proposal.exhaustion_date = date.today()
 
                     for alloc in recent_expired_proposal.allocations:
-                        alloc.final_usage = slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True) + alloc.service_units_used
+                        alloc.final_usage = slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True) \
+                                            + alloc.service_units_used
 
                     LOG.info(f"Closed out recently expired proposal under {self._account_name}")
 
