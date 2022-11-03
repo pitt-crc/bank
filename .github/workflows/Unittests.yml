@@ -38,9 +38,9 @@ jobs:
       - name: Run tests
         run: |
           # Run tests with coverage and catch the exit status
-          coverage-${{ matrix.python }} run -m unittest discover
-          coverage-${{ matrix.python }} report --omit="tests/*"
-          coverage-${{ matrix.python }} --omit="tests/*" -o report_${{ matrix.python-version }}_${{ matrix.slurm }}.xml
+          coverage-${{ matrix.python }} run -m unittest discover bank
+          coverage-${{ matrix.python }} report --include="bank/*"
+          coverage-${{ matrix.python }} xml --include="bank/*" -o report_${{ matrix.python-version }}_${{ matrix.slurm }}.xml
 
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
