@@ -43,6 +43,7 @@ class UsedServiceUnitsValidation(TestCase):
         """Test the used service units are allowed to exceed the total allocated service units"""
 
         allocation = Allocation(service_units_total=100, service_units_used=105)
+        self.assertGreater(allocation.service_units_used, allocation.service_units_total)
         self.assertEqual(100, allocation.service_units_total)
         self.assertEqual(105, allocation.service_units_used)
 
