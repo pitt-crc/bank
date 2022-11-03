@@ -12,7 +12,7 @@ class TotalServiceUnitsValidation(TestCase):
     def test_negative_service_units(self) -> None:
         """Test for a ``ValueError`` when the total number of service units is negative"""
 
-        with self.assertRaisesRegex(ValueError, 'must be a non-negative integer'):
+        with self.assertRaisesRegex(ValueError, 'non-negative'):
             Allocation(service_units_total=-1)
 
     def test_value_is_assigned(self) -> None:
@@ -29,7 +29,7 @@ class UsedServiceUnitsValidation(TestCase):
     def test_negative_service_units(self) -> None:
         """Test for a ``ValueError`` when the total number of service units is negative"""
 
-        with self.assertRaisesRegex(ValueError, 'must be a non-negative integer'):
+        with self.assertRaisesRegex(ValueError, 'non-negative'):
             Allocation(service_units_used=-1)
 
     def test_value_is_assigned(self) -> None:
@@ -59,11 +59,11 @@ class ClusterNameValidation(TestCase):
     def test_missing_cluster(self) -> None:
         """Test for a ``ValueError`` when the cluster name is not defined in settings"""
 
-        with self.assertRaisesRegex(ValueError, 'not a cluster name defined in application settings'):
+        with self.assertRaisesRegex(ValueError, 'application settings'):
             Allocation(cluster_name='fake_cluster')
 
     def test_blank_name(self) -> None:
         """Test for a ``ValueError`` when the cluster name is blank"""
 
-        with self.assertRaisesRegex(ValueError, 'not a cluster name defined in application settings'):
+        with self.assertRaisesRegex(ValueError, 'application settings'):
             Allocation(cluster_name='')
