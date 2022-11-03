@@ -46,13 +46,13 @@ class Formatting(TestCase):
     def test_partial_format_error(self) -> None:
         """Test for a ``ValueError`` when partially formatting a message"""
 
-        with self.assertRaisesRegex(FormattingError, 'Missing field names: {y}'):
+        with self.assertRaisesRegex(FormattingError, "Missing field names: {'y'}"):
             EmailTemplate('First Value: {x}, Second Value: {y}').format(x=0)
 
     def test_error_on_invalid_keys(self) -> None:
         """Test for a value error when given invalid field names"""
 
-        with self.assertRaisesRegex(FormattingError, 'Invalid field names: {y}'):
+        with self.assertRaisesRegex(FormattingError, "Invalid field names: {'y'}"):
             EmailTemplate('Value: {x}').format(x=0, y=1)
 
 
