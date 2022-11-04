@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict
+from typing import Dict, Set
 
 from bank import settings
 from bank.exceptions import *
@@ -38,7 +38,7 @@ class Slurm:
         return True
 
     @classmethod
-    def cluster_names(cls) -> set[str]:
+    def cluster_names(cls) -> Set[str]:
         """Return cluster names configured with Slurm
 
         Returns:
