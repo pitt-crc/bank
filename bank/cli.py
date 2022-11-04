@@ -56,12 +56,49 @@ from __future__ import annotations
 import abc
 import sys
 from argparse import ArgumentParser, ArgumentTypeError
-from datetime import datetime
+from datetime import date, datetime
 from typing import Type
 
 from . import settings
 from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
 from .system.slurm import Slurm
+
+
+class ArgumentTypes:
+    """Methods for type casting custom string formats into other data types"""
+
+    @staticmethod
+    def date(date_string: str) -> date:
+        """Cast a string to a ``date`` object
+
+        Args:
+            date_string: The string value to cast
+
+        Returns:
+            The passed value as ``date`` instance
+        """
+
+        return datetime.strptime(date_string, settings.date_format).date()
+
+    @staticmethod
+    def non_negative_int(int_string: str) -> int:
+        """Cast a string to a positive ``int`` object
+
+        Args:
+            int_string: The string value to cast
+
+        Returns:
+            The passed value as an ``int`` instance
+
+        Raises:
+            ArgumentTypeError: If the integer value is less than zero
+        """
+
+        number = int(int_string)
+        if number < 0:
+            raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
+
+        return number
 
 
 class BaseParser(ArgumentParser):
@@ -92,22 +129,6 @@ class BaseParser(ArgumentParser):
 
         else:
             super().error(message)
-
-    @staticmethod
-    def valid_date(date_string: str) -> datetime.date():
-        """Print a useful error if the user provided date does not conform to `settings.date_format`."""
-        date = datetime.strptime(date_string, settings.date_format).date()
-
-        return date
-
-    @staticmethod
-    def non_negative_int(number: int) -> int:
-        """Print an error if a negative integer is supplied to applicable arguments."""
-
-        if int(number) < 0:
-            raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
-
-        return number
 
     @classmethod
     @abc.abstractmethod
@@ -250,7 +271,7 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(
             '--start',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             default=datetime.today(),
             help=(
                 'Start date for the proposal, '
@@ -260,7 +281,7 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(
             '--end',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help='Duration of the proposal in months, default is 1 year (12 months)'
         )
         cls._add_cluster_args(create_parser)
@@ -299,7 +320,7 @@ class ProposalParser(BaseParser):
         modify_date_parser.add_argument(
             '--start',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help=(
                 'Set a new proposal start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -308,7 +329,7 @@ class ProposalParser(BaseParser):
         modify_date_parser.add_argument(
             '--end',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help=(
                 'Set a new proposal end date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -325,7 +346,7 @@ class ProposalParser(BaseParser):
 
         service_unit_definition = dict(
             metavar='service_units',
-            type=BaseParser.non_negative_int,
+            type=ArgumentTypes.non_negative_int,
             default=0
         )
         # Add argument to specify Service Unit allotment
@@ -363,13 +384,13 @@ class InvestmentParser(BaseParser):
         investment_id_definition = dict(
             dest='inv_id',
             metavar='investment_ID',
-            type=cls.non_negative_int,
+            type=ArgumentTypes.non_negative_int,
             help='The investment proposal ID number'
         )
         service_unit_definition = dict(
             dest='sus',
             metavar='service_units',
-            type=cls.non_negative_int,
+            type=ArgumentTypes.non_negative_int,
             required=True,
             help='The number of SUs to process'
         )
@@ -382,14 +403,14 @@ class InvestmentParser(BaseParser):
         create_parser.add_argument(
             '--num_inv',
             metavar='N',
-            type=cls.non_negative_int,
+            type=ArgumentTypes.non_negative_int,
             default=5,
             help='Divide the service units across N sequential investments'
         )
         create_parser.add_argument(
             '--start',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             default=datetime.today(),
             help=(
                 'Start date for the investment, '
@@ -399,7 +420,7 @@ class InvestmentParser(BaseParser):
         create_parser.add_argument(
             '--end',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help=('The expiration date of the investment / first investment in a series. The default is a year '
                   'from the start date')
         )
@@ -438,7 +459,7 @@ class InvestmentParser(BaseParser):
         modify_date_parser.add_argument(
             '--start',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -447,7 +468,7 @@ class InvestmentParser(BaseParser):
         modify_date_parser.add_argument(
             '--end',
             metavar='DATE',
-            type=cls.valid_date,
+            type=ArgumentTypes.date,
             help=(
                 'Set a new investment start date, '
                 f'format: {datetime.strftime(datetime.today(), settings.date_format)}'
@@ -500,11 +521,12 @@ class CommandLineApplication:
         )
 
     def add_subparser_to_app(
-            self,
-            command: str,
-            parser_class: Type[BaseParser],
-            title: str,
-            help_text: str) -> None:
+        self,
+        command: str,
+        parser_class: Type[BaseParser],
+        title: str,
+        help_text: str
+    ) -> None:
         """Add a parser object to the parent commandline application as a subparser
 
         Args:
