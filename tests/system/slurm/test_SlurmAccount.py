@@ -12,15 +12,16 @@ class Instantiation(TestCase):
     """Test the instantiation of new instances"""
 
     def test_error_on_missing_account(self) -> None:
-        """Test a ``AccountNotFoundError`` error is raised if the specified user account does not exist"""
+        """Test an ``AccountNotFoundError`` error is raised if the specified user account does not exist"""
 
         with self.assertRaises(AccountNotFoundError):
             SlurmAccount('fake_account')
 
     def test_valid_account_name(self) -> None:
-        """Tet an instance is created successfully for a valid account name"""
+        """Test an instance is created successfully for a valid account name"""
 
-        self.assertEqual(settings.test_account, SlurmAccount(settings.test_account).account_name)
+        account = SlurmAccount(settings.test_account)
+        self.assertEqual(settings.test_account, account.account_name)
 
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
@@ -38,7 +39,7 @@ class CheckAccountExists(TestCase):
         self.assertTrue(SlurmAccount.check_account_exists(settings.test_account))
 
     def test_invalid_account(self) -> None:
-        """Test the return value is ``True`` for a non-existant existing account"""
+        """Test the return value is ``True`` for a non-existent account"""
 
         self.assertFalse(SlurmAccount.check_account_exists('fake_account'))
 
