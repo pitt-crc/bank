@@ -26,7 +26,7 @@ class Slurm:
         LOG.debug('Checking for Slurm installation')
 
         try:
-            cmd = ShellCmd('sacctmgr -V')
+            cmd = ShellCmd('sacctmgr --version')
             cmd.raise_if_err()
 
         # We catch all exceptions, but explicitly list the common cases for reference
@@ -34,22 +34,21 @@ class Slurm:
             LOG.debug('Slurm is not installed.')
             return False
 
-        version = cmd.out.lstrip('slurm ')
-        LOG.debug(f'Found Slurm version {version}')
+        LOG.debug(f'Found Slurm version "{cmd.out}"')
         return True
 
     @classmethod
-    def cluster_names(cls) -> tuple[str]:
+    def cluster_names(cls) -> set[str]:
         """Return cluster names configured with Slurm
 
         Returns:
             A tuple of cluster names
         """
 
-        cmd = ShellCmd('sacctmgr show clusters format=Cluster  --noheader --parsable2')
+        cmd = ShellCmd('sacctmgr show clusters format=Cluster --noheader --parsable2')
         cmd.raise_if_err()
 
-        clusters = cmd.out.split()
+        clusters = set(cmd.out.split())
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
 
@@ -74,7 +73,8 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
+            LOG.error(
+                f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
             raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
@@ -192,4 +192,5 @@ class SlurmAccount:
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
         clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        ShellCmd(
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
