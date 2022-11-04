@@ -7,6 +7,7 @@ API Reference
 from logging import getLogger
 from shlex import split
 from subprocess import PIPE, Popen
+from typing import List, Tuple
 
 from bank.exceptions import CmdError
 
@@ -37,7 +38,7 @@ class ShellCmd:
         self.out, self.err = self._subprocess_call(split(cmd))
 
     @staticmethod
-    def _subprocess_call(args: list[str]) -> tuple[str, str]:
+    def _subprocess_call(args: List[str]) -> Tuple[str, str]:
         """Wrapper method for executing shell commands via ``Popen.communicate``
 
         Args:
