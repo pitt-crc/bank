@@ -23,7 +23,7 @@ class FindUnlockedAccounts(TestCase):
         slurm_account.set_locked_state(False, settings.test_cluster)
 
         admin_services = AdminServices()
-        self.assertFalse(any(name == slurm_account.account_name for name in admin_services.find_unlocked_account_names()))
+        self.assertIn(slurm_account.account_name, admin_services.find_unlocked_account_names())
 
     def test_locked_account_not_found(self) -> None:
         """Test that a locked account is not found"""
@@ -32,7 +32,7 @@ class FindUnlockedAccounts(TestCase):
         slurm_account.set_locked_state(True, settings.test_cluster)
 
         admin_services = AdminServices()
-        self.assertFalse(any(name == slurm_account.account_name for name in admin_services.find_unlocked_account_names()))
+        self.assertNotIn(slurm_account.account_name, admin_services.find_unlocked_account_names())
 
 
 class UpdateAccountStatus(ProposalSetup, InvestmentSetup, TestCase):
