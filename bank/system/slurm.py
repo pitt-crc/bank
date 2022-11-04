@@ -73,8 +73,7 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(
-                f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
+            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
             raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
@@ -192,5 +191,4 @@ class SlurmAccount:
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
         clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
