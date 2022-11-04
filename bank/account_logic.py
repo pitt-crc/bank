@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Collection, Iterable, Optional, Union
+from typing import Collection, Iterable, Optional, Union, Set
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
@@ -782,7 +782,6 @@ class AccountServices:
             # This will not find a recently expired proposal/investment
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investment = session.execute(self._active_investment_query).scalars().first()
-            # TODO: Multiple investments? scalars().all()?
             lock_clusters = []
 
 
@@ -983,8 +982,8 @@ class AdminServices:
         print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
-    def find_unlocked(cls) -> None:
-        """Provide a list of accounts that are unlocked on at least one cluster, looking across all clusters"""
+    def find_unlocked_account_names(cls) -> Set[str]:
+        """Provide a list of accounts that are unlocked on the clusters defined in SLURM"""
 
         return set(cls._iter_accounts_by_lock_state(False, cluster) for cluster in Slurm.cluster_names())
 
@@ -992,5 +991,5 @@ class AdminServices:
     def update_account_status(cls) -> None:
         """Update account usage information and lock any expired or overdrawn accounts"""
 
-        for account in cls.find_unlocked():
+        for account in cls.find_unlocked_account_names():
             account.update_status()
