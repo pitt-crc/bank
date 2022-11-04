@@ -78,7 +78,11 @@ class ArgumentTypes:
             The passed value as ``date`` instance
         """
 
-        return datetime.strptime(date_string, settings.date_format).date()
+        try:
+            return datetime.strptime(date_string, settings.date_format).date()
+
+        except Exception as excep:
+            raise ArgumentTypeError(str(excep)) from excep
 
     @staticmethod
     def non_negative_int(int_string: str) -> int:
@@ -94,7 +98,12 @@ class ArgumentTypes:
             ArgumentTypeError: If the integer value is less than zero
         """
 
-        number = int(int_string)
+        try:
+            number = int(int_string)
+
+        except Exception as excep:
+            raise ArgumentTypeError(str(excep)) from excep
+
         if number < 0:
             raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
 
