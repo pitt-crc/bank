@@ -9,7 +9,7 @@ from bank.cli import ArgumentTypes
 
 
 class DateCasting(TestCase):
-    """Tests for type casting via the ``date`` method"""
+    """Test type casting via the ``date`` method"""
 
     def test_blank_string_error(self) -> None:
         """Test an ``ArgumentTypeError`` is raised for a blank string"""
@@ -24,9 +24,14 @@ class DateCasting(TestCase):
             ArgumentTypes.date('this is not a date')
 
     def test_invalid_format_err(self) -> None:
-        self.assertNotEqual('%b %d %Y', settings.date_format)
+        """Test an ``ArgumentTypeError`` is raised for valid dates using the wrong string format"""
+
+        test_date = date(2000, 11, 12)
+        test_format = '%b %d %Y'
+
+        self.assertNotEqual(test_format, settings.date_format)
         with self.assertRaises(ArgumentTypeError):
-            ArgumentTypes.date('Nov 07 1993')
+            ArgumentTypes.date(test_date.strftime(test_format))
 
     def test_valid_format(self) -> None:
         """Test date strings matching the format in application settings are returned as date objects"""
@@ -71,4 +76,5 @@ class NonNegativeIntCasting(TestCase):
 
     def test_zero(self) -> None:
         """Test the string ``"0"`` is returned as the integer ``0``"""
+
         self.assertEqual(0, ArgumentTypes.non_negative_int('0'))
