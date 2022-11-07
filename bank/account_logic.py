@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from logging import getLogger
 from math import ceil
-from typing import Collection, Iterable, Optional, Union, Set
+from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
