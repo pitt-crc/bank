@@ -104,7 +104,7 @@ class SlurmAccount:
             cluster: Name of the cluster to get the lock state for
 
         Returns:
-            Whether the user is locked out from ANY of the given clusters
+            Whether the user is locked out on ANY of the given clusters
 
         Raises:
             SlurmClusterNotFoundError: If the given slurm cluster does not exist
@@ -168,26 +168,23 @@ class SlurmAccount:
         return out_data
 
     def get_cluster_usage_total(self, cluster: Optional[str] = None, in_hours: bool = True) -> int:
-        """Return the raw account usage total on a cluster
+        """Return the raw account usage total on one or more clusters
 
         Args:
-            cluster: Return total usage on the specific cluster provided
-            in_hours: Return usage in units of hours instead of seconds
+            cluster: A string (or list of strings) of clusters to display compute a total for, default is all clusters
+            in_hours: Boolean to return usage in units of hours instead of seconds
 
         Returns:
-            The account's usage (sum across all users) of the give cluster, default is all clusters
+            The account's total usage across all of its users, across all clusters provided
         """
 
         # Default to all clusters in settings.clusters if not specified as an argument
-        if cluster:
-            clusters = cluster
-        else:
-            clusters = settings.clusters
+        clusters = (cluster, ) or settings.clusters
 
         total = 0
         for cluster_name in clusters:
             user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
-            total + sum(user_usage.values())
+            total += sum(user_usage.values())
 
         return total
 
