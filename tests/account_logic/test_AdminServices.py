@@ -41,19 +41,3 @@ class FindUnlockedAccounts(TestCase):
         # The account should not be in the list of unlocked accounts
         unlocked_accounts_by_cluster = self.admin_services.find_unlocked_account_names()
         self.assertNotIn(self.slurm_account.account_name, unlocked_accounts_by_cluster[settings.test_cluster])
-
-
-class UpdateAccountStatus(ProposalSetup, InvestmentSetup, TestCase):
-    """Test update_account_status functionality over multiple accounts"""
-
-    def setUp(self) -> None:
-        """Instantiate AdminServices object for multi-account UpdateAccountStatus"""
-
-        super().setUp()
-        self.account = AccountServices(settings.test_account)
-
-    def test_lock_multiple_accounts(self) -> None:
-        # TODO: implement
-        pass
-
-
