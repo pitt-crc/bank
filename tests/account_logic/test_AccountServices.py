@@ -129,13 +129,11 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
     """Test update_status functionality for an individual account"""
 
     def setUp(self) -> None:
+        """Instantiate an AccountServices and SlurmAccount object for the test account"""
+
         super().setUp()
-
         self.account = AccountServices(settings.test_account)
-
-        with DBConnection.session() as session:
-            active_proposal = session.execute(active_proposal_query).scalars().first()
-            self.proposal_end_date = active_proposal.end_date
+        self.slurm_account = SlurmAccount(settings.test_account)
 
     # Ensure account usage is a reproducible value for testing
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
@@ -143,8 +141,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Test that update_status locks the account on a single cluster that is exceeding usage limits"""
 
         # Unlock SLURM account
-        slurm_acct = SlurmAccount(settings.test_account)
-        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
+        self.slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
 
@@ -162,7 +159,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # cluster should be locked due to exceeding usage
-        self.assertTrue(slurm_acct.get_locked_state(cluster=settings.test_cluster))
+        self.assertTrue(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_locked_on_multiple_clusters(self) -> None:
@@ -175,8 +172,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Test that update_status locks the account on all clusters"""
 
         # Unlock SLURM account
-        slurm_acct = SlurmAccount(settings.test_account)
-        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
+        self.slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is expired
@@ -193,16 +189,14 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # clusters should be locked due to lacking an active proposal or investment
-        #cluster_names = [cluster for cluster in settings.clusters if cluster != "all_clusters"]
         for cluster in settings.clusters:
-            self.assertTrue(slurm_acct.get_locked_state(cluster=cluster))
+            self.assertTrue(self.slurm_account.get_locked_state(cluster=cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_floating_sus_applied(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
 
-        slurm_acct = SlurmAccount(settings.test_account)
-        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
+        self.slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is active and has floating service units
@@ -239,14 +233,13 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             self.assertEqual(1100, floating_sus_used)
             self.assertEqual(proposal.allocations[0].service_units_used, proposal.allocations[0].service_units_total)
 
-        self.assertFalse(slurm_acct.get_locked_state(cluster=settings.test_cluster))
+        self.assertFalse(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_floating_sus_applied_multiple_clusters(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
 
-        slurm_acct = SlurmAccount(settings.test_account)
-        slurm_acct.set_locked_state(0, cluster=settings.test_cluster)
+        self.slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is active and has floating service units
@@ -270,16 +263,15 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # clusters should be unlocked due to exceeding usage being covered by floating SUs
-        cluster_names = [cluster for cluster in settings.clusters if cluster != "all_clusters"]
+        cluster_names = settings.clusters
         for cluster in cluster_names:
-            self.assertFalse(slurm_acct.get_locked_state(cluster=cluster))
+            self.assertFalse(self.slurm_account.get_locked_state(cluster=cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
     def test_status_unlocked_with_investment_sus_applied(self) -> None:
         """Test that update_status uses investment SUs to cover usage over limits"""
 
-        slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(0, cluster=settings.test_cluster)
+        self.slurm_account.set_locked_state(0, cluster=settings.test_cluster)
 
         with DBConnection.session() as session:
             # Proposal is expired
@@ -296,7 +288,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # cluster should be unlocked due to exceeding usage being covered by investment
-        self.assertFalse(slurm_account.get_locked_state(cluster=settings.test_cluster))
+        self.assertFalse(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
 
         with DBConnection.session() as session:
             # check that investment SUs were used to cover usage
@@ -305,6 +297,3 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             self.assertEqual(900, investment.current_sus)
             self.assertEqual(proposal.allocations[0].service_units_used, proposal.allocations[0].service_units_total)
-
-
-

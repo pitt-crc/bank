@@ -16,35 +16,41 @@ active_proposal_query = select(Proposal).join(Account) \
 class FindUnlockedAccounts(TestCase):
     """Test finding unlocked accounts via the ``find_unlocked`` method"""
 
+    def setUp(self) -> None:
+        """Instantiate a SlurmAccount and AdminServices objects for finding account tests"""
+        super().setUp()
+        self.slurm_account = SlurmAccount(settings.test_account)
+        self.admin_services = AdminServices()
+
     def test_unlocked_account_found(self) -> None:
         """Test that an unlocked account is found"""
 
-        slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(False, settings.test_cluster)
+        # Unlock the account
+        self.slurm_account.set_locked_state(False, settings.test_cluster)
 
-        admin_services = AdminServices()
-        self.assertIn(slurm_account.account_name, admin_services.find_unlocked_account_names())
+        # The account should be in the list of unlocked accounts
+        unlocked_accounts_by_cluster = self.admin_services.find_unlocked_account_names()
+        self.assertIn(self.slurm_account.account_name, unlocked_accounts_by_cluster[settings.test_cluster])
 
     def test_locked_account_not_found(self) -> None:
         """Test that a locked account is not found"""
 
-        slurm_account = SlurmAccount(settings.test_account)
-        slurm_account.set_locked_state(True, settings.test_cluster)
+        # Lock the account
+        self.slurm_account.set_locked_state(True, settings.test_cluster)
 
-        admin_services = AdminServices()
-        self.assertNotIn(slurm_account.account_name, admin_services.find_unlocked_account_names())
+        # The account should not be in the list of unlocked accounts
+        unlocked_accounts_by_cluster = self.admin_services.find_unlocked_account_names()
+        self.assertNotIn(self.slurm_account.account_name, unlocked_accounts_by_cluster[settings.test_cluster])
 
 
 class UpdateAccountStatus(ProposalSetup, InvestmentSetup, TestCase):
     """Test update_account_status functionality over multiple accounts"""
 
     def setUp(self) -> None:
-        super().setUp()
+        """Instantiate AdminServices object for multi-account UpdateAccountStatus"""
 
+        super().setUp()
         self.account = AccountServices(settings.test_account)
-        with DBConnection.session() as session:
-            active_proposal = session.execute(active_proposal_query).scalars().first()
-            self.proposal_end_date = active_proposal.end_date
 
     def test_lock_multiple_accounts(self) -> None:
         # TODO: implement
