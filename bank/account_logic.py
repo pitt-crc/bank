@@ -952,11 +952,12 @@ class AdminServices:
             A tuple of account names
         """
 
-        # Query database for accounts that are unlocked and expired
-        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
+        # Query database for account names
+        account_name_query = select(Account.name).join(Proposal)
         with DBConnection.session() as session:
             account_names = session.execute(account_name_query).scalars().all()
 
+        # Build a generator for account names that match the lock state
         for account in account_names:
             if SlurmAccount(account).get_locked_state(cluster) == status:
                 yield account
@@ -982,10 +983,17 @@ class AdminServices:
         print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
-    def find_unlocked_account_names(cls) -> Set[str]:
-        """Provide a list of accounts that are unlocked on the clusters defined in SLURM"""
+    def find_unlocked_account_names(cls) -> dict:
+        """Provide a list of accounts that are unlocked on the clusters defined in SLURM
 
-        return set(cls._iter_accounts_by_lock_state(False, cluster) for cluster in Slurm.cluster_names())
+        Returns: A dictionary with cluster name as the keys and a generator yielding account names as the value
+        """
+
+        unlocked_accounts_by_cluster = {}
+        for cluster in Slurm.cluster_names():
+            unlocked_accounts_by_cluster[cluster] = set(cls._iter_accounts_by_lock_state(False, cluster))
+
+        return unlocked_accounts_by_cluster
 
     @classmethod
     def update_account_status(cls) -> None:
