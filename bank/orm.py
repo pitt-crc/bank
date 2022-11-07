@@ -164,12 +164,12 @@ class Allocation(Base):
     has run out.
 
     Table Fields:
-      - id                   (Integer): Primary key for this table
-      - proposal_id          (ForeignKey): Primary key for the ``proposal`` table
+      - id                  (Integer): Primary key for this table
+      - proposal_id      (ForeignKey): Primary key for the ``proposal`` table
       - cluster_name         (String): Name of the allocated cluster
-      - service_units_total  (Integer): Number of allocated service units
-      - service_units_used   (Integer): Number of used service units
-      - final_usage          (Integer): Total service units utilized at proposal expiration
+      - service_units_total (Integer): Number of allocated service units
+      - service_units_used  (Integer): Number of used service units
+      - final_usage         (Integer): Total service units utilized at proposal expiration
 
     Relationships:
       - proposal (Proposal): Many to one
