@@ -8,7 +8,7 @@ from sqlalchemy import join, select
 from bank import settings
 from bank.account_logic import AccountServices
 from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
-from bank.system.slurm import SlurmAccount
+from bank.system.slurm import SlurmAccount, Slurm
 from tests._utils import InvestmentSetup, ProposalSetup
 
 active_proposal_query = select(Proposal).join(Account) \
@@ -189,7 +189,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # clusters should be locked due to lacking an active proposal or investment
-        for cluster in settings.clusters:
+        for cluster in Slurm.cluster_names():
             self.assertTrue(self.slurm_account.get_locked_state(cluster=cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
@@ -263,8 +263,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         self.account.update_status()
 
         # clusters should be unlocked due to exceeding usage being covered by floating SUs
-        cluster_names = settings.clusters
-        for cluster in cluster_names:
+        for cluster in Slurm.cluster_names():
             self.assertFalse(self.slurm_account.get_locked_state(cluster=cluster))
 
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)

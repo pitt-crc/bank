@@ -215,7 +215,7 @@ class Allocation(Base):
             ValueError: If the given value is not in application settings
         """
 
-        if value not in settings.clusters and value != "all_clusters":
+        if value not in settings.clusters:
             raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
 
         return value
