@@ -50,8 +50,9 @@ class Slurm:
         clusters = cmd.out.split()
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
-        
-    def partition_names(cls, cluster: str) -> tuple[str]:
+    
+    @staticmethod    
+    def partition_names(cluster: str) -> tuple[str]:
         """Return partition names within cluster configured with Slurm
         Returns:
             A tuple of partition names within the cluster specified by cluster
