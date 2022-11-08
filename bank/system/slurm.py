@@ -117,7 +117,7 @@ class SlurmAccount:
         return 'cpu=0' in ShellCmd(cmd).out
 
     def set_locked_state(self, lock_state: bool, cluster: str) -> None:
-        """Lock or unlock the current slurm account
+        """Lock or unlock the current slurm account, except for two accounts 'isenocak' and 'eschneider' with purchased partitions within gpu cluster
 
         Args:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
@@ -132,9 +132,11 @@ class SlurmAccount:
             raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
-        ).raise_if_err()
+        if ((cluster!='gpu') or (self.account_name!='isenocak' and self.account_name!='eschneider')):
+            ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
+        else:
+            ShellCmd(f'echo {self.account_name} account cannot be locked from the {cluster} cluster due to the presence of purchased partitions!').raise_if_err() 
+          
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
         """Return the raw account usage on a given cluster
