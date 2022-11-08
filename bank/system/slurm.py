@@ -1,5 +1,4 @@
 """Wrappers around Slurm command line utilities.
-
 API Reference
 -------------
 """
@@ -41,7 +40,6 @@ class Slurm:
     @classmethod
     def cluster_names(cls) -> tuple[str]:
         """Return cluster names configured with Slurm
-
         Returns:
             A tuple of cluster names
         """
@@ -52,6 +50,19 @@ class Slurm:
         clusters = cmd.out.split()
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
+        
+    def partition_names(cls, cluster: str) -> tuple[str]:
+        """Return partition names within cluster configured with Slurm
+        Returns:
+            A tuple of partition names within the cluster specified by cluster
+        """
+
+        cmd = ShellCmd(f'sinfo -M {cluster} -o "%P" --noheader')
+        cmd.raise_if_err()
+
+        partitions = cmd.out.split()
+        LOG.debug(f'Found Slurm partitions {clusters}')
+        return partitions        
 
 
 class SlurmAccount:
@@ -59,10 +70,8 @@ class SlurmAccount:
 
     def __init__(self, account_name: str) -> None:
         """A Slurm user account
-
         Args:
             account_name: The name of the Slurm account
-
         Raises:
             SystemError: If the ``sacctmgr`` utility is not installed
             SlurmAccountNotFoundError: If an account with the given name does not exist
@@ -86,10 +95,8 @@ class SlurmAccount:
     @staticmethod
     def check_account_exists(account_name: str) -> bool:
         """Return whether the given Slurm account exists
-
         Args:
             account_name: The name of the Slurm account
-
         Returns:
             Boolean value indicating whether the account exists
         """
@@ -99,13 +106,10 @@ class SlurmAccount:
 
     def get_locked_state(self, cluster: str) -> bool:
         """Return whether the current slurm account is locked
-
         Args:
             cluster: Name of the cluster to get the lock state for
-
         Returns:
             Whether the user is locked out from ANY of the given clusters
-
         Raises:
             SlurmClusterNotFoundError: If the given slurm cluster does not exist
         """
@@ -118,11 +122,9 @@ class SlurmAccount:
 
     def set_locked_state(self, lock_state: bool, cluster: str) -> None:
         """Lock or unlock the current slurm account (except for two accounts 'isenocak' and 'eschneider' with purchased partitions within gpu cluster, as speficied in update_status)
-
         Args:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
             cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
-
         Raises:
             SlurmClusterNotFoundError: If the given slurm cluster does not exist
         """
@@ -137,14 +139,11 @@ class SlurmAccount:
 
     def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
         """Return the raw account usage on a given cluster
-
         Args:
             cluster: The name of the cluster
             in_hours: Return usage in units of hours instead of seconds
-
         Returns:
             A dictionary with the number of service units used by each user in the account
-
         Raises:
             SlurmClusterNotFoundError: If the given slurm cluster does not exist
         """
@@ -168,10 +167,8 @@ class SlurmAccount:
 
     def get_total_usage(self, in_hours: bool = True) -> int:
         """Return the raw account usage across all clusters
-
         Args:
             in_hours: Return usage in units of hours instead of seconds
-
         Returns:
             The account's usage of the given cluster
         """
