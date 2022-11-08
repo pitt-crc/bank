@@ -771,8 +771,7 @@ class AccountServices:
             clusters: Optional[Collection[str]] = None,
             all_clusters: bool = False
     ) -> None:
-        """Update the lock/unlocked states for the current account
-
+        """Update the lock/unlocked states for the current account, only lock account if it has no purchased partitions within cluster
         Args:
             lock_state: The new account lock state
             clusters: Name of the clusters to lock the account on. Defaults to all clusters.
@@ -782,8 +781,17 @@ class AccountServices:
         if all_clusters:
             clusters = Slurm.cluster_names()
 
+        HasPurchasedPartition = False
+        
         for cluster in clusters:
-            SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
+            partitions = Slurm.partition_names(cluster)
+            for partition in partitions:
+                if(partition.find(self._account_name)>=0):  HasPurchasedPartition = True
+                
+            if(HasPurchasedPartition==False): 
+                SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
+            else:
+                ShellCmd(f'echo "{self._account_name} cannot be locked from the {cluster} cluster because it has purchased partition(s)!"')
 
     def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
