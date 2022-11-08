@@ -62,7 +62,7 @@ class Slurm:
         cmd.raise_if_err()
 
         partitions = cmd.out.split()
-        LOG.debug(f'Found Slurm partitions {clusters}')
+      
         return partitions        
 
 
