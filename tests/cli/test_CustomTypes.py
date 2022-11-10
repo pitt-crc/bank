@@ -2,6 +2,7 @@
 
 from argparse import ArgumentTypeError
 from datetime import date
+import string
 from unittest import TestCase
 
 from bank import settings
@@ -16,6 +17,13 @@ class DateCasting(TestCase):
 
         with self.assertRaises(ArgumentTypeError):
             ArgumentTypes.date('')
+
+    def test_whitespace_string_error(self) -> None:
+        """Test ``ArgumentTypeError`` is raised when string is whitespace"""
+
+        for char in string.whitespace:
+            with self.assertRaises(ArgumentTypeError):
+                ArgumentTypes.date(char)
 
     def test_invalid_value_err(self) -> None:
         """Test an ``ArgumentTypeError`` is raised for strings not representing valid dates"""
@@ -49,6 +57,13 @@ class NonNegativeIntCasting(TestCase):
 
         with self.assertRaises(ArgumentTypeError):
             ArgumentTypes.non_negative_int('')
+
+    def test_whitespace_string_error(self) -> None:
+        """Test ``ArgumentTypeError`` is raised when string is whitespace"""
+
+        for char in string.whitespace:
+            with self.assertRaises(ArgumentTypeError):
+                ArgumentTypes.non_negative_int(char)
 
     def test_negative_int(self) -> None:
         """Test an ``ArgumentTypeError`` is raised for a negative integer"""
