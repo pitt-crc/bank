@@ -1,5 +1,6 @@
 """Tests for the ``ShellCmd`` class."""
 
+import string
 from unittest import TestCase
 
 from bank.exceptions import CmdError
@@ -9,11 +10,18 @@ from bank.system.slurm import ShellCmd
 class InitExceptions(TestCase):
     """Tests related to exceptions raised during instantiation"""
 
-    def test_empty_init_arg(self) -> None:
+    def test_empty_cmd_arg(self) -> None:
         """Test for a ``ValueError`` when the command is an empty string"""
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'Command string cannot be empty'):
             ShellCmd('')
+
+    def test_whitespace_cmd(self) -> None:
+        """Test for a ``ValueError`` when the command is only whitespace"""
+
+        for char in string.whitespace:
+            with self.assertRaisesRegex(ValueError, 'Command string cannot be empty'):
+                ShellCmd(char)
 
 
 class FileDescriptors(TestCase):
