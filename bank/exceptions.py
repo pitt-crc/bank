@@ -22,8 +22,8 @@ class SlurmClusterNotFoundError(Exception):
     """Raised when a Slurm cluster does not exist."""
 
 
-class MissingEmailFieldsError(Exception):
-    """Raised when trying to send an incomplete email template."""
+class FormattingError(Exception):
+    """Raised when incorrectly formatting angit a email template."""
 
 
 class MissingProposalError(Exception):

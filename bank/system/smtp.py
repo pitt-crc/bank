@@ -14,29 +14,30 @@ from typing import Any, Optional, Tuple, cast
 
 from bs4 import BeautifulSoup
 
-from bank.exceptions import MissingEmailFieldsError
+from bank.exceptions import FormattingError
 
 LOG = getLogger('bank.system.smtp')
 
 
-class EmailTemplate(Formatter):
+class EmailTemplate:
     """A formattable email template"""
 
-    def __init__(self, msg: str) -> None:
+    def __init__(self, template: str) -> None:
         """A formattable email template
 
         Email messages passed at init should follow the standard python
         formatting syntax. The message can be in plain text or in HTML format.
 
         Args:
-            msg: A partially unformatted email template
+            template: A partially unformatted email template
         """
 
-        self._msg = msg
+        self._msg = template
+        self._formatter = Formatter()
 
     @property
     def msg(self) -> str:
-        """"The text content of the email template"""
+        """"Return the text content of the email template"""
 
         return self._msg
 
@@ -48,7 +49,12 @@ class EmailTemplate(Formatter):
             A tuple of unique field names
         """
 
-        return tuple(cast(str, field_name) for _, field_name, *_ in self.parse(self.msg) if field_name is not None)
+        # Create an iterator over all fields
+        all_fields = (cast(str, field_name) for _, field_name, *_ in self._formatter.parse(self.msg))
+
+        # Keep only unique fields that are not None
+        unique_fields = set(field for field in all_fields if field is not None)
+        return tuple(unique_fields)
 
     def format(self, **kwargs: Any) -> EmailTemplate:
         """Format the email template
@@ -57,7 +63,22 @@ class EmailTemplate(Formatter):
 
         Args:
             kwargs: Values used to format each field in the template
+
+        Returns:
+            A copy of the parent instance with a formatted message
+
+        Raises:
+            FormattingError: One missing or extra fields
         """
+
+        passed_fields = set(kwargs)
+        extra_fields = passed_fields - set(self.fields)
+        if extra_fields:
+            raise FormattingError(f'Invalid field names: {extra_fields}')
+
+        missing_fields = set(self.fields) - passed_fields
+        if missing_fields:
+            raise FormattingError(f'Missing field names: {missing_fields}')
 
         return EmailTemplate(self._msg.format(**kwargs))
 
@@ -65,12 +86,12 @@ class EmailTemplate(Formatter):
         """Raise an error if the template message has any unformatted fields
 
         Raises:
-            MissingEmailFieldsError: If the email template has unformatted fields
+            FormattingError: If the email template has unformatted fields
         """
 
-        if any(field_name for _, field_name, *_ in self.parse(self.msg) if field_name is not None):
+        if any(self.fields):
             LOG.error('Could not send email. Missing fields found')
-            raise MissingEmailFieldsError(f'Message has unformatted fields: {self.fields}')
+            raise FormattingError(f'Message has unformatted fields: {self.fields}')
 
     def send_to(self, to: str, subject: str, ffrom: str, smtp: Optional[SMTP] = None) -> EmailMessage:
         """Send the email template to the given address
@@ -82,10 +103,10 @@ class EmailTemplate(Formatter):
             smtp: optionally use an existing SMTP server instance
 
         Returns:
-            A copy of the sent email
+            A copy of the email message
 
         Raises:
-            MissingEmailFieldsError: If the email template has unformatted fields
+            FormattingError: If the email template has unformatted fields
         """
 
         LOG.debug(f'Sending email to {to}')
