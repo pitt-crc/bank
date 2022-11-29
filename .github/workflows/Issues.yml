@@ -5,9 +5,7 @@ on:
     types:
       - opened
 
-permissions:
-  contents: read
-  repository-projects: write
+permissions: write-all
 
 jobs:
   add-to-project:
