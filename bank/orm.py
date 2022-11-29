@@ -82,7 +82,7 @@ class Proposal(Base):
 
         raise ValueError(f'Value for {key} column must be between 0 and 100 (got {value}).')
 
-    @validates('end')
+    @validates('end_date')
     def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the proposal end date is after the start date
 
