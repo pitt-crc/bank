@@ -1,6 +1,6 @@
 """Tests for the ``SlurmAccount`` class."""
 
-from unittest import TestCase
+from unittest import TestCase, skip
 from unittest.mock import patch
 
 from bank import settings
@@ -56,3 +56,23 @@ class AccountLocking(TestCase):
         account = SlurmAccount(settings.test_account)
         with self.assertRaises(SlurmClusterNotFoundError):
             account.get_locked_state('fake_cluster')
+
+
+class AccountUsage(TestCase):
+    """Test the retrieval of account usage values"""
+
+    @skip('This functionality relies on setting up SLURM account with non-zero usage in the DB.')
+    def test_get_usage_hours(self) -> None:
+        """Test the recovered account usage in hours matches the value in seconds"""
+
+        account = SlurmAccount(settings.test_account)
+        cluster = settings.test_cluster
+        usage_seconds = account.get_cluster_usage_per_user(cluster)
+        usage_hours = account.get_cluster_usage_per_user(cluster, in_hours=True)
+
+        test_user = next(iter(usage_seconds.keys()))
+        test_usage_seconds = usage_seconds[test_user]
+        test_usage_hours = usage_hours[test_user]
+
+        self.assertGreater(test_usage_seconds, 0)
+        self.assertEqual(int(test_usage_seconds // 60), test_usage_hours)

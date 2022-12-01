@@ -164,7 +164,7 @@ class AdminParser(BaseParser):
         """
 
         cluster_argument = dict(
-            dest='clusters',
+            dest='cluster',
             nargs='+',
             choices=list(Slurm.cluster_names()),
             help='A cluster or list of clusters to lock the account on'
