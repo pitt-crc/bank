@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, String, create_engine, select
+from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, not_, or_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
@@ -126,10 +126,12 @@ class Proposal(Base):
     @is_expired.expression
     def is_expired(cls) -> bool:
         today = date.today()
-        subquery = select(Proposal.id).join(Allocation) \
+
+        # Proposal does not have any active allocations
+        subquery = select(Proposal.id).outerjoin(Allocation) \
             .where(Proposal.start_date < today) \
             .where(Proposal.end_date >= today) \
-            .where(Allocation.final_usage != None)
+            .where(or_(not_(Proposal.allocations.any()), Allocation.final_usage.is_not(None)))
 
         return cls.id.in_(subquery)
 
