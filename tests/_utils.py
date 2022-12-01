@@ -25,6 +25,7 @@ class EmptyAccountSetup:
                 session.delete(account)
 
             session.commit()
+
             # Create a new (empty) accounts
             session.add(Account(name=settings.test_account))
             session.add(Account(name=settings.test_account2))
