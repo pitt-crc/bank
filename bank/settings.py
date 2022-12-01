@@ -80,6 +80,8 @@ _CUR_DIR = Path(__file__).resolve().parent
 
 # Settings for running the test suite.
 test_account = 'account1'
+test_account2 = 'account2'
+
 test_cluster = 'development'
 nonexistent_account = 'fake_account'
 

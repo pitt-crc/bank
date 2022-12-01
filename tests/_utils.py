@@ -16,16 +16,18 @@ class EmptyAccountSetup:
     """Base class used to delete database entries before running tests"""
 
     def setUp(self) -> None:
-        """Delete any proposals and investments that may already exist for the test account"""
+        """Delete any proposals and investments that may already exist for the test accounts"""
 
         with DBConnection.session() as session:
-            account = session.query(Account).filter(Account.name == settings.test_account).first()
-            if account is not None:
+            accounts = session.query(Account).all()
+
+            for account in accounts:
                 session.delete(account)
 
             session.commit()
-            # Create a new (empty) account
+            # Create a new (empty) accounts
             session.add(Account(name=settings.test_account))
+            session.add(Account(name=settings.test_account2))
             session.commit()
 
 

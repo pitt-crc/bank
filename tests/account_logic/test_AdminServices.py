@@ -4,16 +4,16 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.account_logic import AdminServices
-from bank.orm import Account, DBConnection
 from bank.system.slurm import SlurmAccount
+from tests._utils import EmptyAccountSetup
 
 
-class FindUnlockedAccounts(TestCase):
+class FindUnlockedAccounts(EmptyAccountSetup, TestCase):
     """Test finding unlocked accounts via the ``find_unlocked`` method"""
 
     def setUp(self) -> None:
         """Instantiate a SlurmAccount and AdminServices objects for finding account tests"""
-
+        super().setUp()
         self.slurm_account1 = SlurmAccount(settings.test_account)
         self.slurm_account2 = SlurmAccount('account2')
         self.admin_services = AdminServices()
