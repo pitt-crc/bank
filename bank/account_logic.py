@@ -716,8 +716,7 @@ class AccountServices:
 
         proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
-            .where(Proposal.exhaustion_date is not None) \
-            .where(Proposal.start_date < date.today())
+            .where(Proposal.is_active)
 
         with DBConnection.session() as session:
             for proposal in session.execute(proposal_query).scalars().all():

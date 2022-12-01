@@ -46,7 +46,6 @@ class Proposal(Base):
       - start_date            (Date): The date when the proposal goes into effect
       - end_date              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
-      - exhaustion_date       (Date): Date the proposal expired or reached full utilization
 
     Relationships:
       - account        (Account): Many to one
@@ -60,7 +59,6 @@ class Proposal(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False, default=0)
-    exhaustion_date = Column(Date, nullable=True)
 
     account = relationship('Account', back_populates='proposals')
     allocations = relationship('Allocation', back_populates='proposal', cascade="all,delete")
@@ -181,6 +179,7 @@ class Allocation(Base):
     service_units_total = Column(Integer, nullable=False)
     service_units_used = Column(Integer, nullable=True)
     final_usage = Column(Integer, nullable=True)
+    #TODO: remove final_usage
 
     proposal = relationship('Proposal', back_populates='allocations')
 
@@ -218,6 +217,15 @@ class Allocation(Base):
 
         return value
 
+    @hybrid_property
+    def is_exhausted(self) -> bool:
+        """Whether the allocation has available service units"""
+        #TODO Implement
+
+    @is_exhausted.expression
+    def is_exhausted(cls) -> bool:
+        #TODO Implement
+
 
 class Investment(Base):
     """Service unit allocations granted in exchange for user investment
@@ -231,7 +239,6 @@ class Investment(Base):
       - rollover_sus  (Integer): Service units carried over from a previous investment
       - withdrawn_sus (Integer): Service units removed from this investment and into another
       - current_sus   (Integer): Total service units available in the investment
-      - exhaustion_date  (Date): Date the investment expired or reached full utilization
 
     Relationships:
       - account (Account): Many to one
@@ -247,7 +254,6 @@ class Investment(Base):
     rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
     withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
     current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
-    exhaustion_date = Column(Date, nullable=True)
 
     account = relationship('Account', back_populates='investments')
 
@@ -295,19 +301,17 @@ class Investment(Base):
     def is_expired(self) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
 
-        is_exhausted = self.exhaustion_date is not None
         past_end = self.end_date <= date.today()
         spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
-        return is_exhausted or past_end or spent_service_units
+        return past_end or spent_service_units
 
     @is_expired.expression
     def is_expired(cls) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
-
-        is_exhausted = cls.exhaustion_date != None
+        #TODO Implement
         past_end = cls.end_date <= date.today()
         spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return is_exhausted | past_end | spent_service_units
+        return  past_end | spent_service_units
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -318,6 +322,9 @@ class Investment(Base):
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
         return in_date_range & has_service_units
 
+    @is_active.expression
+    def is_active(cls) -> bool:
+        #TODO: Implement
 
 class DBConnection:
     """A configurable connection to the application database"""
