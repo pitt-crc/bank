@@ -171,6 +171,7 @@ class SlurmAccount:
             self,
             cluster: Optional[Union[str, Collection[str]]] = None,
             in_hours: bool = True) -> int:
+
         """Return the raw account usage total on one or more clusters
 
         Args:
