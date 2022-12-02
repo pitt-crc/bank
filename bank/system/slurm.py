@@ -136,7 +136,7 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_if_err()
 
-    def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
+    def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
         """Return the raw account usage per user on a given cluster
 
         Args:
@@ -161,7 +161,7 @@ class SlurmAccount:
             user, usage = line.split('|')
             usage = int(usage)
             if in_hours:  # Convert from seconds to hours
-                usage //= 60
+                usage //= 3600
 
             out_data[user] = usage
 
