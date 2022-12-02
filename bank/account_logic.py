@@ -761,8 +761,8 @@ class AccountServices:
                 subject=subject)
 
     def update_status(self) -> None:
-        """Close any expired proposals/investments and lock the account if necessary
-        on an otherwise unlocked account
+        """Update the Bank database entries for an unlocked account given the usage values from SLURM,
+        and lock the account if necessary
 
         Update the current usage for each allocation in the proposal from the values in the slurm database,
         then reset the slurm database values.
@@ -783,54 +783,15 @@ class AccountServices:
             investment = session.execute(self._active_investment_query).scalars().first()
             lock_clusters = []
 
-
-            # No active investments in date range with SUs to spend, check that any recently
-            # active investments are closed out and move on to proposals
+            investment_sus = 0
             if investment:
                 investment_sus = investment.current_sus
-            else:
-                investment_sus = 0
-                # Check for a recently active investment, and that it was updated in the DB
-                # TODO: Should this handle multiple investments that have not yet had their exhaustion date set?
-                recent_expired_investment = session.execute(select(Investment).join(Account)
-                                                            .where(Account.name == self._account_name)
-                                                            .where(Investment.is_expired)
-                                                            .where(Investment.exhaustion_date is None)
-                                                            ).scalars().first()
 
-                if recent_expired_investment:
-                    # TODO: only accurate if update_account_status is run every day
-                    recent_expired_investment.exhaustion_date = date.today()
-                    LOG.info(f"Closed out recently expired investment under {self._account_name}")
-
-            # No proposal in date range with SUs to spend, check that any recently active proposals
-            # are closed out and move on to locking
+            # No active proposal (in date range with SUs to spend), lock on all clusters if there are not investment
+            # SUs to use
             if not proposal:
-
-                # Check for a recently active proposal that has not yet been closed out
-                recent_expired_proposal = session.execute(select(Proposal).join(Account)
-                                                          .where(Account.name == self._account_name)
-                                                          .where(Proposal.is_expired)
-                                                          .where(Proposal.exhaustion_date is None)).scalars().first()
-
-                # An account that is unlocked on some cluster should have an active or recently active proposal
-                if not recent_expired_proposal:
-                    # TODO: test for this but assume it wouldn't happen normally?
-                    LOG.debug(f"No active or recently expired proposal found when account status for "
-                             f"account {self._account_name}")
-                else:
-                    # Set exhaustion date and alloc final usages
-                    # TODO: this only stays accurate if update_account_status runs daily
-                    recent_expired_proposal.exhaustion_date = date.today()
-
-                    for alloc in recent_expired_proposal.allocations:
-                        alloc.final_usage = slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True) \
-                                            + alloc.service_units_used
-
-                    LOG.info(f"Closed out recently expired proposal under {self._account_name}")
-
                 # No proposal or investment SUs, lock on all clusters
-                if not investment:
+                if investment_sus == 0:
                     LOG.info(f"Locking {self._account_name} on all clusters, no active proposal or investment")
                     self.lock(all_clusters=True)
             else:
