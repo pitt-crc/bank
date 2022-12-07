@@ -8,7 +8,7 @@ from bank.system.slurm import ShellCmd
 
 
 class InitExceptions(TestCase):
-    """Tests related to exceptions raised during instantiation"""
+    """Test for exceptions raised during instantiation"""
 
     def test_empty_cmd_arg(self) -> None:
         """Test for a ``ValueError`` when the command is an empty string"""
