@@ -132,8 +132,8 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Instantiate an AccountServices and SlurmAccount object for the test account"""
 
         super().setUp()
-        self.account = AccountServices(settings.test_account)
-        self.slurm_account = SlurmAccount(settings.test_account)
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     # Ensure account usage is a reproducible value for testing
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
@@ -222,7 +222,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         joined_tables = join(join(Allocation, Proposal), Account)
         floating_alloc_used_query = select(Allocation.service_units_used) \
             .select_from(joined_tables) \
-            .where(Account.name == settings.test_account) \
+            .where(Account.name == settings.test_accounts[0]) \
             .where(Allocation.cluster_name == "all_clusters") \
             .where(Proposal.is_active)
 
