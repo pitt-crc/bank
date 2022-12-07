@@ -790,12 +790,16 @@ class AccountServices:
             # No active proposal (in date range with SUs to spend), lock on all clusters if there are not investment
             # SUs to use
             if not proposal:
-                # No proposal or investment SUs, lock on all clusters
-                if investment_sus == 0:
+                # Try to cover current raw usage with investment service units
+                total_usage = slurm_acct.get_cluster_usage_total(in_hours=True)
+                if total_usage <= investment_sus:
+                    LOG.debug(f"Using investment service units to cover usage with no active proposal "
+                              f"for {self._account_name}")
+                    investment.current_sus -= total_usage
+                else:
                     LOG.info(f"Locking {self._account_name} on all clusters, no active proposal or investment")
                     self.lock(all_clusters=True)
             else:
-
                 floating_sus_remaining = 0
                 floating_alloc = None
 
@@ -809,7 +813,7 @@ class AccountServices:
                         continue
 
                     # TODO: cluster usage errors on empty output from sshare
-                    alloc.service_units_used += slurm_acct.get_cluster_usage_per_user(alloc.cluster_name, in_hours=True)
+                    alloc.service_units_used += slurm_acct.get_cluster_usage_total(alloc.cluster_name, in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
                     # within-cluster limits
