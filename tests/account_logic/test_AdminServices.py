@@ -14,8 +14,8 @@ class FindUnlockedAccounts(EmptyAccountSetup, TestCase):
     def setUp(self) -> None:
         """Instantiate a SlurmAccount and AdminServices objects for finding account tests"""
         super().setUp()
-        self.slurm_account1 = SlurmAccount(settings.test_account)
-        self.slurm_account2 = SlurmAccount(settings.test_account2)
+        self.slurm_account1 = SlurmAccount(settings.test_accounts[0])
+        self.slurm_account2 = SlurmAccount(settings.test_accounts[1])
         self.admin_services = AdminServices()
 
     def test_unlocked_accounts_found(self) -> None:

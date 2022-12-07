@@ -28,8 +28,8 @@ class EmptyAccountSetup:
             session.commit()
 
             # Create new (empty) accounts
-            session.add(Account(name=settings.test_account))
-            session.add(Account(name=settings.test_account2))
+            for account in settings.test_accounts:
+                session.add(Account(name=account))
 
             session.commit()
 
@@ -62,7 +62,8 @@ class ProposalSetup(EmptyAccountSetup):
             proposals.append(proposal)
 
         with DBConnection.session() as session:
-            account = session.execute(select(Account).where(Account.name == settings.test_account)).scalars().first()
+            account = session.execute(select(Account)
+                                      .where(Account.name == settings.test_accounts[0])).scalars().first()
             account.proposals.extend(proposals)
             session.commit()
 
@@ -96,7 +97,7 @@ class InvestmentSetup(EmptyAccountSetup):
             investments.append(inv)
 
         with DBConnection.session() as session:
-            result = session.execute(select(Account).where(Account.name == settings.test_account))
+            result = session.execute(select(Account).where(Account.name == settings.test_accounts[0]))
             account = result.scalars().first()
             account.investments.extend(investments)
             session.commit()
