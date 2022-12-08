@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import abc
 import sys
-from argparse import ArgumentParser, ArgumentTypeError, ArgumentError
+from argparse import ArgumentParser, ArgumentTypeError, ArgumentError, Action
 from datetime import date, datetime
 from typing import Type
 
@@ -111,14 +111,16 @@ class ArgumentTypes:
 
 
 class BaseParser(ArgumentParser):
-    """Abstract base class to use when building commandline parser objects
+    """Abstract base class for building commandline parsers
 
-    Subclasses must define the commandline interface (i.e., any commandline subparsers or arguments) by implementing
-    the ``define_interface`` method. The interface is automatically added to the parser object at installation.
+    Subclasses must define their desired commandline interface (i.e., any
+    subparsers or arguments) by implementing the ``define_interface`` method.
+    The interface is automatically added to the parent parser instance at
+    instantiation.
     """
 
     def __init__(self, *args, raise_on_error=True, **kwargs) -> None:
-        """Instantiate the commandline interface and add any necessary subparsers
+        """Instantiate a commandline parser and its associated interface
 
         Args:
             raise_on_error: Raise an exception instead of exiting out when an error occurs
@@ -138,6 +140,9 @@ class BaseParser(ArgumentParser):
 
         Args:
             message: The error message
+
+        Raises:
+            ArgumentError: If the ``define_interface`` attribute is ``True``
         """
 
         if self.raise_on_error:
@@ -151,11 +156,12 @@ class BaseParser(ArgumentParser):
 
     @classmethod
     @abc.abstractmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: Action) -> None:
+        """Define the commandline interface for the parent parser
 
-        Adds parsers and commandline arguments to the given subparser action.
-        The ``parent_parser`` object is the same object returned by the ``add_subparsers`` method.
+        This method is implemented by subclasses to define the commandline
+        interface for the parent parser instance. Subparsers and arguments
+        should be assigned the ``parent_parser`` argument.
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -540,11 +546,11 @@ class CommandLineApplication:
         )
 
     def add_subparser_to_app(
-        self,
-        command: str,
-        parser_class: Type[BaseParser],
-        title: str,
-        help_text: str
+            self,
+            command: str,
+            parser_class: Type[BaseParser],
+            title: str,
+            help_text: str
     ) -> None:
         """Add a parser object to the parent commandline application as a subparser
 
