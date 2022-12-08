@@ -438,7 +438,7 @@ class InvestmentParser(BaseParser):
 
         # Remove SUs from Investment
         subtract_parser = parent_parser.add_parser(
-            'subtract_sus',
+            name='subtract_sus',
             help='subtract service units from an existing investment')
         subtract_parser.set_defaults(function=InvestmentServices.subtract_sus)
         subtract_parser.add_argument(**account_definition)
@@ -447,7 +447,7 @@ class InvestmentParser(BaseParser):
 
         # Modify Investment Dates
         modify_date_parser = parent_parser.add_parser(
-            'modify_date',
+            name='modify_date',
             help='change the start or end date of an existing investment')
         modify_date_parser.set_defaults(function=InvestmentServices.modify_date)
         modify_date_parser.add_argument(**account_definition)
@@ -464,7 +464,7 @@ class InvestmentParser(BaseParser):
             help=f'set a new investment end date ({safe_date_format})')
 
         advance_parser = parent_parser.add_parser(
-            'advance',
+            name='advance',
             help='forward service units from future investments to a given investment')
         advance_parser.set_defaults(function=InvestmentServices.add_sus)
         advance_parser.add_argument(**account_definition)
@@ -486,33 +486,32 @@ class CommandLineApplication:
             'admin',
             AdminParser,
             title='Admin actions',
-            help_text='Tools for general account management'
-        )
+            help_text='Tools for general system administration')
+
         self.add_subparser_to_app(
             'account',
             AccountParser,
             title='Account actions',
-            help_text='Tools for general account management'
-        )
+            help_text='Tools for managing individual accounts')
+
         self.add_subparser_to_app(
             'proposal',
             ProposalParser,
             title='Proposal actions',
-            help_text='Administrative tools for user proposals'
-        )
+            help_text='Administrative tools for user proposals')
+
         self.add_subparser_to_app(
             'investment',
             InvestmentParser,
             title='Investment actions',
-            help_text='Administrative tools for user investments'
-        )
+            help_text='Administrative tools for user investments')
 
     def add_subparser_to_app(
-            self,
-            command: str,
-            parser_class: Type[BaseParser],
-            title: str,
-            help_text: str
+        self,
+        command: str,
+        parser_class: Type[BaseParser],
+        title: str,
+        help_text: str
     ) -> None:
         """Add a parser object to the parent commandline application as a subparser
 
