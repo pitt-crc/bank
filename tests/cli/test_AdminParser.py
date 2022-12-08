@@ -16,6 +16,12 @@ class UpdateStatus(CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(AdminParser(), 'update_status')
 
+    def test_error_on_account_name(self) -> None:
+        """Test the subparser does not take additional arguments"""
+
+        with self.assertRaises(ArgumentError):
+            self.assert_parser_matches_func_signature(AdminParser(), 'update_status account1')
+
 
 class ListLocked(CLIAsserts, TestCase):
     """Test the ``list_locked`` subparser"""

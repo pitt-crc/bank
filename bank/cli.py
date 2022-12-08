@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import abc
 import sys
-from argparse import ArgumentParser, ArgumentTypeError, ArgumentError, Action
+from argparse import ArgumentParser, ArgumentTypeError, ArgumentError, _SubParsersAction
 from datetime import date, datetime
 from typing import Type
 
@@ -156,7 +156,7 @@ class BaseParser(ArgumentParser):
 
     @classmethod
     @abc.abstractmethod
-    def define_interface(cls, parent_parser: Action) -> None:
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
         """Define the commandline interface for the parent parser
 
         This method is implemented by subclasses to define the commandline
@@ -172,8 +172,8 @@ class AdminParser(BaseParser):
     """Commandline interface for the ``AdminServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -188,24 +188,21 @@ class AdminParser(BaseParser):
 
         # Update Account Status
         update_status = parent_parser.add_parser(
-            'update_status',
-            help='Close any expired proposals/investments and lock accounts for all unlocked accounts'
-        )
+            name='update_status',
+            help='Close any expired proposals/investments and lock accounts for all unlocked accounts')
         update_status.set_defaults(function=AdminServices.update_account_status)
 
         # List Locked Accounts
         list_locked = parent_parser.add_parser(
-            'list_locked',
-            help='List all of the accounts that are currently set to the locked state'
-        )
+            name='list_locked',
+            help='List all of the accounts that are currently set to the locked state')
         list_locked.add_argument('--clusters', **cluster_argument)
         list_locked.set_defaults(function=AdminServices.list_locked_accounts)
 
         # List Unlocked Accounts
         list_unlocked = parent_parser.add_parser(
-            'list_unlocked',
-            help='List all of the accounts that are currently set to the unlocked state'
-        )
+            name='list_unlocked',
+            help='List all of the accounts that are currently set to the unlocked state')
         list_unlocked.add_argument('--clusters', **cluster_argument)
         list_unlocked.set_defaults(function=AdminServices.list_unlocked_accounts)
 
@@ -214,8 +211,8 @@ class AccountParser(BaseParser):
     """Commandline interface for the ``AccountServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -268,8 +265,8 @@ class ProposalParser(BaseParser):
     """Commandline interface for the ``ProposalServices`` class"""
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -393,7 +390,7 @@ class InvestmentParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+        """Define the commandline interface for the parent parser
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
