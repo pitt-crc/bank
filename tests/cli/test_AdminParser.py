@@ -1,4 +1,5 @@
 """Tests for the ``AdminParser`` class"""
+
 from argparse import ArgumentError
 from unittest import TestCase
 
@@ -32,8 +33,9 @@ class ListLocked(CLIAsserts, TestCase):
     def test_error_invalid_cluster(self) -> None:
         """Test ``--clusters`` arguments are not valid unless defined in application settings"""
 
-        with self.assertRaises(ArgumentError):
-            self.assert_parser_matches_func_signature(AdminParser(), 'list_locked --clusters fake_cluster')
+        parser = AdminParser(raise_on_error=True)
+        with self.assertRaisesRegex(ArgumentError, '--clusters: invalid choice:'):
+            self.assert_parser_matches_func_signature(parser, 'list_locked --clusters fake_cluster')
 
 
 class ListUnlocked(CLIAsserts, TestCase):
@@ -52,5 +54,6 @@ class ListUnlocked(CLIAsserts, TestCase):
     def test_error_invalid_cluster(self) -> None:
         """Test ``--clusters`` arguments are not valid unless defined in application settings"""
 
-        with self.assertRaises(ArgumentError):
-            self.assert_parser_matches_func_signature(AdminParser(), 'list_unlocked --clusters fake_cluster')
+        parser = AdminParser(raise_on_error=True)
+        with self.assertRaisesRegex(ArgumentError, '--clusters: invalid choice:'):
+            self.assert_parser_matches_func_signature(parser, 'list_locked --clusters fake_cluster')

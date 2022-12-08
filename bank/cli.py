@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import abc
 import sys
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser, ArgumentTypeError, ArgumentError
 from datetime import date, datetime
 from typing import Type
 
@@ -117,11 +117,18 @@ class BaseParser(ArgumentParser):
     the ``define_interface`` method. The interface is automatically added to the parser object at installation.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        """Instantiate the commandline interface and add any necessary subparsers"""
+    def __init__(self, *args, raise_on_error=True, **kwargs) -> None:
+        """Instantiate the commandline interface and add any necessary subparsers
+
+        Args:
+            raise_on_error: Raise an exception instead of exiting out when an error occurs
+        """
 
         super().__init__(*args, **kwargs)
-        subparsers = self.add_subparsers(parser_class=ArgumentParser)
+        self.raise_on_error = raise_on_error
+
+        subparsers = self.add_subparsers(parser_class=BaseParser)
+        subparsers.raise_on_error = raise_on_error
         self.define_interface(subparsers)
 
     def error(self, message: str) -> None:
@@ -132,6 +139,9 @@ class BaseParser(ArgumentParser):
         Args:
             message: The error message
         """
+
+        if self.raise_on_error:
+            raise ArgumentError(None, message)
 
         if len(sys.argv) == 1:
             self.print_help()
