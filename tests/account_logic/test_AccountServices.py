@@ -12,11 +12,11 @@ from bank.system.slurm import SlurmAccount, Slurm
 from tests._utils import InvestmentSetup, ProposalSetup
 
 active_proposal_query = select(Proposal).join(Account) \
-    .where(Account.name == settings.test_account) \
+    .where(Account.name == settings.test_accounts[0]) \
     .where(Proposal.is_active)
 
 active_investment_query = select(Investment).join(Account) \
-    .where(Account.name == settings.test_account) \
+    .where(Account.name == settings.test_accounts[0]) \
     .where(Investment.is_active)
 
 
@@ -40,10 +40,10 @@ class AccountLocking(TestCase):
     def test_account_locked_on_cluster(self) -> None:
         """Test the account is locked on a given cluster"""
 
-        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account = SlurmAccount(settings.test_accounts[0])
         slurm_account.set_locked_state(False, settings.test_cluster)
 
-        account_services = AccountServices(settings.test_account)
+        account_services = AccountServices(settings.test_accounts[0])
         account_services.lock(clusters=[settings.test_cluster])
         self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
 
@@ -54,10 +54,10 @@ class AccountUnlocking(TestCase):
     def test_account_unlocked_on_cluster(self) -> None:
         """Test the account is unlocked on a given cluster"""
 
-        slurm_account = SlurmAccount(settings.test_account)
+        slurm_account = SlurmAccount(settings.test_accounts[0])
         slurm_account.set_locked_state(True, settings.test_cluster)
 
-        account_services = AccountServices(settings.test_account)
+        account_services = AccountServices(settings.test_accounts[0])
         account_services.unlock(clusters=[settings.test_cluster])
         self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
@@ -70,7 +70,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
     def setUp(self) -> None:
         super().setUp()
 
-        self.account = AccountServices(settings.test_account)
+        self.account = AccountServices(settings.test_accounts[0])
         with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
@@ -132,8 +132,8 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Instantiate an AccountServices and SlurmAccount object for the test account"""
 
         super().setUp()
-        self.account = AccountServices(settings.test_account)
-        self.slurm_account = SlurmAccount(settings.test_account)
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     # Ensure account usage is a reproducible value for testing
     @patch.object(SlurmAccount, "get_cluster_usage_per_user", lambda self, cluster, in_hours: 100)
@@ -222,7 +222,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         joined_tables = join(join(Allocation, Proposal), Account)
         floating_alloc_used_query = select(Allocation.service_units_used) \
             .select_from(joined_tables) \
-            .where(Account.name == settings.test_account) \
+            .where(Account.name == settings.test_accounts[0]) \
             .where(Allocation.cluster_name == "all_clusters") \
             .where(Proposal.is_active)
 

@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, Optional
+from typing import Dict, Optional, Union, Collection
 
 from bank import settings
 from bank.exceptions import *
@@ -167,7 +167,11 @@ class SlurmAccount:
 
         return out_data
 
-    def get_cluster_usage_total(self, cluster: Optional[str] = None, in_hours: bool = True) -> int:
+    def get_cluster_usage_total(
+            self,
+            cluster: Optional[Union[str, Collection[str]]] = None,
+            in_hours: bool = True) -> int:
+
         """Return the raw account usage total on one or more clusters
 
         Args:
