@@ -30,7 +30,7 @@ class AccountLocking(TestCase):
     def test_account_status_updated(self) -> None:
         """Test the account is successfully locked/unlocked"""
 
-        account = SlurmAccount(settings.test_account)
+        account = SlurmAccount(settings.test_accounts[0])
         account.set_locked_state(False, settings.test_cluster)
         self.assertFalse(account.get_locked_state(settings.test_cluster))
 
@@ -43,7 +43,7 @@ class AccountLocking(TestCase):
     def test_set_invalid_cluster(self) -> None:
         """Test an error is raised when setting the lock state for a nonexistent cluster"""
 
-        account = SlurmAccount(settings.test_account)
+        account = SlurmAccount(settings.test_accounts[0])
         with self.assertRaises(SlurmClusterNotFoundError):
             account.set_locked_state(True, 'fake_cluster')
 
@@ -53,7 +53,7 @@ class AccountLocking(TestCase):
     def test_get_invalid_cluster(self) -> None:
         """Test an error is raised when getting the lock state for a nonexistent cluster"""
 
-        account = SlurmAccount(settings.test_account)
+        account = SlurmAccount(settings.test_accounts[0])
         with self.assertRaises(SlurmClusterNotFoundError):
             account.get_locked_state('fake_cluster')
 
@@ -65,7 +65,7 @@ class AccountUsage(TestCase):
     def test_get_usage_hours(self) -> None:
         """Test the recovered account usage in hours matches the value in seconds"""
 
-        account = SlurmAccount(settings.test_account)
+        account = SlurmAccount(settings.test_accounts[0])
         cluster = settings.test_cluster
         usage_seconds = account.get_cluster_usage_per_user(cluster)
         usage_hours = account.get_cluster_usage_per_user(cluster, in_hours=True)

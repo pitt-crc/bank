@@ -63,7 +63,7 @@ class MessageSending(TestCase):
     def setUp(self, mock_smtp) -> None:
         """Set up and send a mock ``EmailTemplate``  instance"""
 
-        self.template = EmailTemplate('This_is_a_test')
+        self.template = EmailTemplate('This is a test')
         self.from_address = 'fake_sender@fake_domain.com'
         self.to_address = 'fake_recipient@fake_domain.com'
         self.subject = 'Subject line'
