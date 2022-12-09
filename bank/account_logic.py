@@ -916,10 +916,9 @@ class AdminServices:
             A tuple of account names
         """
 
-        # Query database for account names
-        account_name_query = select(Account.name).join(Proposal)
+        # Query database for all account names
         with DBConnection.session() as session:
-            account_names = session.execute(account_name_query).scalars().all()
+            account_names = session.execute(select(Account.name)).scalars().all()
 
         # Build a generator for account names that match the lock state
         for account in account_names:
