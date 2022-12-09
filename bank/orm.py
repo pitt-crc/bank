@@ -117,7 +117,7 @@ class Proposal(Base):
             return False
 
         has_allocations = bool(self.allocations)
-        has_service_units = not (all(alloc.is_exhausted for alloc in self.allocations))
+        has_service_units = not all(alloc.is_exhausted for alloc in self.allocations)
 
         is_expired = not (has_allocations and has_service_units)
 
@@ -125,6 +125,8 @@ class Proposal(Base):
 
     @is_expired.expression
     def is_expired(cls) -> bool:
+        """SQL expression form of Proposal `is_expired` functionality"""
+
         today = date.today()
         subquery = select(Proposal.id).join(Allocation) \
             .where(Proposal.start_date < today) \
@@ -139,11 +141,13 @@ class Proposal(Base):
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = not (all(alloc.is_exhausted for alloc in self.allocations))
+        has_allocations = not all(alloc.is_exhausted for alloc in self.allocations)
         return in_date_range and has_allocations
 
     @is_active.expression
     def is_active(cls) -> bool:
+        """SQL expression form of Proposal `is_active` functionality"""
+
         today = date.today()
         subquery = select(Proposal.id).join(Allocation) \
             .where(Proposal.start_date <= today) \
@@ -221,10 +225,11 @@ class Allocation(Base):
     def is_exhausted(self) -> bool:
         """Whether the allocation has available service units"""
 
-        return not (self.service_units_used < self.service_units_total)
+        return self.service_units_used >= self.service_units_total
 
     @is_exhausted.expression
     def is_exhausted(cls) -> bool:
+        """SQL expression form of Allocation `is_exhausted` functionality"""
 
         subquery = select(Allocation.cluster_name) \
             .where(Allocation.service_units_used >= Allocation.service_units_total)
@@ -312,8 +317,9 @@ class Investment(Base):
 
     @is_expired.expression
     def is_expired(cls) -> bool:
-        """Return whether the investment is past its end date or has exhausted its allocation"""
-        #TODO Implement
+        """SQL expression form of Investment `is_expired` functionality"""
+
+        #TODO Implement and test
         past_end = cls.end_date <= date.today()
         spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
         return  past_end | spent_service_units
@@ -329,7 +335,9 @@ class Investment(Base):
 
     @is_active.expression
     def is_active(cls) -> bool:
-        #TODO: Implement
+        """SQL expression form of Investment `is_active` functionality"""
+
+        #TODO: Implement and test
         today = date.today()
         in_date_range = (cls.start_date <= today) & (today < cls.end_date)
         has_service_units = (cls.current_sus > 0) & (cls.withdrawn_sus < cls.service_units)
