@@ -79,11 +79,13 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         self.assertFalse(not_started.is_expired)
 
         not_started_with_alloc = copy.deepcopy(not_started)
-        not_started_with_alloc.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        not_started_with_alloc.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                                             service_units_used=0,
+                                                             service_units_total=10_000))
         self.assertFalse(not_started_with_alloc.is_expired)
 
         not_started_with_expired_alloc = copy.deepcopy(not_started_with_alloc)
-        not_started_with_expired_alloc.allocations[0].final_usage = 1_000
+        not_started_with_expired_alloc.allocations[0].service_units_used = not_started_with_expired_alloc.allocations[0].service_units_total
         self.assertFalse(not_started_with_expired_alloc.is_expired)
 
         # Add proposals to the test account in the database
@@ -116,16 +118,17 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         self.assertTrue(started_without_allocs.is_expired)
 
         started_with_active_alloc = copy.deepcopy(started_without_allocs)
-        started_with_active_alloc.allocations.append(
-            Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        started_with_active_alloc.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                                                service_units_used=0,
+                                                                service_units_total=10_000))
         self.assertFalse(started_with_active_alloc.is_expired)
 
-        started_with_all_allocs_expired = copy.deepcopy(started_with_active_alloc)
-        started_with_all_allocs_expired.allocations[0].final_usage = 1_000
-        self.assertTrue(started_with_all_allocs_expired.is_expired)
+        started_with_all_allocs_exhausted = copy.deepcopy(started_with_active_alloc)
+        started_with_all_allocs_exhausted.allocations[0].service_units_used = started_with_all_allocs_exhausted.allocations[0].service_units_total
+        self.assertTrue(started_with_all_allocs_exhausted.is_expired)
 
         # Add proposals to the test account in the database
-        proposals = [started_without_allocs, started_with_active_alloc, started_with_all_allocs_expired]
+        proposals = [started_without_allocs, started_with_active_alloc, started_with_all_allocs_exhausted]
 
         with DBConnection.session() as session:
             account = session.query(Account).filter(Account.name == settings.test_account).first()
@@ -153,13 +156,14 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         """
 
         proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
-
         self.assertTrue(proposal.is_expired)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertTrue(proposal.is_expired)
 
     def test_current_date_at_start(self) -> None:
@@ -168,10 +172,12 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
         self.assertTrue(proposal.is_expired)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertFalse(proposal.is_expired)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertTrue(proposal.is_expired)
 
     def test_current_date_at_end(self) -> None:
@@ -180,10 +186,12 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
         self.assertTrue(proposal.is_expired)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertTrue(proposal.is_expired)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertTrue(proposal.is_expired)
 
 
@@ -200,10 +208,12 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
         self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertFalse(proposal.is_active)
 
     def test_current_date_in_range(self) -> None:
@@ -216,10 +226,12 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertTrue(proposal.is_active)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertFalse(proposal.is_active)
 
     def test_current_date_after_range(self) -> None:
@@ -231,10 +243,12 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertFalse(proposal.is_active)
 
     def test_current_date_at_start(self) -> None:
@@ -243,10 +257,12 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertTrue(proposal.is_active)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertFalse(proposal.is_active)
 
     def test_current_date_at_end(self) -> None:
@@ -255,8 +271,10 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster, service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=0,
+                                               service_units_total=10_000))
         self.assertFalse(proposal.is_active)
 
-        proposal.allocations[0].final_usage = 1_000
+        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
         self.assertFalse(proposal.is_active)
