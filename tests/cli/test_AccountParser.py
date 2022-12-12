@@ -19,7 +19,7 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
     def test_account_info(self) -> None:
         """Test the parsing of arguments by the ``info`` command"""
 
-        self.assert_parser_matches_func_signature(self.parser, f'info {settings.test_account}')
+        self.assert_parser_matches_func_signature(self.parser, f'info {settings.test_accounts[0]}')
 
     def test_lock_list_clusters(self) -> None:
         """Test argument parsing for the ``lock`` command`"""
@@ -27,11 +27,11 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
         # Lock on a specific cluster
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'lock {settings.test_account} --cluster {settings.test_cluster}'
+            f'lock {settings.test_accounts[0]} --cluster {settings.test_cluster}'
         )
 
         # Lock on all clusters
-        self.assert_parser_matches_func_signature(self.parser, f'lock {settings.test_account} --all_clusters')
+        self.assert_parser_matches_func_signature(self.parser, f'lock {settings.test_accounts[0]} --all_clusters')
 
     def test_unlock_clusters(self) -> None:
         """Test argument parsing for the ``unlock`` command """
@@ -39,8 +39,8 @@ class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):
         # Unlock on a specific cluster
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'unlock {settings.test_account} --cluster {settings.test_cluster}'
+            f'unlock {settings.test_accounts[0]} --cluster {settings.test_cluster}'
         )
 
         # Unlock on a specific cluster
-        self.assert_parser_matches_func_signature(self.parser, f'unlock {settings.test_account} --all_clusters')
+        self.assert_parser_matches_func_signature(self.parser, f'unlock {settings.test_accounts[0]} --all_clusters')
