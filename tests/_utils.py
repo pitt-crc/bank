@@ -1,4 +1,6 @@
+from copy import deepcopy
 from datetime import date, timedelta
+from typing import Optional
 
 from sqlalchemy import select
 
@@ -17,6 +19,8 @@ class EmptyAccountSetup:
 
     def setUp(self) -> None:
         """Delete any proposals and investments that may already exist for the test accounts"""
+
+        DBConnection.configure('sqlite:///:memory:')
 
         with DBConnection.session() as session:
 
@@ -39,24 +43,51 @@ class ProposalSetup(EmptyAccountSetup):
 
     num_proposal_sus = 10_000
 
-    def setUp(self) -> None:
+    def setUp(self, start: Optional[date] = None, end: Optional[date] = None) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
 
         proposals = []
-        for i in range(3):
-            start = TODAY + ((i - 1) * timedelta(days=365))
-            end = TODAY + (i * timedelta(days=365))
+        if not (start and end):
+            # Add proposal with the following date ranges:
+            # 2 years ago today - 1 year ago today
+            # 1 year ago today - today
+            for i in range(-1, 2):
+                start = TODAY + ((i - 1) * timedelta(days=365))
+                end = TODAY + (i * timedelta(days=365))
 
-            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_total=self.num_proposal_sus)]
-            proposal = Proposal(
-                allocations=allocations,
-                start_date=start,
-                end_date=end
-            )
+                allocations = [Allocation(cluster_name=settings.test_cluster, service_units_total=self.num_proposal_sus)]
+                proposal = Proposal(
+                    allocations=allocations,
+                    start_date=start,
+                    end_date=end
+                )
+                proposals.append(proposal)
+        else:
 
-            proposals.append(proposal)
+            # Proposal without allocations
+            Proposal1 = Proposal(start_date=start, end_date=end)
+            proposals.append(Proposal1)
+
+            # Proposal with single allocation that is not exhausted
+            Proposal2 = deepcopy(Proposal1)
+            active_alloc = Allocation(cluster_name=settings.test_cluster,
+                                      service_units_used=0,
+                                      service_units_total=self.num_proposal_sus)
+            Proposal2.allocations.append(active_alloc)
+            proposals.append(Proposal2)
+
+            # Proposal with an allocation that is exhausted and one that is not
+            Proposal3 = deepcopy(Proposal2)
+            Proposal3.allocations.append(active_alloc)
+            Proposal3.allocations[1].service_units_used = Proposal3.allocations[1].service_units_total
+            proposals.append(Proposal3)
+
+            # Proposal with expired allocations
+            Proposal4 = deepcopy(Proposal3)
+            Proposal4.allocations[0].service_units_used = Proposal3.allocations[0].service_units_total
+            proposals.append(Proposal4)
 
         with DBConnection.session() as session:
             account = session.execute(select(Account)
