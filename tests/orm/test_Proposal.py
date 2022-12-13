@@ -64,6 +64,29 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         DBConnection.configure('sqlite:///:memory:')
         super().setUp()
 
+    @staticmethod
+    def create_test_proposals(self, start, end) -> list[Proposal]:
+        """Create set of proposals used across more than one test"""
+
+        # Proposal without allocations
+        Proposal1 = Proposal(start_date=start, end_date=end)
+
+        # Proposal with single allocation that is not exhausted
+        Proposal2 = copy.deepcopy(Proposal1)
+        active_alloc = Allocation(cluster_name=settings.test_cluster, service_units_used=0, service_units_total=10_000)
+        Proposal2.allocations.append(active_alloc)
+
+        # Proposal with an allocation that is exhausted and one that is not
+        Proposal3 = copy.deepcopy(Proposal2)
+        Proposal3.allocations.append(active_alloc)
+        Proposal3.allocations[1].service_units_used = Proposal3.allocations[1].service_units_total
+
+        # Proposal with expired allocations
+        Proposal4 = copy.deepcopy(Proposal3)
+        Proposal4.allocations[0].service_units_used = Proposal3.allocations[0].service_units_total
+
+        return [Proposal1, Proposal2, Proposal3, Proposal4]
+
     def test_current_date_before_range(self) -> None:
         """Test that a proposal is never expired before its start
 
@@ -75,32 +98,23 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         """
 
         # Create proposal objects, and test that the values loaded into them evaluate to not yet being expired
-        not_started = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
-        self.assertFalse(not_started.is_expired)
+        test_proposals = self.create_test_proposals(start=TOMORROW, end=DAY_AFTER_TOMORROW)
 
-        not_started_with_alloc = copy.deepcopy(not_started)
-        not_started_with_alloc.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                                             service_units_used=0,
-                                                             service_units_total=10_000))
-        self.assertFalse(not_started_with_alloc.is_expired)
-
-        not_started_with_expired_alloc = copy.deepcopy(not_started_with_alloc)
-        not_started_with_expired_alloc.allocations[0].service_units_used = not_started_with_expired_alloc.allocations[0].service_units_total
-        self.assertFalse(not_started_with_expired_alloc.is_expired)
-
-        # Add proposals to the test account in the database
-        proposals = [not_started, not_started_with_alloc, not_started_with_expired_alloc]
+        for proposal in test_proposals:
+            self.assertFalse(proposal.is_expired)
 
         with DBConnection.session() as session:
-            account = session.execute(select(Account).where(Account.name == settings.test_account)).scalars().first()
-            account.proposals.extend(proposals)
+
+            # Add proposals to the test account in the database
+            account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+            account.proposals.extend(test_proposals)
             session.commit()
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
             expired_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
-                .where(Account.name == settings.test_account)
+                .where(Account.name == settings.test_accounts[0])
                 .where(Proposal.is_expired)
             ).all()
 
@@ -114,39 +128,32 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         or exhausted (all service units consumed).
         """
 
-        started_without_allocs = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
-        self.assertTrue(started_without_allocs.is_expired)
-
-        started_with_active_alloc = copy.deepcopy(started_without_allocs)
-        started_with_active_alloc.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                                                service_units_used=0,
-                                                                service_units_total=10_000))
-        self.assertFalse(started_with_active_alloc.is_expired)
-
-        started_with_all_allocs_exhausted = copy.deepcopy(started_with_active_alloc)
-        started_with_all_allocs_exhausted.allocations[0].service_units_used = started_with_all_allocs_exhausted.allocations[0].service_units_total
-        self.assertTrue(started_with_all_allocs_exhausted.is_expired)
-
-        # Add proposals to the test account in the database
-        proposals = [started_without_allocs, started_with_active_alloc, started_with_all_allocs_exhausted]
+        # Create proposal objects, and test that the values loaded into them evaluate to not yet being expired
+        test_proposals = self.create_test_proposals(start=YESTERDAY, end=TOMORROW)
+        self.assertTrue(test_proposals[0].is_expired)
+        self.assertFalse(test_proposals[1].is_expired)
+        self.assertFalse(test_proposals[2].is_expired)
+        self.assertTrue(test_proposals[3].is_expired)
 
         with DBConnection.session() as session:
-            account = session.query(Account).filter(Account.name == settings.test_account).first()
-            account.proposals.extend(proposals)
+
+            # Add proposals to the test account in the database
+            account = session.query(Account).filter(Account.name == settings.test_accounts[0]).first()
+            account.proposals.extend(test_proposals)
             session.commit()
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
             expired_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
-                .where(Account.name == settings.test_account)
+                .where(Account.name == settings.test_accounts[0])
                 .where(Proposal.is_expired)
             ).scalars().all()
 
             self.assertIn(1, expired_proposal_ids)
             self.assertNotIn(2, expired_proposal_ids)
-            self.assertIn(3, expired_proposal_ids)
-
+            self.assertNotIn(3, expired_proposal_ids)
+            self.assertIn(4, expired_proposal_ids)
 
     def test_current_date_after_range(self) -> None:
         """Test the proposal is always expired after the proposal date range
@@ -155,44 +162,83 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         has passed, no matter the status of associated allocations.
         """
 
-        proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
-        self.assertTrue(proposal.is_expired)
+        # Create proposal objects, and test that the values loaded into them evaluate to not yet being expired
+        test_proposals = self.create_test_proposals(start=DAY_BEFORE_YESTERDAY, end=YESTERDAY)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertTrue(proposal.is_expired)
+        for proposal in test_proposals:
+            self.assertTrue(proposal.is_expired)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+        with DBConnection.session() as session:
+            # Add proposals to the test account in the database
+            account = session.execute(
+                select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+            account.proposals.extend(test_proposals)
+            session.commit()
+
+            # Query for active proposals using the equivalent SQL expression for is_expired as a filter
+            active_proposal_ids = session.execute(
+                select(Proposal.id)
+                .join(Account)
+                .where(Account.name == settings.test_accounts[0])
+                .where(not Proposal.is_expired)
+            ).all()
+
+            self.assertFalse(active_proposal_ids, "All of the proposals should be expired")
 
     def test_current_date_at_start(self) -> None:
         """Test the proposal is not expired on the start date"""
 
-        proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
-        self.assertTrue(proposal.is_expired)
+        # Create proposal objects, and test that the values loaded into them evaluate to not yet being expired
+        test_proposals = self.create_test_proposals(start=TODAY, end=TOMORROW)
+        self.assertTrue(test_proposals[0].is_expired)
+        self.assertFalse(test_proposals[1].is_expired)
+        self.assertFalse(test_proposals[2].is_expired)
+        self.assertTrue(test_proposals[3].is_expired)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertFalse(proposal.is_expired)
+        with DBConnection.session() as session:
+            # Add proposals to the test account in the database
+            account = session.query(Account).filter(Account.name == settings.test_accounts[0]).first()
+            account.proposals.extend(test_proposals)
+            session.commit()
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+            # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
+            expired_proposal_ids = session.execute(
+                select(Proposal.id)
+                .join(Account)
+                .where(Account.name == settings.test_accounts[0])
+                .where(Proposal.is_expired)
+            ).scalars().all()
+
+            self.assertIn(1, expired_proposal_ids)
+            self.assertNotIn(2, expired_proposal_ids)
+            self.assertNotIn(3, expired_proposal_ids)
+            self.assertIn(4, expired_proposal_ids)
 
     def test_current_date_at_end(self) -> None:
         """Test the proposal is expired on the end date"""
 
-        proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
-        self.assertTrue(proposal.is_expired)
+        # Create proposal objects, and test that the values loaded into them evaluate to not yet being expired
+        test_proposals = self.create_test_proposals(start=YESTERDAY, end=TODAY)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertTrue(proposal.is_expired)
+        for proposal in test_proposals:
+            self.assertFalse(proposal.is_expired)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+        with DBConnection.session() as session:
+            # Add proposals to the test account in the database
+            account = session.execute(
+                select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+            account.proposals.extend(test_proposals)
+            session.commit()
+
+            # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
+            expired_proposal_ids = session.execute(
+                select(Proposal.id)
+                .join(Account)
+                .where(Account.name == settings.test_accounts[0])
+                .where(Proposal.is_expired)
+            ).all()
+
+            self.assertFalse(expired_proposal_ids, "None of the proposals should be expired")
 
 
 class ActiveProperty(EmptyAccountSetup, TestCase):
