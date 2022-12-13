@@ -5,7 +5,7 @@ from unittest import TestCase
 from sqlalchemy import select, not_
 
 from bank import settings
-from bank.orm import Account, Allocation, DBConnection, Proposal
+from bank.orm import Account, DBConnection, Proposal
 from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 
@@ -68,14 +68,14 @@ class ExpiredProperty(ProposalSetup, TestCase):
         directly from the database with the equivalent SQL expression.
         """
 
-        super().setUp(self, TOMORROW, DAY_AFTER_TOMORROW)
+        super().setUp(TOMORROW, DAY_AFTER_TOMORROW)
 
         # Gather proposal objects, and test that the values loaded into them evaluate to not yet being expired
         with DBConnection.session() as session:
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
                 self.assertFalse(proposal.is_expired)
@@ -105,7 +105,7 @@ class ExpiredProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             self.assertTrue(proposals[0].is_expired)
             self.assertFalse(proposals[1].is_expired)
@@ -138,7 +138,7 @@ class ExpiredProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
                 self.assertTrue(proposal.is_expired)
@@ -162,7 +162,7 @@ class ExpiredProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             self.assertTrue(proposals[0].is_expired)
             self.assertFalse(proposals[1].is_expired)
@@ -192,7 +192,7 @@ class ExpiredProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
                 self.assertFalse(proposal.is_expired)
@@ -224,20 +224,20 @@ class ActiveProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
-                self.assertTrue(proposal.is_active)
+                self.assertFalse(proposal.is_active)
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
-            expired_proposal_ids = session.execute(
+            active_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
                 .where(Account.name == settings.test_accounts[0])
-                .where(not_(Proposal.is_active))
-            ).all()
+                .where(Proposal.is_active)
+            ).scalars().all()
 
-        self.assertFalse(expired_proposal_ids, "None of the proposals should be expired")
+        self.assertFalse(active_proposal_ids, "None of the proposals should be expired")
 
     def test_current_date_in_range(self) -> None:
         """Test the proposal is active during the proposal date range
@@ -253,7 +253,7 @@ class ActiveProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             self.assertFalse(proposals[0].is_active)
             self.assertTrue(proposals[1].is_active)
@@ -261,17 +261,17 @@ class ActiveProperty(ProposalSetup, TestCase):
             self.assertFalse(proposals[3].is_active)
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
-            expired_proposal_ids = session.execute(
+            active_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
                 .where(Account.name == settings.test_accounts[0])
-                .where(not_(Proposal.is_active))
+                .where(Proposal.is_active)
             ).scalars().all()
 
-            self.assertIn(1, expired_proposal_ids)
-            self.assertNotIn(2, expired_proposal_ids)
-            self.assertNotIn(3, expired_proposal_ids)
-            self.assertIn(4, expired_proposal_ids)
+            self.assertNotIn(1, active_proposal_ids)
+            self.assertIn(2, active_proposal_ids)
+            self.assertIn(3, active_proposal_ids)
+            self.assertNotIn(4, active_proposal_ids)
 
     def test_current_date_after_range(self) -> None:
         """Test the proposal is not active after the end date
@@ -285,20 +285,20 @@ class ActiveProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
-                self.assertTrue(proposal.is_active)
+                self.assertFalse(proposal.is_active, "All proposals should be expired")
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
-            expired_proposal_ids = session.execute(
+            active_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
                 .where(Account.name == settings.test_accounts[0])
-                .where(not_(Proposal.is_active))
+                .where(Proposal.is_active)
             ).all()
 
-        self.assertFalse(expired_proposal_ids, "None of the proposals should be expired")
+        self.assertFalse(active_proposal_ids, "All proposals should be expired")
 
     def test_current_date_at_start(self) -> None:
         """Test the proposal is active on the start date"""
@@ -310,7 +310,7 @@ class ActiveProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             self.assertFalse(proposals[0].is_active)
             self.assertTrue(proposals[1].is_active)
@@ -318,20 +318,23 @@ class ActiveProperty(ProposalSetup, TestCase):
             self.assertFalse(proposals[3].is_active)
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
-            expired_proposal_ids = session.execute(
+            active_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
                 .where(Account.name == settings.test_accounts[0])
-                .where(not_(Proposal.is_active))
+                .where(Proposal.is_active)
             ).scalars().all()
 
-            self.assertIn(1, expired_proposal_ids)
-            self.assertNotIn(2, expired_proposal_ids)
-            self.assertNotIn(3, expired_proposal_ids)
-            self.assertIn(4, expired_proposal_ids)
+            self.assertNotIn(1, active_proposal_ids)
+            self.assertIn(2, active_proposal_ids)
+            self.assertIn(3, active_proposal_ids)
+            self.assertNotIn(4, active_proposal_ids)
 
     def test_current_date_at_end(self) -> None:
-        """Test the proposal is not active on the end date"""
+        """Test the proposal is not active on the end date
+
+        A proposal should never return as active on its expiration date
+        """
 
         super().setUp(start=YESTERDAY, end=TODAY)
 
@@ -339,17 +342,17 @@ class ActiveProperty(ProposalSetup, TestCase):
             proposals = session.execute(
                 select(Proposal).join(Account)
                 .where(Account.name == settings.test_accounts[0])
-            ).all()
+            ).scalars().all()
 
             for proposal in proposals:
-                self.assertTrue(proposal.is_active)
+                self.assertFalse(proposal.is_active)
 
             # Query for expired proposals using the equivalent SQL expression for is_expired as a filter
-            expired_proposal_ids = session.execute(
+            active_proposal_ids = session.execute(
                 select(Proposal.id)
                 .join(Account)
                 .where(Account.name == settings.test_accounts[0])
-                .where(not_(Proposal.is_active))
+                .where(Proposal.is_active)
             ).all()
 
-        self.assertFalse(expired_proposal_ids, "None of the proposals should be expired")
+        self.assertFalse(active_proposal_ids, "None of the proposals should be expired")
