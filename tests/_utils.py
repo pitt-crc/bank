@@ -67,27 +67,28 @@ class ProposalSetup(EmptyAccountSetup):
         else:
 
             # Proposal without allocations
-            Proposal1 = Proposal(start_date=start, end_date=end)
-            proposals.append(Proposal1)
+            Proposal0 = Proposal(start_date=start, end_date=end)
+            proposals.append(Proposal0)
 
             # Proposal with single allocation that is not exhausted
-            Proposal2 = deepcopy(Proposal1)
-            active_alloc = Allocation(cluster_name=settings.test_cluster,
-                                      service_units_used=0,
-                                      service_units_total=self.num_proposal_sus)
-            Proposal2.allocations.append(active_alloc)
-            proposals.append(Proposal2)
+            Proposal1 = deepcopy(Proposal0)
+            Proposal1.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                                    service_units_used=0,
+                                                    service_units_total=self.num_proposal_sus))
+            proposals.append(Proposal1)
 
             # Proposal with an allocation that is exhausted and one that is not
-            Proposal3 = deepcopy(Proposal2)
-            Proposal3.allocations.append(active_alloc)
-            Proposal3.allocations[1].service_units_used = Proposal3.allocations[1].service_units_total
-            proposals.append(Proposal3)
+            Proposal2 = deepcopy(Proposal1)
+            Proposal2.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                                    service_units_used=0,
+                                                    service_units_total=self.num_proposal_sus))
+            Proposal2.allocations[1].service_units_used = Proposal2.allocations[1].service_units_total
+            proposals.append(Proposal2)
 
             # Proposal with expired allocations
-            Proposal4 = deepcopy(Proposal3)
-            Proposal4.allocations[0].service_units_used = Proposal3.allocations[0].service_units_total
-            proposals.append(Proposal4)
+            Proposal3 = deepcopy(Proposal2)
+            Proposal3.allocations[0].service_units_used = Proposal3.allocations[0].service_units_total
+            proposals.append(Proposal3)
 
         with DBConnection.session() as session:
             account = session.execute(select(Account)
