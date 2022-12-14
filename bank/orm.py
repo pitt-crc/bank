@@ -159,9 +159,8 @@ class Proposal(Base):
 
         today = date.today()
         subquery = select(Proposal.id).outerjoin(Allocation) \
-            .where(Proposal.start_date <= today) \
-            .where(today < Proposal.end_date) \
-            .where(not_(Proposal.allocations.is_exhausted))
+            .where(and_(today >= Proposal.start_date, today < Proposal.end_date)) \
+            .where(not_(Allocation.is_exhausted))
 
         return cls.id.in_(subquery)
 
