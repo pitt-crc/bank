@@ -782,7 +782,9 @@ class AccountServices:
             clusters = Slurm.cluster_names()
 
         HasPurchasedPartition = False
-        
+        """ Searching for purchased partition using CRC's naming convention: Name of of a purchased partition always
+            contains name of the account, e.g. eschneider 
+        """
         for cluster in clusters:
             partitions = Slurm.partition_names(cluster)
             for partition in partitions:
