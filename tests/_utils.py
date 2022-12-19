@@ -49,7 +49,7 @@ class ProposalSetup(EmptyAccountSetup):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
 
-            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_total=self.num_proposal_sus)]
+            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_used=0, service_units_total=self.num_proposal_sus)]
             proposal = Proposal(
                 allocations=allocations,
                 start_date=start,
