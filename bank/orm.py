@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import and_, Column, Date, ForeignKey, Integer, MetaData, not_, or_, String, create_engine, select
+from sqlalchemy import and_, Column, Date, ForeignKey, func, Integer, MetaData, not_, or_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
@@ -131,11 +131,11 @@ class Proposal(Base):
 
         # Proposal does not have any active allocations
         subquery = select(Proposal.id).outerjoin(Allocation) \
-            .where(Proposal.start_date < today) \
-            .where(Proposal.end_date >= today) \
-            .where(or_(not_(Proposal.allocations.any()), Allocation.is_exhausted))
+            .where(Allocation.proposal_id == cls.id) \
+            .where(not_(Allocation.is_exhausted)) \
+            .where(today < Proposal.end_date)
 
-        return cls.id.in_(subquery)
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(subquery)))
 
     @hybrid_property
     def is_active(self) -> bool:
