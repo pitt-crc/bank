@@ -1,4 +1,3 @@
-from copy import deepcopy
 from datetime import date, timedelta
 from typing import Optional
 
@@ -60,6 +59,8 @@ class ProposalSetup(EmptyAccountSetup):
         # Add proposal with the following date ranges:
         # 2 years ago today - 1 year ago today
         # 1 year ago today - today
+        # today - 1 year from today
+        # 1 year from today - 2 years from today
         for i in range(-1, 2):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
@@ -71,6 +72,7 @@ class ProposalSetup(EmptyAccountSetup):
                 start_date=start,
                 end_date=end
             )
+
             proposals.append(proposal)
 
         add_proposal_to_test_account(proposal)

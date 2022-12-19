@@ -831,7 +831,7 @@ class AccountServices:
                 exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
 
                 # Floating SUs can cover
-                if exceeding_sus_total < floating_sus_remaining:
+                if exceeding_sus_total <= floating_sus_remaining:
                     floating_alloc.service_units_used += exceeding_sus_total
                     for cluster in lock_clusters:
                         cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
@@ -839,7 +839,7 @@ class AccountServices:
                                   f"on {cluster['name']}")
 
                 # Investment SUs can cover
-                elif exceeding_sus_total - floating_sus_remaining < investment_sus:
+                elif exceeding_sus_total - floating_sus_remaining <= investment_sus:
                     remaining_sus = exceeding_sus - floating_sus_remaining
                     if floating_alloc:
                         floating_alloc.service_units_used = floating_alloc.service_units_total
