@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, not_, String, create_engine, select
+from sqlalchemy import and_, Column, Date, ForeignKey, Integer, MetaData, not_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
+from sqlalchemy.orm import aliased, declarative_base, relationship, sessionmaker, validates
 
 from bank import settings
 
@@ -48,8 +48,12 @@ class Proposal(Base):
       - percent_notified   (Integer): Percent usage when account holder was last notified
 
     Relationships:
-      - account        (Account): Many to one
-      - allocations (Allocation): One to many
+      - account            (Account): Many to one
+      - allocations     (Allocation): One to many
+
+    Hybrid Properties:
+        - is_expired       (Boolean): Whether the proposal is expired or not
+        - is_active        (Boolean): Whether the proposal is active or not
     """
 
     __tablename__ = 'proposal'
@@ -149,10 +153,10 @@ class Proposal(Base):
         """SQL expression form of Proposal `is_active` functionality"""
 
         today = date.today()
-        subquery = select(Proposal.id).join(Allocation) \
-            .where(Proposal.start_date <= today) \
-            .where(today < Proposal.end_date) \
-            .where(not_(Allocation.is_exhausted))
+        aliasAllocation = aliased(Allocation)
+        subquery = select(aliasAllocation.id) \
+            .where(aliasAllocation.id == cls.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
         return cls.id.in_(subquery)
 
@@ -174,7 +178,10 @@ class Allocation(Base):
       - final_usage         (Integer): Total service units utilized at proposal expiration
 
     Relationships:
-      - proposal (Proposal): Many to one
+      - proposal           (Proposal): Many to one
+
+    Hybrid Properties:
+        - is_exhausted       (Boolean): Whether the allocation has remaining service units to spend
     """
 
     __tablename__ = 'allocation'
@@ -183,7 +190,7 @@ class Allocation(Base):
     proposal_id = Column(Integer, ForeignKey(Proposal.id))
     cluster_name = Column(String, nullable=False)
     service_units_total = Column(Integer, nullable=False)
-    service_units_used = Column(Integer, nullable=True)
+    service_units_used = Column(Integer, nullable=False, default=0)
 
     proposal = relationship('Proposal', back_populates='allocations')
 
@@ -227,15 +234,6 @@ class Allocation(Base):
 
         return self.service_units_used >= self.service_units_total
 
-    @is_exhausted.expression
-    def is_exhausted(cls) -> bool:
-        """SQL expression form of Allocation `is_exhausted` functionality"""
-
-        subquery = select(Allocation.cluster_name) \
-            .where(Allocation.service_units_used >= Allocation.service_units_total)
-
-        return cls.cluster_name.in_(subquery)
-
 
 class Investment(Base):
     """Service unit allocations granted in exchange for user investment
@@ -252,6 +250,10 @@ class Investment(Base):
 
     Relationships:
       - account (Account): Many to one
+
+    Hybrid Properties:
+        - is_expired       (Boolean): Whether the investment is expired or not
+        - is_active        (Boolean): Whether the investment is active or not
     """
 
     __tablename__ = 'investment'
