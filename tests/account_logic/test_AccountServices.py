@@ -254,7 +254,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             # Proposal is active and has floating service units
             proposal = session.execute(active_proposal_query).scalars().first()
             proposal.allocations[0].service_units_total = 10_000
-            proposal.allocations[0].service_units_used = 11_000
+            proposal.allocations[0].service_units_used = 10_000
             # TODO: need a second allocation on another cluster
 
             proposal.allocations.append(Allocation(
@@ -270,6 +270,24 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             session.commit()
 
         self.account.update_status()
+
+        joined_tables = join(join(Allocation, Proposal), Account)
+        floating_alloc_used_query = select(Allocation.service_units_used) \
+            .select_from(joined_tables) \
+            .where(Account.name == settings.test_accounts[0]) \
+            .where(Allocation.cluster_name == "all_clusters") \
+            .where(Proposal.is_active)
+
+        # Service units used should equal service units total for the cluster where usage was covered,
+        # usage covered should equal the amount needed to bring service_units_used back down to the total
+        with DBConnection.session() as session:
+            proposal = session.execute(active_proposal_query).scalars().first()
+            floating_sus_used = session.execute(floating_alloc_used_query).scalars().first()
+
+            self.assertEqual(proposal.allocations[0].service_units_used, proposal.allocations[0].service_units_total)
+
+            # Floating SUs cover raw usage exceeding total
+            self.assertEqual(floating_sus_used, 100)
 
         # clusters should be unlocked due to exceeding usage being covered by floating SUs
         for cluster in Slurm.cluster_names():
