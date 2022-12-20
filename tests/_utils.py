@@ -48,16 +48,13 @@ class ProposalSetup(EmptyAccountSetup):
         for i in range(3):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
-            exhausted = None
-            if end <= TODAY:
-                exhausted = end
 
-            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_total=self.num_proposal_sus)]
+            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_used=0, service_units_total=self.num_proposal_sus)]
             proposal = Proposal(
                 allocations=allocations,
                 start_date=start,
-                end_date=end,
-                exhaustion_date=exhausted)
+                end_date=end
+            )
 
             proposals.append(proposal)
 
@@ -81,9 +78,6 @@ class InvestmentSetup(EmptyAccountSetup):
         for i in range(3):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
-            exhausted = None
-            if end <= TODAY:
-                exhausted = end
 
             inv = Investment(
                 start_date=start,
@@ -91,8 +85,7 @@ class InvestmentSetup(EmptyAccountSetup):
                 service_units=self.num_inv_sus,
                 current_sus=self.num_inv_sus,
                 withdrawn_sus=0,
-                rollover_sus=0,
-                exhaustion_date=exhausted
+                rollover_sus=0
             )
             investments.append(inv)
 
