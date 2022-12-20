@@ -14,6 +14,7 @@ DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
+    """Add a Proposal to the test account and commit the addition to the database """
     with DBConnection.session() as session:
         account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
         account.proposals.extend([proposal])
