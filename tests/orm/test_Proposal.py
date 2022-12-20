@@ -1,4 +1,5 @@
 """Tests for the `Proposal`` class."""
+
 from datetime import date, timedelta
 import time_machine
 from unittest import TestCase

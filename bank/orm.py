@@ -159,11 +159,7 @@ class Proposal(Base):
 
     @is_active.expression
     def is_active(cls) -> bool:
-        """SQL expression form of Proposal `is_active` functionality
-
-        Should not include .where(not_(Allocation.is_exhausted)) as it is possible
-        that floating SUs may cause the allocation to remain active in update_status
-        """
+        """SQL expression form of Proposal `is_active` functionality"""
 
         today = date.today()
 
@@ -338,7 +334,7 @@ class Investment(Base):
         #TODO Implement and test
         past_end = cls.end_date <= date.today()
         spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return  past_end | spent_service_units
+        return past_end | spent_service_units
 
     @hybrid_property
     def is_active(self) -> bool:

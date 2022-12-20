@@ -50,7 +50,7 @@ class ProposalSetup(EmptyAccountSetup):
 
     num_proposal_sus = 10_000
 
-    def setUp(self, start: Optional[date] = None, end: Optional[date] = None) -> None:
+    def setUp(self) -> None:
         """Ensure there exists a user proposal for the test account with zero service units"""
 
         super().setUp()
@@ -67,6 +67,7 @@ class ProposalSetup(EmptyAccountSetup):
             end = TODAY + (i * timedelta(days=365))
 
             allocations = [Allocation(cluster_name=settings.test_cluster,
+                                      service_units_used=0,
                                       service_units_total=self.num_proposal_sus)]
             proposal = Proposal(
                 allocations=allocations,
