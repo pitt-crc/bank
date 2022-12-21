@@ -9,15 +9,7 @@ from bank import settings
 from bank.account_logic import AccountServices
 from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
 from bank.system.slurm import SlurmAccount, Slurm
-from tests._utils import InvestmentSetup, ProposalSetup
-
-active_proposal_query = select(Proposal).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Proposal.is_active)
-
-active_investment_query = select(Investment).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Investment.is_active)
+from tests._utils import InvestmentSetup, ProposalSetup, active_proposal_query, active_investment_query
 
 
 class CalculatePercentage(TestCase):

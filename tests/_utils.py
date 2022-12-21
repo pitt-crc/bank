@@ -1,5 +1,4 @@
 from datetime import date, timedelta
-from typing import Optional
 
 from sqlalchemy import select
 
@@ -12,9 +11,18 @@ YESTERDAY = TODAY - timedelta(days=1)
 DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
+active_proposal_query = select(Proposal).join(Account) \
+    .where(Account.name == settings.test_accounts[0]) \
+    .where(Proposal.is_active)
+
+active_investment_query = select(Investment).join(Account) \
+    .where(Account.name == settings.test_accounts[0]) \
+    .where(Investment.is_active)
+
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
     """Add a Proposal to the test account and commit the addition to the database """
+
     with DBConnection.session() as session:
         account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
         account.proposals.extend([proposal])
@@ -26,8 +34,6 @@ class EmptyAccountSetup:
 
     def setUp(self) -> None:
         """Delete any proposals and investments that may already exist for the test accounts"""
-
-        DBConnection.configure('sqlite:///:memory:')
 
         with DBConnection.session() as session:
 
