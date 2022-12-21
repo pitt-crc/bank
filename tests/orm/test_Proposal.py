@@ -8,16 +8,11 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.orm import Account, Allocation, DBConnection, Proposal
-from tests._utils import add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
+from tests._utils import account_proposals_query, add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
 
 # Start and End date values to use with time_machine
 start = TODAY
 end = DAY_AFTER_TOMORROW
-
-proposal_query = select(Proposal) \
-                 .join(Account) \
-                 .where(Account.name == settings.test_accounts[0])
-
 
 class PercentNotifiedValidation(TestCase):
     """Test the validation of the ``percent_notified``` column"""
@@ -86,7 +81,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date -> expired
             self.assertTrue(proposal.is_expired)
@@ -148,7 +143,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date -> not expired
             self.assertFalse(proposal.is_expired)
@@ -214,7 +209,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date -> not expired
             self.assertFalse(proposal.is_expired)
@@ -279,7 +274,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date -> expired
             self.assertTrue(proposal.is_expired)
@@ -342,7 +337,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         # Test is_active on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
             self.assertFalse(proposal.is_active)
@@ -404,7 +399,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
             self.assertTrue(proposal.is_active)
@@ -470,7 +465,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
             self.assertTrue(proposal.is_active)
@@ -535,7 +530,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         # Test is_exhausted on various dates
         with DBConnection.session() as session:
 
-            proposal = session.execute(proposal_query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
             self.assertFalse(proposal.is_active)

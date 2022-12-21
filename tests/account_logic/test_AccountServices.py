@@ -7,9 +7,9 @@ from sqlalchemy import join, select
 
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
+from bank.orm import Account, Allocation, DBConnection, Proposal
 from bank.system.slurm import SlurmAccount, Slurm
-from tests._utils import InvestmentSetup, ProposalSetup, active_proposal_query, active_investment_query
+from tests._utils import active_proposal_query, active_investment_query, InvestmentSetup, ProposalSetup
 
 
 class CalculatePercentage(TestCase):
