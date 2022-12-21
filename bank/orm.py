@@ -147,15 +147,9 @@ class Proposal(Base):
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
+        has_allocations = any(not alloc.is_exhausted for alloc in self.allocations)
 
-        if in_date_range:
-            has_allocations = bool(self.allocations)
-            if has_allocations:
-                has_service_units = not all(alloc.is_exhausted for alloc in self.allocations)
-                if has_service_units:
-                    return True
-
-        return False
+        return in_date_range and has_allocations
 
     @is_active.expression
     def is_active(cls) -> bool:
