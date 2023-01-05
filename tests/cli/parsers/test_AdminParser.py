@@ -1,5 +1,6 @@
 """Tests for the ``AdminParser`` class"""
 
+from argparse import ArgumentError
 from unittest import TestCase
 
 from bank.cli.parsers import AdminParser
@@ -15,6 +16,12 @@ class UpdateStatus(CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(AdminParser(), 'update_status')
 
+    def test_error_on_account_name(self) -> None:
+        """Test the subparser does not take additional arguments"""
+
+        with self.assertRaisesRegex(SystemExit, "invalid choice: 'account1'"):
+            AdminParser().parse_args(['update_status', 'account1'])
+
 
 class ListLocked(CLIAsserts, TestCase):
     """Test the ``list_locked`` subparser"""
@@ -29,6 +36,12 @@ class ListLocked(CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(AdminParser(), f'list_locked --clusters {test_cluster}')
 
+    def test_error_invalid_cluster(self) -> None:
+        """Test ``--clusters`` arguments are not valid unless defined in application settings"""
+
+        with self.assertRaisesRegex(SystemExit, '--clusters: invalid choice:'):
+            AdminParser().parse_args(['list_locked', '--clusters', 'fake_cluster'])
+
 
 class ListUnlocked(CLIAsserts, TestCase):
     """Test the ``list_unlocked`` subparser"""
@@ -41,4 +54,10 @@ class ListUnlocked(CLIAsserts, TestCase):
     def test_single_clusters_argument(self) -> None:
         """Test the ``--clusters`` argument accepts at least one cluster name"""
 
-        self.assert_parser_matches_func_signature(AdminParser(), f'list_unlocked --clusters {test_cluster}')
+        self.assert_parser_matches_func_signature(AdminParser(), 'list_unlocked --clusters development')
+
+    def test_error_invalid_cluster(self) -> None:
+        """Test ``--clusters`` arguments are not valid unless defined in application settings"""
+
+        with self.assertRaisesRegex(ArgumentError, '--clusters: invalid choice:'):
+            AdminParser().parse_args(['list_locked', '--clusters', 'fake_cluster'])
