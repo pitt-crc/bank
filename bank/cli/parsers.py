@@ -1,6 +1,6 @@
 import abc
 import sys
-from argparse import ArgumentParser, ArgumentError
+from argparse import ArgumentParser
 from datetime import datetime
 
 from .types import Date, NonNegativeInt
@@ -82,7 +82,7 @@ class AdminParser(BaseParser):
         # Update account status for all accounts
         update_status = parent_parser.add_parser(
             name='update_status',
-            help='close expired proposals/investments and lock accounts without available SUs')
+            help='close expired allocations and lock accounts without available SUs')
         update_status.set_defaults(function=AdminServices.update_account_status)
 
         # List locked accounts
@@ -134,21 +134,13 @@ class AccountParser(BaseParser):
         lock_parser.set_defaults(function=AccountServices.lock)
         lock_parser.add_argument('account', **account_argument)
         lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
-        lock_cluster.add_argument('--all_clusters', **all_clusters_argument, help='lock all available clusters')
+        lock_cluster.add_argument('--all-clusters', **all_clusters_argument, help='lock all available clusters')
         lock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to lock the account on')
 
-        # Unlock an account
-        unlock_parser = parent_parser.add_parser('unlock', help='allow an account to resume submitting jobs')
-        unlock_parser.set_defaults(function=AccountServices.unlock)
-        unlock_parser.add_argument('account', **account_argument)
-        unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
-        unlock_cluster.add_argument('--all_clusters', **all_clusters_argument, help='unlock all available clusters')
-        unlock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to unlock the account on')
-
-        # Fetch general account information parser
+        # Fetch general account information
         info_parser = parent_parser.add_parser('info', help='print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.info)
-        info_parser.add_argument('account', **account_argument)
+        info_parser.add_argument(**account_argument)
 
 
 class ProposalParser(BaseParser):
@@ -246,7 +238,7 @@ class ProposalParser(BaseParser):
         """
 
         su_argument = dict(metavar='su', type=NonNegativeInt, default=0)
-        parser.add_argument('--all_clusters', **su_argument, help='service units awarded across all clusters')
+        parser.add_argument('--all-clusters', **su_argument, help='service units awarded across all clusters')
 
         # Add per-cluster arguments for setting service units
         for cluster in Slurm.cluster_names():
