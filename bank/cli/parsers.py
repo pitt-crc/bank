@@ -39,6 +39,7 @@ class BaseParser(ArgumentParser):
 
         if len(sys.argv) == 1:
             self.print_help()
+            raise SystemExit(message)
 
         else:
             super().error(message)
