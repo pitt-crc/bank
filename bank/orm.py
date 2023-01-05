@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Column, Date, ForeignKey, Integer, MetaData, String, create_engine, select
+from sqlalchemy import and_, Column, Date, ForeignKey, Integer, MetaData, not_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
+from sqlalchemy.orm import aliased, declarative_base, relationship, sessionmaker, validates
 
 from bank import settings
 
@@ -46,11 +46,14 @@ class Proposal(Base):
       - start_date            (Date): The date when the proposal goes into effect
       - end_date              (Date): The proposal's expiration date
       - percent_notified   (Integer): Percent usage when account holder was last notified
-      - exhaustion_date       (Date): Date the proposal expired or reached full utilization
 
     Relationships:
-      - account        (Account): Many to one
-      - allocations (Allocation): One to many
+      - account            (Account): Many to one
+      - allocations     (Allocation): One to many
+
+    Hybrid Properties:
+        - is_expired       (Boolean): Whether the proposal is expired or not
+        - is_active        (Boolean): Whether the proposal is active or not
     """
 
     __tablename__ = 'proposal'
@@ -60,7 +63,6 @@ class Proposal(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     percent_notified = Column(Integer, nullable=False, default=0)
-    exhaustion_date = Column(Date, nullable=True)
 
     account = relationship('Account', back_populates='proposals')
     allocations = relationship('Allocation', back_populates='proposal', cascade="all,delete")
@@ -119,7 +121,7 @@ class Proposal(Base):
             return False
 
         has_allocations = bool(self.allocations)
-        has_service_units = any(alloc.final_usage is None for alloc in self.allocations)
+        has_service_units = not all(alloc.is_exhausted for alloc in self.allocations)
 
         is_expired = not (has_allocations and has_service_units)
 
@@ -127,11 +129,13 @@ class Proposal(Base):
 
     @is_expired.expression
     def is_expired(cls) -> bool:
+        """SQL expression form of Proposal `is_expired` functionality"""
+
         today = date.today()
         subquery = select(Proposal.id).join(Allocation) \
             .where(Proposal.start_date < today) \
             .where(Proposal.end_date >= today) \
-            .where(Allocation.final_usage != None)
+            .where(Allocation.is_exhausted)
 
         return cls.id.in_(subquery)
 
@@ -141,16 +145,18 @@ class Proposal(Base):
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = any(alloc.final_usage is None for alloc in self.allocations)
+        has_allocations = not all(alloc.is_exhausted for alloc in self.allocations)
         return in_date_range and has_allocations
 
     @is_active.expression
     def is_active(cls) -> bool:
+        """SQL expression form of Proposal `is_active` functionality"""
+
         today = date.today()
-        subquery = select(Proposal.id).join(Allocation) \
-            .where(Proposal.start_date <= today) \
-            .where(today < Proposal.end_date) \
-            .where(Allocation.final_usage == None)
+        aliasAllocation = aliased(Allocation)
+        subquery = select(aliasAllocation.id) \
+            .where(aliasAllocation.id == cls.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
         return cls.id.in_(subquery)
 
@@ -172,7 +178,10 @@ class Allocation(Base):
       - final_usage         (Integer): Total service units utilized at proposal expiration
 
     Relationships:
-      - proposal (Proposal): Many to one
+      - proposal           (Proposal): Many to one
+
+    Hybrid Properties:
+        - is_exhausted       (Boolean): Whether the allocation has remaining service units to spend
     """
 
     __tablename__ = 'allocation'
@@ -181,8 +190,7 @@ class Allocation(Base):
     proposal_id = Column(Integer, ForeignKey(Proposal.id))
     cluster_name = Column(String, nullable=False)
     service_units_total = Column(Integer, nullable=False)
-    service_units_used = Column(Integer, nullable=True)
-    final_usage = Column(Integer, nullable=True)
+    service_units_used = Column(Integer, nullable=False, default=0)
 
     proposal = relationship('Proposal', back_populates='allocations')
 
@@ -220,6 +228,12 @@ class Allocation(Base):
 
         return value
 
+    @hybrid_property
+    def is_exhausted(self) -> bool:
+        """Whether the allocation has available service units"""
+
+        return self.service_units_used >= self.service_units_total
+
 
 class Investment(Base):
     """Service unit allocations granted in exchange for user investment
@@ -233,10 +247,13 @@ class Investment(Base):
       - rollover_sus  (Integer): Service units carried over from a previous investment
       - withdrawn_sus (Integer): Service units removed from this investment and into another
       - current_sus   (Integer): Total service units available in the investment
-      - exhaustion_date  (Date): Date the investment expired or reached full utilization
 
     Relationships:
       - account (Account): Many to one
+
+    Hybrid Properties:
+        - is_expired       (Boolean): Whether the investment is expired or not
+        - is_active        (Boolean): Whether the investment is active or not
     """
 
     __tablename__ = 'investment'
@@ -249,7 +266,6 @@ class Investment(Base):
     rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
     withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
     current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
-    exhaustion_date = Column(Date, nullable=True)
 
     account = relationship('Account', back_populates='investments')
 
@@ -297,19 +313,18 @@ class Investment(Base):
     def is_expired(self) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
 
-        is_exhausted = self.exhaustion_date is not None
         past_end = self.end_date <= date.today()
         spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
-        return is_exhausted or past_end or spent_service_units
+        return past_end or spent_service_units
 
     @is_expired.expression
     def is_expired(cls) -> bool:
-        """Return whether the investment is past its end date or has exhausted its allocation"""
+        """SQL expression form of Investment `is_expired` functionality"""
 
-        is_exhausted = cls.exhaustion_date != None
+        #TODO Implement and test
         past_end = cls.end_date <= date.today()
         spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return is_exhausted | past_end | spent_service_units
+        return  past_end | spent_service_units
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -318,6 +333,16 @@ class Investment(Base):
         today = date.today()
         in_date_range = (self.start_date <= today) & (today < self.end_date)
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
+        return in_date_range & has_service_units
+
+    @is_active.expression
+    def is_active(cls) -> bool:
+        """SQL expression form of Investment `is_active` functionality"""
+
+        #TODO: Implement and test
+        today = date.today()
+        in_date_range = (cls.start_date <= today) & (today < cls.end_date)
+        has_service_units = (cls.current_sus > 0) & (cls.withdrawn_sus < cls.service_units)
         return in_date_range & has_service_units
 
 

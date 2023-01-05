@@ -109,10 +109,3 @@ class IsExpiredProperty(TestCase):
         investment.current_sus = 0
         investment.withdrawn_sus = investment.service_units
         self.assertTrue(investment.is_expired)
-
-    def test_expired_if_exhausted(self) -> None:
-        """Test an investment is expired if it has been marked as exhausted"""
-
-        investment = create_investment()
-        investment.exhaustion_date = TODAY
-        self.assertTrue(investment.is_expired)
