@@ -138,6 +138,14 @@ class AccountParser(BaseParser):
         lock_cluster.add_argument('--all-clusters', **all_clusters_argument, help='lock all available clusters')
         lock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to lock the account on')
 
+        # Unlock Account
+        unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        unlock_parser.set_defaults(function=AccountServices.unlock)
+        unlock_parser.add_argument(**account_argument)
+        unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
+        unlock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to unlock the account on')
+        unlock_cluster.add_argument('--all_clusters', **all_clusters_argument)
+
         # Fetch general account information
         info_parser = parent_parser.add_parser('info', help='print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.info)
