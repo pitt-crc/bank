@@ -133,7 +133,7 @@ class AccountParser(BaseParser):
         # Lock an account
         lock_parser = parent_parser.add_parser('lock', help='lock an account from submitting jobs')
         lock_parser.set_defaults(function=AccountServices.lock)
-        lock_parser.add_argument('account', **account_argument)
+        lock_parser.add_argument(**account_argument)
         lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
         lock_cluster.add_argument('--all-clusters', **all_clusters_argument, help='lock all available clusters')
         lock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to lock the account on')
