@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from bank import settings
 from bank.cli import ProposalParser
 from bank.exceptions import SlurmAccountNotFoundError
-from tests.cli._utils import CLIAsserts
+from tests.cli.parsers._utils import CLIAsserts
 
 
 class SignatureMatchesCLI(TestCase, CLIAsserts):

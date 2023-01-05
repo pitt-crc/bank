@@ -5,7 +5,7 @@ from unittest import TestCase
 from bank import settings
 from bank.cli import AccountParser
 from tests._utils import ProposalSetup
-from tests.cli._utils import CLIAsserts
+from tests.cli.parsers._utils import CLIAsserts
 
 
 class SignatureMatchesCLI(ProposalSetup, CLIAsserts, TestCase):

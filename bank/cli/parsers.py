@@ -1,113 +1,12 @@
-"""The ``cli`` module defines the commandline interface for the parent application. This module is effectively
-a wrapper around existing functionality defined in the ``account_logic`` module.
-
-Commandline functions are grouped together by the service being administered.
-
-.. code-block:: bash
-
-   application.py <service> <action> --arguments
-
-Each service is represented by a distinct class which handles the parsing of commands and arguments related to
-that service. These classes are ultimatly called by the ``CommandLineApplication`` class, which acts as the
-primary commandline interface for the parent application.
-
-.. note::
-   Parser classes in this module are based on the ``ArgumentParser``
-   class from the `standard Python library <https://docs.python.org/3/library/argparse.html>`_.
-
-Usage Example
--------------
-
-Use the ``CommandLineApplication`` object to parse and evaluate commandline arguments:
-
-.. code-block:: python
-
-   >>> from bank.cli import CommandLineApplication
-   >>>
-   >>> app = CommandLineApplication()
-   >>>
-   >>> # Parse commandline arguments and launch the banking application
-   >>> app.execute()
-
-The application's argument parsing functionality is accessible via the
-``parser`` attribute:
-
-.. code-block:: python
-
-   >>> # Raise an error if there are unknown args
-   >>> args = app.parser.parse_args()
-
-If you want to access the commandline interface for just a single service
-(e.g., for testing purposes) you can use the dedicated class for that service:
-
-.. code-block:: python
-
-   >>> from bank.cli import AdminParser
-   >>>
-   >>> admin_parser = AdminParser()
-   >>> admin_parser.parse_args()
-
-API Reference
--------------
-"""
-
-from __future__ import annotations
-
 import abc
 import sys
-from argparse import ArgumentParser, ArgumentTypeError, ArgumentError
-from datetime import date, datetime
-from typing import Type
+from argparse import ArgumentParser, ArgumentError
+from datetime import datetime
 
-from . import settings
-from .account_logic import AccountServices, AdminServices, InvestmentServices, ProposalServices
-from .system.slurm import Slurm
-
-
-class ArgumentTypes:
-    """Methods for type casting custom string formats into other data types"""
-
-    @staticmethod
-    def date(date_string: str) -> date:
-        """Cast a string to a ``date`` object
-
-        Args:
-            date_string: The string value to cast
-
-        Returns:
-            The passed value as ``date`` instance
-        """
-
-        try:
-            return datetime.strptime(date_string, settings.date_format).date()
-
-        except Exception as excep:
-            raise ArgumentTypeError(str(excep)) from excep
-
-    @staticmethod
-    def non_negative_int(int_string: str) -> int:
-        """Cast a string to a non-negative ``int`` object
-
-        Args:
-            int_string: The string value to cast
-
-        Returns:
-            The passed value as an ``int`` instance
-
-        Raises:
-            ArgumentTypeError: If the integer value is less than zero
-        """
-
-        try:
-            number = int(int_string)
-
-        except Exception as excep:
-            raise ArgumentTypeError(str(excep)) from excep
-
-        if number < 0:
-            raise ArgumentTypeError(f"{number} is negative. SUs must be a positive integer")
-
-        return number
+from .types import Date, NonNegativeInt
+from .. import settings
+from ..account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
+from ..system import Slurm
 
 
 class BaseParser(ArgumentParser):
@@ -119,18 +18,11 @@ class BaseParser(ArgumentParser):
     instantiation.
     """
 
-    def __init__(self, *args, raise_on_error=True, **kwargs) -> None:
-        """Instantiate a commandline parser and its associated interface
-
-        Args:
-            raise_on_error: Raise an exception instead of exiting out when an error occurs
-        """
+    def __init__(self, *args, **kwargs) -> None:
+        """Instantiate a commandline parser and its associated interface"""
 
         super().__init__(*args, **kwargs)
-        self.raise_on_error = raise_on_error
-
         subparsers = self.add_subparsers(parser_class=BaseParser)
-        subparsers.raise_on_error = raise_on_error
         self.define_interface(subparsers)
 
     def error(self, message: str) -> None:
@@ -144,9 +36,6 @@ class BaseParser(ArgumentParser):
         Raises:
             ArgumentError: If the ``define_interface`` attribute is ``True``
         """
-
-        if self.raise_on_error:
-            raise ArgumentError(None, message)
 
         if len(sys.argv) == 1:
             self.print_help()
@@ -243,7 +132,7 @@ class AccountParser(BaseParser):
         # Lock an account
         lock_parser = parent_parser.add_parser('lock', help='lock an account from submitting jobs')
         lock_parser.set_defaults(function=AccountServices.lock)
-        lock_parser.add_argument(**account_argument)
+        lock_parser.add_argument('account', **account_argument)
         lock_cluster = lock_parser.add_mutually_exclusive_group(required=True)
         lock_cluster.add_argument('--all_clusters', **all_clusters_argument, help='lock all available clusters')
         lock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to lock the account on')
@@ -251,7 +140,7 @@ class AccountParser(BaseParser):
         # Unlock an account
         unlock_parser = parent_parser.add_parser('unlock', help='allow an account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock)
-        unlock_parser.add_argument(**account_argument)
+        unlock_parser.add_argument('account', **account_argument)
         unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
         unlock_cluster.add_argument('--all_clusters', **all_clusters_argument, help='unlock all available clusters')
         unlock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to unlock the account on')
@@ -259,7 +148,7 @@ class AccountParser(BaseParser):
         # Fetch general account information parser
         info_parser = parent_parser.add_parser('info', help='print account usage and allocation information')
         info_parser.set_defaults(function=AccountServices.info)
-        info_parser.add_argument(**account_argument)
+        info_parser.add_argument('account', **account_argument)
 
 
 class ProposalParser(BaseParser):
@@ -298,13 +187,13 @@ class ProposalParser(BaseParser):
         create_parser.add_argument(
             '--start',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             default=datetime.today(),
             help=f'proposal start date ({safe_date_format}) - defaults to today')
         create_parser.add_argument(
             '--end',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'proposal end date ({safe_date_format}) - defaults to 1 year from today')
         cls._add_cluster_args(create_parser)
 
@@ -340,12 +229,12 @@ class ProposalParser(BaseParser):
         modify_date_parser.add_argument(
             '--start',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'set a new proposal start date ({safe_date_format})')
         modify_date_parser.add_argument(
             '--end',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'set a new proposal end date ({safe_date_format})')
 
     @staticmethod
@@ -356,7 +245,7 @@ class ProposalParser(BaseParser):
             parser: The parser to add arguments to
         """
 
-        su_argument = dict(metavar='su', type=ArgumentTypes.non_negative_int, default=0)
+        su_argument = dict(metavar='su', type=NonNegativeInt, default=0)
         parser.add_argument('--all_clusters', **su_argument, help='service units awarded across all clusters')
 
         # Add per-cluster arguments for setting service units
@@ -390,13 +279,13 @@ class InvestmentParser(BaseParser):
         investment_id_definition = dict(
             dest='inv_id',
             metavar='ID',
-            type=ArgumentTypes.non_negative_int,
+            type=NonNegativeInt,
             help='the investment ID number')
 
         service_unit_definition = dict(
             dest='sus',
             metavar='su',
-            type=ArgumentTypes.non_negative_int,
+            type=NonNegativeInt,
             required=True,
             help='the number of service units')
 
@@ -408,19 +297,19 @@ class InvestmentParser(BaseParser):
         create_parser.add_argument(
             '--num_inv',
             metavar='N',
-            type=ArgumentTypes.non_negative_int,
+            type=NonNegativeInt,
             default=5,
             help='divide the service units across N sequential investments')
         create_parser.add_argument(
             '--start',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             default=datetime.today(),
             help=f'start date for the investment ({safe_date_format}) - defaults to today')
         create_parser.add_argument(
             '--end',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'investment end date ({safe_date_format}) - defaults to 1 year from today')
 
         # Investment Deletion
@@ -455,12 +344,12 @@ class InvestmentParser(BaseParser):
         modify_date_parser.add_argument(
             '--start',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'set a new investment start date ({safe_date_format})')
         modify_date_parser.add_argument(
             '--end',
             metavar='date',
-            type=ArgumentTypes.date,
+            type=Date,
             help=f'set a new investment end date ({safe_date_format})')
 
         advance_parser = parent_parser.add_parser(
@@ -470,76 +359,3 @@ class InvestmentParser(BaseParser):
         advance_parser.add_argument(**account_definition)
         advance_parser.add_argument('--id', **investment_id_definition)
         advance_parser.add_argument('--sus', **service_unit_definition)
-
-
-class CommandLineApplication:
-    """commandline application used as the primary entry point for the parent application"""
-
-    def __init__(self):
-        """Initialize the application's commandline interface"""
-
-        self.parser = ArgumentParser()
-        self.subparsers = self.parser.add_subparsers(parser_class=ArgumentParser, dest='service', required=True)
-
-        # Add desired parsers to the commandline application
-        self.add_subparser_to_app(
-            'admin',
-            AdminParser,
-            title='Admin actions',
-            help_text='Tools for general system administration')
-
-        self.add_subparser_to_app(
-            'account',
-            AccountParser,
-            title='Account actions',
-            help_text='Tools for managing individual accounts')
-
-        self.add_subparser_to_app(
-            'proposal',
-            ProposalParser,
-            title='Proposal actions',
-            help_text='Administrative tools for user proposals')
-
-        self.add_subparser_to_app(
-            'investment',
-            InvestmentParser,
-            title='Investment actions',
-            help_text='Administrative tools for user investments')
-
-    def add_subparser_to_app(
-        self,
-        command: str,
-        parser_class: Type[BaseParser],
-        title: str,
-        help_text: str
-    ) -> None:
-        """Add a parser object to the parent commandline application as a subparser
-
-        Args:
-            command: The commandline argument used to invoke the given parser
-            parser_class: A ``BaseParser`` subclass
-            title: The help text title
-            help_text: The help text description
-        """
-
-        parser = self.subparsers.add_parser(command, help=help_text)
-        subparsers = parser.add_subparsers(title=title, dest='command', required=True)
-        parser_class.define_interface(subparsers)
-
-    @classmethod
-    def execute(cls) -> None:
-        """Parse commandline arguments and execute the application.
-
-        This method is defined as a class method to provide an executable hook
-        for the packaged setup.py file.
-        """
-
-        cli_kwargs = vars(cls().parser.parse_args())
-        executable = cli_kwargs.pop('function')
-
-        # Remove arguments unused in app logic
-        del cli_kwargs['service']
-        del cli_kwargs['command']
-
-        # Execute app logic with relevant arguments
-        executable(**cli_kwargs)

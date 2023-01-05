@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from bank.cli import BaseParser
+from bank.cli.parsers import BaseParser
 
 
 class DefineInterface(TestCase):
