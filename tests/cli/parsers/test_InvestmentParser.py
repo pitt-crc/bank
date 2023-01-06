@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import InvestmentParser
-from tests.cli.parsers._utils import CLIAsserts
+from ._utils import CLIAsserts
 
 TEST_ACCOUNT = settings.test_accounts[0]
 
@@ -71,7 +71,7 @@ class Create(CLIAsserts, TestCase):
         """Test and error is raised for a negative number of investments"""
 
         # Create an investment, providing a negative num_inv amount
-        with self.assertRaisesRegex(SystemExit, 'Number of investments must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, 'Argument must be a non-negative number'):
             InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--sus', '100', '--num_inv', '-1'])
 
 

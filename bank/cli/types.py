@@ -29,7 +29,7 @@ class Date:
             return datetime.strptime(val, settings.date_format).date()
 
         except Exception as exception:
-            raise ArgumentTypeError(str(exception)) from exception
+            raise ArgumentTypeError('Could not parse given date') from exception
 
 
 class NonNegativeInt:
@@ -55,6 +55,6 @@ class NonNegativeInt:
             raise ArgumentTypeError(str(exception)) from exception
 
         if number < 0:
-            raise ArgumentTypeError(f'{number} is negative. SUs must be a positive integer.')
+            raise ArgumentTypeError(f'Argument must be a non-negative integer.')
 
         return number

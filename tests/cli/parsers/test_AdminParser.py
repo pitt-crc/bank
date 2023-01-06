@@ -1,11 +1,10 @@
 """Tests for the ``AdminParser`` class"""
 
-from argparse import ArgumentError
 from unittest import TestCase
 
 from bank.cli.parsers import AdminParser
 from bank.settings import test_cluster
-from tests.cli.parsers._utils import CLIAsserts
+from ._utils import CLIAsserts
 
 
 class UpdateStatus(CLIAsserts, TestCase):
@@ -19,7 +18,7 @@ class UpdateStatus(CLIAsserts, TestCase):
     def test_error_on_account_name(self) -> None:
         """Test the subparser does not take additional arguments"""
 
-        with self.assertRaisesRegex(SystemExit, "invalid choice: 'account1'"):
+        with self.assertRaisesRegex(SystemExit, 'unrecognized arguments:'):
             AdminParser().parse_args(['update_status', 'account1'])
 
 
@@ -59,5 +58,5 @@ class ListUnlocked(CLIAsserts, TestCase):
     def test_error_invalid_cluster(self) -> None:
         """Test ``--clusters`` arguments are not valid unless defined in application settings"""
 
-        with self.assertRaisesRegex(ArgumentError, '--clusters: invalid choice:'):
+        with self.assertRaisesRegex(SystemExit, '--clusters: invalid choice:'):
             AdminParser().parse_args(['list_locked', '--clusters', 'fake_cluster'])
