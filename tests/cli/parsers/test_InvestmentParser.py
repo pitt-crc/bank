@@ -140,71 +140,56 @@ class Subtract(TestCase, CLIAsserts):
 class Modify(TestCase, CLIAsserts):
     """Test the ``modify`` subparser"""
 
-    def test_modify_date(self) -> None:
-        """Test the parsing of arguments by the ``modify_date`` command"""
+    start_date = datetime.now()
+    start_date_str = start_date.strftime(settings.date_format)
+    end_date = start_date + relativedelta(months=6)
+    end_date_str = end_date.strftime(settings.date_format)
 
-        start_date = datetime.now()
-        start_date_str = start_date.strftime(settings.date_format)
-        end_date = start_date + relativedelta(months=6)
-        end_date_str = end_date.strftime(settings.date_format)
+    def test_modify_active_investment(self) -> None:
+        """Test changing the dates of the currently active proposal"""
 
-        # Modify the active investment's date, changing only the start date
+        # Modify the active investment's start date
         self.assert_parser_matches_func_signature(
             InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --start {start_date_str}')
+            f'modify_date {TEST_ACCOUNT} --start {self.start_date_str}')
 
-        # Modify the active investment's date, changing only the start date, but with the wrong format
-        with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
-            self.assert_parser_matches_func_signature(
-                InvestmentParser(),
-                f'create {TEST_ACCOUNT} --start 09/01/2500')
-
-        # Modify a specific investment's date, changing only the start date
+        # Modify the active investment's end date
         self.assert_parser_matches_func_signature(
             InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --id 0 --start {start_date_str}'
+            f'modify_date {TEST_ACCOUNT} --end {self.end_date_str}')
+
+        # Modify the start and end dates
+        self.assert_parser_matches_func_signature(
+            InvestmentParser(),
+            f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}'
         )
 
-        # Modify a specific investment's date, changing only the start date, but with the wrong format
+    def test_modify_specific_investment(self) -> None:
+        """Test changing the dates while specifying an investment ID"""
+
+        # Modify only the start date
+        self.assert_parser_matches_func_signature(
+            InvestmentParser(), f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str}')
+
+        # Modify only the end date
+        self.assert_parser_matches_func_signature(
+            InvestmentParser(), f'modify_date {TEST_ACCOUNT} --id 0 --end {self.end_date_str}')
+
+        # Modify the start and end dates
+        self.assert_parser_matches_func_signature(
+            InvestmentParser(),
+            f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str} --end {self.end_date_str}')
+
+    def test_incorrect_date_format(self) -> None:
+        """Test a ``SystemExit`` error is raised for invalid date formats"""
+
+        # Modify the start date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
-            self.assert_parser_matches_func_signature(
-                InvestmentParser(),
-                f'create {TEST_ACCOUNT} --id 0 --start 09/01/2500')
+            InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/2500'])
 
-        # Modify the active investment's date, changing only the end date
-        self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --end {end_date_str}')
-
-        # Modify the active investment's date, changing only the end date, but with the wrong format
+        # Modify the end date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
-            self.assert_parser_matches_func_signature(
-                InvestmentParser(),
-                f'create {TEST_ACCOUNT} --end 09/01/2500')
-
-        # Modify a specific investment's date, changing only the end date
-        self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --id 0 --end {end_date_str}'
-        )
-
-        # Modify a specific investment's date, changing only the end date, but with the wrong format
-        with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
-            self.assert_parser_matches_func_signature(
-                InvestmentParser(),
-                f'create {TEST_ACCOUNT} --end 09/01/2500')
-
-        # Modify the active investment's date, changing the start and end dates
-        self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --start {start_date_str} --end {end_date_str}'
-        )
-
-        # Modify a specific investment's date, changing the start and end dates
-        self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --id 0 --start {start_date_str} --end {end_date_str}'
-        )
+            InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/2500'])
 
 
 class Advance(TestCase, CLIAsserts):
