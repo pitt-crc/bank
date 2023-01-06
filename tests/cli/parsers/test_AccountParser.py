@@ -4,7 +4,6 @@ from unittest import TestCase
 
 from bank import settings
 from bank.cli import AccountParser
-from bank.exceptions import SlurmAccountNotFoundError
 from tests._utils import ProposalSetup
 from tests.cli.parsers._utils import CLIAsserts
 

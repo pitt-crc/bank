@@ -19,7 +19,7 @@ class BlankArgument(TestCase):
             Date('')
 
     def test_whitespace_string_error(self) -> None:
-        """Test ``ArgumentTypeError`` is raised when string is whitespace"""
+        """Test ``ArgumentTypeError`` is raised when the string is whitespace"""
 
         for char in string.whitespace:
             with self.assertRaises(ArgumentTypeError):

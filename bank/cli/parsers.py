@@ -1,6 +1,12 @@
+"""The ``cli.parsers`` module defines commandline parsers used to define the
+application's commandline interface. Individual parsers are designed around
+different services provided by the banking app.
+"""
+
 import sys
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
+from typing import List
 
 from .types import Date, NonNegativeInt
 from .. import settings
@@ -9,25 +15,26 @@ from ..system import Slurm
 
 
 class BaseParser(ArgumentParser):
-    """Abstract base class for building commandline parsers
+    """Base class used for building commandline parsers
 
+    Extends functionality defined by the builtin ``ArgumentParser`` class.
     Subclasses should define their desired commandline interface (i.e., any
-    subparsers or arguments) in their ``__init__`` method
+    subparsers or arguments) in their ``__init__`` method.
     """
 
-    def parse_known_args(self, args=None, namespace=None) -> tuple[Namespace, list[str]]:
+    def parse_known_args(self, args: List[str] = None, namespace: Namespace = None) -> tuple[Namespace, list[str]]:
         """Parse and return commandline arguments
 
         This method wraps the parent class implementation and forwards parsing
-        errors to the ``error`` method. The parent class does this in some, but
-        not all cases (e.g., type casting errors).
+        errors to the ``error`` method. The parent class already does this in
+        some, but not all cases (e.g., type casting errors).
 
         Args:
             args: Optionally parse the given arguments instead of STDIN
             namespace: The namespace class to use for returned values
 
         Returns:
-            A tuple containing a namespace object of valid arguments and a dictionary of invalid ones
+            Tuple containing a namespace of valid arguments and a dictionary of invalid ones
         """
 
         try:
