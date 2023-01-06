@@ -45,13 +45,13 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Create a proposal, adding SUs to 'all' clusters
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'create {settings.test_accounts[0]} --all_clusters 100')
+            f'create {settings.test_accounts[0]} --all-clusters 100')
 
         # Create proposal, adding a negative amount of SUs to a specific cluster
         with self.assertRaises(SystemExit):
             self.assert_parser_matches_func_signature(
                 self.parser,
-                f'create {settings.test_accounts[0]} --all_clusters -100')
+                f'create {settings.test_accounts[0]} --all-clusters -100')
 
         # Create a proposal, specifying a start date
         start_date = datetime.now()
@@ -107,12 +107,12 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         )
 
         # Add SUs to the active proposal, usable across all clusters
-        self.assert_parser_matches_func_signature(self.parser, f'add_sus {settings.test_accounts[0]} --all_clusters 100')
+        self.assert_parser_matches_func_signature(self.parser, f'add_sus {settings.test_accounts[0]} --all-clusters 100')
 
         # Add SUs to a specific proposal, usable across all clusters
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'add_sus {settings.test_accounts[0]} --ID 0 --all_clusters 100'
+            f'add_sus {settings.test_accounts[0]} --ID 0 --all-clusters 100'
         )
 
     def test_subtract_service_units(self) -> None:
@@ -139,13 +139,13 @@ class SignatureMatchesCLI(TestCase, CLIAsserts):
         # Subtract SUs from the active proposal, removing from 'all' clusters
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'subtract_sus {settings.test_accounts[0]} --all_clusters 100'
+            f'subtract_sus {settings.test_accounts[0]} --all-clusters 100'
         )
 
         # Subtract SUs from a specific proposal, removing from 'all' clusters
         self.assert_parser_matches_func_signature(
             self.parser,
-            f'subtract_sus {settings.test_accounts[0]} --ID 0 --all_clusters 100'
+            f'subtract_sus {settings.test_accounts[0]} --ID 0 --all-clusters 100'
         )
 
     def test_modify_proposal_date(self) -> None:

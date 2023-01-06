@@ -4,6 +4,7 @@ from unittest import TestCase
 
 from bank import settings
 from bank.cli import AccountParser
+from bank.exceptions import SlurmAccountNotFoundError
 from tests._utils import ProposalSetup
 from tests.cli.parsers._utils import CLIAsserts
 
@@ -20,7 +21,7 @@ class Info(ProposalSetup, CLIAsserts, TestCase):
         self.assert_parser_matches_func_signature(AccountParser(), f'info {TEST_ACCOUNT}')
 
     def test_missing_account_name_error(self) -> None:
-        """Test the account name argument is required"""
+        """Test a ``SystemExit`` if the account name is not provided"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             AccountParser().parse_args(['info'])
@@ -37,29 +38,28 @@ class Lock(ProposalSetup, CLIAsserts, TestCase):
     def test_accepts_cluster_name(self) -> None:
         """Test the ``lock`` command accepts cluster names"""
 
-        self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} {TEST_CLUSTER}')
+        self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
 
     def test_all_clusters_plus_name_error(self) -> None:
-        """Test an error is raised when a cluster name is specified with ``--all-clusters``"""
+        """Test a ``SystemExit`` error is raised when a cluster name is specified with ``--all-clusters``"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(
-                AccountParser(), f'lock {TEST_ACCOUNT} {TEST_CLUSTER} --all-clusters')
+            AccountParser().parse_args(['lock', TEST_ACCOUNT, '--clusters', TEST_CLUSTER, '--all-clusters'])
 
     def test_invalid_cluster_error(self) -> None:
-        """Test an error is raised for cluster names not defined in application settings"""
+        """Test a ``SystemExit`` error is raised for cluster names not defined in application settings"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} fake_cluster_name')
+            AccountParser().parse_args(['lock', TEST_ACCOUNT, 'fake_cluster_name'])
 
     def test_invalid_account_error(self) -> None:
-        """Test an error is raised for account names that do not exist"""
+        """Test a ``SystemExit`` error is raised for account names that do not exist"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(AccountParser(), f'lock fake_account_name --all-clusters')
+            AccountParser().parse_args(['lock', 'fake_account_name', '--all-clusters'])
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(AccountParser(), f'lock fake_account_name {TEST_CLUSTER}')
+            AccountParser().parse_args(['lock', 'fake_account_name', '--clusters', TEST_CLUSTER])
 
 
 class Unlock(ProposalSetup, CLIAsserts, TestCase):
@@ -73,28 +73,25 @@ class Unlock(ProposalSetup, CLIAsserts, TestCase):
     def test_accepts_cluster_name(self) -> None:
         """Test the ``lock`` command accepts cluster names"""
 
-        self.assert_parser_matches_func_signature(
-            AccountParser(), f'unlock {TEST_ACCOUNT} {TEST_CLUSTER}')
+        self.assert_parser_matches_func_signature(AccountParser(), f'unlock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
 
     def test_all_clusters_plus_name_error(self) -> None:
-        """Test an error is raised when a cluster name is specified with ``--all-clusters``"""
+        """Test a ``SystemExit`` error is raised when a cluster name is specified with ``--all-clusters``"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(
-                AccountParser(), f'unlock {TEST_ACCOUNT} {TEST_CLUSTER} --all-clusters')
+            AccountParser().parse_args(['unlock', TEST_ACCOUNT, '--clusters', TEST_CLUSTER, '--all-clusters'])
 
     def test_invalid_cluster_error(self) -> None:
-        """Test an error is raised for cluster names not defined in application settings"""
+        """Test a ``SystemExit`` error is raised for cluster names not defined in application settings"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(
-                AccountParser(), f'unlock {TEST_ACCOUNT} fake_cluster_name')
+            AccountParser().parse_args(['unlock', TEST_ACCOUNT, 'fake_cluster_name'])
 
     def test_invalid_account_error(self) -> None:
-        """Test an error is raised for account names that do not exist"""
+        """Test a ``SystemExit`` error is raised for account names that do not exist"""
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(AccountParser(), f'unlock fake_account_name --all-clusters')
+            AccountParser().parse_args(['unlock', 'fake_account_name', '--all-clusters'])
 
         with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(AccountParser(), f'unlock fake_account_name {TEST_CLUSTER}')
+            AccountParser().parse_args(['unlock', 'fake_account_name', TEST_CLUSTER])

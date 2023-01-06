@@ -1,4 +1,4 @@
-"""Tests for the ``ArgumentTypes`` class"""
+"""Tests for the ``Date`` class"""
 
 import string
 from argparse import ArgumentTypeError
