@@ -71,7 +71,7 @@ class AdminParser(BaseParser):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate a commandline parser and its associated interface"""
+        """Instantiate the commandline parser and its associated interface"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=BaseParser)
@@ -108,7 +108,7 @@ class AccountParser(BaseParser):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate a commandline parser and its associated interface"""
+        """Instantiate the commandline parser and its associated interface"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=BaseParser)
@@ -161,7 +161,7 @@ class ProposalParser(BaseParser):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate a commandline parser and its associated interface"""
+        """Instantiate the commandline parser and its associated interface"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=BaseParser)
@@ -263,7 +263,7 @@ class InvestmentParser(BaseParser):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        """Instantiate a commandline parser and its associated interface"""
+        """Instantiate the commandline parser and its associated interface"""
 
         super().__init__(*args, **kwargs)
         subparsers = self.add_subparsers(parser_class=BaseParser)
