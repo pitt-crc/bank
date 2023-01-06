@@ -1,4 +1,4 @@
-"""The ``cli.parsers`` module defines commandline parsers used to define the
+"""The ``cli.parsers`` module defines commandline parsers used to build the
 application's commandline interface. Individual parsers are designed around
 different services provided by the banking app.
 """
