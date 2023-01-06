@@ -172,8 +172,7 @@ class ProposalParser(BaseParser):
             dest='self',
             metavar='account',
             type=ProposalServices,
-            help='the slurm account name',
-            choices=['account1']
+            help='the slurm account name'
         )
 
         proposal_id_argument = dict(
