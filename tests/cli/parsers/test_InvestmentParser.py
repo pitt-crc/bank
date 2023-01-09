@@ -20,11 +20,17 @@ class Create(CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['create', '--sus', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['create', 'fake_account_name', '--sus', '100'])
 
     def test_missing_sus_error(self) -> None:
         """Test a ``SystemExit`` error is raised when no service units are provided"""
@@ -85,12 +91,6 @@ class Create(CLIAsserts, TestCase):
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
             InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--end', '09/01/2500'])
 
-    def test_missing_slurm_account(self) -> None:
-        """Test a ``SystemExit`` error is raised for a missing slurm account"""
-
-        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
-            InvestmentParser().parse_args(['create', 'fake_account_name', '--sus', '100'])
-
 
 class Delete(TestCase, CLIAsserts):
     """Test the ``delete`` subparser"""
@@ -100,11 +100,17 @@ class Delete(TestCase, CLIAsserts):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'delete {TEST_ACCOUNT} --id 0')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['delete', '--id', '0'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['delete', 'fake_account_name', '--sus', '100'])
 
     def test_missing_id_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``id`` argument"""
@@ -126,11 +132,17 @@ class Add(TestCase, CLIAsserts):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'add_sus {TEST_ACCOUNT} --id 0 --sus 100')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['add_sus', '--sus', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['add_sus', 'fake_account_name', '--sus', '100'])
 
     def test_missing_sus_error(self) -> None:
         """Test a ``SystemExit`` error is raised when no service units are provided"""
@@ -171,11 +183,17 @@ class Subtract(TestCase, CLIAsserts):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'subtract_sus {TEST_ACCOUNT} --id 0 --sus 100')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['subtract_sus', '--sus', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['subtract_sus', 'fake_account_name', '--sus', '100'])
 
     def test_missing_sus_error(self) -> None:
         """Test a ``SystemExit`` error is raised when no service units are provided"""
@@ -246,11 +264,17 @@ class Modify(TestCase, CLIAsserts):
             InvestmentParser(),
             f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str} --end {self.end_date_str}')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['modify_date', '--start', self.start_date_str])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['modify_date', 'fake_account_name'])
 
     def test_incorrect_date_format(self) -> None:
         """Test a ``SystemExit`` error is raised for invalid date formats"""
@@ -277,11 +301,17 @@ class Advance(TestCase, CLIAsserts):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'advance {TEST_ACCOUNT} --id 0 --sus 100')
 
-    def test_missing_account_error(self) -> None:
+    def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
         with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
             InvestmentParser().parse_args(['advance', '--sus', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            InvestmentParser().parse_args(['advance', 'fake_account_name'])
 
     def test_missing_sus_error(self) -> None:
         """Test a ``SystemExit`` error is raised when no service units are provided"""
