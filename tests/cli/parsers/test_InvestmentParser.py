@@ -20,6 +20,12 @@ class Create(CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100')
 
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['create', '--sus', '100'])
+
     def test_missing_sus_error(self) -> None:
         """Test a ``SystemExit`` error is raised when no service units are provided"""
 
@@ -92,8 +98,19 @@ class Delete(TestCase, CLIAsserts):
     def test_delete_investment(self) -> None:
         """Test the parsing of arguments by the ``delete`` command"""
 
-        # Delete a specific investment
         self.assert_parser_matches_func_signature(InvestmentParser(), f'delete {TEST_ACCOUNT} --id 0')
+
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['delete', '--id', '0'])
+
+    def test_missing_id_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``id`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: --id'):
+            InvestmentParser().parse_args(['delete', TEST_ACCOUNT])
 
 
 class Add(TestCase, CLIAsserts):
