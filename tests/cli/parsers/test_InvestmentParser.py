@@ -110,7 +110,7 @@ class Delete(TestCase, CLIAsserts):
         """Test a ``SystemExit`` error is raised for a missing slurm account"""
 
         with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
-            InvestmentParser().parse_args(['delete', 'fake_account_name', '--sus', '100'])
+            InvestmentParser().parse_args(['delete', 'fake_account_name', '--id', '0'])
 
     def test_missing_id_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``id`` argument"""

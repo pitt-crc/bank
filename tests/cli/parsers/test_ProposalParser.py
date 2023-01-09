@@ -73,12 +73,30 @@ class Create(ProposalSetup, CLIAsserts, TestCase):
 
 
 class Delete(CLIAsserts, TestCase):
+    """Test the ``delete`` subparsers"""
 
     def test_delete_proposal(self) -> None:
         """Test the parsing of arguments by the ``delete`` command"""
 
-        # Delete a specific proposal
-        self.assert_parser_matches_func_signature(self.parser, f'delete {TEST_ACCOUNT} --ID 0')
+        self.assert_parser_matches_func_signature(ProposalParser(), f'delete {TEST_ACCOUNT} --id 0')
+
+    def test_missing_account_name_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            ProposalParser().parse_args(['delete', '--id', '0'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            ProposalParser().parse_args(['delete', 'fake_account_name', '--id', '0'])
+
+    def test_missing_id_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``id`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: --id'):
+            ProposalParser().parse_args(['delete', TEST_ACCOUNT])
 
 
 class Add(CLIAsserts, TestCase):
