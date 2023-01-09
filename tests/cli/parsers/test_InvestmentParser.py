@@ -234,19 +234,15 @@ class Modify(TestCase, CLIAsserts):
 
         # Modify the active investment's start date
         self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --start {self.start_date_str}')
+            InvestmentParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str}')
 
         # Modify the active investment's end date
         self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --end {self.end_date_str}')
+            InvestmentParser(), f'modify_date {TEST_ACCOUNT} --end {self.end_date_str}')
 
         # Modify the start and end dates
         self.assert_parser_matches_func_signature(
-            InvestmentParser(),
-            f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}'
-        )
+            InvestmentParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}')
 
     def test_modify_specific_investment(self) -> None:
         """Test changing the dates while specifying an investment ID"""

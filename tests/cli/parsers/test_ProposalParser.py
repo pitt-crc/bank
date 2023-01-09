@@ -188,45 +188,68 @@ class Subtract(CLIAsserts, TestCase):
         """Test zero is a valid number of service units"""
 
         self.assert_parser_matches_func_signature(ProposalParser(), f'subtract_sus {TEST_ACCOUNT} --{TEST_CLUSTER} 0')
-        self.assert_parser_matches_func_signature(ProposalParser(),
-                                                  f'subtract_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 0')
-
-
-class Modify(CLIAsserts, TestCase):
-    """Test parser arguments match the signatures of the corresponding executable"""
-
-    def test_modify_proposal_date(self) -> None:
-        """Test the parsing of arguments by the ``modify_date`` command"""
-
-        date = datetime.now().strftime(settings.date_format)
-
-        # Modify the active proposal's date, changing only the start date
-        self.assert_parser_matches_func_signature(self.parser,
-                                                  f'modify_date {TEST_ACCOUNT} --start {date}')
-
-        # Modify a specific proposal's date, changing only the start date
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'modify_date {TEST_ACCOUNT} --ID 0 --start {date}'
-        )
+            ProposalParser(), f'subtract_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 0')
 
-        # Modify the active proposal's date, changing only the end date
-        self.assert_parser_matches_func_signature(self.parser, f'modify_date {TEST_ACCOUNT} --end {date}')
 
-        # Modify a specific proposal's date, changing only the end date
+class Modify(TestCase, CLIAsserts):
+    """Test the ``modify`` subparser"""
+
+    start_date = datetime.now()
+    start_date_str = start_date.strftime(settings.date_format)
+    end_date = start_date + relativedelta(months=6)
+    end_date_str = end_date.strftime(settings.date_format)
+
+    def test_modify_active_proposal(self) -> None:
+        """Test changing the dates of the currently active proposal"""
+
+        # Modify the active proposal's start date
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'modify_date {TEST_ACCOUNT} --ID 0 --end {date}'
-        )
+            ProposalParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str}')
 
-        # Modify the active proposal's date, changing the start and end dates
+        # Modify the active proposal's end date
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'modify_date {TEST_ACCOUNT} --start {date} --end {date}'
-        )
+            ProposalParser(), f'modify_date {TEST_ACCOUNT} --end {self.end_date_str}')
 
-        # Modify a specific proposal's date, changing the start and end dates
+        # Modify the start and end dates
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'modify_date {TEST_ACCOUNT} --ID 0 --start {date} --end {date}'
-        )
+            ProposalParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}')
+
+    def test_modify_specific_proposal(self) -> None:
+        """Test changing the dates while specifying an proposal ID"""
+
+        # Modify only the start date
+        self.assert_parser_matches_func_signature(
+            ProposalParser(), f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str}')
+
+        # Modify only the end date
+        self.assert_parser_matches_func_signature(
+            ProposalParser(), f'modify_date {TEST_ACCOUNT} --id 0 --end {self.end_date_str}')
+
+        # Modify the start and end dates
+        self.assert_parser_matches_func_signature(
+            ProposalParser(),
+            f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str} --end {self.end_date_str}')
+
+    def test_missing_account_name_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            ProposalParser().parse_args(['modify_date', '--start', self.start_date_str])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            ProposalParser().parse_args(['modify_date', 'fake_account_name'])
+
+    def test_incorrect_date_format(self) -> None:
+        """Test a ``SystemExit`` error is raised for invalid date formats"""
+
+        # Modify the start date using the wrong format
+        with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
+            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/2500'])
+
+        # Modify the end date using the wrong format
+        with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
+            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/2500'])
