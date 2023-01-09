@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from bank.cli.parsers import AdminParser
 from bank.settings import test_cluster
-from ._utils import CLIAsserts
+from tests.cli.parsers._utils import CLIAsserts
 
 
 class UpdateStatus(CLIAsserts, TestCase):

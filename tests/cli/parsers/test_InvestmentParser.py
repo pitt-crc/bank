@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import InvestmentParser
-from ._utils import CLIAsserts
+from tests.cli.parsers._utils import CLIAsserts
 
 TEST_ACCOUNT = settings.test_accounts[0]
 
