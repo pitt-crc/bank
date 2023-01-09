@@ -23,13 +23,16 @@ class Date:
 
         Returns:
             The passed value as ``date`` instance
+
+        Raises:
+            ArgumentTypeError: If the value cannot be parsed as a date
         """
 
         try:
             return datetime.strptime(val, settings.date_format).date()
 
         except Exception as exception:
-            raise ArgumentTypeError('Could not parse given date') from exception
+            raise ArgumentTypeError(f'Could not parse the given date: {val}') from exception
 
 
 class NonNegativeInt:
@@ -55,6 +58,6 @@ class NonNegativeInt:
             raise ArgumentTypeError(str(exception)) from exception
 
         if number < 0:
-            raise ArgumentTypeError(f'Argument must be a non-negative integer.')
+            raise ArgumentTypeError(f'Argument is not a non-negative integer: {val}')
 
         return number
