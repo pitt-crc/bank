@@ -51,37 +51,37 @@ class Create(CLIAsserts, TestCase):
     def test_negative_num_inv(self) -> None:
         """Test a ``SystemExit`` error is raised for a negative number of investments"""
 
-        # Create an investment, providing a negative num_inv amount
+        # Create an investment using a negative num_inv amount
         with self.assertRaisesRegex(SystemExit, 'Argument must be a non-negative integer'):
             InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--sus', '100', '--num_inv', '-1'])
 
     def test_custom_dates(self) -> None:
         """Test the specification of custom dates"""
 
-        # Create an investment, providing a custom start date
+        # Create an investment using a custom start date
         start_date = datetime.now()
         start_date_str = start_date.strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --start {start_date_str}')
 
-        # Create an investment, specifying a custom end date
+        # Create an investment using a custom end date
         end_date = start_date + relativedelta(months=6)
         end_date_str = end_date.strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --end {end_date_str}')
 
-        # Create an investment, specifying a custom start and end date
+        # Create an investment using a custom start and end date
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --start {start_date_str} --end {end_date_str}')
 
     def test_invalid_date_format(self) -> None:
         """Test a ``SystemExit`` error is raised for invalid date formats"""
 
-        # Create an investment, providing a custom start date with the wrong format
+        # Create an investment using a start date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
             InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--start', '09/01/2500'])
 
-        # Create an investment, providing a custom end date with the wrong format
+        # Create an investment using an end date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
             InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--end', '09/01/2500'])
 
@@ -119,25 +119,43 @@ class Add(TestCase, CLIAsserts):
     def test_add_sus(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
 
-        # Add SUs to the active investment
         self.assert_parser_matches_func_signature(InvestmentParser(), f'add_sus {TEST_ACCOUNT} --sus 100')
 
     def test_investment_id(self) -> None:
-        """Test the specification of a specific investment ID"""
+        """Test an investment ID can be specified using the ``--id`` argument"""
 
-        # Add SUs a specific investment
         self.assert_parser_matches_func_signature(InvestmentParser(), f'add_sus {TEST_ACCOUNT} --id 0 --sus 100')
 
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['add_sus', '--sus', '100'])
+
+    def test_missing_sus_error(self) -> None:
+        """Test a ``SystemExit`` error is raised when no service units are provided"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: --sus'):
+            InvestmentParser().parse_args(['add_sus', TEST_ACCOUNT])
+
     def test_negative_sus(self) -> None:
-        """Test an error is raised for negative service units"""
+        """Test a ``SystemExit`` error is raised for negative service units"""
+
+        err_msg = 'Argument must be a non-negative integer: -100'
 
         # Add SUs to the active investment, providing a negative SU amount
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['add_sus', TEST_ACCOUNT, '--sus', '-100'])
 
         # Add SUs to a specific investment, providing a negative SU amount
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['add_sus', TEST_ACCOUNT, '--id', '0', '--sus', '-100'])
+
+    def test_zero_sus(self) -> None:
+        """Test zero is a valid number of service units"""
+
+        self.assert_parser_matches_func_signature(InvestmentParser(), f'add_sus {TEST_ACCOUNT} --sus 0')
+        self.assert_parser_matches_func_signature(InvestmentParser(), f'add_sus {TEST_ACCOUNT} --id 0 --sus 0')
 
 
 class Subtract(TestCase, CLIAsserts):
@@ -149,20 +167,40 @@ class Subtract(TestCase, CLIAsserts):
         self.assert_parser_matches_func_signature(InvestmentParser(), f'subtract_sus {TEST_ACCOUNT} --sus 100')
 
     def test_investment_id(self) -> None:
-        """Test the specification of a specific investment ID"""
+        """Test an investment ID can be specified using the ``--id`` argument"""
 
         self.assert_parser_matches_func_signature(InvestmentParser(), f'subtract_sus {TEST_ACCOUNT} --id 0 --sus 100')
 
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['subtract_sus', '--sus', '100'])
+
+    def test_missing_sus_error(self) -> None:
+        """Test a ``SystemExit`` error is raised when no service units are provided"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: --sus'):
+            InvestmentParser().parse_args(['subtract_sus', TEST_ACCOUNT])
+
     def test_negative_sus(self) -> None:
-        """Test an error is raised for negative service units"""
+        """Test a ``SystemExit`` error is raised for negative service units"""
+
+        err_msg = 'Argument must be a non-negative integer: -100'
 
         # Add SUs to the active investment, providing a negative SU amount
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['subtract_sus', TEST_ACCOUNT, '--sus', '-100'])
 
         # Add SUs to a specific investment, providing a negative SU amount
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['subtract_sus', TEST_ACCOUNT, '--id', '0', '--sus', '-100'])
+
+    def test_zero_sus(self) -> None:
+        """Test zero is a valid number of service units"""
+
+        self.assert_parser_matches_func_signature(InvestmentParser(), f'subtract_sus {TEST_ACCOUNT} --sus 0')
+        self.assert_parser_matches_func_signature(InvestmentParser(), f'subtract_sus {TEST_ACCOUNT} --id 0 --sus 0')
 
 
 class Modify(TestCase, CLIAsserts):
