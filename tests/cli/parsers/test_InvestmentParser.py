@@ -246,15 +246,21 @@ class Modify(TestCase, CLIAsserts):
             InvestmentParser(),
             f'modify_date {TEST_ACCOUNT} --id 0 --start {self.start_date_str} --end {self.end_date_str}')
 
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['modify_date', '--start', self.start_date_str])
+
     def test_incorrect_date_format(self) -> None:
         """Test a ``SystemExit`` error is raised for invalid date formats"""
 
         # Modify the start date using the wrong format
-        with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
+        with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
             InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/2500'])
 
         # Modify the end date using the wrong format
-        with self.assertRaisesRegex(SystemExit, 'Could not parse given date'):
+        with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
             InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/2500'])
 
 
