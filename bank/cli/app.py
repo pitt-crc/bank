@@ -11,7 +11,7 @@ class CommandLineApplication:
         """Initialize the application's commandline interface"""
 
         self.parser = ArgumentParser()
-        self.subparsers = self.parser.add_subparsers(parser_class=ArgumentParser, dest='service', required=True)
+        self.subparsers = self.parser.add_subparsers(parser_class= BaseParser, dest='service', required=True)
 
         # Add desired parsers to the commandline application
         self.add_subparser_to_app(
