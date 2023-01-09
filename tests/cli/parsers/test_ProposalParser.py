@@ -100,65 +100,96 @@ class Delete(CLIAsserts, TestCase):
 
 
 class Add(CLIAsserts, TestCase):
-    def test_add_service_units(self) -> None:
+    """Test the ``add_sus`` subparser"""
+
+    def test_add_sus(self) -> None:
         """Test the parsing of arguments by the ``add`` command"""
 
-        # Add SUs to the active proposal, usable on a specific cluster
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'add_sus {TEST_ACCOUNT} --{settings.test_cluster} 100'
-        )
+        self.assert_parser_matches_func_signature(ProposalParser(), f'add_sus {TEST_ACCOUNT} --{TEST_CLUSTER} 100')
 
-        # Add SUs to a specific proposal, usable on a specific cluster
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'add_sus {TEST_ACCOUNT} --ID 0 --{settings.test_cluster} 100'
-        )
+    def test_proposal_id(self) -> None:
+        """Test a proposal ID can be specified using the ``--id`` argument"""
 
-        # Add SUs to the active proposal, usable across all clusters
-        self.assert_parser_matches_func_signature(self.parser,
-                                                  f'add_sus {TEST_ACCOUNT} --all-clusters 100')
-
-        # Add SUs to a specific proposal, usable across all clusters
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'add_sus {TEST_ACCOUNT} --ID 0 --all-clusters 100'
-        )
+            ProposalParser(), f'add_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 100')
+
+    def test_missing_account_name_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            ProposalParser().parse_args(['add_sus', f'--{TEST_CLUSTER}', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            ProposalParser().parse_args(['add_sus', 'fake_account_name', f'--{TEST_CLUSTER}', '100'])
+
+    def test_negative_sus(self) -> None:
+        """Test a ``SystemExit`` error is raised for negative service units"""
+
+        err_msg = 'Argument must be a non-negative integer: -100'
+
+        # Add SUs to the active proposal, providing a negative SU amount
+        with self.assertRaisesRegex(SystemExit, err_msg):
+            ProposalParser().parse_args(['add_sus', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '-100'])
+
+        # Add SUs to a specific proposal, providing a negative SU amount
+        with self.assertRaisesRegex(SystemExit, err_msg):
+            ProposalParser().parse_args(['add_sus', TEST_ACCOUNT, '--id', '0', f'--{TEST_CLUSTER}', '-100'])
+
+    def test_zero_sus(self) -> None:
+        """Test zero is a valid number of service units"""
+
+        self.assert_parser_matches_func_signature(ProposalParser(), f'add_sus {TEST_ACCOUNT} --{TEST_CLUSTER} 0')
+        self.assert_parser_matches_func_signature(ProposalParser(), f'add_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 0')
 
 
 class Subtract(CLIAsserts, TestCase):
-    def test_subtract_service_units(self) -> None:
+    """Test the ``subtract_sus`` subparser"""
+
+    def test_subtract_sus(self) -> None:
         """Test the parsing of arguments by the ``subtract`` command"""
 
-        # Subtract SUs from the active proposal, removing from a specific cluster
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'subtract_sus {TEST_ACCOUNT} --{settings.test_cluster} 100'
-        )
+        self.assert_parser_matches_func_signature(ProposalParser(), f'subtract_sus {TEST_ACCOUNT} --{TEST_CLUSTER} 100')
 
-        # Remove SUs from the active proposal, providing a negative SU amount
-        with self.assertRaises(SystemExit):
-            self.assert_parser_matches_func_signature(
-                self.parser,
-                f'subtract_sus {TEST_ACCOUNT} --{settings.test_cluster} -100')
+    def test_proposal_id(self) -> None:
+        """Test a proposal ID can be specified using the ``--id`` argument"""
 
-        # Subtract SUs from a specific proposal, removing from a specific cluster
         self.assert_parser_matches_func_signature(
-            self.parser,
-            f'subtract_sus {TEST_ACCOUNT} --ID 0 --{settings.test_cluster} 100'
-        )
+            ProposalParser(), f'subtract_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 100')
 
-        # Subtract SUs from the active proposal, removing from 'all' clusters
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'subtract_sus {TEST_ACCOUNT} --all-clusters 100'
-        )
+    def test_missing_account_name_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
-        # Subtract SUs from a specific proposal, removing from 'all' clusters
-        self.assert_parser_matches_func_signature(
-            self.parser,
-            f'subtract_sus {TEST_ACCOUNT} --ID 0 --all-clusters 100'
-        )
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            ProposalParser().parse_args(['subtract_sus', f'--{TEST_CLUSTER}', '100'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing slurm account"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            ProposalParser().parse_args(['subtract_sus', 'fake_account_name', f'--{TEST_CLUSTER}', '100'])
+
+    def test_negative_sus(self) -> None:
+        """Test a ``SystemExit`` error is raised for negative service units"""
+
+        err_msg = 'Argument must be a non-negative integer: -100'
+
+        # Add SUs to the active proposal, providing a negative SU amount
+        with self.assertRaisesRegex(SystemExit, err_msg):
+            ProposalParser().parse_args(['subtract_sus', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '-100'])
+
+        # Add SUs to a specific proposal, providing a negative SU amount
+        with self.assertRaisesRegex(SystemExit, err_msg):
+            ProposalParser().parse_args(['subtract_sus', TEST_ACCOUNT, '--id', '0', f'--{TEST_CLUSTER}', '-100'])
+
+    def test_zero_sus(self) -> None:
+        """Test zero is a valid number of service units"""
+
+        self.assert_parser_matches_func_signature(ProposalParser(), f'subtract_sus {TEST_ACCOUNT} --{TEST_CLUSTER} 0')
+        self.assert_parser_matches_func_signature(ProposalParser(),
+                                                  f'subtract_sus {TEST_ACCOUNT} --id 0 --{TEST_CLUSTER} 0')
 
 
 class Modify(CLIAsserts, TestCase):
