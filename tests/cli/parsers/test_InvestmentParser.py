@@ -275,15 +275,28 @@ class Advance(TestCase, CLIAsserts):
     def test_investment_id(self) -> None:
         """Test the specification of a specific investment ID"""
 
-        # Advance a specific investment
         self.assert_parser_matches_func_signature(InvestmentParser(), f'advance {TEST_ACCOUNT} --id 0 --sus 100')
 
-    def test_negative_sus(self) -> None:
-        """Test an error is raised for negative service units"""
+    def test_missing_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            InvestmentParser().parse_args(['advance', '--sus', '100'])
+
+    def test_missing_sus_error(self) -> None:
+        """Test a ``SystemExit`` error is raised when no service units are provided"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: --sus'):
+            InvestmentParser().parse_args(['advance', TEST_ACCOUNT])
+
+    def test_negative_sus(self) -> None:
+        """Test a ``SystemExit`` error is raised for negative service units"""
+
+        err_msg = 'Argument must be a non-negative integer: -100'
+
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['advance', TEST_ACCOUNT, '--sus', '-100'])
 
         # Advance a specific investment, providing a negative SU amount
-        with self.assertRaisesRegex(SystemExit, 'SUs must be a positive integer'):
+        with self.assertRaisesRegex(SystemExit, err_msg):
             InvestmentParser().parse_args(['advance', TEST_ACCOUNT, '--id', '0', '--sus', '-100'])
