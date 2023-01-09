@@ -58,6 +58,6 @@ class NonNegativeInt:
             raise ArgumentTypeError(str(exception)) from exception
 
         if number < 0:
-            raise ArgumentTypeError(f'Argument is not a non-negative integer: {val}')
+            raise ArgumentTypeError(f'Argument must be a non-negative integer: {val}')
 
         return number
