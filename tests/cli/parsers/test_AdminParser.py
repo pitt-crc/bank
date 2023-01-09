@@ -16,7 +16,7 @@ class UpdateStatus(CLIAsserts, TestCase):
         self.assert_parser_matches_func_signature(AdminParser(), 'update_status')
 
     def test_error_on_account_name(self) -> None:
-        """Test the subparser does not take additional arguments"""
+        """Test a ``SystemExit`` error is raised if an account name is provided"""
 
         with self.assertRaisesRegex(SystemExit, 'unrecognized arguments:'):
             AdminParser().parse_args(['update_status', 'account1'])
