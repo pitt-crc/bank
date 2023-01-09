@@ -6,7 +6,7 @@ different services provided by the banking app.
 import sys
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 from .types import Date, NonNegativeInt
 from .. import settings
@@ -22,7 +22,7 @@ class BaseParser(ArgumentParser):
     subparsers or arguments) in their ``__init__`` method.
     """
 
-    def parse_known_args(self, args: List[str] = None, namespace: Namespace = None) -> tuple[Namespace, list[str]]:
+    def parse_known_args(self, args: List[str] = None, namespace: Namespace = None) -> Tuple[Namespace, List[str]]:
         """Parse and return commandline arguments
 
         This method wraps the parent class implementation and forwards parsing
