@@ -35,7 +35,7 @@ class Lock(ProposalSetup, CLIAsserts, TestCase):
         self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} --all-clusters')
 
     def test_accepts_cluster_name(self) -> None:
-        """Test the ``lock`` command accepts cluster names"""
+        """Test the ``lock`` command accepts individual cluster names"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
 
@@ -65,12 +65,12 @@ class Unlock(ProposalSetup, CLIAsserts, TestCase):
     """Test the ``unlock`` subparser"""
 
     def test_all_clusters_flag(self) -> None:
-        """Test the ``lock`` accepts the ``--all-clusters`` option"""
+        """Test the ``unlock`` accepts the ``--all-clusters`` option"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'unlock {TEST_ACCOUNT} --all-clusters')
 
     def test_accepts_cluster_name(self) -> None:
-        """Test the ``lock`` command accepts cluster names"""
+        """Test the ``unlock`` command accepts cluster names"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'unlock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
 
