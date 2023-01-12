@@ -102,7 +102,6 @@ class AdminParser(BaseParser):
 
         cluster_argument = dict(
             dest='cluster',
-            nargs='+',
             choices=list(Slurm.cluster_names()),
             help='list of clusters to check the lock state on'
         )
@@ -115,12 +114,12 @@ class AdminParser(BaseParser):
 
         # List locked accounts
         list_locked = parent_parser.add_parser('list_locked', help='list all locked accounts')
-        list_locked.add_argument('--clusters', **cluster_argument)
+        list_locked.add_argument('--cluster', **cluster_argument)
         list_locked.set_defaults(function=AdminServices.list_locked_accounts)
 
         # List unlocked accounts
         list_unlocked = parent_parser.add_parser('list_unlocked', help='list all unlocked accounts')
-        list_unlocked.add_argument('--clusters', **cluster_argument)
+        list_unlocked.add_argument('--cluster', **cluster_argument)
         list_unlocked.set_defaults(function=AdminServices.list_unlocked_accounts)
 
 
