@@ -2,7 +2,6 @@
 the application from the commandline.
 """
 
-from argparse import ArgumentParser
 from typing import Type
 
 from .parsers import AdminParser, AccountParser, ProposalParser, InvestmentParser, BaseParser
