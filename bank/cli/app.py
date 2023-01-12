@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from typing import Type
 
 from .parsers import AdminParser, AccountParser, ProposalParser, InvestmentParser, BaseParser
+from .. import __version__
 
 
 class CommandLineApplication:
@@ -14,33 +15,34 @@ class CommandLineApplication:
     def __init__(self):
         """Initialize the application's commandline interface"""
 
-        self.parser = ArgumentParser()
-        self.subparsers = self.parser.add_subparsers(parser_class= BaseParser, dest='service', required=True)
+        self.parser = BaseParser()
+        self.parser.add_argument('--version', action='version', version=__version__)
+        self.subparsers = self.parser.add_subparsers(parser_class=BaseParser, dest='service', required=True)
 
         # Add desired parsers to the commandline application
         self.add_subparser_to_app(
             'admin',
             AdminParser,
             title='Admin actions',
-            help_text='Tools for general system administration')
+            help_text='tools for general system administration')
 
         self.add_subparser_to_app(
             'account',
             AccountParser,
             title='Account actions',
-            help_text='Tools for managing individual accounts')
+            help_text='tools for managing individual accounts')
 
         self.add_subparser_to_app(
             'proposal',
             ProposalParser,
             title='Proposal actions',
-            help_text='Administrative tools for user proposals')
+            help_text='administrative tools for user proposals')
 
         self.add_subparser_to_app(
             'investment',
             InvestmentParser,
             title='Investment actions',
-            help_text='Administrative tools for user investments')
+            help_text='administrative tools for user investments')
 
     def add_subparser_to_app(
         self,
