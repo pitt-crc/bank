@@ -2,6 +2,7 @@
 application's commandline interface. Individual parsers are designed around
 different services provided by the banking app.
 """
+
 import abc
 import sys
 from argparse import ArgumentParser, Namespace

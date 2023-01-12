@@ -1,3 +1,7 @@
+"""The ``cli.app`` module defines the entrypoint for executing
+the application from the commandline.
+"""
+
 from argparse import ArgumentParser
 from typing import Type
 
