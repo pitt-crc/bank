@@ -51,14 +51,22 @@ class Lock(ProposalSetup, CLIAsserts, TestCase):
             AccountParser().parse_args(['lock', 'fake_account_name', '--clusters', TEST_CLUSTER])
 
     def test_all_clusters_flag(self) -> None:
-        """Test the ``lock`` accepts the ``--all-clusters`` option"""
+        """Test the ``lock`` command accepts the ``--all-clusters`` option"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} --all-clusters')
+
+        # Check parsed arguments match input values
+        args = AccountParser().parse_args(['lock', TEST_ACCOUNT, '--all-clusters'])
+        self.assertCountEqual([TEST_CLUSTER], args.clusters)
 
     def test_accepts_cluster_name(self) -> None:
         """Test the ``lock`` command accepts individual cluster names"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'lock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
+
+        # Check parsed arguments match input values
+        args = AccountParser().parse_args(['lock', TEST_ACCOUNT, '--clusters', TEST_CLUSTER])
+        self.assertCountEqual([TEST_CLUSTER], args.clusters)
 
     def test_invalid_cluster_error(self) -> None:
         """Test a ``SystemExit`` error is raised for cluster names not defined in application settings"""
@@ -92,14 +100,22 @@ class Unlock(ProposalSetup, CLIAsserts, TestCase):
             AccountParser().parse_args(['unlock', 'fake_account_name', '--clusters', TEST_CLUSTER])
 
     def test_all_clusters_flag(self) -> None:
-        """Test the ``unlock`` accepts the ``--all-clusters`` option"""
+        """Test the ``unlock`` command accepts the ``--all-clusters`` option"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'unlock {TEST_ACCOUNT} --all-clusters')
 
+        # Check parsed arguments match input values
+        args = AccountParser().parse_args(['unlock', TEST_ACCOUNT, '--all-clusters'])
+        self.assertCountEqual([TEST_CLUSTER], args.clusters)
+
     def test_accepts_cluster_name(self) -> None:
-        """Test the ``unlock`` command accepts cluster names"""
+        """Test the ``unlock`` command accepts individual cluster names"""
 
         self.assert_parser_matches_func_signature(AccountParser(), f'unlock {TEST_ACCOUNT} --clusters {TEST_CLUSTER}')
+
+        # Check parsed arguments match input values
+        args = AccountParser().parse_args(['unlock', TEST_ACCOUNT, '--clusters', TEST_CLUSTER])
+        self.assertCountEqual([TEST_CLUSTER], args.clusters)
 
     def test_invalid_cluster_error(self) -> None:
         """Test a ``SystemExit`` error is raised for cluster names not defined in application settings"""
