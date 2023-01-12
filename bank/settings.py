@@ -79,7 +79,7 @@ from textwrap import dedent
 _CUR_DIR = Path(__file__).resolve().parent
 
 # Settings for running the test suite.
-test_account = 'account1'
+test_accounts = ['account1', 'account2']
 test_cluster = 'development'
 nonexistent_account = 'fake_account'
 
@@ -95,7 +95,7 @@ log_level = 'INFO'
 db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = ('development',)
+clusters = ('development', 'all_clusters',)
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1

@@ -14,13 +14,13 @@ from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountS
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units_total) \
     .select_from(joined_tables) \
-    .where(Account.name == settings.test_account) \
+    .where(Account.name == settings.test_accounts[0]) \
     .where(Allocation.cluster_name == settings.test_cluster) \
     .where(Proposal.is_active)
 
 active_proposal_query = select(Proposal) \
     .join(Account) \
-    .where(Account.name == settings.test_account) \
+    .where(Account.name == settings.test_accounts[0]) \
     .where(Proposal.is_active)
 
 
@@ -38,14 +38,14 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
 
         self.account.create()
         with DBConnection.session() as session:
-            query = select(Proposal).join(Account).where(Account.name == settings.test_account)
+            query = select(Proposal).join(Account).where(Account.name == settings.test_accounts[0])
             proposal = session.execute(query).scalars().first()
 
             self.assertTrue(proposal)
@@ -80,7 +80,7 @@ class DeleteProposal(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_delete_by_id(self) -> None:
         """Test a specific proposal is deleted when an id is given"""
@@ -99,14 +99,14 @@ class ModifyDate(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
 
         proposal_query = select(Proposal) \
             .join(Account) \
-            .where(Account.name == settings.test_account) \
+            .where(Account.name == settings.test_accounts[0]) \
             .order_by(Proposal.start_date.desc())
 
         with DBConnection.session() as session:
@@ -134,7 +134,7 @@ class AddSus(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_sus_are_added(self) -> None:
         """Test SUs are added to the proposal"""
@@ -168,7 +168,7 @@ class SubtractSus(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_sus_are_subtracted(self) -> None:
         """Test SUs are removed from the proposal"""
@@ -207,7 +207,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_error_on_delete(self) -> None:
         """Test for a ``MissingProposalError`` error when deleting without a proposal ID"""
@@ -239,7 +239,7 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_account)
+        self.account = ProposalServices(settings.test_accounts[0])
 
     def test_neighboring_proposals_are_allowed(self):
         """Test that proposals with neighboring durations are allowed"""

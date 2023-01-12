@@ -89,7 +89,7 @@ class ProposalServices:
         """
 
         for cluster, sus in clusters_sus.items():
-            if cluster not in settings.clusters:
+            if cluster not in settings.clusters and cluster != "all_clusters":
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
             if sus < 0:
@@ -605,11 +605,11 @@ class AccountServices:
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
 
-        self._proposal_query = select(Proposal).join(Account) \
+        self._active_proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
             .where(Proposal.is_active)
 
-        self._investment_query = select(Investment).join(Account) \
+        self._active_investment_query = select(Investment).join(Account) \
             .where(Account.name == self._account_name). \
             where(Investment.is_active)
 
@@ -628,8 +628,8 @@ class AccountServices:
         slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=0)
         with DBConnection.session() as session:
-            proposal = session.execute(self._proposal_query).scalars().first()
-            investments = session.execute(self._investment_query).scalars().all()
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+            investments = session.execute(self._active_investment_query).scalars().all()
 
             if not proposal:
                 raise MissingProposalError('Account has no proposal')
@@ -637,7 +637,7 @@ class AccountServices:
             usage_total = 0
             allocation_total = 0
             for allocation in proposal.allocations:
-                usage_data = slurm_acct.get_cluster_usage(allocation.cluster_name, in_hours=True)
+                usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
                 total_cluster_usage = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units_total)
 
@@ -648,7 +648,8 @@ class AccountServices:
                     user_usage_table.add_row([user, user_usage, user_percentage])
 
                 # Add the table created above to the outer table that will eventually be returned
-                output_table.add_row(f"Cluster: {allocation.cluster_name}, Available SUs: {allocation.service_units_total}")
+                output_table.add_row(f"Cluster: {allocation.cluster_name}, "
+                                     f"Available SUs: {allocation.service_units_total}")
                 output_table.add_row(user_usage_table)
                 output_table.add_row(['Overall', total_cluster_usage, total_cluster_percent])
 
@@ -682,7 +683,7 @@ class AccountServices:
         """
 
         with DBConnection.session() as session:
-            investments = session.execute(self._investment_query).scalars().all()
+            investments = session.execute(self._active_investment_query).scalars().all()
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
@@ -716,8 +717,7 @@ class AccountServices:
 
         proposal_query = select(Proposal).join(Account) \
             .where(Account.name == self._account_name) \
-            .where(Proposal.exhaustion_date is not None) \
-            .where(Proposal.start_date < date.today())
+            .where(Proposal.is_active)
 
         with DBConnection.session() as session:
             for proposal in session.execute(proposal_query).scalars().all():
@@ -726,7 +726,7 @@ class AccountServices:
     def _notify_proposal(self, proposal):
         # Determine the next usage percentage that an email is scheduled to be sent out
         slurm_acct = SlurmAccount(self._account_name)
-        usage = slurm_acct.get_total_usage()
+        usage = slurm_acct.get_cluster_usage_total()
         total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
@@ -760,10 +760,105 @@ class AccountServices:
                 ffrom=settings.from_address,
                 subject=subject)
 
-    def update_account_status(self) -> None:
-        """Close any expired proposals/investments and lock the account if necessary"""
+    def update_status(self) -> None:
+        """Update the Bank database entries for an unlocked account given the usage values from SLURM,
+        and lock the account if necessary
 
-        raise NotImplementedError
+        Update the current usage for each allocation in the proposal from the values in the slurm database,
+        then reset the slurm database values.
+
+        Using these values, determine which clusters the account is exceeding usage limits on, and determine if that
+        usage can be covered by floating/investment service units, locking on the cluster if not.
+
+        Makes sure a recently expired proposal is closed out if no active proposal is found.
+        Makes sure any recently expired investments are closed out if no active investments are found.
+        """
+
+        slurm_acct = SlurmAccount(self._account_name)
+        with DBConnection.session() as session:
+
+            # Gather the account's active proposal and investments if they exist
+            # This will not find a recently expired proposal/investment
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+            investment = session.execute(self._active_investment_query).scalars().first()
+            lock_clusters = []
+
+            investment_sus = 0
+            if investment:
+                investment_sus = investment.current_sus
+
+            # No active proposal (in date range with SUs to spend), lock on all clusters if there are not investment
+            # SUs to use
+            if not proposal:
+                # Try to cover current raw usage with investment service units
+                total_usage = slurm_acct.get_cluster_usage_total(in_hours=True)
+                if total_usage <= investment_sus:
+                    LOG.debug(f"Using investment service units to cover usage with no active proposal "
+                              f"for {self._account_name}")
+                    investment.current_sus -= total_usage
+                else:
+                    LOG.info(f"Locking {self._account_name} on all clusters, no active proposal or investment")
+                    self.lock(all_clusters=True)
+            else:
+                floating_sus_remaining = 0
+                floating_alloc = None
+
+                # Update Cluster usage in the bank database and determine which clusters may need to be locked
+                for alloc in proposal.allocations:
+
+                    # Skip floating SUs, noting how many are available
+                    if alloc.cluster_name == 'all_clusters':
+                        floating_alloc = alloc
+                        floating_sus_remaining = alloc.service_units_total - alloc.service_units_used
+                        continue
+
+                    # TODO: cluster usage errors on empty output from sshare
+                    alloc.service_units_used += slurm_acct.get_cluster_usage_total(alloc.cluster_name, in_hours=True)
+
+                    # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
+                    # within-cluster limits
+                    exceeding_sus = alloc.service_units_used - alloc.service_units_total
+
+                    if exceeding_sus >= 0:
+                        lock_clusters.append({"alloc": alloc,
+                                              "name": alloc.cluster_name,
+                                              "exceeding_sus": exceeding_sus})
+
+            # If usage on some clusters are exceeding the awarded amount
+            if lock_clusters:
+
+                cluster_names = [cluster['name'] for cluster in lock_clusters]
+                exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
+
+                # Floating SUs can cover
+                if exceeding_sus_total <= floating_sus_remaining:
+                    floating_alloc.service_units_used += exceeding_sus_total
+                    for cluster in lock_clusters:
+                        cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
+                        LOG.debug(f"Using floating service units to cover usage over limit for {self._account_name} "
+                                  f"on {cluster['name']}")
+
+                # Investment SUs can cover
+                elif exceeding_sus_total - floating_sus_remaining <= investment_sus:
+                    remaining_sus = exceeding_sus - floating_sus_remaining
+                    if floating_alloc:
+                        floating_alloc.service_units_used = floating_alloc.service_units_total
+                    investment.current_sus -= remaining_sus
+                    # TODO: do withdrawn SUs need to be changed?
+                    for cluster in lock_clusters:
+                        cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
+                        LOG.debug(f"Using investment service units to cover usage over limit for {self._account_name} "
+                                  f"on {cluster['name']}")
+
+                # Neither can cover
+                else:
+                    self.lock(clusters=cluster_names)
+                    LOG.info(f"Locking {self._account_name} due to exceeding limits")
+
+            session.commit()
+
+        # Reset the raw usage now that the session values to be committed to the DB reflect the SLURM DB
+        slurm_acct.reset_raw_usage()
 
     def _set_account_lock(
             self,
@@ -831,11 +926,11 @@ class AdminServices:
             A tuple of account names
         """
 
-        # Query database for accounts that are unlocked and expired
-        account_name_query = (select(Account.name).join(Proposal).where(Proposal.end_date < date.today()))
+        # Query database for all account names
         with DBConnection.session() as session:
-            account_names = session.execute(account_name_query).scalars().all()
+            account_names = session.execute(select(Account.name)).scalars().all()
 
+        # Build a generator for account names that match the lock state
         for account in account_names:
             if SlurmAccount(account).get_locked_state(cluster) == status:
                 yield account
@@ -861,8 +956,21 @@ class AdminServices:
         print(*cls._iter_accounts_by_lock_state(False, cluster), sep='\n')
 
     @classmethod
+    def find_unlocked_account_names(cls) -> dict:
+        """Provide a list of accounts that are unlocked on the clusters defined in SLURM
+
+        Returns: A dictionary with cluster name as the keys and a generator yielding account names as the value
+        """
+
+        unlocked_accounts_by_cluster = {}
+        for cluster in Slurm.cluster_names():
+            unlocked_accounts_by_cluster[cluster] = set(cls._iter_accounts_by_lock_state(False, cluster))
+
+        return unlocked_accounts_by_cluster
+
+    @classmethod
     def update_account_status(cls) -> None:
         """Update account usage information and lock any expired or overdrawn accounts"""
 
-        for account in cls.find_unlocked():
-            account.update_account_status()
+        for account in cls.find_unlocked_account_names():
+            account.update_status()
