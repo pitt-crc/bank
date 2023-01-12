@@ -1,9 +1,7 @@
 """Tests for the ``ProposalParser`` class"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import TestCase
-
-from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import ProposalParser
@@ -50,7 +48,7 @@ class Create(ProposalSetup, CLIAsserts, TestCase):
             ProposalParser(), f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100 --start {start_date_str}')
 
         # Create a proposal using a custom end date
-        end_date = start_date + relativedelta(months=6)
+        end_date = start_date + timedelta(days=180)
         end_date_str = end_date.strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             ProposalParser(), f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100 --end {end_date_str}')
@@ -197,7 +195,7 @@ class Modify(TestCase, CLIAsserts):
 
     start_date = datetime.now()
     start_date_str = start_date.strftime(settings.date_format)
-    end_date = start_date + relativedelta(months=6)
+    end_date = start_date + timedelta(days=180)
     end_date_str = end_date.strftime(settings.date_format)
 
     def test_modify_active_proposal(self) -> None:
@@ -216,7 +214,7 @@ class Modify(TestCase, CLIAsserts):
             ProposalParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}')
 
     def test_modify_specific_proposal(self) -> None:
-        """Test changing the dates while specifying an proposal ID"""
+        """Test changing the dates while specifying a proposal ID"""
 
         # Modify only the start date
         self.assert_parser_matches_func_signature(

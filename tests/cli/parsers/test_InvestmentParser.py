@@ -1,9 +1,7 @@
 """Tests for the ``InvestmentParser`` class"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import TestCase
-
-from dateutil.relativedelta import relativedelta
 
 from bank import settings
 from bank.cli import InvestmentParser
@@ -71,7 +69,7 @@ class Create(CLIAsserts, TestCase):
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --start {start_date_str}')
 
         # Create an investment using a custom end date
-        end_date = start_date + relativedelta(months=6)
+        end_date = start_date + timedelta(days=180)
         end_date_str = end_date.strftime(settings.date_format)
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --end {end_date_str}')
@@ -226,7 +224,7 @@ class Modify(TestCase, CLIAsserts):
 
     start_date = datetime.now()
     start_date_str = start_date.strftime(settings.date_format)
-    end_date = start_date + relativedelta(months=6)
+    end_date = start_date + timedelta(days=180)
     end_date_str = end_date.strftime(settings.date_format)
 
     def test_modify_active_investment(self) -> None:
