@@ -5,7 +5,7 @@ different services provided by the banking app.
 
 import abc
 import sys
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, _SubParsersAction
 from datetime import datetime
 from typing import List, Tuple
 
@@ -20,7 +20,7 @@ class BaseParser(ArgumentParser):
 
     Extends functionality defined by the builtin ``ArgumentParser`` class.
     Subclasses should define their desired commandline interface (i.e., any
-    subparsers or arguments) by overriding the ``define_interface`` method.
+    subparsers or arguments) by defining the ``define_interface`` method.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -41,11 +41,11 @@ class BaseParser(ArgumentParser):
         some, but not all cases (e.g., type casting errors).
 
         Args:
-            args: Optionally parse the given arguments instead of STDIN
+            args: Optionally parse the given arguments instead of parsing STDIN
             namespace: The namespace class to use for returned values
 
         Returns:
-            Tuple containing a namespace of valid arguments and a dictionary of invalid ones
+            Tuple with a namespace of valid arguments and a dictionary of invalid ones
         """
 
         try:
@@ -57,13 +57,13 @@ class BaseParser(ArgumentParser):
     def error(self, message: str) -> None:
         """Print the error message to STDOUT and exit
 
-        If the application was called without any arguments, print the help text.
+        If the parser was called without any arguments, print the help text.
 
         Args:
             message: The error message
 
         Raises:
-            ArgumentError: If the ``define_interface`` attribute is ``True``
+            SystemExit: Every time the method is called
         """
 
         if len(sys.argv) == 1:
@@ -73,11 +73,12 @@ class BaseParser(ArgumentParser):
 
     @classmethod
     @abc.abstractmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser instance
 
-        Adds parsers and commandline arguments to the given subparser action.
-        The ``parent_parser`` object is the same object returned by the ``add_subparsers`` method.
+        Use this method to define subparsers and commandline arguments.
+        The ``parent_parser`` object is the same object returned by the
+        ``add_subparsers`` method.
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -93,7 +94,7 @@ class AdminParser(BaseParser):
 
     @classmethod
     def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+        """Define the commandline interface for the parent parser instance
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -131,8 +132,8 @@ class AccountParser(BaseParser):
     """
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser instance
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -165,7 +166,7 @@ class AccountParser(BaseParser):
         lock_cluster.add_argument('--clusters', **clusters_argument, help='list of clusters to lock the account on')
 
         # Unlock Account
-        unlock_parser = parent_parser.add_parser('unlock', help='Allow a slurm account to resume submitting jobs')
+        unlock_parser = parent_parser.add_parser('unlock', help='allow a slurm account to resume submitting jobs')
         unlock_parser.set_defaults(function=AccountServices.unlock)
         unlock_parser.add_argument(**account_argument)
         unlock_cluster = unlock_parser.add_mutually_exclusive_group(required=True)
@@ -186,8 +187,8 @@ class ProposalParser(BaseParser):
     """
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser instance
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
@@ -289,8 +290,8 @@ class InvestmentParser(BaseParser):
     """
 
     @classmethod
-    def define_interface(cls, parent_parser) -> None:
-        """Define the commandline interface of the parent parser
+    def define_interface(cls, parent_parser: _SubParsersAction) -> None:
+        """Define the commandline interface for the parent parser instance
 
         Args:
             parent_parser: Subparser action to assign parsers and arguments to
