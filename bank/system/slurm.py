@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, Set
+from typing import Dict, Optional, Union, Collection, Set
 
 from bank import settings
 from bank.exceptions import *
@@ -73,7 +73,8 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
+            LOG.error(
+                f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
             raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
@@ -103,7 +104,7 @@ class SlurmAccount:
             cluster: Name of the cluster to get the lock state for
 
         Returns:
-            Whether the user is locked out from ANY of the given clusters
+            Whether the user is locked out on ANY of the given clusters
 
         Raises:
             SlurmClusterNotFoundError: If the given slurm cluster does not exist
@@ -135,8 +136,8 @@ class SlurmAccount:
             f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
         ).raise_if_err()
 
-    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
-        """Return the raw account usage on a given cluster
+    def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
+        """Return the raw account usage per user on a given cluster
 
         Args:
             cluster: The name of the cluster
@@ -160,26 +161,34 @@ class SlurmAccount:
             user, usage = line.split('|')
             usage = int(usage)
             if in_hours:  # Convert from seconds to hours
-                usage //= 60
+                usage //= 3600
 
             out_data[user] = usage
 
         return out_data
 
-    def get_total_usage(self, in_hours: bool = True) -> int:
-        """Return the raw account usage across all clusters
+    def get_cluster_usage_total(
+        self,
+        cluster: Optional[Union[str, Collection[str]]] = None,
+        in_hours: bool = True) -> int:
+
+        """Return the raw account usage total on one or more clusters
 
         Args:
-            in_hours: Return usage in units of hours instead of seconds
+            cluster: A string (or list of strings) of clusters to display compute a total for, default is all clusters
+            in_hours: Boolean to return usage in units of hours instead of seconds
 
         Returns:
-            The account's usage of the given cluster
+            The account's total usage across all of its users, across all clusters provided
         """
 
+        # Default to all clusters in settings.clusters if not specified as an argument
+        clusters = (cluster,) or settings.clusters
+
         total = 0
-        for cluster in settings.clusters:
-            user_usage = self.get_cluster_usage(cluster, in_hours)
-            total + sum(user_usage.values())
+        for cluster_name in clusters:
+            user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
+            total += sum(user_usage.values())
 
         return total
 
@@ -191,4 +200,5 @@ class SlurmAccount:
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
         clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        ShellCmd(
+            f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')

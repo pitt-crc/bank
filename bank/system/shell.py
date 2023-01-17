@@ -31,7 +31,7 @@ class ShellCmd:
             ValueError: When the ``cmd`` argument is empty
         """
 
-        if not cmd:
+        if not cmd.split():
             raise ValueError('Command string cannot be empty')
 
         LOG.debug(f'executing `{cmd}`')
