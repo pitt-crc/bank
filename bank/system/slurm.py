@@ -88,7 +88,9 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
+            LOG.error(
+                f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for '
+                f'username {account_name}. No account exists.')
             raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
@@ -132,7 +134,7 @@ class SlurmAccount:
 
     def set_locked_state(self, lock_state: bool, cluster: str) -> None:
         """Lock or unlock the current slurm account
-        (except for two accounts 'isenocak' and 'eschneider' with purchased partitions within gpu cluster, as speficied in update_status)
+
         Args:
             lock_state: Whether to lock (``True``) or unlock (``False``) the user account
             cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
@@ -146,7 +148,8 @@ class SlurmAccount:
             raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
+                 f'set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
 
     def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
         """Return the raw account usage per user on a given cluster
