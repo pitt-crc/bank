@@ -32,11 +32,11 @@ dependencies = [
 [project.optional-dependencies]
 tests = ["coverage"]
 docs = [
-    "sphinx",
-    "sphinx_autodoc_typehints",
-    "sphinx-copybutton",
-    "sphinx-rtd-theme",
-    "sphinx-argparse",
+    "sphinx==5.3.0",
+    "sphinx_autodoc_typehints==1.20.1",
+    "sphinx-copybutton==0.5.1",
+    "sphinx-rtd-theme==1.1.1",
+    "sphinx-argparse==0.4.0",
 ]
 
 [tool.setuptools]
