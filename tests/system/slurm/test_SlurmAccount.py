@@ -39,7 +39,7 @@ class CheckAccountExists(TestCase):
         self.assertTrue(SlurmAccount.check_account_exists(settings.test_account))
 
     def test_invalid_account(self) -> None:
-        """Test the return value is ``True`` for a non-existent account"""
+        """Test the return value is ``False`` for a non-existent account"""
 
         self.assertFalse(SlurmAccount.check_account_exists('fake_account'))
 
