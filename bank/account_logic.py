@@ -866,7 +866,9 @@ class AccountServices:
             clusters: Optional[Collection[str]] = None,
             all_clusters: bool = False
     ) -> None:
-        """Update the lock/unlocked states for the current account, only lock account if it has no purchased partitions within cluster
+        """Update the lock/unlocked states for the current account, only lock account if it has no purchased partitions
+        within a cluster
+
         Args:
             lock_state: The new account lock state
             clusters: Name of the clusters to lock the account on. Defaults to all clusters.
@@ -876,18 +878,20 @@ class AccountServices:
         if all_clusters:
             clusters = Slurm.cluster_names()
 
-        """ Searching for purchased partition using CRC's naming convention: Name of of a purchased partition always
-            contains name of the account, e.g. eschneider 
-        """
         for cluster in clusters:
-            hasInvestmentPartition = False
+            locked = lock_state
+
+            # Determine whether a purchased partition exists on the cluster
+            # using CRC's naming convention: partition name always
+            # contains name of the account, e.g. eschneider-mpi
             for partition in [Slurm.partition_names(cluster)]:
                 if partition.find(self._account_name) >= 0:
-                    LOG.info(f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
-                    hasInvestmentPartition = True
+                    locked = False
+                    LOG.info(
+                        f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
                     break
-            if not hasInvestmentPartition:
-                SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
+
+            SlurmAccount(self._account_name).set_locked_state(locked, cluster)
 
     def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
