@@ -876,19 +876,18 @@ class AccountServices:
         if all_clusters:
             clusters = Slurm.cluster_names()
 
-        HasPurchasedPartition = False
         """ Searching for purchased partition using CRC's naming convention: Name of of a purchased partition always
             contains name of the account, e.g. eschneider 
         """
         for cluster in clusters:
-            partitions = Slurm.partition_names(cluster)
-            for partition in partitions:
-                if(partition.find(self._account_name)>=0):  HasPurchasedPartition = True
-                
-            if(HasPurchasedPartition==False): 
+            hasInvestmentPartition = False
+            for partition in [Slurm.partition_names(cluster)]:
+                if partition.find(self._account_name) >= 0:
+                    LOG.info(f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
+                    hasInvestmentPartition = True
+                    break
+            if not hasInvestmentPartition:
                 SlurmAccount(self._account_name).set_locked_state(lock_state, cluster)
-            else:
-                ShellCmd(f'echo "{self._account_name} cannot be locked from the {cluster} cluster because it has purchased partition(s)!"')
 
     def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
