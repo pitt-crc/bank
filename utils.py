@@ -220,15 +220,29 @@ def get_raw_usage_in_hours(account, cluster):
 
 def lock_account(account):
     clusters = ",".join(CLUSTERS)
+
+    # Lock CPU based jobs
     _, _ = run_command(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=0"
+    )
+
+    # Lock GPU based jobs
+    _, _ = run_command(
+        f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=gres/gpu=0"
     )
 
 
 def unlock_account(account):
     clusters = ",".join(CLUSTERS)
+
+    # Unlock CPU based jobs
     _, _ = run_command(
         f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=cpu=-1"
+    )
+
+    # Unlock GPU based jobs
+    _, _ = run_command(
+        f"sacctmgr -i modify account where account={account} cluster={clusters} set GrpTresRunMins=gres/gpu=-1"
     )
 
 
