@@ -884,7 +884,7 @@ class AccountServices:
             # Determine whether a purchased partition exists on the cluster
             # using CRC's naming convention: partition name always
             # contains name of the account, e.g. eschneider-mpi
-            for partition in [Slurm.partition_names(cluster)]:
+            for partition in Slurm.partition_names(cluster):
                 if partition.find(self._account_name) >= 0:
                     locked = False
                     LOG.info(
