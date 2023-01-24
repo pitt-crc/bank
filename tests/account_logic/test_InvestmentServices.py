@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.account_logic import InvestmentServices
-from bank.exceptions import MissingInvestmentError, MissingProposalError, SlurmAccountNotFoundError
+from bank.exceptions import MissingInvestmentError, MissingProposalError, AccountNotFoundError
 from bank.orm import Account, DBConnection, Investment
 from tests._utils import InvestmentSetup, ProposalSetup
 
@@ -21,7 +21,7 @@ class InitExceptions(InvestmentSetup, TestCase):
 
     def test_error_on_non_existent_account(self) -> None:
         # Attempt to create an investment for a nonexistent slurm account
-        with self.assertRaises(SlurmAccountNotFoundError):
+        with self.assertRaises(AccountNotFoundError):
             self.account = InvestmentServices(account_name=settings.nonexistent_account)
 
     def test_error_on_missing_proposal(self) -> None:
