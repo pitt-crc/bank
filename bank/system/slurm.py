@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, Optional, Union, Collection
+from typing import Dict, Optional, Union, Collection, Set
 
 from bank import settings
 from bank.exceptions import *
@@ -26,7 +26,7 @@ class Slurm:
         LOG.debug('Checking for Slurm installation')
 
         try:
-            cmd = ShellCmd('sacctmgr -V')
+            cmd = ShellCmd('sacctmgr --version')
             cmd.raise_if_err()
 
         # We catch all exceptions, but explicitly list the common cases for reference
@@ -34,22 +34,21 @@ class Slurm:
             LOG.debug('Slurm is not installed.')
             return False
 
-        version = cmd.out.lstrip('slurm ')
-        LOG.debug(f'Found Slurm version {version}')
+        LOG.debug(f'Found Slurm version "{cmd.out}"')
         return True
 
     @classmethod
-    def cluster_names(cls) -> tuple[str]:
+    def cluster_names(cls) -> Set[str]:
         """Return cluster names configured with Slurm
 
         Returns:
             A tuple of cluster names
         """
 
-        cmd = ShellCmd('sacctmgr show clusters format=Cluster  --noheader --parsable2')
+        cmd = ShellCmd('sacctmgr show clusters format=Cluster --noheader --parsable2')
         cmd.raise_if_err()
 
-        clusters = cmd.out.split()
+        clusters = set(cmd.out.split())
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
 
@@ -65,7 +64,7 @@ class SlurmAccount:
 
         Raises:
             SystemError: If the ``sacctmgr`` utility is not installed
-            SlurmAccountNotFoundError: If an account with the given name does not exist
+            AccountNotFoundError: If an account with the given name does not exist
         """
 
         self._account = account_name
@@ -74,8 +73,8 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
-            raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
+            LOG.error(f'AccountNotFoundError: No Slurm account for username {account_name}.')
+            raise AccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
     def account_name(self) -> str:
@@ -107,11 +106,11 @@ class SlurmAccount:
             Whether the user is locked out on ANY of the given clusters
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
         if cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=GrpTresRunMins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
@@ -124,12 +123,12 @@ class SlurmAccount:
             cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
         LOG.info(f'Updating lock state for Slurm account {self.account_name} to {lock_state}')
         if cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
         ShellCmd(
@@ -147,11 +146,11 @@ class SlurmAccount:
             A dictionary with the number of service units used by each user in the account
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
-        if cluster and cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+        if cluster not in Slurm.cluster_names():
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
         header, *data = cmd.out.split('\n')[1:]
@@ -168,9 +167,9 @@ class SlurmAccount:
         return out_data
 
     def get_cluster_usage_total(
-            self,
-            cluster: Optional[Union[str, Collection[str]]] = None,
-            in_hours: bool = True) -> int:
+        self,
+        cluster: Optional[Union[str, Collection[str]]] = None,
+        in_hours: bool = True) -> int:
 
         """Return the raw account usage total on one or more clusters
 
@@ -183,7 +182,7 @@ class SlurmAccount:
         """
 
         # Default to all clusters in settings.clusters if not specified as an argument
-        clusters = (cluster, ) or settings.clusters
+        clusters = (cluster,) or settings.clusters
 
         total = 0
         for cluster_name in clusters:
@@ -199,5 +198,5 @@ class SlurmAccount:
         # RawUsage to any value other than zero
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
-        clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        clusters_str = ','.join(settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_str} set RawUsage=0')
