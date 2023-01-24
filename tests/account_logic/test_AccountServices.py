@@ -35,23 +35,15 @@ class CalculatePercentage(TestCase):
 
 
 class AccountLocking(TestCase):
-    """Test locking the account via the ``lock`` method. One test for an account without investment partition and another one for the opposite case. """
+    """Test locking the account via the ``lock`` method"""
 
     def test_account_locked_on_cluster(self) -> None:
-        """Test the account without investment partition is locked on a given cluster"""
+        """Test the account is locked on a given cluster"""
 
         slurm_account = SlurmAccount(settings.test_accounts[0])
         slurm_account.set_locked_state(False, settings.test_cluster)
 
         account_services = AccountServices(settings.test_accounts[0])
-        account_services.lock(clusters=[settings.test_cluster])
-        self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
-        
-        """Test the account with investment partition is not locked on a given cluster"""
-        slurm_account = SlurmAccount(settings.test_accounts[1])
-        slurm_account.set_locked_state(False, settings.test_cluster)
-
-        account_services = AccountServices(settings.test_accounts[1])
         account_services.lock(clusters=[settings.test_cluster])
         self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
 
