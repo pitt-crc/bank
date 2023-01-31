@@ -24,7 +24,7 @@ dependencies = [
     "pandas",
     "prettytable",
     "python-environ",
-    "SQLAlchemy",
+    "SQLAlchemy==1.4.46",
     "sqlalchemy-utils",
     "time-machine",
 ]
