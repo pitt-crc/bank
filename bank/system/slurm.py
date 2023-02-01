@@ -52,6 +52,20 @@ class Slurm:
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
 
+    @staticmethod
+    def partition_names(cluster: str) -> tuple[str]:
+        """Return partition names within cluster configured with Slurm
+        Returns:
+            A tuple of partition names within the cluster specified by cluster
+        """
+
+        cmd = ShellCmd(f'sinfo -M {cluster} -o "%P" --noheader')
+        cmd.raise_if_err()
+
+        partitions = cmd.out.split()
+
+        return partitions
+
 
 class SlurmAccount:
     """Common administrative tasks relating to Slurm user accounts"""
@@ -131,9 +145,10 @@ class SlurmAccount:
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
-        ).raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
+                 f'set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
+                 f'set GrpTresRunMins=gres/gpu={lock_state_int}').raise_if_err()
 
     def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
         """Return the raw account usage per user on a given cluster
@@ -182,7 +197,7 @@ class SlurmAccount:
         """
 
         # Default to all clusters in settings.clusters if not specified as an argument
-        clusters = (cluster,) or settings.clusters
+        clusters = (cluster, ) or settings.clusters
 
         total = 0
         for cluster_name in clusters:
@@ -198,5 +213,6 @@ class SlurmAccount:
         # RawUsage to any value other than zero
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
-        clusters_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_str} set RawUsage=0')
+        clusters_as_str = ','.join(settings.clusters)
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} '
+                 f'set RawUsage=0')

@@ -47,6 +47,17 @@ class AccountLocking(TestCase):
         account_services.lock(clusters=[settings.test_cluster])
         self.assertTrue(slurm_account.get_locked_state(settings.test_cluster))
 
+    @patch.object(Slurm, "partition_names", lambda self: (settings.test_accounts[0],))
+    def test_account_unlocked_on_investment_partition(self) -> None:
+        """Test the account is locked on a given cluster"""
+
+        slurm_account = SlurmAccount(settings.test_accounts[0])
+        slurm_account.set_locked_state(False, settings.test_cluster)
+
+        account_services = AccountServices(settings.test_accounts[0])
+        account_services.lock(clusters=[settings.test_cluster])
+        self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
+
 
 class AccountUnlocking(TestCase):
     """Test unlocking the account"""
