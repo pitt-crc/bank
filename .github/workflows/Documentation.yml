@@ -15,18 +15,14 @@ jobs:
   build:
     name: Build Documentation
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.2.2
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
-      - name: Setup environment
-        run: /usr/local/bin/entrypoint.sh
-
       - name: Checkout source code
         uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
