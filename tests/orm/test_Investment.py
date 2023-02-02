@@ -1,4 +1,7 @@
+"""Tests for the `Investment`` class."""
+
 from datetime import date
+import time_machine
 from unittest import TestCase
 
 from bank.orm import Investment
