@@ -21,6 +21,10 @@ classifiers = [
     "Topic :: System :: Systems Administration",
     "Typing :: Typed"
 ]
+packages = [
+    { include = "bank" },
+    { include = "bank/**/*.py" },
+]
 
 [tool.poetry.dependencies]
 beautifulsoup4 = "4.11.2"
