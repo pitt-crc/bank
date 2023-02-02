@@ -26,14 +26,14 @@ classifiers = [
 beautifulsoup4 = "4.11.2"
 pandas = "1.5.3"
 prettytable = "3.6.0"
-python = ">3.8"
+python = ">3.8, <4.0"
 python-environ = "0.4.54"
 SQLAlchemy = "1.4.46"
 sqlalchemy-utils = "0.39.0"
 time-machine = "2.9.0"
 
 [tool.poetry.group.test.dependencies]
-tests = ["coverage"]
+coverage = "7.1.0"
 
 [tool.poetry.group.docs]
 optional = true
