@@ -29,15 +29,17 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Python
-        run: yum install -y python38
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
       - name: Install Poetry
         uses: Gr1N/setup-poetry@v8
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
 
       - name: Install dependencies
         run: poetry install --with docs
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
 
       - name: Build documentation
         working-directory: docs
