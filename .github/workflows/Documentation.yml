@@ -32,7 +32,9 @@ jobs:
         run: yum install -y python38
 
       - name: Install Poetry
-        run: python3 -m pip install poetry
+        uses: Gr1N/setup-poetry@v8
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
 
       - name: Install dependencies
         run: poetry install --with docs
