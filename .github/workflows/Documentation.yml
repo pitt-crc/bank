@@ -28,9 +28,6 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Install python
-        run: which python3
-
       - name: Install Poetry
         uses: snok/install-poetry@v1.3.3
         with:
