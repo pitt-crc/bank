@@ -16,7 +16,7 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.2.2
+      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.3.2
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -28,21 +28,18 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Fix Python libraries
-        run: yum install -y python38
-
-      - name: Install python for poetry
+      - name: Install python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: '3.8'
 
       - name: Install Poetry
-        uses: Gr1N/setup-poetry@v8
+        uses: snok/install-poetry@v1.3.3
+        with:
+          virtualenvs-create: false
 
       - name: Install dependencies
         run: poetry install --with docs
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
 
       - name: Build documentation
         working-directory: docs
