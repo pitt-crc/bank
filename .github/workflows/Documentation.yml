@@ -29,9 +29,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+        run: yum install -y python38
 
       - name: Install Poetry
         uses: Gr1N/setup-poetry@v8
