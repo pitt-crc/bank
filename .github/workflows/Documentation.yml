@@ -28,8 +28,13 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Fix Python libraries
         run: yum install -y python38
+
+      - name: Install python for poetry
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
 
       - name: Install Poetry
         uses: Gr1N/setup-poetry@v8
