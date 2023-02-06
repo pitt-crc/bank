@@ -1,9 +1,9 @@
-name: Documentation
+name: Build Documentation
 
 on:
+  workflow_dispatch:
+  workflow_call:
   pull_request:
-  push:
-    branches: [ development ]
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
       - name: Setup environment
         run: /usr/local/bin/entrypoint.sh
 
-      - name: Checkout source code
+      - name: Checkout project source
         uses: actions/checkout@v3
 
       - name: Install Poetry
@@ -44,20 +44,3 @@ jobs:
         uses: actions/upload-pages-artifact@v1
         with:
           path: docs/build/html
-
-  deploy:
-    name: Publish Documentation
-    if: github.event_name == 'push'
-    needs: [ build ]
-
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
