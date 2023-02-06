@@ -16,7 +16,7 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.2.2
+      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.3.2
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -28,8 +28,13 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.3.3
+        with:
+          virtualenvs-create: false
+
       - name: Install dependencies
-        run: pip3.9 install .[docs]
+        run: poetry install --with docs
 
       - name: Build documentation
         working-directory: docs
