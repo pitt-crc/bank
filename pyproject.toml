@@ -36,9 +36,6 @@ SQLAlchemy = "1.4.46"
 sqlalchemy-utils = "0.39.0"
 time-machine = "2.9.0"
 
-[tool.poetry.group.test.dependencies]
-coverage = "7.1.0"
-
 [tool.poetry.group.docs]
 optional = true
 
