@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: Build test environment
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           load: true
