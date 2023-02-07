@@ -1,12 +1,18 @@
 """Tests for the `Proposal`` class."""
 
 from datetime import date, timedelta
+import time_machine
 from unittest import TestCase
 
-from bank import settings
-from bank.orm import Allocation, Proposal
-from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, TODAY, TOMORROW, YESTERDAY
+from sqlalchemy import select
 
+from bank import settings
+from bank.orm import Account, Allocation, DBConnection, Proposal
+from tests._utils import account_proposals_query, add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
+
+# Start and End date values to use with time_machine
+start = TODAY
+end = DAY_AFTER_TOMORROW
 
 class PercentNotifiedValidation(TestCase):
     """Test the validation of the ``percent_notified``` column"""
@@ -54,172 +60,513 @@ class EndDateValidation(TestCase):
         self.assertEqual(tomorrow, proposal.end_date)
 
 
-class ExpiredProperty(TestCase):
-    """Test boolean ``is_expired`` property"""
+class ExpiredProperty(EmptyAccountSetup, TestCase):
+    """Test boolean ``is_expired`` hybrid property and it's SQL expression form"""
 
-    def test_current_date_before_range(self) -> None:
-        """Test the proposal is always unexpired before the proposal start
+    def test_is_expired_no_allocations(self) -> None:
+        """ Test ``is_expired`` for various date ranges on a proposal without any allocations
 
-        Before the proposal start date, the proposal should not return as
-        being expired under any circumstances.
+        On start date --> expired
+        Before start date --> not expired
+        After start date --> expired
+        On end date --> expired
+        After end date --> expired
+
         """
 
-        proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
-        self.assertFalse(proposal.is_expired)
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertFalse(proposal.is_expired)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_expired)
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-    def test_current_date_in_range(self) -> None:
-        """Test the proposal is only expired when missing active allocations
+            # On start date -> expired
+            self.assertTrue(proposal.is_expired)
+            self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                       .join(Account)
+                                                       .where(Account.name == settings.test_accounts[0])
+                                                       .where(Proposal.is_expired)).scalars().all())
 
-        When the proposal is within the start/end dates, the proposal should
-        only be expired if there are no available allocations.
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # After start date -> expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+    def test_is_expired_active_allocation(self) -> None:
+        """ Test ``is_expired`` various date ranges for a proposal with an active allocation
+
+        On start date --> not expired
+        Before start date --> not expired
+        After start date --> not expired
+        On end date --> expired
+        After end date --> expired
+
         """
 
-        proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
-        self.assertTrue(proposal.is_expired)
-
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        self.assertFalse(proposal.is_expired)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
 
-    def test_current_date_after_range(self) -> None:
-        """Test the proposal is always expired after the proposal date range
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-        The proposal should always return as being expired after the end date
-        has passed, no matter the status of associated allocations.
+            # On start date -> not expired
+            self.assertFalse(proposal.is_expired)
+            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                          .join(Account)
+                                                          .where(Account.name == settings.test_accounts[0])
+                                                          .where(Proposal.is_expired)).scalars().all())
+
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_expired)).scalars().all())
+
+            # After start date -> not expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_expired)).scalars().all())
+
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+    def test_is_expired_mixed_allocations(self) -> None:
+        """ Test ``is_expired`` for various date ranges on a proposal with an active allocation and an
+        exhausted allocation
+
+        On start date --> not expired
+        Before start date --> not expired
+        After start date --> not expired
+        On end date -->  expired
+        After end date --> expired
+
         """
 
-        proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
-        self.assertTrue(proposal.is_expired)
-
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        self.assertTrue(proposal.is_expired)
-
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
-
-    def test_current_date_at_start(self) -> None:
-        """Test the proposal is unexpired on the start date"""
-
-        proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
-        self.assertTrue(proposal.is_expired)
-
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
+                                               service_units_used=10_000,
                                                service_units_total=10_000))
-        self.assertFalse(proposal.is_expired)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
 
-    def test_current_date_at_end(self) -> None:
-        """Test the proposal is expired on the end date"""
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-        proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
-        self.assertTrue(proposal.is_expired)
+            # On start date -> not expired
+            self.assertFalse(proposal.is_expired)
+            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                          .join(Account)
+                                                          .where(Account.name == settings.test_accounts[0])
+                                                          .where(Proposal.is_expired)).scalars().all())
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertTrue(proposal.is_expired)
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_expired)).scalars().all())
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertTrue(proposal.is_expired)
+            # After start date -> not expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_expired)).scalars().all())
 
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
 
-class ActiveProperty(TestCase):
-    """Test the boolean ``is_active`` property"""
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
 
-    def test_current_date_before_range(self) -> None:
-        """Test the proposal is not active before the start date
+    def test_is_expired_exhausted_allocations(self) -> None:
+        """ Test ``is_expired`` for various date ranges on a proposal with exhausted allocations
 
-        Before the start date, the proposal should not be active, even if
-        there is an associated allocation.
+        On start date --> expired
+        Before start date --> not expired
+        After start date --> expired
+        On end date --> expired
+        After end date --> expired
+
         """
 
-        proposal = Proposal(start_date=TOMORROW, end_date=DAY_AFTER_TOMORROW)
-        self.assertFalse(proposal.is_active, 'Proposal is active despite missing allocation')
-
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
+                                               service_units_used=10_000,
                                                service_units_total=10_000))
-        self.assertFalse(proposal.is_active)
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=10_000,
+                                               service_units_total=10_000))
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_active)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
 
-    def test_current_date_in_range(self) -> None:
-        """Test the proposal is active during the proposal date range
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-        Proposals within the start/end dates should be active if they have
-        unexpired allocations.
+            # On start date -> expired
+            self.assertTrue(proposal.is_expired)
+            self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                       .join(Account)
+                                                       .where(Account.name == settings.test_accounts[0])
+                                                       .where(Proposal.is_expired)).scalars().all())
+
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_expired)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_expired)).scalars().all())
+
+            # After start date -> expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(proposal.is_expired)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_expired)).scalars().all())
+
+
+class ActiveProperty(EmptyAccountSetup, TestCase):
+    """Test the boolean ``is_active`` hybrid property and it's SQL expression form"""
+
+    def test_is_active_no_allocations(self) -> None:
+        """ Test ``is_active`` for various date ranges on a proposal without any allocations
+
+        On start date --> not active
+        Before start date --> not active
+        After start date --> not active
+        On end date --> not active
+        After end date --> not active
+
         """
 
-        proposal = Proposal(start_date=YESTERDAY, end_date=TOMORROW)
-        self.assertFalse(proposal.is_active)
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
-                                               service_units_total=10_000))
-        self.assertTrue(proposal.is_active)
+        # Test is_active on various dates
+        with DBConnection.session() as session:
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_active)
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-    def test_current_date_after_range(self) -> None:
-        """Test the proposal is not active after the end date
+            # On start date
+            self.assertFalse(proposal.is_active)
+            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                          .join(Account)
+                                                          .where(Account.name == settings.test_accounts[0])
+                                                          .where(Proposal.is_active)).scalars().all())
 
-        A proposal should never return as active after the end date.
+            # Before start date
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After start date
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # On End date
+            with time_machine.travel(end):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After End date
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+    def test_is_active_active_allocation(self) -> None:
+        """ Test ``is_active`` for various date ranges on a proposal with an active allocation
+
+        On start date --> active
+        Before start date --> not active
+        After start date --> active
+        On end date --> not active
+        After end date --> not active
+
         """
 
-        proposal = Proposal(start_date=DAY_BEFORE_YESTERDAY, end_date=YESTERDAY)
-        self.assertFalse(proposal.is_active)
-
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        self.assertFalse(proposal.is_active)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_active)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
 
-    def test_current_date_at_start(self) -> None:
-        """Test the proposal is active on the start date"""
+            proposal = session.execute(account_proposals_query).scalars().first()
 
-        proposal = Proposal(start_date=TODAY, end_date=TOMORROW)
-        self.assertFalse(proposal.is_active)
+            # On start date
+            self.assertTrue(proposal.is_active)
+            self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                       .join(Account)
+                                                       .where(Account.name == settings.test_accounts[0])
+                                                       .where(Proposal.is_active)).scalars().all())
 
+            # Before start date
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After start date
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(proposal.is_active)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_active)).scalars().all())
+
+            # On End date
+            with time_machine.travel(end):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After End date
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+    def test_is_active_mixed_allocations(self) -> None:
+        """ Test ``is_active`` for various date ranges on a proposal with an active allocation
+        and an exhausted allocation
+
+        On start date --> active
+        Before start date --> not active
+        After start date --> active
+        On end date --> not active
+        After end date --> not active
+
+        """
+
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        self.assertTrue(proposal.is_active)
-
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_active)
-
-    def test_current_date_at_end(self) -> None:
-        """Test the proposal is not active on the end date"""
-
-        proposal = Proposal(start_date=YESTERDAY, end_date=TODAY)
-        self.assertFalse(proposal.is_active)
-
         proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
-                                               service_units_used=0,
+                                               service_units_used=10_000,
                                                service_units_total=10_000))
-        self.assertFalse(proposal.is_active)
+        add_proposal_to_test_account(proposal)
 
-        proposal.allocations[0].service_units_used = proposal.allocations[0].service_units_total
-        self.assertFalse(proposal.is_active)
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
+
+            proposal = session.execute(account_proposals_query).scalars().first()
+
+            # On start date
+            self.assertTrue(proposal.is_active)
+            self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                       .join(Account)
+                                                       .where(Account.name == settings.test_accounts[0])
+                                                       .where(Proposal.is_active)).scalars().all())
+
+            # Before start date
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After start date
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(proposal.is_active)
+                self.assertIn(proposal.id, session.execute(select(Proposal.id)
+                                                           .join(Account)
+                                                           .where(Account.name == settings.test_accounts[0])
+                                                           .where(Proposal.is_active)).scalars().all())
+
+            # On End date
+            with time_machine.travel(end):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After End date
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+    def test_is_active_exhausted_allocations(self) -> None:
+        """ Test ``is_active`` for various date ranges on a proposal with exhausted allocations
+
+        On start date --> not active
+        Before start date --> not active
+        After start date --> not active
+        On end date --> not active
+        After end date --> not active
+
+        """
+
+        # Create Proposal and add it to DB
+        proposal = Proposal(start_date=start, end_date=end)
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=10_000,
+                                               service_units_total=10_000))
+        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+                                               service_units_used=10_000,
+                                               service_units_total=10_000))
+        add_proposal_to_test_account(proposal)
+
+        # Test is_exhausted on various dates
+        with DBConnection.session() as session:
+
+            proposal = session.execute(account_proposals_query).scalars().first()
+
+            # On start date
+            self.assertFalse(proposal.is_active)
+            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                          .join(Account)
+                                                          .where(Account.name == settings.test_accounts[0])
+                                                          .where(Proposal.is_active)).scalars().all())
+
+            # Before start date
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After start date
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())
+
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(proposal.is_active)
+                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
+                                                              .join(Account)
+                                                              .where(Account.name == settings.test_accounts[0])
+                                                              .where(Proposal.is_active)).scalars().all())

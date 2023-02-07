@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import and_, Column, Date, ForeignKey, Integer, MetaData, not_, String, create_engine, select
+from sqlalchemy import and_, Column, Date, ForeignKey, func, Integer, MetaData, not_, or_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased, declarative_base, relationship, sessionmaker, validates
@@ -132,12 +132,14 @@ class Proposal(Base):
         """SQL expression form of Proposal `is_expired` functionality"""
 
         today = date.today()
-        subquery = select(Proposal.id).join(Allocation) \
-            .where(Proposal.start_date < today) \
-            .where(Proposal.end_date >= today) \
-            .where(Allocation.is_exhausted)
 
-        return cls.id.in_(subquery)
+        # Proposal does not have any active allocations
+        subquery = select(Proposal.id).outerjoin(Allocation) \
+            .where(Allocation.proposal_id == cls.id) \
+            .where(not_(Allocation.is_exhausted)) \
+            .where(today < Proposal.end_date)
+
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(subquery)))
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -145,7 +147,8 @@ class Proposal(Base):
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = not all(alloc.is_exhausted for alloc in self.allocations)
+        has_allocations = any(not alloc.is_exhausted for alloc in self.allocations)
+
         return in_date_range and has_allocations
 
     @is_active.expression
@@ -153,10 +156,12 @@ class Proposal(Base):
         """SQL expression form of Proposal `is_active` functionality"""
 
         today = date.today()
+
         aliasAllocation = aliased(Allocation)
         subquery = select(aliasAllocation.id) \
             .where(aliasAllocation.id == cls.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date))
+            .where(and_(today >= cls.start_date, today < cls.end_date)) \
+            .where(not_(Allocation.is_exhausted))
 
         return cls.id.in_(subquery)
 
@@ -164,7 +169,7 @@ class Proposal(Base):
 class Allocation(Base):
     """Service unit allocations on individual clusters
 
-    Values for the ``final_usage`` column may exceed the ``service_units``
+    Values for the ``service_units_used`` column may exceed the ``service_units_total``
     column in situations where system administrators have bypassed the banking
     system and manually enabled continued usage of a cluster after an allocation
     has run out.
@@ -175,7 +180,6 @@ class Allocation(Base):
       - cluster_name         (String): Name of the allocated cluster
       - service_units_total (Integer): Number of allocated service units
       - service_units_used  (Integer): Number of used service units
-      - final_usage         (Integer): Total service units utilized at proposal expiration
 
     Relationships:
       - proposal           (Proposal): Many to one
@@ -324,7 +328,7 @@ class Investment(Base):
         #TODO Implement and test
         past_end = cls.end_date <= date.today()
         spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return  past_end | spent_service_units
+        return past_end | spent_service_units
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -333,7 +337,7 @@ class Investment(Base):
         today = date.today()
         in_date_range = (self.start_date <= today) & (today < self.end_date)
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
-        return in_date_range & has_service_units
+        return in_date_range and has_service_units
 
     @is_active.expression
     def is_active(cls) -> bool:

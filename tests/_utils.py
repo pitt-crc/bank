@@ -11,6 +11,27 @@ YESTERDAY = TODAY - timedelta(days=1)
 DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
+account_proposals_query = select(Proposal) \
+                 .join(Account) \
+                 .where(Account.name == settings.test_accounts[0])
+
+active_proposal_query = select(Proposal).join(Account) \
+    .where(Account.name == settings.test_accounts[0]) \
+    .where(Proposal.is_active)
+
+active_investment_query = select(Investment).join(Account) \
+    .where(Account.name == settings.test_accounts[0]) \
+    .where(Investment.is_active)
+
+
+def add_proposal_to_test_account(proposal: Proposal) -> None:
+    """Add a Proposal to the test account and commit the addition to the database """
+
+    with DBConnection.session() as session:
+        account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+        account.proposals.extend([proposal])
+        session.commit()
+
 
 class EmptyAccountSetup:
     """Base class used to delete database entries before running tests"""
@@ -45,11 +66,19 @@ class ProposalSetup(EmptyAccountSetup):
         super().setUp()
 
         proposals = []
-        for i in range(3):
+
+        # Add proposal with the following date ranges:
+        # 2 years ago today - 1 year ago today
+        # 1 year ago today - today
+        # today - 1 year from today
+        # 1 year from today - 2 years from today
+        for i in range(-1, 2):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
 
-            allocations = [Allocation(cluster_name=settings.test_cluster, service_units_used=0, service_units_total=self.num_proposal_sus)]
+            allocations = [Allocation(cluster_name=settings.test_cluster,
+                                      service_units_used=0,
+                                      service_units_total=self.num_proposal_sus)]
             proposal = Proposal(
                 allocations=allocations,
                 start_date=start,
@@ -58,11 +87,7 @@ class ProposalSetup(EmptyAccountSetup):
 
             proposals.append(proposal)
 
-        with DBConnection.session() as session:
-            account = session.execute(select(Account)
-                                      .where(Account.name == settings.test_accounts[0])).scalars().first()
-            account.proposals.extend(proposals)
-            session.commit()
+        add_proposal_to_test_account(proposal)
 
 
 class InvestmentSetup(EmptyAccountSetup):
