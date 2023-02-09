@@ -13,6 +13,7 @@ jobs:
       matrix:
         slurm:
           - slurm-20-02-5-1
+          - slurm-20-11-9-1
           - slurm-22-05-2-1
         python:
           - 3.8
@@ -33,7 +34,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: Build test environment
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           load: true
