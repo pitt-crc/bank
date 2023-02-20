@@ -32,7 +32,7 @@ pandas = "1.5.3"
 prettytable = "3.6.0"
 python = ">=3.8, <4.0"
 python-environ = "0.4.54"
-SQLAlchemy = "1.4.46"
+SQLAlchemy = "2.0.4"
 sqlalchemy-utils = "0.40.0"
 time-machine = "2.9.0"
 
