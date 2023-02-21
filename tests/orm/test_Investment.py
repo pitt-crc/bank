@@ -5,8 +5,11 @@ import time_machine
 from unittest import TestCase
 
 from bank.orm import Investment
-from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, TODAY, TOMORROW, YESTERDAY
+from tests._utils import add_investment_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY, TOMORROW, YESTERDAY
 
+# Start and End date values to use with time_machine
+start = TODAY
+end = DAY_AFTER_TOMORROW
 
 def create_investment(
         start_date=YESTERDAY,
@@ -89,8 +92,25 @@ class InvestmentStatus(TestCase):
         self.assertFalse(record.is_active)
 
 
-class IsExpiredProperty(TestCase):
+
+
+class ExpiredProperty(EmptyAccountSetup, TestCase):
     """Tests for the ``is_expired`` property"""
+
+    def test_is_expired_no_investment_sus:
+        """ Test ``is_expired`` for various date ranges on an investment without any service units remaining"""
+
+        #Create the Investment and add it to the DB
+        investment = create_investment(start_date=start,end_date=end)
+        investment.current_sus = investment.service_units
+        add_investment_to_test_account(investment)
+
+    def test_is_expired_has_investment_sus:
+        """ Test ``is_expired`` for various date ranges on an investment with service units remaining"""
+
+        investment = create_investment(start_date=start, end_date=end)
+        investment.current_sus = investment.service_units
+
 
     def test_not_expired_with_sus_and_in_range(self):
         """Test valid investments are not marked"""
@@ -112,3 +132,5 @@ class IsExpiredProperty(TestCase):
         investment.current_sus = 0
         investment.withdrawn_sus = investment.service_units
         self.assertTrue(investment.is_expired)
+
+class ActiveProperty(EmptyAccountSetup, TestCase):
