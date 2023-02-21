@@ -33,6 +33,15 @@ def add_proposal_to_test_account(proposal: Proposal) -> None:
         session.commit()
 
 
+def add_investment_to_test_account(investment: Investment) -> None:
+    """Add an Investment to the test account and commit the addition to the database """
+
+    with DBConnection.session() as session:
+        account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+        account.investments.extend([investment])
+        session.commit()
+
+
 class EmptyAccountSetup:
     """Base class used to delete database entries before running tests"""
 
