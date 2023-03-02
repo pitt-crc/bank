@@ -603,7 +603,7 @@ elif args["renewal"]:
                 if need_to_rollover > 0:
                     to_withdraw = (
                         investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
-                    ) // utils.years_left(investor_row["end_date"])
+                    ) // (utils.years_left(investor_row["end_date"]) or 1)
                     to_rollover = int(
                         investor_row[f"current_sus"]
                         if investor_row[f"current_sus"] < need_to_rollover
