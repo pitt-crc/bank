@@ -44,5 +44,5 @@ sphinx = "<6.0.0"
 sphinx-argparse = "0.4.0"
 sphinx_autodoc_typehints = "1.22"
 sphinx-copybutton = "0.5.1"
-sphinx-rtd-theme = "1.1.1"
+sphinx-rtd-theme = "1.2.0"
 
