@@ -601,9 +601,10 @@ elif args["renewal"]:
             investor_rows = investor_table.find(account=args["<account>"])
             for investor_row in investor_rows:
                 if need_to_rollover > 0:
+                    # Divide by 1 if years left is less than 1 to prevent division by 0
                     to_withdraw = (
                         investor_row[f"service_units"] - investor_row[f"withdrawn_sus"]
-                    ) // utils.years_left(investor_row["end_date"])
+                    ) // (utils.years_left(investor_row["end_date"]) or 1)
                     to_rollover = int(
                         investor_row[f"current_sus"]
                         if investor_row[f"current_sus"] < need_to_rollover
