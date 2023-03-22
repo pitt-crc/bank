@@ -79,26 +79,25 @@ def upgrade():
         op.drop_table(table)
 
     # Create Account Table
-    op.create_table(
+    account_table = op.create_table(
         'account',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('name', sa.String, nullable=False, unique=True)
     )
 
-    # Exclusive OR account names from investment/proposal tables to populate account table
-    # TODO: look into sqlalchemy representation of this?
+    # Populate account table with all distinct account names from investment/proposal tables
     conn.execute("INSERT INTO account (name) "
-                 "SELECT DISTINCT _proposal_old.account "
+                 "SELECT account FROM"
+                 "(SELECT DISTINCT _proposal_old.account "
                  "FROM _proposal_old "
-                 "LEFT JOIN _investment_old ON _proposal_old.account = _investment_old.account "
-                 "WHERE _investment_old.account IS NULL "
-                 "UNION ALL "
+                 "UNION "
                  "SELECT DISTINCT _investment_old.account "
-                 "FROM _investment_old "
-                 "LEFT JOIN _proposal_old ON _proposal_old.account=_investment_old.account "
-                 "WHERE _proposal_old.account IS NULL")
+                 "FROM _investment_old)")
 
-    # Create Proposal Table
+    # TODO: look into sqlalchemy representation of this?
+    # account_table.insert(sa.union(sa.distinct())
+
+    # Create proposal table with new schema and account id foreign key
     proposal_table = op.create_table(
         'proposal',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
@@ -118,7 +117,7 @@ def upgrade():
         sa.Column('service_units_used', sa.Integer, nullable=False, default=0)
     )
 
-    # Create Investment Table
+    # Create investment table with new schema and account id foreign key
     investment_table = op.create_table(
         'investment',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
