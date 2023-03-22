@@ -16,24 +16,6 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-
-def print_tables(connection):
-    metadata = sa.MetaData()
-    metadata.reflect(connection.engine)
-    insp = sa.inspect(connection.engine)
-    for table_name in metadata.tables:
-        print(f'\n{table_name} -------------------------')
-        for column in insp.get_columns(table_name):
-            for name, value in column.items():
-                print('  ', end='')
-                if value:
-                    field = name if value in [True, 'auto'] else value
-                    print(field, end=' ')
-            print()
-
-    print("\n.\n.\n.\n")
-
-
 def upgrade():
     """Upgrade the database schema to the next version"""
 
