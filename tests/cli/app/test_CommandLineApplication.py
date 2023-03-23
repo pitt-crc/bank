@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from bank.cli import CommandLineApplication
+from bank.cli.app import CommandLineApplication
 
 
 class HasSubparsers(TestCase):

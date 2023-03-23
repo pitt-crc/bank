@@ -7,7 +7,7 @@ API Reference
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict
+from typing import Dict, Optional, Union, Collection, Set
 
 from bank import settings
 from bank.exceptions import *
@@ -26,7 +26,7 @@ class Slurm:
         LOG.debug('Checking for Slurm installation')
 
         try:
-            cmd = ShellCmd('sacctmgr -V')
+            cmd = ShellCmd('sacctmgr --version')
             cmd.raise_if_err()
 
         # We catch all exceptions, but explicitly list the common cases for reference
@@ -34,24 +34,37 @@ class Slurm:
             LOG.debug('Slurm is not installed.')
             return False
 
-        version = cmd.out.lstrip('slurm ')
-        LOG.debug(f'Found Slurm version {version}')
+        LOG.debug(f'Found Slurm version "{cmd.out}"')
         return True
 
     @classmethod
-    def cluster_names(cls) -> tuple[str]:
+    def cluster_names(cls) -> Set[str]:
         """Return cluster names configured with Slurm
 
         Returns:
             A tuple of cluster names
         """
 
-        cmd = ShellCmd('sacctmgr show clusters format=Cluster  --noheader --parsable2')
+        cmd = ShellCmd('sacctmgr show clusters format=Cluster --noheader --parsable2')
         cmd.raise_if_err()
 
-        clusters = cmd.out.split()
+        clusters = set(cmd.out.split())
         LOG.debug(f'Found Slurm clusters {clusters}')
         return clusters
+
+    @staticmethod
+    def partition_names(cluster: str) -> tuple[str]:
+        """Return partition names within cluster configured with Slurm
+        Returns:
+            A tuple of partition names within the cluster specified by cluster
+        """
+
+        cmd = ShellCmd(f'sinfo -M {cluster} -o "%P" --noheader')
+        cmd.raise_if_err()
+
+        partitions = cmd.out.split()
+
+        return partitions
 
 
 class SlurmAccount:
@@ -65,7 +78,7 @@ class SlurmAccount:
 
         Raises:
             SystemError: If the ``sacctmgr`` utility is not installed
-            SlurmAccountNotFoundError: If an account with the given name does not exist
+            AccountNotFoundError: If an account with the given name does not exist
         """
 
         self._account = account_name
@@ -74,8 +87,8 @@ class SlurmAccount:
             raise SystemError('The Slurm ``sacctmgr`` utility is not installed.')
 
         if not self.check_account_exists(account_name):
-            LOG.error(f'SlurmAccountNotFoundError: Could not instantiate SlurmAccount for username {account_name}. No account exists.')
-            raise SlurmAccountNotFoundError(f'No Slurm account for username {account_name}')
+            LOG.error(f'AccountNotFoundError: No Slurm account for username {account_name}.')
+            raise AccountNotFoundError(f'No Slurm account for username {account_name}')
 
     @property
     def account_name(self) -> str:
@@ -104,14 +117,14 @@ class SlurmAccount:
             cluster: Name of the cluster to get the lock state for
 
         Returns:
-            Whether the user is locked out from ANY of the given clusters
+            Whether the user is locked out on ANY of the given clusters
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
         if cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=GrpTresRunMins clusters={cluster}'
         return 'cpu=0' in ShellCmd(cmd).out
@@ -124,20 +137,21 @@ class SlurmAccount:
             cluster: Name of the cluster to get the lock state for. Defaults to all clusters.
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
         LOG.info(f'Updating lock state for Slurm account {self.account_name} to {lock_state}')
         if cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
-        ShellCmd(
-            f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=cpu={lock_state_int}'
-        ).raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
+                 f'set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
+                 f'set GrpTresRunMins=gres/gpu={lock_state_int}').raise_if_err()
 
-    def get_cluster_usage(self, cluster: str, in_hours: bool = False) -> Dict[str, int]:
-        """Return the raw account usage on a given cluster
+    def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
+        """Return the raw account usage per user on a given cluster
 
         Args:
             cluster: The name of the cluster
@@ -147,11 +161,11 @@ class SlurmAccount:
             A dictionary with the number of service units used by each user in the account
 
         Raises:
-            SlurmClusterNotFoundError: If the given slurm cluster does not exist
+            ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
-        if cluster and cluster not in Slurm.cluster_names():
-            raise SlurmClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
+        if cluster not in Slurm.cluster_names():
+            raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
         header, *data = cmd.out.split('\n')[1:]
@@ -161,26 +175,34 @@ class SlurmAccount:
             user, usage = line.split('|')
             usage = int(usage)
             if in_hours:  # Convert from seconds to hours
-                usage //= 60
+                usage //= 3600
 
             out_data[user] = usage
 
         return out_data
 
-    def get_total_usage(self, in_hours: bool = True) -> int:
-        """Return the raw account usage across all clusters
+    def get_cluster_usage_total(
+        self,
+        cluster: Optional[Union[str, Collection[str]]] = None,
+        in_hours: bool = True) -> int:
+
+        """Return the raw account usage total on one or more clusters
 
         Args:
-            in_hours: Return usage in units of hours instead of seconds
+            cluster: A string (or list of strings) of clusters to display compute a total for, default is all clusters
+            in_hours: Boolean to return usage in units of hours instead of seconds
 
         Returns:
-            The account's usage of the given cluster
+            The account's total usage across all of its users, across all clusters provided
         """
 
+        # Default to all clusters in settings.clusters if not specified as an argument
+        clusters = (cluster, ) or settings.clusters
+
         total = 0
-        for cluster in settings.clusters:
-            user_usage = self.get_cluster_usage(cluster, in_hours)
-            total + sum(user_usage.values())
+        for cluster_name in clusters:
+            user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
+            total += sum(user_usage.values())
 
         return total
 
@@ -192,4 +214,5 @@ class SlurmAccount:
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
         clusters_as_str = ','.join(settings.clusters)
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} set RawUsage=0')
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} '
+                 f'set RawUsage=0')
