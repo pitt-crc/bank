@@ -10,9 +10,9 @@ from datetime import datetime
 from typing import List, Tuple
 
 from .types import Date, NonNegativeInt
-from .. import settings
-from ..account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
-from ..system import Slurm
+from bank import settings
+from bank.account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
+from bank.system import Slurm
 
 
 class BaseParser(ArgumentParser):
