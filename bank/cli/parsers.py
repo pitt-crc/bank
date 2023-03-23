@@ -9,10 +9,10 @@ from argparse import ArgumentParser, Namespace, _SubParsersAction
 from datetime import datetime
 from typing import List, Tuple
 
-from .types import Date, NonNegativeInt
 from bank import settings
 from bank.account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
 from bank.system import Slurm
+from .types import Date, NonNegativeInt
 
 
 class BaseParser(ArgumentParser):
