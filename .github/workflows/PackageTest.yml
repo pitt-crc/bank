@@ -19,47 +19,33 @@ jobs:
           - 3.8
           - 3.9
 
+    container:
+      image: ghcr.io/pitt-crc/test-env-${{ matrix.slurm }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Setup environment
+        run: /usr/local/bin/entrypoint.sh
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout source code
+        uses: actions/checkout@v3
 
-      - name: Checkout source
-        uses: actions/checkout@master
-
-      - name: Build test environment
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          load: true
-          tags: py-${{ matrix.python }}-${{ matrix.slurm }}
-          build-args: SLURM_TAG=${{ matrix.slurm }}
+      - name: Install dependencies
+        run: pip${{ matrix.python }} install .[tests]
 
       - name: Run tests
-        uses: addnab/docker-run-action@v3
-        with:
-          image: py-${{ matrix.python }}-${{ matrix.slurm }}
-          options: -v ${{ github.workspace }}:/app
-          run: |
-            bash /usr/local/bin/entrypoint.sh
-
-            # Run tests with coverage and catch the exit status
-            coverage-${{ matrix.python }} run -m unittest discover /app
-            status=$?
-
-            coverage-${{ matrix.python }} report --include="/app/bank/*"
-            coverage-${{ matrix.python }} xml --include="/app/bank/*" -o app/coverage.xml
-            exit $status  # Exit with the appropriate status
+        run: |
+          # Run tests with coverage and catch the exit status
+          coverage-${{ matrix.python }} run -m unittest discover bank
+          coverage-${{ matrix.python }} report --include="bank/*"
+          coverage-${{ matrix.python }} xml --include="bank/*" -o report.xml
 
       # Report test coverage to codacy for the python version being tested
       - name: Report partial coverage results
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r coverage.xml
+        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r report.xml
+        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
@@ -72,5 +58,6 @@ jobs:
       # Tell codacy we are done reporting test coverage
       - name: Finish reporting coverage
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
+        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
