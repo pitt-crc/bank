@@ -1,5 +1,5 @@
-ARG SLURM_TAG
-FROM ghcr.io/pitt-crc/test-env-$SLURM_TAG
+ARG SLURM_VERSION
+FROM ghcr.io/pitt-crc/test-env:$SLURM_VERSION
 
 # Include all core dependencies plus extras
 COPY . /src

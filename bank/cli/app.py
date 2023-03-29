@@ -4,8 +4,9 @@ the application from the commandline.
 
 from typing import Type
 
+from bank import __version__
 from .parsers import AdminParser, AccountParser, ProposalParser, InvestmentParser, BaseParser
-from .. import __version__
+
 
 
 class CommandLineApplication:
