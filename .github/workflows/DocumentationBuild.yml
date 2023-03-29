@@ -16,7 +16,7 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pitt-crc/test-env:latest
+      image: ghcr.io/pitt-crc/test-env:22.05.2.1
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
