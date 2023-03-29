@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slurm-version:
+        slurm_version:
           - 20.02.5.1
           - 20.11.9.1
           - 22.05.2.1
@@ -20,7 +20,7 @@ jobs:
           - 3.9
 
     container:
-      image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm }}
+      image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm_version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
