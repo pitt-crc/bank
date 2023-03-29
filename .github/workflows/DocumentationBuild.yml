@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pitt-crc/test-env:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Setup environment

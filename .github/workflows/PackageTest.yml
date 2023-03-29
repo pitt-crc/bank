@@ -21,6 +21,9 @@ jobs:
 
     container:
       image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm_version }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Setup environment
