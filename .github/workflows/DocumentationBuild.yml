@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  packages: read
+  packages: write
   pages: write
   id-token: write
 
@@ -16,7 +16,7 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pitt-crc/test-env-slurm-22-05-2-1:v0.3.2
+      image: ghcr.io/pitt-crc/test-env:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

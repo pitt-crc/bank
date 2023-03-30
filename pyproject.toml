@@ -33,7 +33,7 @@ prettytable = "3.6.0"
 python = ">=3.8, <4.0"
 python-environ = "0.4.54"
 SQLAlchemy = "1.4.46"
-sqlalchemy-utils = "0.39.0"
+sqlalchemy-utils = "0.40.0"
 time-machine = "2.9.0"
 
 [tool.poetry.group.docs]
@@ -42,7 +42,7 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 sphinx = "<6.0.0"
 sphinx-argparse = "0.4.0"
-sphinx_autodoc_typehints = "1.20.1"
+sphinx_autodoc_typehints = "1.22"
 sphinx-copybutton = "0.5.1"
-sphinx-rtd-theme = "1.1.1"
+sphinx-rtd-theme = "1.2.0"
 
