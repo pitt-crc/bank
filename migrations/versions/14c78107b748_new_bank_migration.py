@@ -21,11 +21,6 @@ def upgrade():
 
     conn = op.get_bind()
 
-    # TODO: these already exist in this context?
-    op.drop_table('account')
-    op.drop_table('investment')
-    op.drop_table('allocation')
-
     # Concatenate tables with their archives
     # proposal + proposal_archive -> _proposal_old
     conn.execute("INSERT INTO proposal (start_date, end_date, smp, mpi, htc, gpu, account) "
