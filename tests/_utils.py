@@ -15,6 +15,10 @@ account_proposals_query = select(Proposal) \
                  .join(Account) \
                  .where(Account.name == settings.test_accounts[0])
 
+account_investments_query = select(Investment) \
+                            .join(Account) \
+                            .where(Account.name == settings.test_accounts[0])
+
 active_proposal_query = select(Proposal).join(Account) \
     .where(Account.name == settings.test_accounts[0]) \
     .where(Proposal.is_active)
