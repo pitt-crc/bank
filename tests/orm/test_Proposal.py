@@ -14,6 +14,7 @@ from tests._utils import account_proposals_query, add_proposal_to_test_account, 
 start = TODAY
 end = DAY_AFTER_TOMORROW
 
+
 class PercentNotifiedValidation(TestCase):
     """Test the validation of the ``percent_notified``` column"""
 
