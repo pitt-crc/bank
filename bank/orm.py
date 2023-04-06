@@ -266,10 +266,10 @@ class Investment(Base):
     account_id = Column(Integer, ForeignKey(Account.id))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    service_units = Column(Integer, nullable=False)  # Initial allocation of service units
-    rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
-    withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
-    current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
+    service_units = Column(Integer, nullable=False)
+    rollover_sus = Column(Integer, nullable=False, default=0)
+    withdrawn_sus = Column(Integer, nullable=False, default=0)
+    current_sus = Column(Integer, nullable=False, default=0)
 
     account = relationship('Account', back_populates='investments')
 
