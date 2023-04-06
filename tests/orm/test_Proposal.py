@@ -62,7 +62,7 @@ class EndDateValidation(TestCase):
 
 
 class ExpiredProperty(EmptyAccountSetup, TestCase):
-    """Test boolean ``is_expired`` hybrid property and it's SQL expression form"""
+    """Test boolean ``is_expired`` hybrid property, and it's SQL expression form"""
 
     def test_is_expired_no_allocations(self) -> None:
         """ Test ``is_expired`` for various date ranges on a proposal without any allocations
@@ -79,7 +79,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         proposal = Proposal(start_date=start, end_date=end)
         add_proposal_to_test_account(proposal)
 
-        # Test is_exhausted on various dates
+        # Test is_expired on various dates
         with DBConnection.session() as session:
 
             proposal = session.execute(account_proposals_query).scalars().first()
@@ -318,7 +318,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
 
 class ActiveProperty(EmptyAccountSetup, TestCase):
-    """Test the boolean ``is_active`` hybrid property and it's SQL expression form"""
+    """Test the boolean ``is_active`` hybrid property, and it's SQL expression form"""
 
     def test_is_active_no_allocations(self) -> None:
         """ Test ``is_active`` for various date ranges on a proposal without any allocations
