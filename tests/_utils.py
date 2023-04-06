@@ -12,20 +12,42 @@ DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
 account_proposals_query = select(Proposal) \
-                 .join(Account) \
-                 .where(Account.name == settings.test_accounts[0])
+                          .join(Account) \
+                          .where(Account.name == settings.test_accounts[0])
 
 account_investments_query = select(Investment) \
                             .join(Account) \
                             .where(Account.name == settings.test_accounts[0])
 
-active_proposal_query = select(Proposal).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Proposal.is_active)
+active_proposal_query = select(Proposal) \
+                        .join(Account) \
+                        .where(Account.name == settings.test_accounts[0]) \
+                        .where(Proposal.is_active)
 
-active_investment_query = select(Investment).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Investment.is_active)
+expired_proposal_ids_query = select(Proposal.id) \
+                             .join(Account) \
+                             .where(Account.name == settings.test_accounts[0]) \
+                             .where(Proposal.is_expired)
+
+active_proposal_ids_query = select(Proposal.id) \
+                             .join(Account) \
+                             .where(Account.name == settings.test_accounts[0]) \
+                             .where(Proposal.is_active)
+
+active_investment_query = select(Investment) \
+                          .join(Account) \
+                          .where(Account.name == settings.test_accounts[0]) \
+                          .where(Investment.is_active)
+
+expired_investment_ids_query = select(Investment.id) \
+                               .join(Account) \
+                               .where(Account.name == settings.test_accounts[0]) \
+                               .where(Investment.is_expired)
+
+active_investment_ids_query = select(Investment.id) \
+                               .join(Account) \
+                               .where(Account.name == settings.test_accounts[0]) \
+                               .where(Investment.is_active)
 
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
