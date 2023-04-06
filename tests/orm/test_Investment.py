@@ -1,6 +1,6 @@
 """Tests for the `Investment`` class."""
 
-from datetime import date
+from datetime import date, timedelta
 import time_machine
 from unittest import TestCase
 
@@ -16,8 +16,8 @@ end = DAY_AFTER_TOMORROW
 
 
 def create_investment(
-        start_date=TODAY-1,
-        end_date=TODAY+1,
+        start_date=TODAY - timedelta(days=1),
+        end_date=TODAY + timedelta(days=1),
         service_units=10_000,
         current_sus=5_000,
         withdrawn_sus=1_000,
@@ -62,99 +62,268 @@ class ServiceUnitsValidation(TestCase):
         self.assertEqual(num_sus, investment.service_units)
 
 
-class InvestmentStatus(TestCase):
-    """Tests for the determination of a DB proposal/investment being active"""
+class EndDateValidation(TestCase):
+    """Test the validation of the ``end_date``` column"""
 
-    def test_current_date_before_range(self) -> None:
-        """Test the record is inactive and unexpired before the record date range"""
+    def test_error_before_start_date(self) -> None:
+        """Test for a ``ValueError`` when the end date is before the start date"""
 
-        record = create_investment(start_date=TODAY+1, end_date=DAY_AFTER_TOMORROW)
-        self.assertFalse(record.is_active)
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        with self.assertRaisesRegex(ValueError, 'Value for .* column must come after the investment start date'):
+            Investment(start_date=today, end_date=yesterday)
 
-    def test_current_date_in_range(self) -> None:
-        """Test the record is active and unexpired during the record date range"""
+    def test_error_on_start_date(self) -> None:
+        """Test for a ``ValueError`` when the end date equals the start date"""
 
-        record = create_investment(start_date=TODAY-1, end_date=TODAY+1)
-        self.assertTrue(record.is_active)
+        with self.assertRaisesRegex(ValueError, 'Value for .* column must come after the investment start date'):
+            Investment(start_date=date.today(), end_date=date.today())
 
-    def test_current_date_after_range(self) -> None:
-        """Test the record is inactive and expired after the record date range"""
+    def test_value_is_assigned(self) -> None:
+        """Test the validated value is assigned to the table instance"""
 
-        record = create_investment(start_date=TODAY-2, end_date=TODAY-1)
-        self.assertFalse(record.is_active)
-
-    def test_current_date_at_start(self) -> None:
-        """Test the record is active and unexpired on the start date"""
-
-        record = create_investment(start_date=TODAY, end_date=TODAY+1)
-        self.assertTrue(record.is_active)
-
-    def test_current_date_at_end(self) -> None:
-        """Test the record is inactive and expired on the end date"""
-
-        record = create_investment(start_date=TODAY-1, end_date=TODAY)
-        self.assertFalse(record.is_active)
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+        investment = Investment(start_date=today, end_date=tomorrow)
+        self.assertEqual(tomorrow, investment.end_date)
 
 
 class ExpiredProperty(EmptyAccountSetup, TestCase):
-    """Tests for the ``is_expired`` property"""
+    """Tests for the ``is_expired`` property, and it's SQL expression form"""
 
     def test_is_expired_no_investment_sus(self) -> None:
-        """ Test ``is_expired`` for various date ranges on an investment without any service units remaining"""
+        """ Test ``is_expired`` for various date ranges on an investment without any service units remaining
+
+        On start date --> expired
+        Before start date --> not expired
+        After start date --> expired
+        On end date --> expired
+        After end date --> expired
+
+        """
 
         # Create the Investment and add it to the DB
-        investment = create_investment(start_date=start,end_date=end)
-        investment.current_sus = 0
+        investment = Investment(start_date=start, end_date=end, current_sus=0)
         add_investment_to_test_account(investment)
 
+        # Test is_expired on various dates
         with DBConnection.session() as session:
+
             investment = session.execute(account_investments_query).scalars().first()
 
+            # On start date -> expired
             self.assertTrue(investment.is_expired)
             self.assertIn(investment.id, session.execute(select(Investment.id)
                                                          .join(Account)
                                                          .where(Account.name == settings.test_accounts[0])
                                                          .where(Investment.is_expired)).scalars().all())
 
-    def test_is_expired_has_investment_sus(self) -> None:
-        """ Test ``is_expired`` for various date ranges on an investment with service units remaining"""
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(investment.is_expired)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_expired)).scalars().all())
 
-        investment = create_investment(start_date=start, end_date=end)
-        investment.current_sus = investment.service_units
+            # After start date -> expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(investment.is_expired)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_expired)).scalars().all())
+
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(investment.is_expired)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_expired)).scalars().all())
+
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(investment.is_expired)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_expired)).scalars().all())
+
+    def test_is_expired_has_investment_sus(self) -> None:
+        """ Test ``is_expired`` for various date ranges on an investment with service units remaining
+
+        On start date --> not expired
+        Before start date --> not expired
+        After start date --> not expired
+        On end date --> expired
+        After end date --> expired
+
+        """
+
+        # Create the Investment and add it to the DB
+        investment = Investment(start_date=start, end_date=end, current_sus=100, service_units=100)
         add_investment_to_test_account(investment)
 
-        #with DBConnection.session() as session:
-            #investment =  session.execute(account_invest)
+        # Test is_expired on various dates
+        with DBConnection.session() as session:
+            investment = session.execute(account_investments_query).scalars().first()
 
-    def test_not_expired_with_sus_and_in_range(self) -> None:
-        """Test valid investments are not marked"""
+            # On start date ->  not expired
+            self.assertFalse(investment.is_expired)
+            self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                            .join(Account)
+                                                            .where(Account.name == settings.test_accounts[0])
+                                                            .where(Investment.is_expired)).scalars().all())
 
-        investment = create_investment()
-        self.assertFalse(investment.is_expired)
+            # Before start date -> not expired
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(investment.is_expired)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_expired)).scalars().all())
 
-    def test_expired_if_past_end_date(self) -> None:
-        """Test an investment is is_expired if it is past its end date"""
+            # After start date -> not expired
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(investment.is_expired)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_expired)).scalars().all())
 
-        investment = create_investment()
-        investment.end_date = date.today()
-        self.assertTrue(investment.is_expired)
+            # On End date -> expired
+            with time_machine.travel(end):
+                self.assertTrue(investment.is_expired)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_expired)).scalars().all())
 
-    def test_expired_if_no_more_service_units(self) -> None:
-        """Test an investment is is_expired if it has no more service units"""
-
-        investment = create_investment()
-        investment.current_sus = 0
-        investment.withdrawn_sus = investment.service_units
-        self.assertTrue(investment.is_expired)
+            # After End date -> expired
+            with time_machine.travel(end + timedelta(1)):
+                self.assertTrue(investment.is_expired)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_expired)).scalars().all())
 
 
 class ActiveProperty(EmptyAccountSetup, TestCase):
-    """Test the boolean ``is_active`` hybrid property and it's SQL expression form"""
+    """Test the boolean ``is_active`` hybrid property, and it's SQL expression form"""
 
-    def test_is_expired_no_investment_sus(self) -> None:
-        """ Test ``is_expired`` for various date ranges on an investment without any service units remaining"""
+    def test_is_active_no_investment_sus(self) -> None:
+        """ Test ``is_active`` for various date ranges on an investment without any service units remaining
+
+        On start date --> not active
+        Before start date --> not active
+        After start date --> not active
+        On end date --> not active
+        After end date --> not active
+
+        """
 
         # Create the Investment and add it to the DB
-        investment = create_investment(start_date=start,end_date=end)
-        investment.current_sus = investment.service_units
+        investment = Investment(start_date=start, end_date=end, current_sus=0)
         add_investment_to_test_account(investment)
+
+        # Test is_expired on various dates
+        with DBConnection.session() as session:
+            investment = session.execute(account_investments_query).scalars().first()
+
+            # On start date -> not active
+            self.assertFalse(investment.is_active)
+            self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                            .join(Account)
+                                                            .where(Account.name == settings.test_accounts[0])
+                                                            .where(Investment.is_active)).scalars().all())
+
+            # Before start date -> not active
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+            # After start date -> not active
+            with time_machine.travel(start + timedelta(1)):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+            # On End date -> not active
+            with time_machine.travel(end):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+            # After End date -> not active
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+    def test_is_active_has_investment_sus(self) -> None:
+        """ Test ``is_active`` for various date ranges on an investment with service units remaining
+
+        On start date --> active
+        Before start date --> not active
+        After start date --> active
+        On end date --> not active
+        After end date --> not active
+
+        """
+
+        # Create the Investment and add it to the DB
+        investment = Investment(start_date=start, end_date=end, current_sus=100, service_units=100)
+        add_investment_to_test_account(investment)
+
+        # Test is_active on various dates
+        with DBConnection.session() as session:
+            investment = session.execute(account_investments_query).scalars().first()
+
+            # On start date ->  active
+            self.assertTrue(investment.is_active)
+            self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                         .join(Account)
+                                                         .where(Account.name == settings.test_accounts[0])
+                                                         .where(Investment.is_active)).scalars().all())
+
+            # Before start date -> not active
+            with time_machine.travel(start - timedelta(1)):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+            # After start date -> active
+            with time_machine.travel(start + timedelta(1)):
+                self.assertTrue(investment.is_active)
+                self.assertIn(investment.id, session.execute(select(Investment.id)
+                                                             .join(Account)
+                                                             .where(Account.name == settings.test_accounts[0])
+                                                             .where(Investment.is_active)).scalars().all())
+
+            # On End date -> not active
+            with time_machine.travel(end):
+                self.assertFalse(investment.is_active)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
+
+            # After End date -> not active
+            with time_machine.travel(end + timedelta(1)):
+                self.assertFalse(investment.is_actove)
+                self.assertNotIn(investment.id, session.execute(select(Investment.id)
+                                                                .join(Account)
+                                                                .where(Account.name == settings.test_accounts[0])
+                                                                .where(Investment.is_active)).scalars().all())
