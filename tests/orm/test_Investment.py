@@ -103,7 +103,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
         """
 
         # Create the Investment and add it to the DB
-        investment = Investment(start_date=start, end_date=end, current_sus=0)
+        investment = Investment(start_date=start, end_date=end, current_sus=0, service_units=100, withdrawn_sus=100)
         add_investment_to_test_account(investment)
 
         # Test is_expired on various dates
@@ -224,7 +224,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         """
 
         # Create the Investment and add it to the DB
-        investment = Investment(start_date=start, end_date=end, current_sus=0)
+        investment = Investment(start_date=start, end_date=end, current_sus=0, service_units=100, withdrawn_sus=100)
         add_investment_to_test_account(investment)
 
         # Test is_expired on various dates
@@ -322,7 +322,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # After End date -> not active
             with time_machine.travel(end + timedelta(1)):
-                self.assertFalse(investment.is_actove)
+                self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(select(Investment.id)
                                                                 .join(Account)
                                                                 .where(Account.name == settings.test_accounts[0])
