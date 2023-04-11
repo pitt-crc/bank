@@ -21,8 +21,16 @@ def upgrade():
 
     conn = op.get_bind()
 
-    # Concatenate tables with their archives
-    # proposal + proposal_archive -> _proposal_old
+    # Determine total number of proposals and investments in old db schema
+    num_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
+    num_prop_archive = conn.execute("SELECT count(*) FROM proposal_archive").fetchall()
+    num_proposals_old = num_proposals[0][0] + num_prop_archive[0][0]
+
+    num_investments = conn.execute("SELECT count(*) FROM investor").fetchall()
+    num_inv_archive = conn.execute("SELECT count(*) FROM investor_archive").fetchall()
+    num_investments_old = num_investments[0][0] + num_inv_archive[0][0]
+
+    # Concatenate proposal table with archive
     conn.execute("INSERT INTO proposal (start_date, end_date, smp, mpi, htc, gpu, account) "
                  "SELECT start_date, end_date, smp, mpi, htc, gpu, account "
                  "FROM proposal_archive")
@@ -31,10 +39,11 @@ def upgrade():
                  "SET percent_notified=0 "
                  "WHERE percent_notified is NULL")
 
+    # Drop unused column and rename tabled
     op.drop_column('proposal', 'proposal_type')
     op.rename_table('proposal', '_proposal_old')
 
-    # investor + investor_archive -> _investment_old
+    # Concatenate investor tabled with archive
     conn.execute(
         "INSERT INTO investor (start_date, end_date, service_units, current_sus, account) "
         "SELECT start_date, end_date, service_units, current_sus, account "
@@ -48,6 +57,7 @@ def upgrade():
                  "SET rollover_sus=-9 "
                  "WHERE rollover_sus is NULL")
 
+    # Drop unused column and rename table
     op.drop_column('investor', 'proposal_type')
     op.rename_table('investor', '_investment_old')
 
@@ -70,9 +80,6 @@ def upgrade():
                  "UNION "
                  "SELECT DISTINCT _investment_old.account "
                  "FROM _investment_old)")
-
-    # TODO: look into sqlalchemy representation of this?
-    # account_table.insert(sa.union(sa.distinct())
 
     # Create proposal table with new schema and account id foreign key
     proposal_table = op.create_table(
@@ -107,42 +114,54 @@ def upgrade():
         sa.Column('current_sus', sa.Integer, nullable=False)
     )
 
+    # For each account, create new schema proposals and investments from entries in old schema
     accounts = conn.execute("SELECT * from account").fetchall()
     for account in accounts:
         old_investments = conn.execute(f"SELECT * from _investment_old WHERE _investment_old.account='{account.name}'").fetchall()
         old_proposals = conn.execute(f"SELECT * from _proposal_old WHERE _proposal_old.account='{account.name}'").fetchall()
-        #TODO: sort by date?
         new_proposals = []
-        for old_proposal in old_proposals:
+        for prop in old_proposals:
+
             allocs = []
             for cluster_name in ['smp','mpi','gpu','htc']:
-                allocs.append({'proposal_id': old_proposal.id,
+                allocs.append({'proposal_id': prop.id,
                                'cluster_name': cluster_name,
-                               'service_units_total': getattr(old_proposal, cluster_name)}
+                               'service_units_total': getattr(prop, cluster_name)}
                               )
-                # TODO: no need to set service_units_used, defaults to 0, updated by first run of new bank code?
-            new_proposal = {'id': old_proposal.id,
+
+            new_proposal = {'id': prop.id,
                             'account_id': account.id,
-                            'start_date': datetime.strptime(old_proposal.start_date, DATE_FORMAT),
-                            'end_date': datetime.strptime(old_proposal.end_date, DATE_FORMAT),
-                            'percent_notified': old_proposal.percent_notified}
+                            'start_date': datetime.strptime(prop.start_date, DATE_FORMAT),
+                            'end_date': datetime.strptime(prop.end_date, DATE_FORMAT),
+                            'percent_notified': prop.percent_notified}
+
             op.bulk_insert(allocation_table, allocs)
             new_proposals.append(new_proposal)
+
         op.bulk_insert(proposal_table, new_proposals)
 
         new_investments = []
-        for old_investment in old_investments:
-            new_investment = {'id': old_investment.id,
+        for inv in old_investments:
+            new_investment = {'id': inv.id,
                               'account_id': account.id,
-                              'start_date': datetime.strptime(old_investment.start_date, DATE_FORMAT),
-                              'end_date': datetime.strptime(old_investment.start_date, DATE_FORMAT),
-                              'service_units': old_investment.service_units,
-                              'rollover_sus': old_investment.rollover_sus,
-                              'withdrawn_sus': old_investment.withdrawn_sus,
-                              'current_sus': old_investment.current_sus}
+                              'start_date': datetime.strptime(inv.start_date, DATE_FORMAT),
+                              'end_date': datetime.strptime(inv.start_date, DATE_FORMAT),
+                              'service_units': inv.service_units,
+                              'rollover_sus': inv.rollover_sus,
+                              'withdrawn_sus': inv.withdrawn_sus,
+                              'current_sus': inv.current_sus}
             new_investments.append(new_investment)
+
         op.bulk_insert(investment_table, new_investments)
 
+    # Make sure there is the same number of proposals/investments as the old db schema
+    num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
+    assert (num_new_proposals[0][0] == num_proposals_old)
+
+    num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
+    assert (num_new_investments[0][0] == num_investments_old)
+
+    # Drop old schema tables
     op.drop_table('_proposal_old')
     op.drop_table('_investment_old')
 
