@@ -24,30 +24,18 @@ active_proposal_query = select(Proposal) \
                         .where(Account.name == settings.test_accounts[0]) \
                         .where(Proposal.is_active)
 
-expired_proposal_ids_query = select(Proposal.id) \
+proposal_ids_query = select(Proposal.id) \
                              .join(Account) \
-                             .where(Account.name == settings.test_accounts[0]) \
-                             .where(Proposal.is_expired)
-
-active_proposal_ids_query = select(Proposal.id) \
-                             .join(Account) \
-                             .where(Account.name == settings.test_accounts[0]) \
-                             .where(Proposal.is_active)
+                             .where(Account.name == settings.test_accounts[0])
 
 active_investment_query = select(Investment) \
                           .join(Account) \
                           .where(Account.name == settings.test_accounts[0]) \
                           .where(Investment.is_active)
 
-expired_investment_ids_query = select(Investment.id) \
+investment_ids_query = select(Investment.id) \
                                .join(Account) \
-                               .where(Account.name == settings.test_accounts[0]) \
-                               .where(Investment.is_expired)
-
-active_investment_ids_query = select(Investment.id) \
-                               .join(Account) \
-                               .where(Account.name == settings.test_accounts[0]) \
-                               .where(Investment.is_active)
+                               .where(Account.name == settings.test_accounts[0])
 
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
