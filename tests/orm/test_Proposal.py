@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.orm import Account, Allocation, DBConnection, Proposal
-from tests._utils import account_proposals_query, add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
+from tests._utils import account_proposals_query, add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, proposal_ids_query, TODAY
 
 # Start and End date values to use with time_machine
 start = TODAY
@@ -86,42 +86,37 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
             # On start date -> expired
             self.assertTrue(proposal.is_expired)
-            self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                       .join(Account)
-                                                       .where(Account.name == settings.test_accounts[0])
-                                                       .where(Proposal.is_expired)).scalars().all())
+            self.assertIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_expired)
+            ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After start date -> expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
     def test_is_expired_active_allocation(self) -> None:
         """ Test ``is_expired`` various date ranges for a proposal with an active allocation
@@ -148,42 +143,37 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
             # On start date -> not expired
             self.assertFalse(proposal.is_expired)
-            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                          .join(Account)
-                                                          .where(Account.name == settings.test_accounts[0])
-                                                          .where(Proposal.is_expired)).scalars().all())
+            self.assertNotIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_expired)
+            ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After start date -> not expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
     def test_is_expired_mixed_allocations(self) -> None:
         """ Test ``is_expired`` for various date ranges on a proposal with an active allocation and an
@@ -214,42 +204,37 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
             # On start date -> not expired
             self.assertFalse(proposal.is_expired)
-            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                          .join(Account)
-                                                          .where(Account.name == settings.test_accounts[0])
-                                                          .where(Proposal.is_expired)).scalars().all())
+            self.assertNotIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_expired)
+            ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After start date -> not expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
     def test_is_expired_exhausted_allocations(self) -> None:
         """ Test ``is_expired`` for various date ranges on a proposal with exhausted allocations
@@ -279,42 +264,37 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
             # On start date -> expired
             self.assertTrue(proposal.is_expired)
-            self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                       .join(Account)
-                                                       .where(Account.name == settings.test_accounts[0])
-                                                       .where(Proposal.is_expired)).scalars().all())
+            self.assertIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_expired)
+            ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_expired)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_expired)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After start date -> expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(proposal.is_expired)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_expired)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_expired)
+                ).scalars().all())
 
 
 class ActiveProperty(EmptyAccountSetup, TestCase):
@@ -342,42 +322,37 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # On start date
             self.assertFalse(proposal.is_active)
-            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                          .join(Account)
-                                                          .where(Account.name == settings.test_accounts[0])
-                                                          .where(Proposal.is_active)).scalars().all())
+            self.assertNotIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_active)
+            ).scalars().all())
 
             # Before start date
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # On End date
             with time_machine.travel(end):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After End date
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
     def test_is_active_active_allocation(self) -> None:
         """ Test ``is_active`` for various date ranges on a proposal with an active allocation
@@ -404,42 +379,37 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # On start date
             self.assertTrue(proposal.is_active)
-            self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                       .join(Account)
-                                                       .where(Account.name == settings.test_accounts[0])
-                                                       .where(Proposal.is_active)).scalars().all())
+            self.assertIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_active)
+            ).scalars().all())
 
             # Before start date
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(proposal.is_active)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_active)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # On End date
             with time_machine.travel(end):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After End date
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
     def test_is_active_mixed_allocations(self) -> None:
         """ Test ``is_active`` for various date ranges on a proposal with an active allocation
@@ -470,42 +440,37 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # On start date
             self.assertTrue(proposal.is_active)
-            self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                       .join(Account)
-                                                       .where(Account.name == settings.test_accounts[0])
-                                                       .where(Proposal.is_active)).scalars().all())
+            self.assertIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_active)
+            ).scalars().all())
 
             # Before start date
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(proposal.is_active)
-                self.assertIn(proposal.id, session.execute(select(Proposal.id)
-                                                           .join(Account)
-                                                           .where(Account.name == settings.test_accounts[0])
-                                                           .where(Proposal.is_active)).scalars().all())
+                self.assertIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # On End date
             with time_machine.travel(end):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After End date
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
     def test_is_active_exhausted_allocations(self) -> None:
         """ Test ``is_active`` for various date ranges on a proposal with exhausted allocations
@@ -535,39 +500,34 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # On start date
             self.assertFalse(proposal.is_active)
-            self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                          .join(Account)
-                                                          .where(Account.name == settings.test_accounts[0])
-                                                          .where(Proposal.is_active)).scalars().all())
+            self.assertNotIn(proposal.id, session.execute(
+                proposal_ids_query.where(Proposal.is_active)
+            ).scalars().all())
 
             # Before start date
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(select(Proposal.id)
-                                                              .join(Account)
-                                                              .where(Account.name == settings.test_accounts[0])
-                                                              .where(Proposal.is_active)).scalars().all())
+                self.assertNotIn(proposal.id, session.execute(
+                    proposal_ids_query.where(Proposal.is_active)
+                ).scalars().all())
