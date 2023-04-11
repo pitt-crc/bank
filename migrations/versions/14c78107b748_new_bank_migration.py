@@ -16,6 +16,7 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+
 def upgrade():
     """Upgrade the database schema to the next version"""
 
@@ -154,16 +155,21 @@ def upgrade():
 
         op.bulk_insert(investment_table, new_investments)
 
+    # TODO: Check foreign key relationship between account IDs and proposals/investments?
+
     # Make sure there is the same number of proposals/investments as the old db schema
     num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    assert (num_new_proposals[0][0] == num_proposals_old)
+    assert (num_new_proposals[0][0] == num_proposals_old,
+            "The number of new proposals must equal the number of old proposals")
 
     num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
-    assert (num_new_investments[0][0] == num_investments_old)
+    assert (num_new_investments[0][0] == num_investments_old,
+            "The number of new investments must equal the number of old investments")
 
     # Drop old schema tables
     op.drop_table('_proposal_old')
     op.drop_table('_investment_old')
+
 
 def downgrade():
     """Downgrade the database schema to the previous version"""
