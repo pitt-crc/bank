@@ -1,63 +1,53 @@
-name: Tests
+name: Test Package
 
 on:
   workflow_dispatch:
+  workflow_call:
   push:
 
 jobs:
-  python_tests:
+  run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        slurm_version:
-          - 20.02.5.1
-          - 20.11.9.1
-          - 22.05.2.1
-        python:
-          - 3.8
-          - 3.9
-
-    container:
-      image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm_version }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
 
     steps:
-      - name: Setup environment
-        run: /usr/local/bin/entrypoint.sh
-
-      - name: Checkout source code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: pip${{ matrix.python }} install .[tests]
-
       - name: Run tests
-        run: |
-          # Run tests with coverage and catch the exit status
-          coverage-${{ matrix.python }} run -m unittest discover bank
-          coverage-${{ matrix.python }} report --include="bank/*"
-          coverage-${{ matrix.python }} xml --include="bank/*" -o report.xml
+        uses: ./.github/actions/run-tests
+        with:
+          python-version: ${{ matrix.python-version }}
+          coverage-output: coverage.xml
 
-      # Report test coverage to codacy for the python version being tested
+      # Report partial coverage results to codacy for the current python version
       - name: Report partial coverage results
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r report.xml
-        shell: bash
+        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r coverage.xml
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-  codacy-coverage-reporter:
-    name: Report code coverage
+  # Tell codacy we are done reporting test coverage
+  report-code-coverage:
+    name: Report Code Coverage
     runs-on: ubuntu-latest
-    needs: python_tests
+    needs: run-tests
     steps:
-
-      # Tell codacy we are done reporting test coverage
       - name: Finish reporting coverage
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
-        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+  # Use this job for branch protection rules
+  report-test-status:
+    name: Report Test Status
+    runs-on: ubuntu-latest
+    needs: run-tests
+    if: always()
+    steps:
+      - name: Check build status
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
