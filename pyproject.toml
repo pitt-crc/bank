@@ -26,6 +26,9 @@ packages = [
     { include = "bank/**/*.py" },
 ]
 
+[tool.poetry.scripts]
+crc-bank = "bank.cli.app:CommandLineApplication.execute"
+
 [tool.poetry.dependencies]
 beautifulsoup4 = "4.12.0"
 pandas = "1.5.3"
