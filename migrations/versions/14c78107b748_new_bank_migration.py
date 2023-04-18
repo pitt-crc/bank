@@ -159,12 +159,10 @@ def upgrade():
 
     # Make sure there is the same number of proposals/investments as the old db schema
     num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    assert (num_new_proposals[0][0] == num_proposals_old,
-            "The number of new proposals must equal the number of old proposals")
+    assert num_new_proposals[0][0] == num_proposals_old, "The number of new proposals must equal the number of old proposals"
 
     num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
-    assert (num_new_investments[0][0] == num_investments_old,
-            "The number of new investments must equal the number of old investments")
+    assert num_new_investments[0][0] == num_investments_old, "The number of new investments must equal the number of old investments"
 
     # Drop old schema tables
     op.drop_table('_proposal_old')
