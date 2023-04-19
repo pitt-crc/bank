@@ -6,13 +6,25 @@ on:
   push:
 
 jobs:
-  run-tests:
+  run_tests:
     name: Run Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        slurm_version:
+          - 20.02.5.1
+          - 20.11.9.1
+          - 22.05.2.1
+        python:
+          - 3.8
+          - 3.9
+
+    container:
+      image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm_version }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -38,6 +50,7 @@ jobs:
     steps:
       - name: Finish reporting coverage
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
+        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
