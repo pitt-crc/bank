@@ -57,7 +57,8 @@ class BaseParser(ArgumentParser):
     def error(self, message: str) -> None:
         """Print the error message to STDOUT and exit
 
-        If the parser was called without any arguments, print the help text.
+        If the executable was called without any arguments,
+        or a subparser called without a command, print the help text.
 
         Args:
             message: The error message
@@ -66,7 +67,7 @@ class BaseParser(ArgumentParser):
             SystemExit: Every time the method is called
         """
 
-        if len(sys.argv) == 1:
+        if len(sys.argv) <= 2:
             self.print_help()
 
         raise SystemExit(message)

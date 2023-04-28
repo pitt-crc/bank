@@ -64,6 +64,26 @@ class AccountUnlocking(TestCase):
         account_services.unlock(clusters=[settings.test_cluster])
         self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
+class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
+    """Test _build_usage_table functionality for an individual account"""
+    def setUp(self) -> None:
+        """Instantiate an AccountServices and SlurmAccount object for the test account"""
+
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
+
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, in_hours: {'account1': 50, 'account2': 50})
+    def test_table_built(self) -> None:
+        """Test that the usage table is built properly"""
+
+        table = self.account._build_usage_table()
+
+        # TODO come up with one or more assertions to check the table output
+        #self.assertTrue()
+
 
 @skip('This functionality hasn\'t been fully implemented yet.')
 @patch('smtplib.SMTP.send_message')
@@ -326,3 +346,4 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(active_investment_query).scalars().first()
 
             self.assertEqual(900, investment.current_sus)
+

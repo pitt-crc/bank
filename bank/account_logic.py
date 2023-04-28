@@ -626,7 +626,7 @@ class AccountServices:
         """Return a human-readable summary of the account usage and allocation"""
 
         slurm_acct = SlurmAccount(self._account_name)
-        output_table = PrettyTable(header=False, padding_width=0)
+        output_table = PrettyTable(header=False, padding_width=5)
         with DBConnection.session() as session:
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investments = session.execute(self._active_investment_query).scalars().all()
@@ -634,45 +634,48 @@ class AccountServices:
             if not proposal:
                 raise MissingProposalError('Account has no proposal')
 
-            usage_total = 0
+            # Proposal End Date as first row
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""], divider=True)
+
+
+            aggregate_usage_total = 0
             allocation_total = 0
             for allocation in proposal.allocations:
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
-                total_cluster_usage = sum(usage_data.values())
-                total_cluster_percent = self._calculate_percentage(total_cluster_usage, allocation.service_units_total)
+                total_usage_on_cluster = sum(usage_data.values())
+                total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
 
-                # Build an inner table of individual user usage on the current cluster
-                user_usage_table = PrettyTable(border=False, field_names=['User', 'SUs Used', 'Percentage of Total'])
+                output_table.add_row([f"Cluster: {allocation.cluster_name}",
+                                     f"Available SUs: {allocation.service_units_total}",""], divider=True)
+
+                # Build a list of individual user usage on the current cluster
+                output_table.add_row(["User", "SUs Used", "Percentage of Total"], divider=True)
                 for user, user_usage in usage_data.items():
-                    user_percentage = self._calculate_percentage(user_usage, allocation.service_units_total) or ''
-                    user_usage_table.add_row([user, user_usage, user_percentage])
+                    user_percentage = self._calculate_percentage(user_usage, allocation.service_units_total) or "N/A"
+                    output_table.add_row([user, user_usage, user_percentage])
 
-                # Add the table created above to the outer table that will eventually be returned
-                output_table.add_row(f"Cluster: {allocation.cluster_name}, "
-                                     f"Available SUs: {allocation.service_units_total}")
-                output_table.add_row(user_usage_table)
-                output_table.add_row(['Overall', total_cluster_usage, total_cluster_percent])
+                # Overall usage
+                output_table.add_row([f'Overall for {allocation.cluster_name}', total_usage_on_cluster, total_cluster_percent], divider=True)
 
-                usage_total += total_cluster_usage
+                aggregate_usage_total += total_usage_on_cluster
                 allocation_total += allocation.service_units_total
 
-            usage_percentage = self._calculate_percentage(usage_total, allocation_total)
-            investment_total = sum(inv.service_units for inv in investments)
-            investment_percentage = self._calculate_percentage(usage_total, allocation_total + investment_total)
+            usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
+
 
             # Add another inner table describing aggregate usage
-            output_table.add_row(['Aggregate'])
-            aggregate_table = PrettyTable(border=False, header=False)
-            if investment_total == 0:
-                aggregate_table.add_row(['Aggregate Usage', usage_percentage])
-                output_table.add_row(aggregate_table)
-
+            if not investments:
+                output_table.add_row(['Aggregate Usage', usage_percentage, ""], divider=True)
             else:
-                aggregate_table.add_row(['Investments Total', str(investment_total) + '^a'])
-                aggregate_table.add_row(['Aggregate Usage (no investments)', usage_percentage])
-                aggregate_table.add_row(['Aggregate Usage', investment_percentage])
-                output_table.add_row(aggregate_table)
-                output_table.add_row('^a Investment SUs can be used across any cluster')
+                investment_total = sum(inv.service_units for inv in investments)
+                investment_percentage = self._calculate_percentage(aggregate_usage_total,
+                                                                   allocation_total + investment_total)
+
+                output_table.add_row(['Investments Total', str(investment_total)+f"\N{ASTERISK}", ""])
+                output_table.add_row(['Aggregate Usage (excluding investments)', usage_percentage, ""])
+                output_table.add_row(['Aggregate Usage', investment_percentage, ""])
+                output_table.add_row([f'\N{ASTERISK}Investment SUs are applied to cover usage ', "",""], divider=True)
+                output_table.add_row([f'exceeding proposal limits across any cluster',"",""])
 
             return output_table
 
