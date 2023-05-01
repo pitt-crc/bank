@@ -238,6 +238,15 @@ class Allocation(Base):
 
         return self.service_units_used >= self.service_units_total
 
+    @is_exhausted.expression
+    def is_exhausted(cls) -> bool:
+        """SQL expression form of Allocation `is_exhausted` functionality"""
+
+        subquery = select(Allocation.id) \
+            .where(Allocation.service_units_used >= Allocation.service_units_total)
+
+        return cls.id.in_(subquery)
+
 
 class Investment(Base):
     """Service unit allocations granted in exchange for user investment
