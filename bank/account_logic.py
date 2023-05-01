@@ -636,7 +636,7 @@ class AccountServices:
 
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""], divider=True)
-
+            output_table.add_row(["","",""], divider=True)
 
             aggregate_usage_total = 0
             allocation_total = 0
@@ -644,18 +644,26 @@ class AccountServices:
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
+                cluster_name = str.upper(allocation.cluster_name)
 
-                output_table.add_row([f"Cluster: {allocation.cluster_name}",
+                output_table.add_row([f"Cluster: {cluster_name}",
                                      f"Available SUs: {allocation.service_units_total}",""], divider=True)
 
                 # Build a list of individual user usage on the current cluster
                 output_table.add_row(["User", "SUs Used", "Percentage of Total"], divider=True)
-                for user, user_usage in usage_data.items():
+                for index, data in enumerate(usage_data.items()):
+                    user = data[0]
+                    user_usage = data[1]
                     user_percentage = self._calculate_percentage(user_usage, allocation.service_units_total) or "N/A"
-                    output_table.add_row([user, user_usage, user_percentage])
+                    if index != len(usage_data.items()) - 1:
+                        output_table.add_row([user, user_usage, user_percentage])
+                    else:
+                        # Last user is a divider
+                        output_table.add_row([user, user_usage, user_percentage], divider=True)
 
                 # Overall usage
-                output_table.add_row([f'Overall for {allocation.cluster_name}', total_usage_on_cluster, total_cluster_percent], divider=True)
+                output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent], divider=True)
+                output_table.add_row(["", "", ""], divider=True)
 
                 aggregate_usage_total += total_usage_on_cluster
                 allocation_total += allocation.service_units_total
