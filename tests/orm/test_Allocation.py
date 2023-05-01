@@ -68,3 +68,7 @@ class ClusterNameValidation(TestCase):
 
         with self.assertRaisesRegex(ValueError, 'application settings'):
             Allocation(cluster_name='')
+
+
+# TODO: add isExhausted test
+#class ExhaustedProperty(EmptyAccountSetup, TestCase):
