@@ -266,10 +266,10 @@ class Investment(Base):
     account_id = Column(Integer, ForeignKey(Account.id))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    service_units = Column(Integer, nullable=False)  # Initial allocation of service units
-    rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
-    withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
-    current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
+    service_units = Column(Integer, nullable=False)
+    rollover_sus = Column(Integer, nullable=False, default=0)
+    withdrawn_sus = Column(Integer, nullable=False, default=0)
+    current_sus = Column(Integer, nullable=False, default=0)
 
     account = relationship('Account', back_populates='investments')
 
@@ -290,7 +290,7 @@ class Investment(Base):
 
         return value
 
-    @validates('end')
+    @validates('end_date')
     def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the end date is after the start date
 
@@ -303,7 +303,7 @@ class Investment(Base):
         """
 
         if self.start_date and value <= self.start_date:
-            raise ValueError(f'Value for {key} column must come after the proposal start date')
+            raise ValueError(f'Value for {key} column must come after the investment start date')
 
         return value
 
@@ -317,24 +317,30 @@ class Investment(Base):
     def is_expired(self) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
 
-        past_end = self.end_date <= date.today()
+        today = date.today()
+        past_end = self.end_date <= today
+        started = self.start_date <= today
         spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
-        return past_end or spent_service_units
+        return past_end or (started and spent_service_units)
 
     @is_expired.expression
     def is_expired(cls) -> bool:
         """SQL expression form of Investment `is_expired` functionality"""
 
-        #TODO Implement and test
-        past_end = cls.end_date <= date.today()
-        spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return past_end | spent_service_units
+        today = date.today()
+
+        subquery = select(Investment.id) \
+            .where(and_(Investment.current_sus <= 0, Investment.withdrawn_sus >= Investment.service_units)) \
+            .where(today >= Investment.start_date)
+
+        return or_(today >= cls.end_date, cls.id.in_(subquery))
 
     @hybrid_property
     def is_active(self) -> bool:
         """Return if the investment is within its active date range and has available service units"""
 
         today = date.today()
+
         in_date_range = (self.start_date <= today) & (today < self.end_date)
         has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
         return in_date_range and has_service_units
@@ -343,11 +349,14 @@ class Investment(Base):
     def is_active(cls) -> bool:
         """SQL expression form of Investment `is_active` functionality"""
 
-        #TODO: Implement and test
         today = date.today()
-        in_date_range = (cls.start_date <= today) & (today < cls.end_date)
-        has_service_units = (cls.current_sus > 0) & (cls.withdrawn_sus < cls.service_units)
-        return in_date_range & has_service_units
+
+        subquery = select(Investment.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date)) \
+            .where(Investment.current_sus > 0) \
+            .where(Investment.withdrawn_sus < Investment.service_units)
+
+        return cls.id.in_(subquery)
 
 
 class DBConnection:
