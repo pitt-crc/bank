@@ -157,11 +157,10 @@ class Proposal(Base):
 
         today = date.today()
 
-        aliasAllocation = aliased(Allocation)
-        subquery = select(aliasAllocation.id) \
-            .where(aliasAllocation.id == cls.id) \
+        subquery = select(Proposal.id).outerjoin(Allocation) \
+            .where(Allocation.proposal_id == cls.id) \
             .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(not_(aliasAllocation.is_exhausted))
+            .where(not_(Allocation.is_exhausted))
 
         return cls.id.in_(subquery)
 

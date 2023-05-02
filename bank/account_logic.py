@@ -627,6 +627,7 @@ class AccountServices:
 
         slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=5)
+
         with DBConnection.session() as session:
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investments = session.execute(self._active_investment_query).scalars().all()
