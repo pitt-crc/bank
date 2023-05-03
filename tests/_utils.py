@@ -89,13 +89,18 @@ class ProposalSetup(EmptyAccountSetup):
         # 1 year ago today - today
         # today - 1 year from today
         # 1 year from today - 2 years from today
+
         for i in range(-1, 2):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
 
             allocations = [Allocation(cluster_name=settings.test_cluster,
                                       service_units_used=0,
-                                      service_units_total=self.num_proposal_sus)]
+                                      service_units_total=self.num_proposal_sus),
+                           Allocation(cluster_name='all_clusters',
+                                      service_units_used=0,
+                                      service_units_total=25_000)]
+
             proposal = Proposal(
                 allocations=allocations,
                 start_date=start,
