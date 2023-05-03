@@ -645,7 +645,15 @@ class AccountServices:
 
             aggregate_usage_total = 0
             allocation_total = 0
+            floating_su_usage = 0
+            floating_su_total = 0
+
             for allocation in proposal.allocations:
+                if allocation.cluster_name == 'all_clusters':
+                    floating_su_usage = allocation.service_units_used
+                    floating_su_total = allocation.service_units_total
+                    continue
+
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
@@ -675,6 +683,10 @@ class AccountServices:
 
             usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
+            floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
+            output_table.add_row(['Floating Service Units', floating_su_usage, floating_su_percent])
+            output_table.add_row([f'Floating SUs are applied to cover usage ', "", ""], divider=True)
+            output_table.add_row([f'exceeding proposal limits across any cluster', "", ""])
 
             # Add another inner table describing aggregate usage
             if not investments:

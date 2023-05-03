@@ -175,7 +175,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             # Expired on test cluster, no floating SUs
             proposal = session.execute(active_proposal_query).scalars().first()
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # No Investment SUs
             investment = session.execute(active_investment_query).scalars().first()
@@ -208,7 +208,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         with DBConnection.session() as session:
             # Proposal is expired
             proposal = session.execute(active_proposal_query).scalars().first()
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -236,10 +236,6 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal = session.execute(active_proposal_query).scalars().first()
             proposal.allocations[0].service_units_total = 10_000
             proposal.allocations[0].service_units_used = 11_000
-            proposal.allocations.append(Allocation(
-                cluster_name="all_clusters",
-                service_units_total=10_000,
-                service_units_used=0))
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -282,11 +278,6 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal.allocations[0].service_units_total = 10_000
             proposal.allocations[0].service_units_used = 10_000
             # TODO: need a second allocation on another cluster
-
-            proposal.allocations.append(Allocation(
-                cluster_name="all_clusters",
-                service_units_total=10_000,
-                service_units_used=0))
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -331,7 +322,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             # Proposal is expired
             proposal = session.execute(active_proposal_query).scalars().first()
             proposal.allocations[0].service_units_total = 10_000
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
