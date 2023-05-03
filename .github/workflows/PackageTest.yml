@@ -1,11 +1,12 @@
-name: Tests
+name: Test Package
 
 on:
   workflow_dispatch:
+  workflow_call:
   push:
 
 jobs:
-  python_tests:
+  run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
     strategy:
@@ -32,32 +33,46 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: pip${{ matrix.python }} install .[tests]
-
-      - name: Run tests
+      - name: Install poetry
         run: |
-          # Run tests with coverage and catch the exit status
-          coverage-${{ matrix.python }} run -m unittest discover bank
-          coverage-${{ matrix.python }} report --include="bank/*"
-          coverage-${{ matrix.python }} xml --include="bank/*" -o report.xml
+          pip install poetry
+          poetry env use python${{ matrix.python_version }}
 
-      # Report test coverage to codacy for the python version being tested
+      - name: Install dependencies
+        run: poetry install --with tests
+
+      - name: Run tests with coverage
+        run: |
+          poetry run coverage run -m unittest discover 
+          poetry run coverage report --omit="tests/*"
+          poetry run coverage xml --omit="tests/*" -o coverage.xml
+
+      # Report partial coverage results to codacy for the current python version
       - name: Report partial coverage results
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r report.xml
-        shell: bash
+        if: github.event_name != 'release'
+        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r coverage.xml
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-  codacy-coverage-reporter:
-    name: Report code coverage
+  # Tell codacy we are done reporting test coverage
+  report-code-coverage:
+    name: Report Coverage
+    if: github.event_name != 'release'
+    needs: run-tests
     runs-on: ubuntu-latest
-    needs: python_tests
     steps:
-
-      # Tell codacy we are done reporting test coverage
       - name: Finish reporting coverage
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
-        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+  # Use this job for branch protection rules
+  report-test-status:
+    name: Report Test Status
+    if: always()
+    needs: run-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build status
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
