@@ -12,16 +12,30 @@ DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
 account_proposals_query = select(Proposal) \
-                 .join(Account) \
-                 .where(Account.name == settings.test_accounts[0])
+                          .join(Account) \
+                          .where(Account.name == settings.test_accounts[0])
 
-active_proposal_query = select(Proposal).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Proposal.is_active)
+account_investments_query = select(Investment) \
+                            .join(Account) \
+                            .where(Account.name == settings.test_accounts[0])
 
-active_investment_query = select(Investment).join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Investment.is_active)
+active_proposal_query = select(Proposal) \
+                        .join(Account) \
+                        .where(Account.name == settings.test_accounts[0]) \
+                        .where(Proposal.is_active)
+
+proposal_ids_query = select(Proposal.id) \
+                             .join(Account) \
+                             .where(Account.name == settings.test_accounts[0])
+
+active_investment_query = select(Investment) \
+                          .join(Account) \
+                          .where(Account.name == settings.test_accounts[0]) \
+                          .where(Investment.is_active)
+
+investment_ids_query = select(Investment.id) \
+                               .join(Account) \
+                               .where(Account.name == settings.test_accounts[0])
 
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
@@ -30,6 +44,15 @@ def add_proposal_to_test_account(proposal: Proposal) -> None:
     with DBConnection.session() as session:
         account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
         account.proposals.extend([proposal])
+        session.commit()
+
+
+def add_investment_to_test_account(investment: Investment) -> None:
+    """Add an Investment to the test account and commit the addition to the database """
+
+    with DBConnection.session() as session:
+        account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+        account.investments.extend([investment])
         session.commit()
 
 
