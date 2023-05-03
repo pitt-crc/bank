@@ -26,7 +26,6 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
-    'sphinx_autodoc_typehints',
     'sphinx_rtd_theme',
     'sphinxarg.ext',
     'sphinx.ext.githubpages'
