@@ -8,7 +8,7 @@ from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError, AccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
-from tests._utils import DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
+from tests._utils import account_proposals_query, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
     ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
@@ -17,12 +17,6 @@ sus_query = select(Allocation.service_units_total) \
     .where(Account.name == settings.test_accounts[0]) \
     .where(Allocation.cluster_name == settings.test_cluster) \
     .where(Proposal.is_active)
-
-active_proposal_query = select(Proposal) \
-    .join(Account) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Proposal.is_active)
-
 
 class InitExceptions(EmptyAccountSetup, TestCase):
     """Tests to ensure proposals report that provided account does not exist"""
@@ -45,8 +39,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 
         self.account.create()
         with DBConnection.session() as session:
-            query = select(Proposal).join(Account).where(Account.name == settings.test_accounts[0])
-            proposal = session.execute(query).scalars().first()
+            proposal = session.execute(account_proposals_query).scalars().first()
 
             self.assertTrue(proposal)
             for alloc in proposal.allocations:

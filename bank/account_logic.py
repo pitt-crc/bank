@@ -45,9 +45,10 @@ class ProposalServices:
             MissingProposalError: If no active proposal is found
         """
 
+        subquery = select(Account.id).where(Account.name == self._account_name)
+
         active_proposal_id_query = select(Proposal.id) \
-            .join(Account) \
-            .where(Account.name == self._account_name) \
+            .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
         with DBConnection.session() as session:
@@ -605,13 +606,16 @@ class AccountServices:
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
 
-        self._active_proposal_query = select(Proposal).join(Account) \
-            .where(Account.name == self._account_name) \
+        subquery = select(Account.id).where(Account.name == self._account_name)
+
+        self._active_proposal_query = select(Proposal) \
+            .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
-        self._active_investment_query = select(Investment).join(Account) \
-            .where(Account.name == self._account_name). \
-            where(Investment.is_active)
+        self._active_investment_query = select(Investment)\
+            .join(Account) \
+            .where(Account.name == self._account_name) \
+            .where(Investment.is_active)
 
     @staticmethod
     def _calculate_percentage(usage: int, total: int) -> int:
@@ -627,6 +631,7 @@ class AccountServices:
 
         slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=5)
+
         with DBConnection.session() as session:
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investments = session.execute(self._active_investment_query).scalars().all()
