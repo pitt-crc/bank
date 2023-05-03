@@ -168,7 +168,11 @@ class SlurmAccount:
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
-        header, *data = cmd.out.split('\n')[1:]
+        
+        try:
+            header, *data = cmd.out.split('\n')[1:]
+        except ValueError:
+            return None
 
         out_data = dict()
         for line in data:
