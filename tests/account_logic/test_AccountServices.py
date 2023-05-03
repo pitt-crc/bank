@@ -94,6 +94,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         super().setUp()
 
         self.account = AccountServices(settings.test_accounts[0])
+
         with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
@@ -155,7 +156,9 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Instantiate an AccountServices and SlurmAccount object for the test account"""
 
         super().setUp()
+
         self.account = AccountServices(settings.test_accounts[0])
+
         self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     # Ensure account usage is a reproducible value for testing

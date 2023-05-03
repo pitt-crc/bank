@@ -133,13 +133,16 @@ class Proposal(Base):
 
         today = date.today()
 
-        # Proposal does not have any active allocations
-        subquery = select(Proposal.id).outerjoin(Allocation) \
-            .where(Allocation.proposal_id == cls.id) \
-            .where(not_(Allocation.is_exhausted)) \
-            .where(today < Proposal.end_date)
+        sub_1 = select(Allocation.proposal_id) \
+            .where(Allocation.proposal_id == cls.id)\
+            .where(not_(Allocation.is_exhausted))
 
-        return and_(today >= Proposal.start_date, not_(cls.id.in_(subquery)))
+        # Proposal does not have any active allocations
+        sub_2 = select(Proposal.id) \
+            .where(today < Proposal.end_date) \
+            .where(cls.id.in_(sub_1))
+
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(sub_2)))
 
     @hybrid_property
     def is_active(self) -> bool:
@@ -157,12 +160,15 @@ class Proposal(Base):
 
         today = date.today()
 
-        subquery = select(Proposal.id).outerjoin(Allocation) \
+        sub_1 = select(Allocation.proposal_id) \
             .where(Allocation.proposal_id == cls.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
             .where(not_(Allocation.is_exhausted))
 
-        return cls.id.in_(subquery)
+        sub_2 = select(Proposal.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date)) \
+            .where(cls.id.in_(sub_1))
+
+        return cls.id.in_(sub_2)
 
 
 class Allocation(Base):

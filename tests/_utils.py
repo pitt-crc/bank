@@ -11,32 +11,26 @@ YESTERDAY = TODAY - timedelta(days=1)
 DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
+account_subquery = select(Account.id).where(Account.name == settings.test_accounts[0])
 account_proposals_query = select(Proposal) \
-                          .join(Account) \
-                          .where(Account.name == settings.test_accounts[0])
+                          .where(Proposal.account_id.in_(account_subquery))
 
 account_investments_query = select(Investment) \
-                            .join(Account) \
-                            .where(Account.name == settings.test_accounts[0])
+                            .where(Investment.account_id.in_(account_subquery))
+
+account_proposal_ids_query = select(Proposal.id) \
+                     .where(Proposal.account_id.in_(account_subquery))
+
+account_investment_ids_query = select(Investment.id) \
+                       .where(Investment.account_id.in_(account_subquery))
 
 active_proposal_query = select(Proposal) \
-                        .join(Account) \
-                        .where(Account.name == settings.test_accounts[0]) \
+                        .where(Proposal.account_id.in_(account_subquery)) \
                         .where(Proposal.is_active)
 
-proposal_ids_query = select(Proposal.id) \
-                             .join(Account) \
-                             .where(Account.name == settings.test_accounts[0])
-
 active_investment_query = select(Investment) \
-                          .join(Account) \
-                          .where(Account.name == settings.test_accounts[0]) \
-                          .where(Investment.is_active)
-
-investment_ids_query = select(Investment.id) \
-                               .join(Account) \
-                               .where(Account.name == settings.test_accounts[0])
-
+                        .where(Investment.account_id.in_(account_subquery)) \
+                        .where(Investment.is_active)
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
     """Add a Proposal to the test account and commit the addition to the database """
