@@ -380,6 +380,5 @@ class DBConnection:
 
         cls.url = url
         cls.engine = create_engine(cls.url)
-        cls.metadata.create_all(cls.engine)
         cls.connection = cls.engine.connect()
         cls.session = sessionmaker(cls.engine)
