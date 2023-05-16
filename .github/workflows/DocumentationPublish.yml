@@ -2,7 +2,8 @@ name: Publish Documentation
 
 on:
   workflow_dispatch:
-  workflow_call:
+    branches:
+     - "development"
 
 permissions:
   contents: read
@@ -11,8 +12,12 @@ permissions:
 
 jobs:
   build:
-    name: Build Documentation
+    name: Build
     uses: ./.github/workflows/DocumentationBuild.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: read
 
   deploy:
     name: Deploy Documentation

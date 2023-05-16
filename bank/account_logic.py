@@ -655,6 +655,9 @@ class AccountServices:
                     continue
 
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
+                if not usage_data:
+                    continue
+
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
                 cluster_name = str.upper(allocation.cluster_name)
