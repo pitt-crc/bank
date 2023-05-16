@@ -3,11 +3,12 @@
 Revision ID: 14c78107b748
 Revises:
 Create Date: 2023-02-21 09:41:01.940279
-
 """
+
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
+
 DATE_FORMAT = "%Y-%m-%d"
 
 # revision identifiers, used by Alembic.
@@ -37,7 +38,7 @@ def upgrade():
                  "FROM proposal_archive")
 
     conn.execute("UPDATE proposal "
-                 "SET percent_notified=0 "
+                 "SET percent_notified=100 "
                  "WHERE percent_notified is NULL")
 
     # Drop unused column and rename tabled
@@ -154,8 +155,6 @@ def upgrade():
             new_investments.append(new_investment)
 
         op.bulk_insert(investment_table, new_investments)
-
-    # TODO: Check foreign key relationship between account IDs and proposals/investments?
 
     # Make sure there is the same number of proposals/investments as the old db schema
     num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
