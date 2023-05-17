@@ -641,6 +641,8 @@ class AccountServices:
 
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""], divider=True)
+
+            output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
             output_table.add_row(["","",""], divider=True)
 
             aggregate_usage_total = 0
@@ -649,6 +651,7 @@ class AccountServices:
             floating_su_total = 0
 
             for allocation in proposal.allocations:
+                #TODO: table usage table not picking up all_clusters?
                 if allocation.cluster_name == 'all_clusters':
                     floating_su_usage = allocation.service_units_used
                     floating_su_total = allocation.service_units_total
@@ -966,8 +969,12 @@ class AdminServices:
 
         # Build a generator for account names that match the lock state
         for account in account_names:
-            if SlurmAccount(account).get_locked_state(cluster) == status:
-                yield account
+            try:
+                if SlurmAccount(account).get_locked_state(cluster) == status:
+                    yield account
+            except AccountNotFoundError:
+                continue
+
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:
