@@ -271,7 +271,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
 
         # Advance half the available service units
         sus_to_advance = self.num_inv_sus // 2
-        self.account.advance(sus_to_advance)
+        self.account.advance(sus=sus_to_advance)
 
         with DBConnection.session() as session:
             active_investment = session.execute(primary_investment_query).scalars().first()
@@ -287,14 +287,14 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
             available_sus = sum(inv.service_units for inv in investments)
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).advance(available_sus + 1)
+            self.account.advance(sus=available_sus + 1)
 
     def test_error_on_negative_argument(self) -> None:
         """Test an ``ValueError`` is raised for negative arguments"""
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestmentServices(settings.test_accounts[0]).advance(sus)
+                self.account.advance(sus=sus)
 
 
 class MissingInvestmentErrors(ProposalSetup, TestCase):
@@ -334,4 +334,4 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
         """Test a ``MissingInvestmentError`` is raised if there are no investments to advance from"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.advance(10)
+            self.account.advance(sus=10)
