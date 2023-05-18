@@ -915,16 +915,17 @@ class AccountServices:
         for cluster in clusters:
             locked = lock_state
 
-            # Determine whether a purchased partition exists on the cluster
-            # using CRC's naming convention: partition name always
-            # contains name of the account, e.g. eschneider-mpi
-            for partition in Slurm.partition_names(cluster):
-                if partition.find(self._account_name) >= 0:
-                    locked = False
-                    LOG.info(
-                        f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
-                    break
             try:
+                # Determine whether a purchased partition exists on the cluster
+                # using CRC's naming convention: partition name always
+                # contains name of the account, e.g. eschneider-mpi
+                for partition in Slurm.partition_names(cluster):
+                    if partition.find(self._account_name) >= 0:
+                        locked = False
+                        LOG.info(
+                            f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
+                        break
+
                 SlurmAccount(self._account_name).set_locked_state(locked, cluster)
             except CmdError:
                 # Continue if SLURM cluster is unreachable by sinfo
