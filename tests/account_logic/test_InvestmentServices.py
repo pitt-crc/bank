@@ -98,6 +98,12 @@ class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
 
             self.assertIsNone(investment)
 
+    def test_delete_non_existent_investment(self) -> None:
+        """Test that deleting a non-existent investment yields a MissingInvestmentError"""
+
+        with self.assertRaises(MissingInvestmentError):
+            InvestmentServices(settings.test_accounts[0]).delete(inv_id=1000)
+
 
 class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
     """Test the modification of investment dates via modify_date"""
