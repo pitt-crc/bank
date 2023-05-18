@@ -721,8 +721,8 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(
-                fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table = PrettyTable(header=False, padding_width=5)
+            table.add_row(['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
                 table.add_row([
                     inv.service_units,
