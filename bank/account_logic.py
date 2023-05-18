@@ -924,8 +924,11 @@ class AccountServices:
                     LOG.info(
                         f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
                     break
-
-            SlurmAccount(self._account_name).set_locked_state(locked, cluster)
+            try:
+                SlurmAccount(self._account_name).set_locked_state(locked, cluster)
+            except CmdError:
+                # Continue if SLURM cluster is unreachable by sinfo
+                continue
 
     def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
