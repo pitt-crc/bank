@@ -384,7 +384,7 @@ class InvestmentParser(BaseParser):
         advance_parser = parent_parser.add_parser(
             name='advance',
             help='forward service units from future investments to a given investment')
-        advance_parser.set_defaults(function=InvestmentServices.add_sus)
+        advance_parser.set_defaults(function=InvestmentServices.advance)
         advance_parser.add_argument(**account_definition)
         advance_parser.add_argument('--id', **investment_id_definition)
         advance_parser.add_argument('--sus', **service_unit_definition)

@@ -537,15 +537,16 @@ class InvestmentServices:
 
             LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def advance(self, sus: int) -> None:
+    def advance(self, inv_id: Optional[int], sus: int) -> None:
         """Withdraw service units from future investments
 
         Args:
+            inv_id: the investment ID to perform the advance on, default is the first active investment found
             sus: The number of service units to withdraw
         """
 
         self._verify_service_units(sus)
-        inv_id = self._get_active_investment_id()
+        inv_id = inv_id or self._get_active_investment_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
@@ -722,9 +723,10 @@ class AccountServices:
                 raise MissingInvestmentError('Account has no investments')
 
             table = PrettyTable(header=False, padding_width=5)
-            table.add_row(['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table.add_row(['Investment ID','Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
             for inv in investments:
                 table.add_row([
+                    inv.id,
                     inv.service_units,
                     inv.start_date.strftime(settings.date_format),
                     inv.current_sus,
