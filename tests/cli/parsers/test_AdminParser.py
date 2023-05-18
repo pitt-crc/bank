@@ -29,9 +29,10 @@ class ListLocked(CLIAsserts, TestCase):
     """Test the ``list_locked`` subparser"""
 
     def test_no_arguments(self) -> None:
-        """Test the subparser call is valid without any additional arguments"""
+        """Test the subparser call exits when additional arguments are not supplied"""
 
-        self.assert_parser_matches_func_signature(AdminParser(), 'list_locked')
+        with self.assertRaises(SystemExit):
+            AdminParser().parse_args(['list_locked'])
 
     def test_single_clusters_argument(self) -> None:
         """Test the ``--cluster`` argument accepts at least one cluster name"""
@@ -53,9 +54,10 @@ class ListUnlocked(CLIAsserts, TestCase):
     """Test the ``list_unlocked`` subparser"""
 
     def test_no_arguments(self) -> None:
-        """Test the subparser call is valid without any additional arguments"""
+        """Test the subparser call exits when additional arguments are not supplied"""
 
-        self.assert_parser_matches_func_signature(AdminParser(), 'list_unlocked')
+        with self.assertRaises(SystemExit):
+            AdminParser().parse_args(['list_unlocked'])
 
     def test_single_clusters_argument(self) -> None:
         """Test the ``--cluster`` argument accepts at least one cluster name"""
