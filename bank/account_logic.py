@@ -613,10 +613,12 @@ class AccountServices:
             .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
-        self._active_investment_query = select(Investment)\
-            .join(Account) \
-            .where(Account.name == self._account_name) \
+        self._active_investment_query = select(Investment) \
+            .where(Investment.account_id.in_(subquery)) \
             .where(Investment.is_active)
+
+        self._investments_query = select(Investment) \
+            .where(Investment.account_id.in_(subquery))
 
     @staticmethod
     def _calculate_percentage(usage: int, total: int) -> int:
@@ -718,7 +720,7 @@ class AccountServices:
         """
 
         with DBConnection.session() as session:
-            investments = session.execute(self._active_investment_query).scalars().all()
+            investments = session.execute(self._investments_query).scalars().all()
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
