@@ -691,8 +691,8 @@ class AccountServices:
 
             floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
             output_table.add_row(['Floating Service Units', floating_su_usage, floating_su_percent])
-            output_table.add_row([f'**Floating SUs are applied to cover usage ', "", ""])
-            output_table.add_row([f'exceeding proposal limits across any cluster', "", ""], divider=True)
+            output_table.add_row([f'**Floating SUs are applied to any cluster to cover usage ', "", ""])
+            output_table.add_row([f'exceeding proposal limits', "", ""], divider=True)
 
             # Add another inner table describing aggregate usage
             if not investments:
