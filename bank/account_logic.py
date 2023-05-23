@@ -141,9 +141,6 @@ class ProposalServices:
             # Assign the proposal to user account
             account_query = select(Account).where(Account.name == self._account_name)
             account = session.execute(account_query).scalars().first()
-            if account is None:
-                account = Account(name=self._account_name)
-
             account.proposals.append(new_proposal)
 
             session.add(account)
