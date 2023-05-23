@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.cli import InvestmentParser
+from bank.cli.parsers import InvestmentParser
 from tests.cli.parsers._utils import CLIAsserts
 
 TEST_ACCOUNT = settings.test_accounts[0]
