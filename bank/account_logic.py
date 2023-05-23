@@ -141,6 +141,9 @@ class ProposalServices:
             # Assign the proposal to user account
             account_query = select(Account).where(Account.name == self._account_name)
             account = session.execute(account_query).scalars().first()
+            if account is None:
+                account = Account(name=self._account_name)
+
             account.proposals.append(new_proposal)
 
             session.add(account)
@@ -655,6 +658,9 @@ class AccountServices:
             floating_su_total = 0
 
             for allocation in proposal.allocations:
+                if not allocation.service_units_total:
+                    continue
+
                 if allocation.cluster_name == 'all_clusters':
                     floating_su_usage = allocation.service_units_used
                     floating_su_total = allocation.service_units_total
