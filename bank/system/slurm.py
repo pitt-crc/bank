@@ -206,7 +206,11 @@ class SlurmAccount:
         total = 0
         for cluster_name in clusters:
             user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
-            total += sum(user_usage.values())
+            try:
+                total += sum(user_usage.values())
+            except AttributeError:
+                # get_cluster_usage_per_user returned None because cluster was not responsive
+                return 0
 
         return total
 
