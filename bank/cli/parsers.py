@@ -3,6 +3,7 @@ application's commandline interface. Individual parsers are designed around
 different services provided by the banking app.
 """
 
+import sys
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from typing import List, Tuple
@@ -49,9 +50,10 @@ class BaseParser(ArgumentParser):
             SystemExit: Every time the method is called
         """
 
+        # If missing arguments, print help text followed by the error message
         if 'the following arguments are required:' in message:
             self.print_help()
-            print() # Add space between help text and error message
+            sys.stdout.write('\n')
             raise SystemExit(message)
 
         raise SystemExit(message)
