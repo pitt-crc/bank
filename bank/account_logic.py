@@ -658,9 +658,6 @@ class AccountServices:
             floating_su_total = 0
 
             for allocation in proposal.allocations:
-                if not allocation.service_units_total:
-                    continue
-
                 if allocation.cluster_name == 'all_clusters':
                     floating_su_usage = allocation.service_units_used
                     floating_su_total = allocation.service_units_total
@@ -675,6 +672,8 @@ class AccountServices:
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
                                                                    allocation.service_units_total)
                 cluster_name = str.upper(allocation.cluster_name)
+                if not allocation.service_units_total:
+                    continue
 
                 output_table.add_row([f"Cluster: {cluster_name}",
                                      f"Available SUs: {allocation.service_units_total}",""], divider=True)
