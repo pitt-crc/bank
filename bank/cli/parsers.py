@@ -327,7 +327,7 @@ class InvestmentParser(BaseParser):
             '--num_inv',
             metavar='N',
             type=NonNegativeInt,
-            default=5,
+            default=1,
             help='divide the service units across N sequential investments')
         create_parser.add_argument(
             '--start',
