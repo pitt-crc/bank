@@ -50,9 +50,9 @@ class BaseParser(ArgumentParser):
         """
 
         if 'the following arguments are required:' in message:
-            print(message, end='\n\n')
             self.print_help()
-            raise SystemExit()
+            print() # Add space between help text and error message
+            raise SystemExit(message)
 
         raise SystemExit(message)
 
