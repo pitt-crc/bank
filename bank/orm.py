@@ -220,23 +220,6 @@ class Allocation(Base):
 
         return value
 
-    @validates('cluster_name')
-    def _validate_cluster_name(self, key: str, value: str) -> str:
-        """Verify a cluster name is defined in application settings
-
-        Args:
-            key: Name of the database column being tested
-            value: The value to test
-
-        Raises:
-            ValueError: If the given value is not in application settings
-        """
-
-        if value not in settings.clusters and value != "all_clusters":
-            raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
-
-        return value
-
     @hybrid_property
     def is_exhausted(self) -> bool:
         """Whether the allocation has available service units"""
