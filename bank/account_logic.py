@@ -367,8 +367,8 @@ class InvestmentServices:
             sus: The total number of service units to be added to the investment, or split equally across multiple
             investments with ``num_inv``
             start: The start date of the investment, or first in the sequence of investments, defaulting to today
-            end: The expiration date of the investment, or first in the sequence of investments, defaulting to 12 months
-            from ``start``
+            end: The expiration date of the investment, or first in the sequence of investments, 
+            defaulting to 12 months from ``start``
             num_inv: Divide ``sus`` equally across a number of sequential investments
 
         Raises:
@@ -409,7 +409,7 @@ class InvestmentServices:
                 account.investments.append(new_investment)
                 session.add(account)
 
-                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
+                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} SUs")
 
                 session.commit()
 
@@ -643,7 +643,8 @@ class AccountServices:
                 raise MissingProposalError('Account has no proposal')
 
             # Proposal End Date as first row
-            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""], divider=True)
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""],
+                                 divider=True)
 
             output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
             output_table.add_row(["","",""], divider=True)
@@ -665,7 +666,8 @@ class AccountServices:
                     continue
 
                 total_usage_on_cluster = sum(usage_data.values())
-                total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
+                total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
+                                                                   allocation.service_units_total)
                 cluster_name = str.upper(allocation.cluster_name)
 
                 output_table.add_row([f"Cluster: {cluster_name}",
@@ -684,7 +686,8 @@ class AccountServices:
                         output_table.add_row([user, user_usage, user_percentage], divider=True)
 
                 # Overall usage
-                output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent], divider=True)
+                output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent],
+                                     divider=True)
                 output_table.add_row(["", "", ""], divider=True)
 
                 aggregate_usage_total += total_usage_on_cluster
@@ -694,7 +697,9 @@ class AccountServices:
 
             floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
             output_table.add_row(['Floating Service Units', "Units Remaining", "Percent Used"], divider=True)
-            output_table.add_row([f'**Floating SUs are applied to any cluster to cover usage ', floating_su_remaining, floating_su_percent])
+            output_table.add_row([f'**Floating SUs are applied to any cluster to cover usage ',
+                                  floating_su_remaining,
+                                  floating_su_percent])
             output_table.add_row([f'exceeding proposal limits', "", ""], divider=True)
 
             # Add another inner table describing aggregate usage
@@ -725,7 +730,13 @@ class AccountServices:
                 raise MissingInvestmentError('Account has no investments')
 
             table = PrettyTable(header=False, padding_width=5)
-            table.add_row(['Investment ID','Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table.add_row(['Investment ID',
+                           'Total Investment SUs',
+                           'Start Date',
+                           'Current SUs',
+                           'Withdrawn SUs',
+                           'Rollover SUs'])
+
             for inv in investments:
                 table.add_row([
                     inv.id,
@@ -850,7 +861,7 @@ class AccountServices:
                         floating_sus_remaining = alloc.service_units_total - alloc.service_units_used
                         continue
 
-                    # TODO: cluster usage errors on empty output from sshare
+                    # Update service units used from raw usage, skipping if cluster is unreachable
                     alloc.service_units_used += slurm_acct.get_cluster_usage_total(alloc.cluster_name, in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
@@ -927,7 +938,7 @@ class AccountServices:
                     if partition.find(self._account_name) >= 0:
                         locked = False
                         LOG.info(
-                            f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
+                            f"{self._account_name} is not locked on {cluster} because it has an investment partition")
                         break
 
                 SlurmAccount(self._account_name).set_locked_state(locked, cluster)
@@ -1021,5 +1032,15 @@ class AdminServices:
     def update_account_status(cls) -> None:
         """Update account usage information and lock any expired or overdrawn accounts"""
 
-        for account in cls.find_unlocked_account_names():
+        unlocked_accounts_by_cluster = cls.find_unlocked_account_names()
+
+        # Build set of account names that are unlocked on any cluster
+        account_names = set()
+        for name_set in unlocked_accounts_by_cluster.values():
+            account_names = account_names.union(name_set)
+
+        # Update the status of any unlocked account
+        for name in account_names:
+            account = AccountServices(name)
             account.update_status()
+
