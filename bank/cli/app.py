@@ -16,18 +16,26 @@ class CommandLineApplication:
         self.parser.add_argument('--version', action='version', version=__version__)
         self.subparsers = self.parser.add_subparsers(parser_class=BaseParser, required=True)
 
-        # Add each of the application subparsers with custom help text.
+        # Add each application subparser with appropriate help text
         self.subparsers.add_parser(
-            'admin', parents=[AdminParser(add_help=False)], help='tools for general system administration')
+            name='admin',
+            parents=[AdminParser(add_help=False)],
+            help='tools for general system administration')
 
         self.subparsers.add_parser(
-            'account', parents=[AccountParser(add_help=False)], help='tools for managing individual accounts')
+            name='account',
+            parents=[AccountParser(add_help=False)],
+            help='tools for managing individual accounts')
 
         self.subparsers.add_parser(
-            'proposal', parents=[ProposalParser(add_help=False)], help='administrative tools for user proposals')
+            name='proposal',
+            parents=[ProposalParser(add_help=False)],
+            help='administrative tools for user proposals')
 
         self.subparsers.add_parser(
-            'investment', parents=[InvestmentParser(add_help=False)], help='administrative tools for user investments')
+            name='investment',
+            parents=[InvestmentParser(add_help=False)],
+            help='administrative tools for user investments')
 
     @classmethod
     def execute(cls) -> None:
