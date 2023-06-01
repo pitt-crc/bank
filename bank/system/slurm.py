@@ -200,8 +200,11 @@ class SlurmAccount:
             The account's total usage across all of its users, across all clusters provided
         """
 
+        if not cluster:
+            clusters = settings.clusters
+        else:
+            clusters = (cluster, )
         # Default to all clusters in settings.clusters if not specified as an argument
-        clusters = (cluster, ) or settings.clusters
 
         total = 0
         for cluster_name in clusters:
