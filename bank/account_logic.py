@@ -669,6 +669,8 @@ class AccountServices:
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
                                                                    allocation.service_units_total)
                 cluster_name = str.upper(allocation.cluster_name)
+                if not allocation.service_units_total:
+                    continue
 
                 output_table.add_row([f"Cluster: {cluster_name}",
                                      f"Available SUs: {allocation.service_units_total}",""], divider=True)
