@@ -14,7 +14,7 @@ from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import between, delete, or_, select
+from sqlalchemy import between, delete, desc, or_, select
 
 from . import settings
 from .exceptions import *
@@ -360,7 +360,7 @@ class InvestmentServices:
             sus: int,
             start: Optional[date] = date.today(),
             end: Optional[date] = None,
-            num_inv: Optional[int] = 1) -> None:
+            num_inv: int = 1) -> None:
         """Add a new investment or series of investments to the given account
 
         Args:
@@ -611,11 +611,13 @@ class AccountServices:
 
         self._active_proposal_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active)
+            .where(Proposal.is_active) \
+            .order_by(Proposal.start_date.desc())
 
         self._active_investment_query = select(Investment) \
             .where(Investment.account_id.in_(subquery)) \
-            .where(Investment.is_active)
+            .where(Investment.is_active) \
+            .order_by(Investment.start_date.desc())
 
         self._investments_query = select(Investment) \
             .where(Investment.account_id.in_(subquery))
@@ -753,10 +755,12 @@ class AccountServices:
 
         try:
             print(self._build_usage_table())
-            print(self._build_investment_table())
 
         except MissingProposalError:
             print(f'Account {self._account_name} has no current proposal')
+
+        try:
+            print(self._build_investment_table())
 
         except MissingInvestmentError:
             pass
@@ -889,7 +893,7 @@ class AccountServices:
 
                 # Investment SUs can cover
                 elif exceeding_sus_total - floating_sus_remaining <= investment_sus:
-                    remaining_sus = exceeding_sus - floating_sus_remaining
+                    remaining_sus = exceeding_sus_total - floating_sus_remaining
                     if floating_alloc:
                         floating_alloc.service_units_used = floating_alloc.service_units_total
                     investment.current_sus -= remaining_sus
@@ -900,6 +904,7 @@ class AccountServices:
                                   f"on {cluster['name']}")
 
                 # Neither can cover
+                # TODO: this case should exhaust floating and investment service units as well
                 else:
                     self.lock(clusters=cluster_names)
                     LOG.info(f"Locking {self._account_name} due to exceeding limits")

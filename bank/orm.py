@@ -150,9 +150,8 @@ class Proposal(Base):
 
         today = date.today()
         in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = any(not alloc.is_exhausted for alloc in self.allocations)
 
-        return in_date_range and has_allocations
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
@@ -161,8 +160,7 @@ class Proposal(Base):
         today = date.today()
 
         sub_1 = select(Allocation.proposal_id) \
-            .where(Allocation.proposal_id == cls.id) \
-            .where(not_(Allocation.is_exhausted))
+            .where(Allocation.proposal_id == cls.id)
 
         sub_2 = select(Proposal.id) \
             .where(and_(today >= cls.start_date, today < cls.end_date)) \
@@ -339,8 +337,8 @@ class Investment(Base):
         today = date.today()
 
         in_date_range = (self.start_date <= today) & (today < self.end_date)
-        has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
-        return in_date_range and has_service_units
+
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
@@ -349,9 +347,7 @@ class Investment(Base):
         today = date.today()
 
         subquery = select(Investment.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(Investment.current_sus > 0) \
-            .where(Investment.withdrawn_sus < Investment.service_units)
+            .where(and_(today >= cls.start_date, today < cls.end_date)) 
 
         return cls.id.in_(subquery)
 
