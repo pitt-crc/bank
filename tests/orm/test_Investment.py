@@ -222,8 +222,8 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
             investment = session.execute(account_investments_query).scalars().first()
 
             # On start date -> not active
-            self.assertFalse(investment.is_active)
-            self.assertNotIn(investment.id, session.execute(
+            self.assertTrue(investment.is_active)
+            self.assertIn(investment.id, session.execute(
                 account_investment_ids_query.where(Investment.is_active)
             ).scalars().all())
 

@@ -353,8 +353,8 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
             proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
-            self.assertFalse(proposal.is_active)
-            self.assertNotIn(proposal.id, session.execute(
+            self.assertTrue(proposal.is_active)
+            self.assertIn(proposal.id, session.execute(
                 account_proposal_ids_query.where(Proposal.is_active)
             ).scalars().all())
 
@@ -525,14 +525,14 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
 
-        # Test is_exhausted on various dates
+        # Test is_active on various dates
         with DBConnection.session() as session:
 
             proposal = session.execute(account_proposals_query).scalars().first()
 
             # On start date
-            self.assertFalse(proposal.is_active)
-            self.assertNotIn(proposal.id, session.execute(
+            self.assertTrue(proposal.is_active)
+            self.assertIn(proposal.id, session.execute(
                 account_proposal_ids_query.where(Proposal.is_active)
             ).scalars().all())
 
