@@ -221,7 +221,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         with DBConnection.session() as session:
             investment = session.execute(account_investments_query).scalars().first()
 
-            # On start date -> not active
+            # On start date -> active
             self.assertTrue(investment.is_active)
             self.assertIn(investment.id, session.execute(
                 account_investment_ids_query.where(Investment.is_active)
@@ -234,10 +234,10 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
                     account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
-            # After start date -> not active
+            # After start date -> active
             with time_machine.travel(start + timedelta(1)):
-                self.assertFalse(investment.is_active)
-                self.assertNotIn(investment.id, session.execute(
+                self.assertTrue(investment.is_active)
+                self.assertIn(investment.id, session.execute(
                     account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 

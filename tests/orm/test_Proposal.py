@@ -335,9 +335,9 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
     def test_is_active_no_allocations(self) -> None:
         """ Test ``is_active`` for various date ranges on a proposal without any allocations
 
-        On start date --> not active
+        On start date --> active
         Before start date --> not active
-        After start date --> not active
+        After start date --> active
         On end date --> not active
         After end date --> not active
 
@@ -367,8 +367,8 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
-                self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(
+                self.assertTrue(proposal.is_active)
+                self.assertIn(proposal.id, session.execute(
                     account_proposal_ids_query.where(Proposal.is_active)
                 ).scalars().all())
 
@@ -545,8 +545,8 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
             # After start date
             with time_machine.travel(start + timedelta(1)):
-                self.assertFalse(proposal.is_active)
-                self.assertNotIn(proposal.id, session.execute(
+                self.assertTrue(proposal.is_active)
+                self.assertIn(proposal.id, session.execute(
                     account_proposal_ids_query.where(Proposal.is_active)
                 ).scalars().all())
 
