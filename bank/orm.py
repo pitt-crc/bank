@@ -149,7 +149,7 @@ class Proposal(Base):
         """Whether the proposal is within its active date range and has available service units"""
 
         today = date.today()
-        in_date_range = (self.start_date <= today) and (today < self.end_date)
+        in_date_range = (self.start_date >= today) and (today < self.end_date)
 
         return in_date_range
 
