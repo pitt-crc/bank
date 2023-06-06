@@ -159,14 +159,10 @@ class Proposal(Base):
 
         today = date.today()
 
-        sub_1 = select(Allocation.proposal_id) \
-            .where(Allocation.proposal_id == cls.id)
+        sub_1 = select(Proposal.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
-        sub_2 = select(Proposal.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(cls.id.in_(sub_1))
-
-        return cls.id.in_(sub_2)
+        return cls.id.in_(sub_1)
 
 
 class Allocation(Base):
