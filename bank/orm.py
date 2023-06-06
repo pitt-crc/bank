@@ -139,10 +139,10 @@ class Proposal(Base):
 
         # Proposal does not have any active allocations
         sub_2 = select(Proposal.id) \
-            .where(and_(today >= Proposal.start_date, today < Proposal.end_date)) \
+            .where(today < Proposal.end_date) \
             .where(cls.id.in_(sub_1))
 
-        return not_(cls.id.in_(sub_2))
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(sub_2)))
 
     @hybrid_property
     def is_active(self) -> bool:
