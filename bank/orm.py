@@ -343,7 +343,7 @@ class Investment(Base):
         today = date.today()
 
         subquery = select(Investment.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) 
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
         return cls.id.in_(subquery)
 

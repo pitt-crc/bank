@@ -14,7 +14,7 @@ from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import between, delete, desc, or_, select
+from sqlalchemy import between, delete, or_, select
 
 from . import settings
 from .exceptions import *
@@ -560,8 +560,7 @@ class InvestmentServices:
             usable_investment_query = select(Investment).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(Investment.is_expired is not False) \
-                .where(Investment.id != active_investment.id) \
-                .order_by(Investment.start_date.desc())
+                .where(Investment.id != active_investment.id)
 
             usable_investments = session.execute(usable_investment_query).scalars().all()
             if not usable_investments:
@@ -611,13 +610,11 @@ class AccountServices:
 
         self._active_proposal_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active) \
-            .order_by(Proposal.start_date.desc())
+            .where(Proposal.is_active)
 
         self._active_investment_query = select(Investment) \
             .where(Investment.account_id.in_(subquery)) \
-            .where(Investment.is_active) \
-            .order_by(Investment.start_date.desc())
+            .where(Investment.is_active)
 
         self._investments_query = select(Investment) \
             .where(Investment.account_id.in_(subquery))
@@ -1050,4 +1047,3 @@ class AdminServices:
         for name in account_names:
             account = AccountServices(name)
             account.update_status()
-
