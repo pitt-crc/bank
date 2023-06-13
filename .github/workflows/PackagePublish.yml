@@ -18,6 +18,8 @@ jobs:
   build-docs:
     name: Docs
     needs: run-tests
+    permissions:
+      packages: read
     uses: ./.github/workflows/DocumentationBuild.yml
     secrets: inherit
 
