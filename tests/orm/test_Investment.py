@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from bank import settings
 from bank.orm import Account, DBConnection, Investment
-from tests._utils import account_investments_query, add_investment_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, investment_ids_query, TODAY
+from tests._utils import account_investment_ids_query, account_investments_query, add_investment_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
 
 # Start and End date values to use with time_machine
 start = TODAY
@@ -114,35 +114,35 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
             # On start date -> expired
             self.assertTrue(investment.is_expired)
             self.assertIn(investment.id, session.execute(
-                investment_ids_query.where(Investment.is_expired)
+                account_investment_ids_query.where(Investment.is_expired)
             ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(investment.is_expired)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # After start date -> expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(investment.is_expired)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(investment.is_expired)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(investment.is_expired)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
     def test_is_expired_has_investment_sus(self) -> None:
@@ -167,35 +167,35 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
             # On start date ->  not expired
             self.assertFalse(investment.is_expired)
             self.assertNotIn(investment.id, session.execute(
-                investment_ids_query.where(Investment.is_expired)
+                account_investment_ids_query.where(Investment.is_expired)
             ).scalars().all())
 
             # Before start date -> not expired
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(investment.is_expired)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # After start date -> not expired
             with time_machine.travel(start + timedelta(1)):
                 self.assertFalse(investment.is_expired)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # On End date -> expired
             with time_machine.travel(end):
                 self.assertTrue(investment.is_expired)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
             # After End date -> expired
             with time_machine.travel(end + timedelta(1)):
                 self.assertTrue(investment.is_expired)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_expired)
+                    account_investment_ids_query.where(Investment.is_expired)
                 ).scalars().all())
 
 
@@ -221,38 +221,38 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
         with DBConnection.session() as session:
             investment = session.execute(account_investments_query).scalars().first()
 
-            # On start date -> not active
-            self.assertFalse(investment.is_active)
-            self.assertNotIn(investment.id, session.execute(
-                investment_ids_query.where(Investment.is_active)
+            # On start date -> active
+            self.assertTrue(investment.is_active)
+            self.assertIn(investment.id, session.execute(
+                account_investment_ids_query.where(Investment.is_active)
             ).scalars().all())
 
             # Before start date -> not active
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
-            # After start date -> not active
+            # After start date -> active
             with time_machine.travel(start + timedelta(1)):
-                self.assertFalse(investment.is_active)
-                self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                self.assertTrue(investment.is_active)
+                self.assertIn(investment.id, session.execute(
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
             # On End date -> not active
             with time_machine.travel(end):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
             # After End date -> not active
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
     def test_is_active_has_investment_sus(self) -> None:
@@ -277,33 +277,33 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
             # On start date ->  active
             self.assertTrue(investment.is_active)
             self.assertIn(investment.id, session.execute(
-                investment_ids_query.where(Investment.is_active)
+                account_investment_ids_query.where(Investment.is_active)
             ).scalars().all())
 
             # Before start date -> not active
             with time_machine.travel(start - timedelta(1)):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
             # After start date -> active
             with time_machine.travel(start + timedelta(1)):
                 self.assertTrue(investment.is_active)
                 self.assertIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
             # On End date -> not active
             with time_machine.travel(end):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())
 
             # After End date -> not active
             with time_machine.travel(end + timedelta(1)):
                 self.assertFalse(investment.is_active)
                 self.assertNotIn(investment.id, session.execute(
-                    investment_ids_query.where(Investment.is_active)
+                    account_investment_ids_query.where(Investment.is_active)
                 ).scalars().all())

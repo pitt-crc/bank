@@ -133,23 +133,25 @@ class Proposal(Base):
 
         today = date.today()
 
-        # Proposal does not have any active allocations
-        subquery = select(Proposal.id).outerjoin(Allocation) \
+        sub_1 = select(Allocation.proposal_id) \
             .where(Allocation.proposal_id == cls.id) \
-            .where(not_(Allocation.is_exhausted)) \
-            .where(today < Proposal.end_date)
+            .where(not_(Allocation.is_exhausted))
 
-        return and_(today >= Proposal.start_date, not_(cls.id.in_(subquery)))
+        # Proposal does not have any active allocations
+        sub_2 = select(Proposal.id) \
+            .where(today < Proposal.end_date) \
+            .where(cls.id.in_(sub_1))
+
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(sub_2)))
 
     @hybrid_property
     def is_active(self) -> bool:
         """Whether the proposal is within its active date range and has available service units"""
 
         today = date.today()
-        in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = any(not alloc.is_exhausted for alloc in self.allocations)
+        in_date_range = (today >= self.start_date) and (today < self.end_date)
 
-        return in_date_range and has_allocations
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
@@ -157,13 +159,10 @@ class Proposal(Base):
 
         today = date.today()
 
-        aliasAllocation = aliased(Allocation)
-        subquery = select(aliasAllocation.id) \
-            .where(aliasAllocation.id == cls.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(not_(Allocation.is_exhausted))
+        sub_1 = select(Proposal.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
-        return cls.id.in_(subquery)
+        return cls.id.in_(sub_1)
 
 
 class Allocation(Base):
@@ -215,28 +214,20 @@ class Allocation(Base):
 
         return value
 
-    @validates('cluster_name')
-    def _validate_cluster_name(self, key: str, value: str) -> str:
-        """Verify a cluster name is defined in application settings
-
-        Args:
-            key: Name of the database column being tested
-            value: The value to test
-
-        Raises:
-            ValueError: If the given value is not in application settings
-        """
-
-        if value not in settings.clusters:
-            raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
-
-        return value
-
     @hybrid_property
     def is_exhausted(self) -> bool:
         """Whether the allocation has available service units"""
 
         return self.service_units_used >= self.service_units_total
+
+    @is_exhausted.expression
+    def is_exhausted(cls) -> bool:
+        """SQL expression form of Allocation `is_exhausted` functionality"""
+
+        subquery = select(Allocation.id) \
+            .where(Allocation.service_units_used >= Allocation.service_units_total)
+
+        return cls.id.in_(subquery)
 
 
 class Investment(Base):
@@ -342,8 +333,8 @@ class Investment(Base):
         today = date.today()
 
         in_date_range = (self.start_date <= today) & (today < self.end_date)
-        has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
-        return in_date_range and has_service_units
+
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
@@ -352,9 +343,7 @@ class Investment(Base):
         today = date.today()
 
         subquery = select(Investment.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(Investment.current_sus > 0) \
-            .where(Investment.withdrawn_sus < Investment.service_units)
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
         return cls.id.in_(subquery)
 

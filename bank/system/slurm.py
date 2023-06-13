@@ -167,8 +167,12 @@ class SlurmAccount:
         if cluster not in Slurm.cluster_names():
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -o User,RawUsage")
-        header, *data = cmd.out.split('\n')[1:]
+        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -U -o User,RawUsage")
+
+        try:
+            header, *data = cmd.out.split('\n')[1:]
+        except ValueError:
+            return None
 
         out_data = dict()
         for line in data:
@@ -196,13 +200,21 @@ class SlurmAccount:
             The account's total usage across all of its users, across all clusters provided
         """
 
+        if not cluster:
+            clusters = settings.clusters
+        else:
+            clusters = (cluster, )
         # Default to all clusters in settings.clusters if not specified as an argument
-        clusters = (cluster, ) or settings.clusters
 
         total = 0
         for cluster_name in clusters:
             user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
-            total += sum(user_usage.values())
+            try:
+                total += sum(user_usage.values())
+            except AttributeError:
+                # get_cluster_usage_per_user returned None because cluster was not responsive,
+                # user_usage does not have values so this cluster can be skipped.
+                continue
 
         return total
 

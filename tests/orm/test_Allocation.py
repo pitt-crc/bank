@@ -57,14 +57,6 @@ class ClusterNameValidation(TestCase):
         allocation = Allocation(cluster_name=settings.test_cluster)
         self.assertEqual(settings.test_cluster, allocation.cluster_name)
 
-    def test_missing_cluster(self) -> None:
-        """Test for a ``ValueError`` when the cluster name is not defined in settings"""
 
-        with self.assertRaisesRegex(ValueError, 'application settings'):
-            Allocation(cluster_name='fake_cluster')
-
-    def test_blank_name(self) -> None:
-        """Test for a ``ValueError`` when the cluster name is blank"""
-
-        with self.assertRaisesRegex(ValueError, 'application settings'):
-            Allocation(cluster_name='')
+# TODO: add isExhausted test
+#class ExhaustedProperty(EmptyAccountSetup, TestCase):

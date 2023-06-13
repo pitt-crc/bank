@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from bank import settings
-from bank.cli import ProposalParser
+from bank.cli.parsers import ProposalParser
 from tests._utils import ProposalSetup
 from tests.cli.parsers._utils import CLIAsserts
 

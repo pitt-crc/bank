@@ -64,6 +64,26 @@ class AccountUnlocking(TestCase):
         account_services.unlock(clusters=[settings.test_cluster])
         self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
+class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
+    """Test _build_usage_table functionality for an individual account"""
+    def setUp(self) -> None:
+        """Instantiate an AccountServices and SlurmAccount object for the test account"""
+
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
+
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, in_hours: {'account1': 50, 'account2': 50})
+    def test_table_built(self) -> None:
+        """Test that the usage table is built properly"""
+
+        table = self.account._build_usage_table()
+
+        # TODO come up with one or more assertions to check the table output
+        #self.assertTrue()
+
 
 @skip('This functionality hasn\'t been fully implemented yet.')
 @patch('smtplib.SMTP.send_message')
@@ -74,6 +94,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         super().setUp()
 
         self.account = AccountServices(settings.test_accounts[0])
+
         with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date
@@ -135,7 +156,9 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         """Instantiate an AccountServices and SlurmAccount object for the test account"""
 
         super().setUp()
+
         self.account = AccountServices(settings.test_accounts[0])
+
         self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     # Ensure account usage is a reproducible value for testing
@@ -152,7 +175,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             # Expired on test cluster, no floating SUs
             proposal = session.execute(active_proposal_query).scalars().first()
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # No Investment SUs
             investment = session.execute(active_investment_query).scalars().first()
@@ -185,7 +208,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
         with DBConnection.session() as session:
             # Proposal is expired
             proposal = session.execute(active_proposal_query).scalars().first()
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -213,10 +236,6 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal = session.execute(active_proposal_query).scalars().first()
             proposal.allocations[0].service_units_total = 10_000
             proposal.allocations[0].service_units_used = 11_000
-            proposal.allocations.append(Allocation(
-                cluster_name="all_clusters",
-                service_units_total=10_000,
-                service_units_used=0))
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -259,11 +278,6 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             proposal.allocations[0].service_units_total = 10_000
             proposal.allocations[0].service_units_used = 10_000
             # TODO: need a second allocation on another cluster
-
-            proposal.allocations.append(Allocation(
-                cluster_name="all_clusters",
-                service_units_total=10_000,
-                service_units_used=0))
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -308,7 +322,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             # Proposal is expired
             proposal = session.execute(active_proposal_query).scalars().first()
             proposal.allocations[0].service_units_total = 10_000
-            proposal.allocations[0].service_units_used = 10_000
+            proposal.allocations[0].service_units_used = 35_000
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
@@ -326,3 +340,4 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(active_investment_query).scalars().first()
 
             self.assertEqual(900, investment.current_sus)
+
