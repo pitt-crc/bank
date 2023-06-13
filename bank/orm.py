@@ -9,9 +9,7 @@ from datetime import date, timedelta
 from sqlalchemy import and_, Column, Date, ForeignKey, func, Integer, MetaData, not_, or_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import aliased, declarative_base, relationship, sessionmaker, validates
-
-from bank import settings
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
 Base = declarative_base()
 
