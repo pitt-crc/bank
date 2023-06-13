@@ -20,6 +20,7 @@ jobs:
     needs: run-tests
     permissions:
       packages: read
+      contents: read
     uses: ./.github/workflows/DocumentationBuild.yml
     secrets: inherit
 
