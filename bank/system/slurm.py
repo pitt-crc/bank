@@ -212,7 +212,7 @@ class SlurmAccount:
             try:
                 total += sum(user_usage.values())
             except AttributeError:
-                # get_cluster_usage_per_user returned None because cluster was not responsive, 
+                # get_cluster_usage_per_user returned None because cluster was not responsive,
                 # user_usage does not have values so this cluster can be skipped.
                 continue
 
