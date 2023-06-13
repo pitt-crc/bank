@@ -1,0 +1,56 @@
+[build-system]
+requires = ["poetry-core", ]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "crc-bank"
+version = "0.0.0" # Version is set dynamically by the CI tool on publication
+authors = ["Pitt Center for Research Computing", ]
+readme = "README.md"
+description = "Banking application for resource allocation in Slurm based HPC systems."
+homepage = "https://github.com/pitt-crc/bank"
+repository = "https://github.com/pitt-crc/bank"
+documentation = "https://crc-pages.pitt.edu/bank/"
+keywords = ["Pitt", "CRC", "HPC", "banking", "slurm"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed"
+]
+packages = [
+    { include = "bank" },
+    { include = "bank/**/*.py" },
+]
+
+[tool.poetry.scripts]
+crc-bank = "bank.cli.app:CommandLineApplication.execute"
+
+[tool.poetry.dependencies]
+beautifulsoup4 = "4.12.2"
+pandas = "2.0.1"
+prettytable = "3.7.0"
+python = ">=3.8, <4.0"
+python-environ = "0.4.54"
+SQLAlchemy = "2.0.12"
+sqlalchemy-utils = "0.41.1"
+time-machine = "2.9.0"
+
+[tool.poetry.group.tests]
+optional = true
+
+[tool.poetry.group.tests.dependencies]
+coverage = "*"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "<7.0.0"
+sphinx-argparse = "0.4.0"
+sphinx_autodoc_typehints = "1.23.0"
+sphinx-copybutton = "0.5.2"
+sphinx-rtd-theme = "1.2.0"
