@@ -12,12 +12,18 @@ permissions:
 jobs:
   run-tests:
     name: Tests
+    permissions:
+      packages: read
+      contents: read
     uses: ./.github/workflows/PackageTest.yml
     secrets: inherit
 
   build-docs:
     name: Docs
     needs: run-tests
+    permissions:
+      packages: read
+      contents: read
     uses: ./.github/workflows/DocumentationBuild.yml
     secrets: inherit
 
