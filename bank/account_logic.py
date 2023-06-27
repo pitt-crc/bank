@@ -639,7 +639,7 @@ class AccountServices:
 
             return proposal.end_date
 
-    def _get_active_proposal_allocation_info(self) -> Collection[allocation]:
+    def _get_active_proposal_allocation_info(self) -> Collection[Allocation]:
         """Return the allocations associated with the Account's active proposal"""
 
         with DBConnection.session() as session:
