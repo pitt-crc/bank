@@ -628,6 +628,28 @@ class AccountServices:
 
         return 0
 
+    def _get_active_proposal_end_date(self) -> str:
+        """Return the end date for the Account's active proposal"""
+
+        with DBConnection.session() as session:
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+
+            if not proposal:
+                raise MissingProposalError('Account has no active proposal')
+
+            return proposal.end_date
+
+    def _get_active_proposal_allocation_info(self) -> Collection[allocation]:
+        """Return the allocations associated with the Account's active proposal"""
+
+        with DBConnection.session() as session:
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+
+            if not proposal:
+                raise MissingProposalError('Account has no active proposal')
+
+            return proposal.allocations
+
     def _build_usage_table(self) -> PrettyTable:
         """Return a human-readable summary of the account usage and allocation"""
 
