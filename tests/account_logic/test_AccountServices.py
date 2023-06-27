@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import TestCase, skip
 from unittest.mock import patch
 
@@ -64,6 +64,7 @@ class AccountUnlocking(TestCase):
         account_services.unlock(clusters=[settings.test_cluster])
         self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
+
 class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
     """Test _build_usage_table functionality for an individual account"""
     def setUp(self) -> None:
@@ -84,6 +85,20 @@ class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
         # TODO come up with one or more assertions to check the table output
         #self.assertTrue()
 
+
+class GetActiveProposalEndDate(ProposalSetup, TestCase):
+    """Tests for _get_active_proposal_end_date"""
+
+    def setUp(self) -> None:
+        """Instantiate an AccountServices object for the test account"""
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+
+    def test_date_correct(self) -> None:
+        """Test that the date is returned correctly in the expected format"""
+
+        endDate = self.account._get_active_proposal_end_date()
+        self.assertEqual(endDate, date.today() + timedelta(days=365))
 
 @skip('This functionality hasn\'t been fully implemented yet.')
 @patch('smtplib.SMTP.send_message')
