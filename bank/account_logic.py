@@ -675,7 +675,6 @@ class AccountServices:
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
                                  divider=True)
-            output_table.add_row(["", "", ""], divider=True)
 
             output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
             output_table.add_row(["", "", ""], divider=True)
