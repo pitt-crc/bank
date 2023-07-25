@@ -64,6 +64,7 @@ class AccountUnlocking(TestCase):
         account_services.unlock(clusters=[settings.test_cluster])
         self.assertFalse(slurm_account.get_locked_state(settings.test_cluster))
 
+
 class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
     """Test _build_usage_table functionality for an individual account"""
     def setUp(self) -> None:
@@ -83,6 +84,26 @@ class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
 
         # TODO come up with one or more assertions to check the table output
         #self.assertTrue()
+
+
+class Insert(ProposalSetup, TestCase):
+    """Test first time insertion of the account into the DB"""
+
+    def test_account_inserted(self) -> None:
+        """Test the account has an entry in the DB after insertion"""
+
+        # Insert an entry into the database for an account with an existing SLURM account
+        account_services = AccountServices(settings.test_accounts[0])
+        account_services.insert()
+
+        with DBConnection.session() as session:
+            # Query the DB for the account
+            account_query = select(Account).where(Account.name == self._account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # The account entry should not be empty, and the name should match the name provided
+            self.assertNotEmpty(account)
+            self.assertEquals(account.name, settings.test_accounts[0])
 
 
 @skip('This functionality hasn\'t been fully implemented yet.')

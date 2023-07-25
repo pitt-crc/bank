@@ -11,7 +11,6 @@ TEST_ACCOUNT = settings.test_accounts[0]
 TEST_CLUSTER = settings.test_cluster
 
 
-
 class Insert(ProposalSetup, CLIAsserts, TestCase):
     """Test the ``insert`` subparser"""
 
