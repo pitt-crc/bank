@@ -41,13 +41,12 @@ class ProposalServices:
         with DBConnection.session() as session:
             # Check if the Account has an entry in the database
             account_query = select(Account).where(Account.name == self._account_name)
-            account = session.execute(account_query).scalars().first()
-            if account is None:
+            self.account = session.execute(account_query).scalars().first()
+            if self.account is None:
                 # TODO: create the entry here automatically? Create a static method to do the insertion?
                 raise AccountDBEntryNotFoundError(f'Account {account_name} does not have a database entry yet. '
                                                   f'Insert with crc-bank account insert {account_name}')
 
-    @staticmethod
     def _get_active_proposal_id(self) -> None:
         """Return the active proposal ID for the current account
 
@@ -69,7 +68,6 @@ class ProposalServices:
 
         return proposal_id
 
-    @staticmethod
     def _verify_proposal_id(self, proposal_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
@@ -673,16 +671,12 @@ class AccountServices:
                 raise MissingProposalError('Account has no proposal')
 
             # Proposal End Date as first row
-            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""], divider=True)
-            output_table.add_row(["","",""], divider=True)
-
-            aggregate_usage_total = 0
-            # Proposal End Date as first row
-            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""],
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
                                  divider=True)
+            output_table.add_row(["", "", ""], divider=True)
 
             output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
-            output_table.add_row(["","",""], divider=True)
+            output_table.add_row(["", "", ""], divider=True)
 
             aggregate_usage_total = 0
             allocation_total = 0
@@ -697,11 +691,6 @@ class AccountServices:
                     continue
 
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
-                total_usage_on_cluster = sum(usage_data.values())
-                total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
-                cluster_name = str.upper(allocation.cluster_name)
-                if not usage_data:
-                    continue
 
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
@@ -726,19 +715,12 @@ class AccountServices:
                         output_table.add_row([user, user_usage, user_percentage], divider=True)
 
                 # Overall usage
-                output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent], divider=True)
-                output_table.add_row(["", "", ""], divider=True)
-
-                aggregate_usage_total += total_usage_on_cluster
-                # Overall usage
                 output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent],
                                      divider=True)
                 output_table.add_row(["", "", ""], divider=True)
 
                 aggregate_usage_total += total_usage_on_cluster
                 allocation_total += allocation.service_units_total
-
-            usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
             usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
@@ -823,8 +805,8 @@ class AccountServices:
             if account is None:
                 accounts_table = session.execute(select(Account))
                 accounts_table.append(Account(name=self._account_name))
-                # TODO: Can I just session add the accountEntry?
-                session.add(accounts)
+                # TODO: Can I just session add the Account object?
+                session.add(accounts_table)
                 session.commit()
 
                 LOG.info(f"Created DB entry for account {self._account_name}")
