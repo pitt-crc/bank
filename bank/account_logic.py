@@ -148,7 +148,9 @@ class ProposalServices:
             )
 
             # Assign the proposal to user account
-            self.account.proposals.append(new_proposal)
+            account_query = select(Account).where(Account.name == self._account_name)
+            account = session.execute(account_query).scalars().first()
+            account.proposals.append(new_proposal)
 
             session.add(account)
             session.commit()
@@ -804,7 +806,7 @@ class AccountServices:
             if account is None:
                 accounts_table = session.execute(select(Account))
                 accounts_table.append(Account(name=self._account_name))
-                # TODO: Can I just session add the Account object?
+
                 session.add(accounts_table)
                 session.commit()
 
