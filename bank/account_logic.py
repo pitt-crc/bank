@@ -793,8 +793,7 @@ class AccountServices:
             pass
 
     def insert(self) -> None:
-
-        # TODO: test for inserting non-existent slurm account
+        """Insert an entry into the database for an new SLURM account"""
 
         with DBConnection.session() as session:
             # Check if the Account has an entry in the database

@@ -44,4 +44,3 @@ class MissingInvestmentError(Exception):
 
 class InvestmentExistsError(Exception):
     """Raised when trying to create an investment that already exists."""
-

@@ -123,6 +123,12 @@ class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
 
 class Insert(ProposalSetup, TestCase):
     """Test first time insertion of the account into the DB"""
+    def setUp(self) -> None:
+        """Instantiate an AccountServices and SlurmAccount object for the test account"""
+
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     def test_account_inserted(self) -> None:
         """Test the account has an entry in the DB after insertion"""
