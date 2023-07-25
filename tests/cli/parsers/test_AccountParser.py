@@ -11,6 +11,28 @@ TEST_ACCOUNT = settings.test_accounts[0]
 TEST_CLUSTER = settings.test_cluster
 
 
+
+class Insert(ProposalSetup, CLIAsserts, TestCase):
+    """Test the ``insert`` subparser"""
+
+    def test_account_info(self) -> None:
+        """Test the parsing of arguments by the ``info`` command"""
+
+        self.assert_parser_matches_func_signature(AccountParser(), f'insert {TEST_ACCOUNT}')
+
+    def test_missing_account_name_error(self) -> None:
+        """Test a ``SystemExit`` error is raised if the account name is not provided"""
+
+        with self.assertRaisesRegex(SystemExit, 'the following arguments are required: account'):
+            AccountParser().parse_args(['insert'])
+
+    def test_nonexistent_account_error(self) -> None:
+        """Test a ``SystemExit`` error is raised if the account does not exist"""
+
+        with self.assertRaisesRegex(SystemExit, 'No Slurm account for username'):
+            AccountParser().parse_args(['insert', 'fake_account'])
+
+
 class Info(ProposalSetup, CLIAsserts, TestCase):
     """Test the ``info`` subparser"""
 
