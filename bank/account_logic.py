@@ -38,6 +38,16 @@ class ProposalServices:
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
 
+        with DBConnection.session() as session:
+            # Check if the Account has an entry in the database
+            account_query = select(Account).where(Account.name == self._account_name)
+            account = session.execute(account_query).scalars().first()
+            if account is None:
+                # TODO: create the entry here automatically? Create a static method to do the insertion?
+                raise AccountDBEntryNotFoundError(f'Account {account_name} does not have a database entry yet. '
+                                                  f'Insert with crc-bank account insert {account_name}')
+
+    @staticmethod
     def _get_active_proposal_id(self) -> None:
         """Return the active proposal ID for the current account
 
@@ -58,6 +68,7 @@ class ProposalServices:
 
         return proposal_id
 
+    @staticmethod
     def _verify_proposal_id(self, proposal_id: int) -> None:
         """Raise an error if a given ID does not belong to the current account
 
@@ -138,9 +149,7 @@ class ProposalServices:
             )
 
             # Assign the proposal to user account
-            account_query = select(Account).where(Account.name == self._account_name)
-            account = session.execute(account_query).scalars().first()
-            account.proposals.append(new_proposal)
+            self.account.proposals.append(new_proposal)
 
             session.add(account)
             session.commit()
@@ -722,6 +731,27 @@ class AccountServices:
 
         except MissingInvestmentError:
             pass
+
+    def insert(self) -> None:
+
+        # TODO: test for inserting non-existent slurm account
+
+        with DBConnection.session() as session:
+            # Check if the Account has an entry in the database
+            account_query = select(Account).where(Account.name == self._account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # If not, insert the new account so proposals/investments can reference it
+            if account is None:
+                accounts_table = session.execute(select(Account))
+                accounts_table.append(Account(name=self._account_name))
+                # TODO: Can I just session add the accountEntry?
+                session.add(accounts)
+                session.commit()
+
+                LOG.info(f"Created DB entry for account {self._account_name}")
+            else:
+                print(f'Account {self._account_name} already exists in the DB')
 
     def notify(self) -> None:
         """Send any pending usage alerts to the account"""
