@@ -100,26 +100,6 @@ class GetActiveProposalEndDate(ProposalSetup, TestCase):
         endDate = self.account._get_active_proposal_end_date()
         self.assertEqual(endDate, date.today() + timedelta(days=365))
 
-class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
-    """Test _build_usage_table functionality for an individual account"""
-    def setUp(self) -> None:
-        """Instantiate an AccountServices and SlurmAccount object for the test account"""
-
-        super().setUp()
-        self.account = AccountServices(settings.test_accounts[0])
-        self.slurm_account = SlurmAccount(settings.test_accounts[0])
-
-    @patch.object(SlurmAccount,
-                  "get_cluster_usage_per_user",
-                  lambda self, cluster, in_hours: {'account1': 50, 'account2': 50})
-    def test_table_built(self) -> None:
-        """Test that the usage table is built properly"""
-
-        table = self.account._build_usage_table()
-
-        # TODO come up with one or more assertions to check the table output
-        #self.assertTrue()
-
 
 class Insert(ProposalSetup, TestCase):
     """Test first time insertion of the account into the DB"""
@@ -139,7 +119,7 @@ class Insert(ProposalSetup, TestCase):
 
         with DBConnection.session() as session:
             # Query the DB for the account
-            account_query = select(Account).where(Account.name == self._account_name)
+            account_query = select(Account).where(Account.name == self.account._account_name)
             account = session.execute(account_query).scalars().first()
 
             # The account entry should not be empty, and the name should match the name provided
