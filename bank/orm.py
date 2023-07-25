@@ -9,9 +9,7 @@ from datetime import date, timedelta
 from sqlalchemy import and_, Column, Date, ForeignKey, func, Integer, MetaData, not_, or_, String, create_engine, select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import aliased, declarative_base, relationship, sessionmaker, validates
-
-from bank import settings
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, validates
 
 Base = declarative_base()
 
@@ -133,23 +131,25 @@ class Proposal(Base):
 
         today = date.today()
 
-        # Proposal does not have any active allocations
-        subquery = select(Proposal.id).outerjoin(Allocation) \
+        sub_1 = select(Allocation.proposal_id) \
             .where(Allocation.proposal_id == cls.id) \
-            .where(not_(Allocation.is_exhausted)) \
-            .where(today < Proposal.end_date)
+            .where(not_(Allocation.is_exhausted))
 
-        return and_(today >= Proposal.start_date, not_(cls.id.in_(subquery)))
+        # Proposal does not have any active allocations
+        sub_2 = select(Proposal.id) \
+            .where(today < Proposal.end_date) \
+            .where(cls.id.in_(sub_1))
+
+        return and_(today >= Proposal.start_date, not_(cls.id.in_(sub_2)))
 
     @hybrid_property
     def is_active(self) -> bool:
         """Whether the proposal is within its active date range and has available service units"""
 
         today = date.today()
-        in_date_range = (self.start_date <= today) and (today < self.end_date)
-        has_allocations = any(not alloc.is_exhausted for alloc in self.allocations)
+        in_date_range = (today >= self.start_date) and (today < self.end_date)
 
-        return in_date_range and has_allocations
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
@@ -157,13 +157,10 @@ class Proposal(Base):
 
         today = date.today()
 
-        aliasAllocation = aliased(Allocation)
-        subquery = select(aliasAllocation.id) \
-            .where(aliasAllocation.id == cls.id) \
-            .where(and_(today >= cls.start_date, today < cls.end_date)) \
-            .where(not_(aliasAllocation.is_exhausted))
+        sub_1 = select(Proposal.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
 
-        return cls.id.in_(subquery)
+        return cls.id.in_(sub_1)
 
 
 class Allocation(Base):
@@ -215,23 +212,6 @@ class Allocation(Base):
 
         return value
 
-    @validates('cluster_name')
-    def _validate_cluster_name(self, key: str, value: str) -> str:
-        """Verify a cluster name is defined in application settings
-
-        Args:
-            key: Name of the database column being tested
-            value: The value to test
-
-        Raises:
-            ValueError: If the given value is not in application settings
-        """
-
-        if value not in settings.clusters and value != "all_clusters":
-            raise ValueError(f'Value {key} column is not a cluster name defined in application settings (got {value}).')
-
-        return value
-
     @hybrid_property
     def is_exhausted(self) -> bool:
         """Whether the allocation has available service units"""
@@ -275,10 +255,10 @@ class Investment(Base):
     account_id = Column(Integer, ForeignKey(Account.id))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    service_units = Column(Integer, nullable=False)  # Initial allocation of service units
-    rollover_sus = Column(Integer, nullable=False)  # Service units Carried over from previous investments
-    withdrawn_sus = Column(Integer, nullable=False)  # Service units reallocated from this investment to another
-    current_sus = Column(Integer, nullable=False)  # Initial service units plus those withdrawn from other investments
+    service_units = Column(Integer, nullable=False)
+    rollover_sus = Column(Integer, nullable=False, default=0)
+    withdrawn_sus = Column(Integer, nullable=False, default=0)
+    current_sus = Column(Integer, nullable=False, default=0)
 
     account = relationship('Account', back_populates='investments')
 
@@ -299,7 +279,7 @@ class Investment(Base):
 
         return value
 
-    @validates('end')
+    @validates('end_date')
     def _validate_end_date(self, key: str, value: date) -> date:
         """Verify the end date is after the start date
 
@@ -312,7 +292,7 @@ class Investment(Base):
         """
 
         if self.start_date and value <= self.start_date:
-            raise ValueError(f'Value for {key} column must come after the proposal start date')
+            raise ValueError(f'Value for {key} column must come after the investment start date')
 
         return value
 
@@ -326,37 +306,44 @@ class Investment(Base):
     def is_expired(self) -> bool:
         """Return whether the investment is past its end date or has exhausted its allocation"""
 
-        past_end = self.end_date <= date.today()
+        today = date.today()
+        past_end = self.end_date <= today
+        started = self.start_date <= today
         spent_service_units = (self.current_sus <= 0) and (self.withdrawn_sus >= self.service_units)
-        return past_end or spent_service_units
+        return past_end or (started and spent_service_units)
 
     @is_expired.expression
     def is_expired(cls) -> bool:
         """SQL expression form of Investment `is_expired` functionality"""
 
-        #TODO Implement and test
-        past_end = cls.end_date <= date.today()
-        spent_service_units = (cls.current_sus <= 0) & (cls.withdrawn_sus >= cls.service_units)
-        return past_end | spent_service_units
+        today = date.today()
+
+        subquery = select(Investment.id) \
+            .where(and_(Investment.current_sus <= 0, Investment.withdrawn_sus >= Investment.service_units)) \
+            .where(today >= Investment.start_date)
+
+        return or_(today >= cls.end_date, cls.id.in_(subquery))
 
     @hybrid_property
     def is_active(self) -> bool:
         """Return if the investment is within its active date range and has available service units"""
 
         today = date.today()
+
         in_date_range = (self.start_date <= today) & (today < self.end_date)
-        has_service_units = (self.current_sus > 0) & (self.withdrawn_sus < self.service_units)
-        return in_date_range and has_service_units
+
+        return in_date_range
 
     @is_active.expression
     def is_active(cls) -> bool:
         """SQL expression form of Investment `is_active` functionality"""
 
-        #TODO: Implement and test
         today = date.today()
-        in_date_range = (cls.start_date <= today) & (today < cls.end_date)
-        has_service_units = (cls.current_sus > 0) & (cls.withdrawn_sus < cls.service_units)
-        return in_date_range & has_service_units
+
+        subquery = select(Investment.id) \
+            .where(and_(today >= cls.start_date, today < cls.end_date))
+
+        return cls.id.in_(subquery)
 
 
 class DBConnection:
@@ -380,6 +367,5 @@ class DBConnection:
 
         cls.url = url
         cls.engine = create_engine(cls.url)
-        cls.metadata.create_all(cls.engine)
         cls.connection = cls.engine.connect()
         cls.session = sessionmaker(cls.engine)

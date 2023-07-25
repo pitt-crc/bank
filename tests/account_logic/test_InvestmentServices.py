@@ -98,6 +98,12 @@ class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
 
             self.assertIsNone(investment)
 
+    def test_delete_non_existent_investment(self) -> None:
+        """Test that deleting a non-existent investment yields a MissingInvestmentError"""
+
+        with self.assertRaises(MissingInvestmentError):
+            InvestmentServices(settings.test_accounts[0]).delete(inv_id=1000)
+
 
 class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
     """Test the modification of investment dates via modify_date"""
@@ -255,6 +261,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.account = InvestmentServices(settings.test_accounts[0])
+        self.inv_id = self.account._get_active_investment_id()
 
     def test_investment_is_advanced(self) -> None:
         """Test the specified number of service units are advanced from the investment"""
@@ -265,7 +272,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
 
         # Advance half the available service units
         sus_to_advance = self.num_inv_sus // 2
-        self.account.advance(sus_to_advance)
+        self.account.advance(inv_id=self.inv_id, sus=sus_to_advance)
 
         with DBConnection.session() as session:
             active_investment = session.execute(primary_investment_query).scalars().first()
@@ -281,14 +288,14 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
             available_sus = sum(inv.service_units for inv in investments)
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).advance(available_sus + 1)
+            self.account.advance(inv_id=self.inv_id, sus=available_sus + 1)
 
     def test_error_on_negative_argument(self) -> None:
         """Test an ``ValueError`` is raised for negative arguments"""
 
         for sus in (0, -1):
             with self.assertRaises(ValueError):
-                InvestmentServices(settings.test_accounts[0]).advance(sus)
+                self.account.advance(inv_id=self.inv_id, sus=sus)
 
 
 class MissingInvestmentErrors(ProposalSetup, TestCase):
@@ -328,4 +335,4 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
         """Test a ``MissingInvestmentError`` is raised if there are no investments to advance from"""
 
         with self.assertRaises(MissingInvestmentError):
-            self.account.advance(10)
+            self.account.advance(inv_id=self.account._get_active_investment_id(), sus=10)

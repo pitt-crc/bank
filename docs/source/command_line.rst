@@ -11,7 +11,7 @@ General Account Management
 --------------------------
 
 .. argparse::
-   :module: bank.cli
+   :module: bank.cli.parsers
    :func: AccountParser
    :prog: crc_bank.py
 
@@ -19,7 +19,7 @@ User Proposals
 --------------
 
 .. argparse::
-   :module: bank.cli
+   :module: bank.cli.parsers
    :func: ProposalParser
    :prog: crc_bank.py
 
@@ -27,7 +27,7 @@ User Investments
 ----------------
 
 .. argparse::
-   :module: bank.cli
+   :module: bank.cli.parsers
    :func: InvestmentParser
    :prog: crc_bank.py
 
@@ -36,6 +36,6 @@ Banking Administrative Tasks
 ----------------------------
 
 .. argparse::
-   :module: bank.cli
+   :module: bank.cli.parsers
    :func: AdminParser
    :prog: crc_bank.py

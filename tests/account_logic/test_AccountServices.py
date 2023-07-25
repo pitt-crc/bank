@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import TestCase, skip
 from unittest.mock import patch
 
@@ -86,6 +86,41 @@ class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
         #self.assertTrue()
 
 
+class GetActiveProposalEndDate(ProposalSetup, TestCase):
+    """Tests for _get_active_proposal_end_date"""
+
+    def setUp(self) -> None:
+        """Instantiate an AccountServices object for the test account"""
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+
+    def test_date_correct(self) -> None:
+        """Test that the date is returned correctly in the expected format"""
+
+        endDate = self.account._get_active_proposal_end_date()
+        self.assertEqual(endDate, date.today() + timedelta(days=365))
+
+class BuildUsageTable(ProposalSetup, InvestmentSetup, TestCase):
+    """Test _build_usage_table functionality for an individual account"""
+    def setUp(self) -> None:
+        """Instantiate an AccountServices and SlurmAccount object for the test account"""
+
+        super().setUp()
+        self.account = AccountServices(settings.test_accounts[0])
+        self.slurm_account = SlurmAccount(settings.test_accounts[0])
+
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, in_hours: {'account1': 50, 'account2': 50})
+    def test_table_built(self) -> None:
+        """Test that the usage table is built properly"""
+
+        table = self.account._build_usage_table()
+
+        # TODO come up with one or more assertions to check the table output
+        #self.assertTrue()
+
+
 class Insert(ProposalSetup, TestCase):
     """Test first time insertion of the account into the DB"""
 
@@ -115,6 +150,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         super().setUp()
 
         self.account = AccountServices(settings.test_accounts[0])
+
         with DBConnection.session() as session:
             active_proposal = session.execute(active_proposal_query).scalars().first()
             self.proposal_end_date = active_proposal.end_date

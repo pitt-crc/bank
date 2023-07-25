@@ -30,14 +30,20 @@ packages = [
 crc-bank = "bank.cli.app:CommandLineApplication.execute"
 
 [tool.poetry.dependencies]
-beautifulsoup4 = "4.12.0"
-pandas = "1.5.3"
-prettytable = "3.7.0"
+beautifulsoup4 = "4.12.2"
+pandas = "2.0.1"
+prettytable = "3.8.0"
 python = ">=3.8, <4.0"
 python-environ = "0.4.54"
-SQLAlchemy = "1.4.46"
-sqlalchemy-utils = "0.40.0"
+SQLAlchemy = "2.0.16"
+sqlalchemy-utils = "0.41.1"
 time-machine = "2.9.0"
+
+[tool.poetry.group.tests]
+optional = true
+
+[tool.poetry.group.tests.dependencies]
+coverage = "*"
 
 [tool.poetry.group.docs]
 optional = true
@@ -45,7 +51,6 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 sphinx = "<7.0.0"
 sphinx-argparse = "0.4.0"
-sphinx_autodoc_typehints = "1.22"
-sphinx-copybutton = "0.5.1"
-sphinx-rtd-theme = "1.2.0"
-
+sphinx_autodoc_typehints = "1.23.0"
+sphinx-copybutton = "0.5.2"
+sphinx-rtd-theme = "1.2.2"

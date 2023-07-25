@@ -55,9 +55,10 @@ class ProposalServices:
             MissingProposalError: If no active proposal is found
         """
 
+        subquery = select(Account.id).where(Account.name == self._account_name)
+
         active_proposal_id_query = select(Proposal.id) \
-            .join(Account) \
-            .where(Account.name == self._account_name) \
+            .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
         with DBConnection.session() as session:
@@ -368,15 +369,15 @@ class InvestmentServices:
             sus: int,
             start: Optional[date] = date.today(),
             end: Optional[date] = None,
-            num_inv: Optional[int] = 1) -> None:
+            num_inv: int = 1) -> None:
         """Add a new investment or series of investments to the given account
 
         Args:
             sus: The total number of service units to be added to the investment, or split equally across multiple
             investments with ``num_inv``
             start: The start date of the investment, or first in the sequence of investments, defaulting to today
-            end: The expiration date of the investment, or first in the sequence of investments, defaulting to 12 months
-            from ``start``
+            end: The expiration date of the investment, or first in the sequence of investments,
+            defaulting to 12 months from ``start``
             num_inv: Divide ``sus`` equally across a number of sequential investments
 
         Raises:
@@ -417,7 +418,7 @@ class InvestmentServices:
                 account.investments.append(new_investment)
                 session.add(account)
 
-                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} service units")
+                LOG.debug(f"Inserting investment {new_investment.id} for {self._account_name} with {sus} SUs")
 
                 session.commit()
 
@@ -545,15 +546,16 @@ class InvestmentServices:
 
             LOG.info(f'Removed {sus} service units to investment {investment.id} for account {self._account_name}')
 
-    def advance(self, sus: int) -> None:
+    def advance(self, inv_id: Optional[int], sus: int) -> None:
         """Withdraw service units from future investments
 
         Args:
+            inv_id: the investment ID to perform the advance on, default is the first active investment found
             sus: The number of service units to withdraw
         """
 
         self._verify_service_units(sus)
-        inv_id = self._get_active_investment_id()
+        inv_id = inv_id or self._get_active_investment_id()
         requested_withdrawal = sus
 
         with DBConnection.session() as session:
@@ -567,8 +569,7 @@ class InvestmentServices:
             usable_investment_query = select(Investment).join(Account) \
                 .where(Account.name == self._account_name) \
                 .where(Investment.is_expired is not False) \
-                .where(Investment.id != active_investment.id) \
-                .order_by(Investment.start_date.desc())
+                .where(Investment.id != active_investment.id)
 
             usable_investments = session.execute(usable_investment_query).scalars().all()
             if not usable_investments:
@@ -614,13 +615,18 @@ class AccountServices:
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
 
-        self._active_proposal_query = select(Proposal).join(Account) \
-            .where(Account.name == self._account_name) \
+        subquery = select(Account.id).where(Account.name == self._account_name)
+
+        self._active_proposal_query = select(Proposal) \
+            .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
-        self._active_investment_query = select(Investment).join(Account) \
-            .where(Account.name == self._account_name). \
-            where(Investment.is_active)
+        self._active_investment_query = select(Investment) \
+            .where(Investment.account_id.in_(subquery)) \
+            .where(Investment.is_active)
+
+        self._investments_query = select(Investment) \
+            .where(Investment.account_id.in_(subquery))
 
     @staticmethod
     def _calculate_percentage(usage: int, total: int) -> int:
@@ -631,11 +637,34 @@ class AccountServices:
 
         return 0
 
+    def _get_active_proposal_end_date(self) -> str:
+        """Return the end date for the Account's active proposal"""
+
+        with DBConnection.session() as session:
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+
+            if not proposal:
+                raise MissingProposalError('Account has no active proposal')
+
+            return proposal.end_date
+
+    def _get_active_proposal_allocation_info(self) -> Collection[Allocation]:
+        """Return the allocations associated with the Account's active proposal"""
+
+        with DBConnection.session() as session:
+            proposal = session.execute(self._active_proposal_query).scalars().first()
+
+            if not proposal:
+                raise MissingProposalError('Account has no active proposal')
+
+            return proposal.allocations
+
     def _build_usage_table(self) -> PrettyTable:
         """Return a human-readable summary of the account usage and allocation"""
 
         slurm_acct = SlurmAccount(self._account_name)
         output_table = PrettyTable(header=False, padding_width=5)
+
         with DBConnection.session() as session:
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investments = session.execute(self._active_investment_query).scalars().all()
@@ -648,12 +677,38 @@ class AccountServices:
             output_table.add_row(["","",""], divider=True)
 
             aggregate_usage_total = 0
+            # Proposal End Date as first row
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""],
+                                 divider=True)
+
+            output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
+            output_table.add_row(["","",""], divider=True)
+
+            aggregate_usage_total = 0
             allocation_total = 0
+            floating_su_usage = 0
+            floating_su_total = 0
+
             for allocation in proposal.allocations:
+                if allocation.cluster_name == 'all_clusters':
+                    floating_su_usage = allocation.service_units_used
+                    floating_su_total = allocation.service_units_total
+                    floating_su_remaining = floating_su_total - floating_su_usage
+                    continue
+
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster, allocation.service_units_total)
                 cluster_name = str.upper(allocation.cluster_name)
+                if not usage_data:
+                    continue
+
+                total_usage_on_cluster = sum(usage_data.values())
+                total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
+                                                                   allocation.service_units_total)
+                cluster_name = str.upper(allocation.cluster_name)
+                if not allocation.service_units_total:
+                    continue
 
                 output_table.add_row([f"Cluster: {cluster_name}",
                                      f"Available SUs: {allocation.service_units_total}",""], divider=True)
@@ -675,10 +730,24 @@ class AccountServices:
                 output_table.add_row(["", "", ""], divider=True)
 
                 aggregate_usage_total += total_usage_on_cluster
+                # Overall usage
+                output_table.add_row([f'Overall for {cluster_name}', total_usage_on_cluster, total_cluster_percent],
+                                     divider=True)
+                output_table.add_row(["", "", ""], divider=True)
+
+                aggregate_usage_total += total_usage_on_cluster
                 allocation_total += allocation.service_units_total
 
             usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
+            usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
+
+            floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
+            output_table.add_row(['Floating Service Units', "Units Remaining", "Percent Used"], divider=True)
+            output_table.add_row([f'**Floating SUs are applied to any cluster to cover usage ',
+                                  floating_su_remaining,
+                                  floating_su_percent])
+            output_table.add_row([f'exceeding proposal limits', "", ""], divider=True)
 
             # Add another inner table describing aggregate usage
             if not investments:
@@ -703,14 +772,21 @@ class AccountServices:
         """
 
         with DBConnection.session() as session:
-            investments = session.execute(self._active_investment_query).scalars().all()
+            investments = session.execute(self._investments_query).scalars().all()
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(
-                fields=['Total Investment SUs', 'Start Date', 'Current SUs', 'Withdrawn SUs', 'Rollover SUs'])
+            table = PrettyTable(header=False, padding_width=5)
+            table.add_row(['Investment ID',
+                           'Total Investment SUs',
+                           'Start Date',
+                           'Current SUs',
+                           'Withdrawn SUs',
+                           'Rollover SUs'])
+
             for inv in investments:
                 table.add_row([
+                    inv.id,
                     inv.service_units,
                     inv.start_date.strftime(settings.date_format),
                     inv.current_sus,
@@ -724,10 +800,12 @@ class AccountServices:
 
         try:
             print(self._build_usage_table())
-            print(self._build_investment_table())
 
         except MissingProposalError:
             print(f'Account {self._account_name} has no current proposal')
+
+        try:
+            print(self._build_investment_table())
 
         except MissingInvestmentError:
             pass
@@ -853,7 +931,7 @@ class AccountServices:
                         floating_sus_remaining = alloc.service_units_total - alloc.service_units_used
                         continue
 
-                    # TODO: cluster usage errors on empty output from sshare
+                    # Update service units used from raw usage, skipping if cluster is unreachable
                     alloc.service_units_used += slurm_acct.get_cluster_usage_total(alloc.cluster_name, in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
@@ -881,7 +959,7 @@ class AccountServices:
 
                 # Investment SUs can cover
                 elif exceeding_sus_total - floating_sus_remaining <= investment_sus:
-                    remaining_sus = exceeding_sus - floating_sus_remaining
+                    remaining_sus = exceeding_sus_total - floating_sus_remaining
                     if floating_alloc:
                         floating_alloc.service_units_used = floating_alloc.service_units_total
                     investment.current_sus -= remaining_sus
@@ -892,6 +970,7 @@ class AccountServices:
                                   f"on {cluster['name']}")
 
                 # Neither can cover
+                # TODO: this case should exhaust floating and investment service units as well
                 else:
                     self.lock(clusters=cluster_names)
                     LOG.info(f"Locking {self._account_name} due to exceeding limits")
@@ -922,17 +1001,21 @@ class AccountServices:
         for cluster in clusters:
             locked = lock_state
 
-            # Determine whether a purchased partition exists on the cluster
-            # using CRC's naming convention: partition name always
-            # contains name of the account, e.g. eschneider-mpi
-            for partition in Slurm.partition_names(cluster):
-                if partition.find(self._account_name) >= 0:
-                    locked = False
-                    LOG.info(
-                        f"{self._account_name} cannot be locked on {cluster} because it has an investment partition")
-                    break
+            try:
+                # Determine whether a purchased partition exists on the cluster
+                # using CRC's naming convention: partition name always
+                # contains name of the account, e.g. eschneider-mpi
+                for partition in Slurm.partition_names(cluster):
+                    if partition.find(self._account_name) >= 0:
+                        locked = False
+                        LOG.info(
+                            f"{self._account_name} is not locked on {cluster} because it has an investment partition")
+                        break
 
-            SlurmAccount(self._account_name).set_locked_state(locked, cluster)
+                SlurmAccount(self._account_name).set_locked_state(locked, cluster)
+            except CmdError:
+                # Continue if SLURM cluster is unreachable by sinfo
+                continue
 
     def lock(self, clusters: Optional[Collection[str]] = None, all_clusters=False) -> None:
         """Lock the account on the given clusters
@@ -976,8 +1059,12 @@ class AdminServices:
 
         # Build a generator for account names that match the lock state
         for account in account_names:
-            if SlurmAccount(account).get_locked_state(cluster) == status:
-                yield account
+            try:
+                if SlurmAccount(account).get_locked_state(cluster) == status:
+                    yield account
+            except AccountNotFoundError:
+                continue
+
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:
@@ -1016,5 +1103,14 @@ class AdminServices:
     def update_account_status(cls) -> None:
         """Update account usage information and lock any expired or overdrawn accounts"""
 
-        for account in cls.find_unlocked_account_names():
+        unlocked_accounts_by_cluster = cls.find_unlocked_account_names()
+
+        # Build set of account names that are unlocked on any cluster
+        account_names = set()
+        for name_set in unlocked_accounts_by_cluster.values():
+            account_names = account_names.union(name_set)
+
+        # Update the status of any unlocked account
+        for name in account_names:
+            account = AccountServices(name)
             account.update_status()
