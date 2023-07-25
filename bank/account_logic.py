@@ -804,10 +804,7 @@ class AccountServices:
 
             # If not, insert the new account so proposals/investments can reference it
             if account is None:
-                accounts_table = session.execute(select(Account))
-                accounts_table.append(Account(name=self._account_name))
-
-                session.add(accounts_table)
+                session.add(Account(name=self._account_name))
                 session.commit()
 
                 LOG.info(f"Created DB entry for account {self._account_name}")
