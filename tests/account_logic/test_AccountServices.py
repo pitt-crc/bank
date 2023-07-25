@@ -101,7 +101,7 @@ class GetActiveProposalEndDate(ProposalSetup, TestCase):
         self.assertEqual(endDate, date.today() + timedelta(days=365))
 
 
-class Insert(ProposalSetup, TestCase):
+class Insert(TestCase):
     """Test first time insertion of the account into the DB"""
     def setUp(self) -> None:
         """Instantiate an AccountServices and SlurmAccount object for the test account"""
@@ -123,7 +123,7 @@ class Insert(ProposalSetup, TestCase):
             account = session.execute(account_query).scalars().first()
 
             # The account entry should not be empty, and the name should match the name provided
-            self.assertNotEmpty(account)
+            self.assertTrue(account)
             self.assertEquals(account.name, settings.test_accounts[0])
 
 
