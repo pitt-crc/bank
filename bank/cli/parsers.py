@@ -244,6 +244,8 @@ class ProposalParser(BaseParser):
         parser.add_argument('--all-clusters', **su_argument, help='service units awarded across all clusters')
 
         # Add per-cluster arguments for setting service units
+        clusters = settings.clusters or Slurm.cluster_names()        
+
         for cluster in settings.clusters:
             parser.add_argument(f'--{cluster}', **su_argument, help=f'service units awarded on the {cluster} cluster')
 
