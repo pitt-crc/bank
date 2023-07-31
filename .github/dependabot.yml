@@ -11,6 +11,8 @@ updates:
       python-dependencies:
         patterns:
           - "*"
+        exclude-patterns:
+          - "sphinx*"
       documentation-dependencies:
         patterns:
           - "sphinx*"
