@@ -247,6 +247,13 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
         with self.assertRaises(ProposalExistsError):
             self.account.create(start=TODAY)
 
+    def test_error_on_proposal_creation_default_dates(self):
+        """ Test new proposals are not allowed to overlap with existing proposals, using default dates"""
+
+        self.account.create()
+        with self.assertRaises(ProposalExistsError):
+            self.account.create()
+
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
