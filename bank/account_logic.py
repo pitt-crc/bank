@@ -14,7 +14,7 @@ from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import between, delete, or_, select
+from sqlalchemy import between, delete, and_, or_, select
 
 from . import settings
 from .exceptions import *
@@ -114,16 +114,19 @@ class ProposalServices:
 
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            overlapping_proposal_query = select(Proposal).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(
-                or_(
-                    between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(end, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, end),
-                    between(Proposal.last_active_date, start, end)
-                )
-            )
+            overlapping_proposal_sub_1 = select(Account.id) \
+                                     .where(Account.name == self._account_name)
+            overlapping_proposal_query = select(Proposal) \
+                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                    .where(
+                           or_(
+                               Proposal.start_date == start.date(),
+                               Proposal.last_active_date == end.date(),
+                               and_(Proposal.start_date >= start.date(), Proposal.start_date <= end.date()),
+                               and_(Proposal.last_active_date >= start.date(), Proposal.last_active_date <= end.date()),
+                               and_(Proposal.start_date < start.date(), Proposal.last_active_date > end.date())
+                              )
+                          )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
@@ -203,17 +206,19 @@ class ProposalServices:
             last_active_date = end - timedelta(days=1)
 
             # Find any overlapping proposals (not including the proposal being modified)
-            overlapping_proposal_query = select(Proposal).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(Proposal.id != proposal_id) \
-                .where(
-                or_(
-                    between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(last_active_date, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, last_active_date),
-                    between(Proposal.last_active_date, start, last_active_date)
-                )
-            )
+            overlapping_proposal_sub_1 = select(Account.id) \
+                                     .where(Account.name == self._account_name)
+            overlapping_proposal_query = select(Proposal) \
+                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                    .where(
+                           or_(
+                               Proposal.start_date == start.date(),
+                               Proposal.last_active_date == end.date(),
+                               and_(Proposal.start_date >= start.date(), Proposal.start_date <= end.date()),
+                               and_(Proposal.last_active_date >= start.date(), Proposal.last_active_date <= end.date()),
+                               and_(Proposal.start_date < start.date(), Proposal.last_active_date > end.date())
+                              )
+                          )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
