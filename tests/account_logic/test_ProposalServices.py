@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import TestCase
 
 from sqlalchemy import join, select
@@ -9,7 +9,7 @@ from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError, AccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
 from tests._utils import account_proposals_query, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
-    ProposalSetup, TODAY, TOMORROW, YESTERDAY
+    ProposalSetup, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units_total) \
@@ -212,7 +212,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         """Test a ``MissingProposalError`` error is raised when modifying a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.modify_date(**{'start': TODAY, 'proposal_id': 1000})
+            self.account.modify_date(**{'start': date.today(), 'proposal_id': 1000})
 
     def test_error_on_add(self) -> None:
         """Test a ``MissingProposalError`` error is raised when adding to a missing proposal"""
@@ -237,15 +237,15 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     def test_neighboring_proposals_are_allowed(self):
         """Test that proposals with neighboring durations are allowed"""
 
-        self.account.create(start=TODAY, end=TODAY+relativedelta(days=1), **{settings.test_cluster: 100})
+        self.account.create(start=date.today(), end=date.today()+relativedelta(days=1), **{settings.test_cluster: 100})
         self.account.create(start=TOMORROW, end=TOMORROW+relativedelta(days=1), **{settings.test_cluster: 100})
 
     def test_error_on_proposal_creation(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
 
-        self.account.create(start=TODAY)
+        self.account.create(start=date.today())
         with self.assertRaises(ProposalExistsError):
-            self.account.create(start=TODAY)
+            self.account.create(start=date.today())
 
     def test_error_on_proposal_creation_default_dates(self):
         """ Test new proposals are not allowed to overlap with existing proposals, using default dates"""
