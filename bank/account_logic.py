@@ -14,7 +14,7 @@ from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import between, delete, and_, or_, select
+from sqlalchemy import delete, and_, or_, select
 
 from . import settings
 from .exceptions import *
