@@ -112,6 +112,11 @@ class ProposalServices:
 
         end = end or (start + relativedelta(years=1))
 
+        if isinstance(start, datetime):
+            start = start.date()
+        if isinstance(end, datetime):
+            end = end.date()
+
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
             overlapping_proposal_sub_1 = select(Account.id) \
@@ -120,11 +125,11 @@ class ProposalServices:
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
                            or_(
-                               Proposal.start_date == start.date(),
-                               Proposal.last_active_date == end.date(),
-                               and_(Proposal.start_date >= start.date(), Proposal.start_date <= end.date()),
-                               and_(Proposal.last_active_date >= start.date(), Proposal.last_active_date <= end.date()),
-                               and_(Proposal.start_date < start.date(), Proposal.last_active_date > end.date())
+                               Proposal.start_date == start,
+                               Proposal.last_active_date == end,
+                               and_(Proposal.start_date >= start, Proposal.start_date <= end),
+                               and_(Proposal.last_active_date >= start, Proposal.last_active_date <= end),
+                               and_(Proposal.start_date < start, Proposal.last_active_date > end)
                               )
                           )
 
@@ -203,6 +208,12 @@ class ProposalServices:
                                  f'If providing start or end alone, this comparison is between the provided date and '
                                  f'the proposals\'s existing value')
 
+            if isinstance(start, datetime):
+                start = start.date()
+            if isinstance(end, datetime):
+                end = end.date()
+
+
             last_active_date = end - timedelta(days=1)
 
             # Find any overlapping proposals (not including the proposal being modified)
@@ -212,11 +223,11 @@ class ProposalServices:
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
                            or_(
-                               Proposal.start_date == start.date(),
-                               Proposal.last_active_date == end.date(),
-                               and_(Proposal.start_date >= start.date(), Proposal.start_date <= end.date()),
-                               and_(Proposal.last_active_date >= start.date(), Proposal.last_active_date <= end.date()),
-                               and_(Proposal.start_date < start.date(), Proposal.last_active_date > end.date())
+                               Proposal.start_date == start,
+                               Proposal.last_active_date == end,
+                               and_(Proposal.start_date >= start, Proposal.start_date <= end),
+                               and_(Proposal.last_active_date >= start, Proposal.last_active_date <= end),
+                               and_(Proposal.start_date < start, Proposal.last_active_date > end)
                               )
                           )
 
