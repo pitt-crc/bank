@@ -265,7 +265,7 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
         self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
-        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2, **{settings.test_cluster: 100})
+        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
             self.account.modify_date(end=DAY_AFTER_TOMORROW)
