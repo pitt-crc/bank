@@ -14,7 +14,7 @@ from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import delete, and_, or_, select
+from sqlalchemy import delete, and_, not_, or_, select
 
 from . import settings
 from .exceptions import *
@@ -127,11 +127,10 @@ class ProposalServices:
                            or_(
                                Proposal.start_date == start,
                                Proposal.last_active_date == end,
-                               and_(Proposal.start_date >= start, Proposal.start_date <= end),
-                               and_(Proposal.last_active_date >= start, Proposal.last_active_date <= end),
-                               and_(Proposal.start_date < start, Proposal.last_active_date > end)
-                              )
+                               not_(and_(start < Proposal.start_date, end < Proposal.start_date)),
+                               not_(and_(start > Proposal.end_date, end  > Proposal.end_date))
                           )
+                    )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
@@ -222,13 +221,12 @@ class ProposalServices:
             overlapping_proposal_query = select(Proposal) \
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
-                           or_(
+                            or_(
                                Proposal.start_date == start,
                                Proposal.last_active_date == end,
-                               and_(Proposal.start_date >= start, Proposal.start_date <= end),
-                               and_(Proposal.last_active_date >= start, Proposal.last_active_date <= end),
-                               and_(Proposal.start_date < start, Proposal.last_active_date > end)
-                              )
+                               not_(and_(start < Proposal.start_date, end < Proposal.start_date)),
+                               not_(and_(start > Proposal.end_date, end  > Proposal.end_date))
+                            )
                           )
 
             if session.execute(overlapping_proposal_query).scalars().first():
