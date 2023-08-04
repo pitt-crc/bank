@@ -124,7 +124,7 @@ class ProposalServices:
             overlapping_proposal_query = select(Proposal) \
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
-                           or_(
+                           and_(
                                not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
                                not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                           )
@@ -216,7 +216,7 @@ class ProposalServices:
             overlapping_proposal_query = select(Proposal) \
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
-                            or_(
+                            and_(
                                not_(and_(start < Proposal.start_date, end  <= Proposal.start_date)),
                                not_(and_(start >= Proposal.end_date, end  > Proposal.end_date))
                             )
