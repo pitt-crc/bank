@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import TestCase
 
 from sqlalchemy import join, select
@@ -105,8 +105,8 @@ class ModifyDate(ProposalSetup, TestCase):
         with DBConnection.session() as session:
             old_proposal = session.execute(proposal_query).scalars().first()
             proposal_id = old_proposal.id
-            new_start_date = old_proposal.start_date + relativedelta(days=100)
-            new_end_date = old_proposal.end_date + relativedelta(days=100)
+            new_start_date = old_proposal.start_date + relativedelta(years=2)
+            new_end_date = old_proposal.end_date + relativedelta(years=2)
 
         self.account.modify_date(proposal_id, start=new_start_date, end=new_end_date)
 
@@ -237,21 +237,35 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     def test_neighboring_proposals_are_allowed(self):
         """Test that proposals with neighboring durations are allowed"""
 
-        self.account.create(start=TODAY, end=TODAY+relativedelta(days=1), **{settings.test_cluster: 100})
-        self.account.create(start=TOMORROW, end=TOMORROW+relativedelta(days=1), **{settings.test_cluster: 100})
+        self.account.create(start=TODAY, end=TOMORROW, **{settings.test_cluster: 100})
+        self.account.create(start=TOMORROW, end=DAY_AFTER_TOMORROW, **{settings.test_cluster: 100})
 
-    def test_error_on_proposal_creation(self):
+    def test_error_on_proposal_creation_same_start(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
 
         self.account.create(start=TODAY)
         with self.assertRaises(ProposalExistsError):
             self.account.create(start=TODAY)
 
+    def test_error_on_proposal_creation_during_existing(self):
+        """Test new proposals are not allowed to be created during an existing proposals duration"""
+
+        self.account.create(start=TODAY)
+        with self.assertRaises(ProposalExistsError):
+            self.account.create(start=TOMORROW)
+
+    def test_error_on_proposal_creation_default_dates(self):
+        """ Test new proposals are not allowed to overlap with existing proposals, using default dates"""
+
+        self.account.create()
+        with self.assertRaises(ProposalExistsError):
+            self.account.create()
+
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
-        self.account.create(start=YESTERDAY, end=YESTERDAY+timedelta(days=2), **{settings.test_cluster: 100})
-        self.account.create(start=TOMORROW, end=TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
+        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
             self.account.modify_date(end=DAY_AFTER_TOMORROW)

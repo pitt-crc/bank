@@ -7,14 +7,14 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import between, delete, or_, select
+from sqlalchemy import delete, and_, not_, select
 
 from . import settings
 from .exceptions import *
@@ -112,18 +112,23 @@ class ProposalServices:
 
         end = end or (start + relativedelta(years=1))
 
+        if isinstance(start, datetime):
+            start = start.date()
+        if isinstance(end, datetime):
+            end = end.date()
+
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
-            overlapping_proposal_query = select(Proposal).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(
-                or_(
-                    between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(end, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, end),
-                    between(Proposal.last_active_date, start, end)
-                )
-            )
+            overlapping_proposal_sub_1 = select(Account.id) \
+                                     .where(Account.name == self._account_name)
+            overlapping_proposal_query = select(Proposal) \
+                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                    .where(
+                           and_(
+                               not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
+                               not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
+                          )
+                    )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
@@ -200,20 +205,22 @@ class ProposalServices:
                                  f'If providing start or end alone, this comparison is between the provided date and '
                                  f'the proposals\'s existing value')
 
-            last_active_date = end - timedelta(days=1)
+            if isinstance(start, datetime):
+                start = start.date()
+            if isinstance(end, datetime):
+                end = end.date()
 
             # Find any overlapping proposals (not including the proposal being modified)
-            overlapping_proposal_query = select(Proposal).join(Account) \
-                .where(Account.name == self._account_name) \
-                .where(Proposal.id != proposal_id) \
-                .where(
-                or_(
-                    between(start, Proposal.start_date, Proposal.last_active_date),
-                    between(last_active_date, Proposal.start_date, Proposal.last_active_date),
-                    between(Proposal.start_date, start, last_active_date),
-                    between(Proposal.last_active_date, start, last_active_date)
-                )
-            )
+            overlapping_proposal_sub_1 = select(Account.id) \
+                                     .where(Account.name == self._account_name)
+            overlapping_proposal_query = select(Proposal) \
+                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                    .where(
+                            and_(
+                               not_(and_(start < Proposal.start_date, end  <= Proposal.start_date)),
+                               not_(and_(start >= Proposal.end_date, end  > Proposal.end_date))
+                            )
+                          )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
