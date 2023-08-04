@@ -7,14 +7,14 @@ API Reference
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
-from sqlalchemy import delete, and_, not_, or_, select
+from sqlalchemy import delete, and_, not_, select
 
 from . import settings
 from .exceptions import *
