@@ -101,30 +101,39 @@ class GetActiveProposalEndDate(ProposalSetup, TestCase):
         self.assertEqual(endDate, date.today() + timedelta(days=365))
 
 
-class Insert(TestCase):
+class SetupDBAccountEntry(TestCase):
     """Test first time insertion of the account into the DB"""
-    def setUp(self) -> None:
-        """Instantiate an AccountServices and SlurmAccount object for the test account"""
-
-        super().setUp()
-        self.account = AccountServices(settings.test_accounts[0])
-        self.slurm_account = SlurmAccount(settings.test_accounts[0])
 
     def test_account_inserted(self) -> None:
         """Test the account has an entry in the DB after insertion"""
 
+        account_name = settings.test_accounts[0]
         # Insert an entry into the database for an account with an existing SLURM account
-        account_services = AccountServices(settings.test_accounts[0])
-        account_services.insert()
+        AccountServices.setup_db_account_entry(account_name)
 
         with DBConnection.session() as session:
             # Query the DB for the account
-            account_query = select(Account).where(Account.name == self.account._account_name)
+            account_query = select(Account).where(Account.name == account_name)
             account = session.execute(account_query).scalars().first()
 
             # The account entry should not be empty, and the name should match the name provided
             self.assertTrue(account)
-            self.assertEquals(account.name, settings.test_accounts[0])
+            self.assertEqual(account.name, settings.test_accounts[0])
+
+    def test_account_inserted_AccountServices(self) -> None:
+        """Test the account has an entry in the DB upon AccountServices object creation"""
+
+        # Create an account services object for an existing SLURM account
+        acct = AccountServices(settings.test_accounts[0])
+
+        with DBConnection.session() as session:
+            # Query the DB for the account
+            account_query = select(Account).where(Account.name == acct._account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # The account entry should not be empty, and the name should match the name provided
+            self.assertTrue(account)
+            self.assertEqual(account.name, acct._account_name)
 
 
 @skip('This functionality hasn\'t been fully implemented yet.')

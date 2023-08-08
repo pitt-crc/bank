@@ -223,6 +223,24 @@ class AddSus(ProposalSetup, InvestmentSetup, TestCase):
             account.add_sus(1, 0)
 
 
+class SetupDBAccountEntry(TestCase):
+    """Test first time insertion of the account into the DB"""
+
+    def test_account_inserted_AccountServices(self) -> None:
+        """Test the account has an entry in the DB upon InvestmentServices object creation"""
+
+        # Create an account services object for an existing SLURM account
+        acct = InvestmentServices(settings.test_accounts[0])
+
+        with DBConnection.session() as session:
+            # Query the DB for the account
+            account_query = select(Account).where(Account.name == acct._account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # The account entry should not be empty, and the name should match the name provided
+            self.assertTrue(account)
+            self.assertEqual(account.name, acct._account_name)
+
 class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
     """Tests for the subtraction of sus via the ``subtract`` method"""
 
