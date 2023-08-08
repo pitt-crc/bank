@@ -147,11 +147,6 @@ class AccountParser(BaseParser):
         info_parser.set_defaults(function=AccountServices.info)
         info_parser.add_argument(**account_argument)
 
-        insert_parser = subparsers.add_parser('insert', help='first time insertion of an entry into the database '
-                                                                'for the account')
-        insert_parser.set_defaults(function=AccountServices.insert)
-        insert_parser.add_argument(**account_argument)
-
 
 class ProposalParser(BaseParser):
     """Commandline interface for managing individual proposals

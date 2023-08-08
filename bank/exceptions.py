@@ -18,10 +18,6 @@ class AccountNotFoundError(Exception):
     """Raised when a SLURM user account does not exist."""
 
 
-class AccountDBEntryNotFoundError(Exception):
-    """Raised when the database does not yet contain an entry for the SLURM account"""
-
-
 class ClusterNotFoundError(Exception):
     """Raised when a Slurm cluster does not exist."""
 
