@@ -37,15 +37,7 @@ class ProposalServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
-
-        with DBConnection.session() as session:
-            # Check if the Account has an entry in the database
-            account_query = select(Account).where(Account.name == self._account_name)
-            self.account = session.execute(account_query).scalars().first()
-            if self.account is None:
-                # TODO: create the entry here automatically? Create a static method to do the insertion?
-                raise AccountDBEntryNotFoundError(f'Account {account_name} does not have a database entry yet. '
-                                                  f'Insert with crc-bank account insert {account_name}')
+        AccountServices.setup_db_account_entry(self._account_name)
 
     def _get_active_proposal_id(self) -> None:
         """Return the active proposal ID for the current account
@@ -303,6 +295,7 @@ class InvestmentServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
+        AccountServices.setup_db_account_entry(self._account_name)
 
         with DBConnection.session() as session:
             # Check if the Account has an associated proposal
@@ -614,6 +607,7 @@ class AccountServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
+        self.setup_db_account_entry(self._account_name)
 
         subquery = select(Account.id).where(Account.name == self._account_name)
 
@@ -797,22 +791,21 @@ class AccountServices:
         except MissingInvestmentError:
             pass
 
-    def insert(self) -> None:
-        """Insert an entry into the database for an new SLURM account"""
+    @staticmethod
+    def setup_db_account_entry(account_name) -> Account:
+        """Insert an entry into the database for a new SLURM account if it does not already exist"""
 
         with DBConnection.session() as session:
             # Check if the Account has an entry in the database
-            account_query = select(Account).where(Account.name == self._account_name)
+            account_query = select(Account).where(Account.name == account_name)
             account = session.execute(account_query).scalars().first()
 
             # If not, insert the new account so proposals/investments can reference it
             if account is None:
-                session.add(Account(name=self._account_name))
+                account = Account(name=account_name)
+                session.add(account)
                 session.commit()
-
-                LOG.info(f"Created DB entry for account {self._account_name}")
-            else:
-                print(f'Account {self._account_name} already exists in the DB')
+                LOG.info(f"Created DB entry for account {account_name}")
 
     def notify(self) -> None:
         """Send any pending usage alerts to the account"""
