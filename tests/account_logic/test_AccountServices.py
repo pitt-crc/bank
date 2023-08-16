@@ -127,7 +127,7 @@ class SetupDBAccountEntry(TestCase):
         AccountServices.setup_db_account_entry(account_name)
         AccountServices.setup_db_account_entry(account_name)
 
-        with DB Connection.session() as session:
+        with DBConnection.session() as session:
             account_query = select(Account).where(Account.name == account_name)
             accounts = session.execute(account_query).scalars().all()
 
