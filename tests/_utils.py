@@ -32,6 +32,7 @@ active_investment_query = select(Investment) \
                         .where(Investment.account_id.in_(account_subquery)) \
                         .where(Investment.is_active)
 
+
 def add_proposal_to_test_account(proposal: Proposal) -> None:
     """Add a Proposal to the test account and commit the addition to the database """
 

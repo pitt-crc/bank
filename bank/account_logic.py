@@ -37,6 +37,7 @@ class ProposalServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
+        AccountServices.setup_db_account_entry(self._account_name)
 
     def _get_active_proposal_id(self) -> None:
         """Return the active proposal ID for the current account
@@ -301,6 +302,7 @@ class InvestmentServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
+        AccountServices.setup_db_account_entry(self._account_name)
 
         with DBConnection.session() as session:
             # Check if the Account has an associated proposal
@@ -374,7 +376,7 @@ class InvestmentServices:
             sus: The total number of service units to be added to the investment, or split equally across multiple
             investments with ``num_inv``
             start: The start date of the investment, or first in the sequence of investments, defaulting to today
-            end: The expiration date of the investment, or first in the sequence of investments, 
+            end: The expiration date of the investment, or first in the sequence of investments,
             defaulting to 12 months from ``start``
             num_inv: Divide ``sus`` equally across a number of sequential investments
 
@@ -612,6 +614,7 @@ class AccountServices:
 
         account = SlurmAccount(account_name)
         self._account_name = account.account_name
+        self.setup_db_account_entry(self._account_name)
 
         subquery = select(Account.id).where(Account.name == self._account_name)
 
@@ -671,11 +674,11 @@ class AccountServices:
                 raise MissingProposalError('Account has no proposal')
 
             # Proposal End Date as first row
-            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format),""],
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
                                  divider=True)
 
             output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
-            output_table.add_row(["","",""], divider=True)
+            output_table.add_row(["", "", ""], divider=True)
 
             aggregate_usage_total = 0
             allocation_total = 0
@@ -690,6 +693,8 @@ class AccountServices:
                     continue
 
                 usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
+
+                # Skip if usage data is empty on the cluster
                 if not usage_data:
                     continue
 
@@ -792,6 +797,22 @@ class AccountServices:
 
         except MissingInvestmentError:
             pass
+
+    @staticmethod
+    def setup_db_account_entry(account_name) -> Account:
+        """Insert an entry into the database for a new SLURM account if it does not already exist"""
+
+        with DBConnection.session() as session:
+            # Check if the Account has an entry in the database
+            account_query = select(Account).where(Account.name == account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # If not, insert the new account so proposals/investments can reference it
+            if account is None:
+                account = Account(name=account_name)
+                session.add(account)
+                session.commit()
+                LOG.info(f"Created DB entry for account {account_name}")
 
     def notify(self) -> None:
         """Send any pending usage alerts to the account"""

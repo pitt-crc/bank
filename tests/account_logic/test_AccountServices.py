@@ -100,6 +100,55 @@ class GetActiveProposalEndDate(ProposalSetup, TestCase):
         endDate = self.account._get_active_proposal_end_date()
         self.assertEqual(endDate, date.today() + timedelta(days=365))
 
+
+class SetupDBAccountEntry(TestCase):
+    """Test first time insertion of the account into the DB"""
+
+    def test_account_inserted(self) -> None:
+        """Test the account has an entry in the DB after insertion"""
+
+        account_name = settings.test_accounts[0]
+        # Insert an entry into the database for an account with an existing SLURM account
+        AccountServices.setup_db_account_entry(account_name)
+
+        with DBConnection.session() as session:
+            # Query the DB for the account
+            account_query = select(Account).where(Account.name == account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # The account entry should not be empty, and the name should match the name provided
+            self.assertTrue(account)
+            self.assertEqual(account.name, settings.test_accounts[0])
+
+    def test_insertion_idempotence(self) -> None:
+        """Test that multiple additions of the same account entry do not overwrite the initial insertion"""
+
+        account_name =  settings.test_accounts[0]
+        AccountServices.setup_db_account_entry(account_name)
+        AccountServices.setup_db_account_entry(account_name)
+
+        with DBConnection.session() as session:
+            account_query = select(Account).where(Account.name == account_name)
+            accounts = session.execute(account_query).scalars().all()
+
+        self.assertEqual(len(accounts), 1)
+
+    def test_account_inserted_AccountServices(self) -> None:
+        """Test the account has an entry in the DB upon AccountServices object creation"""
+
+        # Create an account services object for an existing SLURM account
+        acct = AccountServices(settings.test_accounts[0])
+
+        with DBConnection.session() as session:
+            # Query the DB for the account
+            account_query = select(Account).where(Account.name == acct._account_name)
+            account = session.execute(account_query).scalars().first()
+
+            # The account entry should not be empty, and the name should match the name provided
+            self.assertTrue(account)
+            self.assertEqual(account.name, acct._account_name)
+
+
 @skip('This functionality hasn\'t been fully implemented yet.')
 @patch('smtplib.SMTP.send_message')
 class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
@@ -355,4 +404,3 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(active_investment_query).scalars().first()
 
             self.assertEqual(900, investment.current_sus)
-

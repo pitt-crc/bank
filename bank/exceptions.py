@@ -15,7 +15,7 @@ class CmdError(Exception):
 
 
 class AccountNotFoundError(Exception):
-    """Raised when a Slurm user account does not exist."""
+    """Raised when a SLURM user account does not exist."""
 
 
 class ClusterNotFoundError(Exception):
