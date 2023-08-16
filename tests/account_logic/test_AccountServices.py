@@ -120,6 +120,19 @@ class SetupDBAccountEntry(TestCase):
             self.assertTrue(account)
             self.assertEqual(account.name, settings.test_accounts[0])
 
+    def test_insertion_idempotence(self) -> None:
+        """Test that multiple additions of the same account entry do not overwrite the initial insertion"""
+
+        account_name =  settings.test_accounts[0]
+        AccountServices.setup_db_account_entry(account_name)
+        AccountServices.setup_db_account_entry(account_name)
+
+        with DB Connection.session() as session:
+            account_query = select(Account).where(Account.name == account_name)
+            accounts = session.execute(account_query).scalars().all()
+
+        self.assertEqual(len(accounts), 1)
+
     def test_account_inserted_AccountServices(self) -> None:
         """Test the account has an entry in the DB upon AccountServices object creation"""
 
