@@ -124,10 +124,22 @@ def upgrade():
         new_proposals = []
         for prop in old_proposals:
 
+            # Determine whether the proposal has more than a standard allocation, creating a floating alloc if not
             allocs = []
+            total_sus = 0
+
             for cluster_name in ['smp','mpi','gpu','htc']:
+                total_sus += getattr(prop, cluster_name)
                 allocs.append({'proposal_id': prop.id,
                                'cluster_name': cluster_name,
+                               'service_units_total': getattr(prop, cluster_name)}
+                              )
+
+            # Empty the allocations and establish a standard allocation
+            if total_sus <= 25000:
+                allocs = []
+                allocs.append({'proposal_id': prop.id,
+                               'cluster_name': 'all_clusters',
                                'service_units_total': getattr(prop, cluster_name)}
                               )
 
