@@ -9,6 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
 
+from bank.system import SlurmAccount
+
 DATE_FORMAT = "%Y-%m-%d"
 
 # revision identifiers, used by Alembic.
@@ -119,6 +121,7 @@ def upgrade():
     # For each account, create new schema proposals and investments from entries in old schema
     accounts = conn.execute("SELECT * from account").fetchall()
     for account in accounts:
+        slurm_acct = SlurmAccount(account.name)
         old_investments = conn.execute(f"SELECT * from _investment_old WHERE _investment_old.account='{account.name}'").fetchall()
         old_proposals = conn.execute(f"SELECT * from _proposal_old WHERE _proposal_old.account='{account.name}'").fetchall()
         new_proposals = []
@@ -132,16 +135,15 @@ def upgrade():
                 total_sus += getattr(prop, cluster_name)
                 allocs.append({'proposal_id': prop.id,
                                'cluster_name': cluster_name,
-                               'service_units_total': getattr(prop, cluster_name)}
+                               'service_units_total': getattr(prop, cluster_name),
+                               'service_units_used': slurm_acct.get_cluster_usage_total(cluster_name, in_hours=True)}
                               )
 
             # Empty the allocations and establish a standard allocation
             if total_sus <= 25000:
-                allocs = []
-                allocs.append({'proposal_id': prop.id,
-                               'cluster_name': 'all_clusters',
-                               'service_units_total': getattr(prop, cluster_name)}
-                              )
+                allocs = [{'proposal_id': prop.id,
+                           'cluster_name': 'all_clusters',
+                           'service_units_total': getattr(prop, cluster_name)}]
 
             new_proposal = {'id': prop.id,
                             'account_id': account.id,
