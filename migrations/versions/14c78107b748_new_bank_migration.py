@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from datetime import datetime
 
 from bank.system import SlurmAccount
+from bank.exceptions import AccountNotFoundError
 
 DATE_FORMAT = "%Y-%m-%d"
 
@@ -44,7 +45,9 @@ def upgrade():
                  "WHERE percent_notified is NULL")
 
     # Drop unused column and rename tabled
-    op.drop_column('proposal', 'proposal_type')
+    with op.batch_alter_table('proposal') as batch_op:
+        batch_op.drop_column('proposal_type')
+
     op.rename_table('proposal', '_proposal_old')
 
     # Concatenate investor tabled with archive
@@ -62,7 +65,9 @@ def upgrade():
                  "WHERE rollover_sus is NULL")
 
     # Drop unused column and rename table
-    op.drop_column('investor', 'proposal_type')
+    with op.batch_alter_table('investor') as batch_op:
+        batch_op.drop_column('proposal_type')
+
     op.rename_table('investor', '_investment_old')
 
     # Drop old tables after concatenation
@@ -121,7 +126,14 @@ def upgrade():
     # For each account, create new schema proposals and investments from entries in old schema
     accounts = conn.execute("SELECT * from account").fetchall()
     for account in accounts:
-        slurm_acct = SlurmAccount(account.name)
+
+        # Attempt to set up the SLURM account, skipping if it does not exist
+        try:
+            slurm_acct = SlurmAccount(account.name)
+        except AccountNotFoundError:
+            print(f"SLURM Account for {account.name} does not exist, skipping...\n")
+            continue
+
         old_investments = conn.execute(f"SELECT * from _investment_old WHERE _investment_old.account='{account.name}'").fetchall()
         old_proposals = conn.execute(f"SELECT * from _proposal_old WHERE _proposal_old.account='{account.name}'").fetchall()
         new_proposals = []
@@ -171,8 +183,9 @@ def upgrade():
         op.bulk_insert(investment_table, new_investments)
 
     # Make sure there is the same number of proposals/investments as the old db schema
-    num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    assert num_new_proposals[0][0] == num_proposals_old, "The number of new proposals must equal the number of old proposals"
+    # The old DB contains a missing SLURM account, so this isn't actually the case anymore due to it being skipped
+    #num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
+    #assert num_new_proposals[0][0] == num_proposals_old, "The number of new proposals must equal the number of old proposals"
 
     num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
     assert num_new_investments[0][0] == num_investments_old, "The number of new investments must equal the number of old investments"
