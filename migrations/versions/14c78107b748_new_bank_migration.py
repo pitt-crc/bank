@@ -44,10 +44,6 @@ def upgrade():
                  "SET percent_notified=100 "
                  "WHERE percent_notified is NULL")
 
-    # Drop unused column and rename tabled
-    with op.batch_alter_table('proposal') as batch_op:
-        batch_op.drop_column('proposal_type')
-
     op.rename_table('proposal', '_proposal_old')
 
     # Concatenate investor tabled with archive
@@ -63,10 +59,6 @@ def upgrade():
     conn.execute("UPDATE investor "
                  "SET rollover_sus=-9 "
                  "WHERE rollover_sus is NULL")
-
-    # Drop unused column and rename table
-    with op.batch_alter_table('investor') as batch_op:
-        batch_op.drop_column('proposal_type')
 
     op.rename_table('investor', '_investment_old')
 
