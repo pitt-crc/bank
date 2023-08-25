@@ -182,11 +182,6 @@ def upgrade():
 
         op.bulk_insert(investment_table, new_investments)
 
-    # Make sure there is the same number of proposals/investments as the old db schema
-    # The old DB contains a missing SLURM account, so this isn't actually the case anymore due to it being skipped
-    #num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    #assert num_new_proposals[0][0] == num_proposals_old, "The number of new proposals must equal the number of old proposals"
-
     num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
     assert num_new_investments[0][0] == num_investments_old, "The number of new investments must equal the number of old investments"
 
