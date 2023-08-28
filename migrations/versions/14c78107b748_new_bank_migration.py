@@ -26,11 +26,6 @@ def upgrade():
 
     conn = op.get_bind()
 
-    # Determine total number of proposals and investments in old db schema
-    num_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    num_prop_archive = conn.execute("SELECT count(*) FROM proposal_archive").fetchall()
-    num_proposals_old = num_proposals[0][0] + num_prop_archive[0][0]
-
     num_investments = conn.execute("SELECT count(*) FROM investor").fetchall()
     num_inv_archive = conn.execute("SELECT count(*) FROM investor_archive").fetchall()
     num_investments_old = num_investments[0][0] + num_inv_archive[0][0]
