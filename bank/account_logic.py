@@ -684,6 +684,7 @@ class AccountServices:
             allocation_total = 0
             floating_su_usage = 0
             floating_su_total = 0
+            floating_su_remaining = 0
 
             for allocation in proposal.allocations:
                 if allocation.cluster_name == 'all_clusters':
