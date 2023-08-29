@@ -56,7 +56,7 @@ module:
    >>>
    >>> # The format used by the application to represent dates as strings
    >>> print(settings.date_format)
-   %m/%d/%Y
+   %m/%d/%y
 
 Application settings are cached at import and should not be modified during
 the application runtime. Likewise, modifications to environmental variables
@@ -68,7 +68,7 @@ during execution will not be recognized by the application.
    >>> # does not affect the application settings
    >>> os.environ['BANK_DATE_FORMAT'] = '%m-%d'
    >>> print(settings.date_format)
-   %m/%d/%Y
+   %m/%d/%y
 """
 
 from __future__ import annotations
@@ -84,18 +84,18 @@ test_cluster = 'development'
 nonexistent_account = 'fake_account'
 
 # Define how dates should be displayed as strings (in errors, emails, and STDOUT messages)
-date_format = '%m/%d/%Y'
+date_format = '%m/%d/%y'
 
 # Where and how to write log files
-log_path = "/ihome/crc/bank/crc_bank.log"
+log_path = _CUR_DIR / 'crc_bank.log'
 log_format = '[%(levelname)s] %(asctime)s - %(name)s - %(message)s'
 log_level = 'INFO'
 
 # Path to the application database
-db_path = "sqlite:////ihome/crc/bank/crc_bank.db"
+db_path = f"sqlite:///{_CUR_DIR / 'crc_bank.db'}"
 
 # A list of cluster names to track usage on
-clusters = ('smp', 'mpi', 'htc', 'gpu', 'teach', 'invest')
+clusters = ('development', 'all_clusters',)
 
 # Fraction of service units to carry over when rolling over investments
 # Should be a float between 0 and 1
