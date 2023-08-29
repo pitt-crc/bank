@@ -9,6 +9,9 @@ from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
 
+from bank.system import SlurmAccount
+from bank.exceptions import AccountNotFoundError
+
 DATE_FORMAT = "%Y-%m-%d"
 
 # revision identifiers, used by Alembic.
@@ -23,11 +26,6 @@ def upgrade():
 
     conn = op.get_bind()
 
-    # Determine total number of proposals and investments in old db schema
-    num_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    num_prop_archive = conn.execute("SELECT count(*) FROM proposal_archive").fetchall()
-    num_proposals_old = num_proposals[0][0] + num_prop_archive[0][0]
-
     num_investments = conn.execute("SELECT count(*) FROM investor").fetchall()
     num_inv_archive = conn.execute("SELECT count(*) FROM investor_archive").fetchall()
     num_investments_old = num_investments[0][0] + num_inv_archive[0][0]
@@ -41,8 +39,8 @@ def upgrade():
                  "SET percent_notified=100 "
                  "WHERE percent_notified is NULL")
 
-    # Drop unused column and rename tabled
-    op.drop_column('proposal', 'proposal_type')
+    # Drop the proposal archive and rename the combined table
+    op.drop_table('proposal_archive')
     op.rename_table('proposal', '_proposal_old')
 
     # Concatenate investor tabled with archive
@@ -59,13 +57,9 @@ def upgrade():
                  "SET rollover_sus=-9 "
                  "WHERE rollover_sus is NULL")
 
-    # Drop unused column and rename table
-    op.drop_column('investor', 'proposal_type')
+    # Drop the investor archive and renamed the combined table
+    op.drop_table('investor_archive')
     op.rename_table('investor', '_investment_old')
-
-    # Drop old tables after concatenation
-    for table in ('investor_archive', 'proposal_archive'):
-        op.drop_table(table)
 
     # Create Account Table
     account_table = op.create_table(
@@ -119,17 +113,36 @@ def upgrade():
     # For each account, create new schema proposals and investments from entries in old schema
     accounts = conn.execute("SELECT * from account").fetchall()
     for account in accounts:
+
+        # Attempt to set up the SLURM account, skipping if it does not exist
+        try:
+            slurm_acct = SlurmAccount(account.name)
+        except AccountNotFoundError:
+            print(f"SLURM Account for {account.name} does not exist, skipping...\n")
+            continue
+
         old_investments = conn.execute(f"SELECT * from _investment_old WHERE _investment_old.account='{account.name}'").fetchall()
         old_proposals = conn.execute(f"SELECT * from _proposal_old WHERE _proposal_old.account='{account.name}'").fetchall()
         new_proposals = []
         for prop in old_proposals:
 
+            # Determine whether the proposal has more than a standard allocation, creating a floating alloc if not
             allocs = []
+            total_sus = 0
+
             for cluster_name in ['smp','mpi','gpu','htc']:
+                total_sus += getattr(prop, cluster_name)
                 allocs.append({'proposal_id': prop.id,
                                'cluster_name': cluster_name,
-                               'service_units_total': getattr(prop, cluster_name)}
+                               'service_units_total': getattr(prop, cluster_name),
+                               'service_units_used': slurm_acct.get_cluster_usage_total(cluster_name, in_hours=True)}
                               )
+
+            # Empty the allocations and establish a standard allocation
+            if total_sus <= 25000:
+                allocs = [{'proposal_id': prop.id,
+                           'cluster_name': 'all_clusters',
+                           'service_units_total': getattr(prop, cluster_name)}]
 
             new_proposal = {'id': prop.id,
                             'account_id': account.id,
@@ -155,10 +168,6 @@ def upgrade():
             new_investments.append(new_investment)
 
         op.bulk_insert(investment_table, new_investments)
-
-    # Make sure there is the same number of proposals/investments as the old db schema
-    num_new_proposals = conn.execute("SELECT count(*) FROM proposal").fetchall()
-    assert num_new_proposals[0][0] == num_proposals_old, "The number of new proposals must equal the number of old proposals"
 
     num_new_investments = conn.execute("SELECT count(*) FROM investment").fetchall()
     assert num_new_investments[0][0] == num_investments_old, "The number of new investments must equal the number of old investments"
