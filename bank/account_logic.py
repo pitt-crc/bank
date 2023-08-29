@@ -895,7 +895,7 @@ class AccountServices:
             if not proposal:
                 # Try to cover current raw usage with investment service units
                 total_usage = slurm_acct.get_cluster_usage_total(in_hours=True)
-                if total_usage <= investment_sus:
+                if investment and (total_usage <= investment_sus):
                     LOG.debug(f"Using investment service units to cover usage with no active proposal "
                               f"for {self._account_name}")
                     investment.current_sus -= total_usage
