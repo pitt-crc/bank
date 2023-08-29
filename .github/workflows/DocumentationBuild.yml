@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: Setup environment
         run: /usr/local/bin/entrypoint.sh
+      
+      - name: Setup Bank Location
+        run: mkdir -p /ihome/crc/bank 
 
       - name: Checkout project source
         uses: actions/checkout@v3
