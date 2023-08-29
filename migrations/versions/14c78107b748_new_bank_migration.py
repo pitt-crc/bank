@@ -39,6 +39,8 @@ def upgrade():
                  "SET percent_notified=100 "
                  "WHERE percent_notified is NULL")
 
+    # Drop the proposal archive and rename the combined table
+    op.drop_table('proposal_archive')
     op.rename_table('proposal', '_proposal_old')
 
     # Concatenate investor tabled with archive
@@ -55,11 +57,9 @@ def upgrade():
                  "SET rollover_sus=-9 "
                  "WHERE rollover_sus is NULL")
 
+    # Drop the investor archive and renamed the combined table
+    op.drop_table('investor_archive')
     op.rename_table('investor', '_investment_old')
-
-    # Drop old tables after concatenation
-    for table in ('investor_archive', 'proposal_archive'):
-        op.drop_table(table)
 
     # Create Account Table
     account_table = op.create_table(
