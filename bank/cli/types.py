@@ -5,7 +5,7 @@ commandline arguments (strings) into other useful object types.
 from argparse import ArgumentTypeError
 from datetime import date, datetime
 
-from bank import settings
+from bank.settings import ApplicationSettings
 
 
 class Date:
@@ -29,7 +29,7 @@ class Date:
         """
 
         try:
-            return datetime.strptime(val, settings.date_format).date()
+            return datetime.strptime(val, ApplicationSettings.get('date_format')).date()
 
         except Exception as exception:
             raise ArgumentTypeError(f'Could not parse the given date: {val}') from exception

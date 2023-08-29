@@ -8,10 +8,10 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from typing import List, Tuple
 
-from bank import settings
 from bank.account_logic import AdminServices, AccountServices, ProposalServices, InvestmentServices
 from bank.system import Slurm
 from .types import Date, NonNegativeInt
+from ..settings import ApplicationSettings
 
 
 class BaseParser(ArgumentParser):
@@ -161,7 +161,7 @@ class ProposalParser(BaseParser):
         subparsers = self.add_subparsers(parser_class=BaseParser, required=True)
 
         # Reusable argument definitions
-        safe_date_format = settings.date_format.replace('%', '')
+        safe_date_format = ApplicationSettings.get('date_format').replace('%', '')
         account_argument = dict(
             dest='self',
             metavar='account',
@@ -244,7 +244,7 @@ class ProposalParser(BaseParser):
         parser.add_argument('--all-clusters', **su_argument, help='service units awarded across all clusters')
 
         # Add per-cluster arguments for setting service units
-        for cluster in settings.clusters:
+        for cluster in ApplicationSettings.get('clusters'):
             parser.add_argument(f'--{cluster}', **su_argument, help=f'service units awarded on the {cluster} cluster')
 
 
@@ -261,7 +261,7 @@ class InvestmentParser(BaseParser):
         subparsers = self.add_subparsers(parser_class=BaseParser, required=True)
 
         # Reusable argument definitions
-        safe_date_format = settings.date_format.replace("%", "")
+        safe_date_format = ApplicationSettings.get('date_format').replace("%", "")
         account_definition = dict(
             dest='self',
             metavar='account',

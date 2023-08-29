@@ -9,8 +9,8 @@ from __future__ import annotations
 from logging import getLogger
 from typing import Dict, Optional, Union, Collection, Set
 
-from bank import settings
 from bank.exceptions import *
+from bank.settings import ApplicationSettings
 from bank.system.shell import ShellCmd
 
 LOG = getLogger('bank.system.slurm')
@@ -201,9 +201,10 @@ class SlurmAccount:
         """
 
         if not cluster:
-            clusters = settings.clusters
+            clusters = ApplicationSettings.get('clusters')
+
         else:
-            clusters = (cluster, )
+            clusters = (cluster,)
         # Default to all clusters in settings.clusters if not specified as an argument
 
         total = 0
@@ -225,6 +226,6 @@ class SlurmAccount:
         # RawUsage to any value other than zero
 
         LOG.info(f'Resetting cluster usage for Slurm account {self.account_name}')
-        clusters_as_str = ','.join(settings.clusters)
+        clusters_as_str = ','.join(ApplicationSettings.get('clusters'))
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={clusters_as_str} '
                  f'set RawUsage=0')

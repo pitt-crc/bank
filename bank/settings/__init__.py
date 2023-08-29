@@ -9,7 +9,10 @@ from typing import Optional, Literal, Tuple, Any
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-TEMPLATE_DIR = Path(__file__).resolve().parent / 'templates'
+from bank.system import EmailTemplate
+
+DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / 'templates'
+CUSTOM_SETTINGS_DIR = Path('/etc/crc_bank')
 
 
 class SettingsSchema(BaseSettings):
@@ -79,6 +82,25 @@ class SettingsSchema(BaseSettings):
         name='Expiration Notification Thresholds',
         default=(60,),
         description='Notify users when their proposal is given number of days from expiration.')
+
+    def _load_tempalte_file(self, template_file):
+        try:
+            return EmailTemplate((CUSTOM_SETTINGS_DIR / template_file).read_text())
+
+        except:
+            return EmailTemplate(DEFAULT_TEMPLATE_DIR / template_file)
+
+    @property
+    def usage_warning_template(self) -> EmailTemplate:
+        return self._load_tempalte_file('usage_warning_email.html')
+
+    @property
+    def expiration_warning_template(self) -> EmailTemplate:
+        return self._load_tempalte_file('expiration_warning_email.html')
+
+    @property
+    def expired_proposal_template(self) -> EmailTemplate:
+        return self._load_tempalte_file('expired_proposal_email.html')
 
 
 class ApplicationSettings:
