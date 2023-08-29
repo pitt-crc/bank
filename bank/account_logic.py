@@ -934,7 +934,7 @@ class AccountServices:
                 exceeding_sus_total = sum(cluster["exceeding_sus"] for cluster in lock_clusters)
 
                 # Floating SUs can cover
-                if exceeding_sus_total <= floating_sus_remaining:
+                if  floating_alloc and (exceeding_sus_total <= floating_sus_remaining):
                     floating_alloc.service_units_used += exceeding_sus_total
                     for cluster in lock_clusters:
                         cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
@@ -942,11 +942,12 @@ class AccountServices:
                                   f"on {cluster['name']}")
 
                 # Investment SUs can cover
-                elif exceeding_sus_total - floating_sus_remaining <= investment_sus:
+                elif investment and (exceeding_sus_total - floating_sus_remaining <= investment_sus):
                     remaining_sus = exceeding_sus_total - floating_sus_remaining
                     if floating_alloc:
                         floating_alloc.service_units_used = floating_alloc.service_units_total
                     investment.current_sus -= remaining_sus
+
                     # TODO: do withdrawn SUs need to be changed?
                     for cluster in lock_clusters:
                         cluster["alloc"].service_units_used = cluster["alloc"].service_units_total
@@ -954,8 +955,12 @@ class AccountServices:
                                   f"on {cluster['name']}")
 
                 # Neither can cover
-                # TODO: this case should exhaust floating and investment service units as well
                 else:
+                    if floating_alloc:
+                        floating_alloc.service_units_used = floating_alloc.service_units_total
+                    if investment:
+                        investment.current_sus = 0
+
                     self.lock(clusters=cluster_names)
                     LOG.info(f"Locking {self._account_name} due to exceeding limits")
 
