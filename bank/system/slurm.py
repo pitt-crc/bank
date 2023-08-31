@@ -6,6 +6,7 @@ API Reference
 
 from __future__ import annotations
 
+from datetime import date
 from logging import getLogger
 from typing import Dict, Optional, Union, Collection, Set
 
@@ -150,12 +151,14 @@ class SlurmAccount:
         ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
                  f'set GrpTresRunMins=gres/gpu={lock_state_int}').raise_if_err()
 
-    def get_cluster_usage_per_user(self, cluster: str, in_hours: bool = True) -> Dict[str, int]:
+    def get_cluster_usage_per_user(self, cluster: str, start: date, end: date, in_hours: bool = True) -> Dict[str, int]:
         """Return the raw account usage per user on a given cluster
 
         Args:
             cluster: The name of the cluster
             in_hours: Return usage in units of hours instead of seconds
+            start: Start date to generate a report with
+            end: End date to generate a report with
 
         Returns:
             A dictionary with the number of service units used by each user in the account
@@ -167,7 +170,12 @@ class SlurmAccount:
         if cluster not in Slurm.cluster_names():
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
-        cmd = ShellCmd(f"sshare -A {self.account_name} -M {cluster} -P -a -U -o User,RawUsage")
+        time = 'Hours'
+        if not in_hours:
+            time = 'Seconds'
+
+        cmd = ShellCmd(f"sreport cluster AccountUtilizationByUser -Pn -T Billing -t {time} cluster={cluster} "
+                       f"Account={self.account_name} start={start} end={end} format=Proper,Used")
 
         try:
             header, *data = cmd.out.split('\n')[1:]
@@ -178,9 +186,6 @@ class SlurmAccount:
         for line in data:
             user, usage = line.split('|')
             usage = int(usage)
-            if in_hours:  # Convert from seconds to hours
-                usage //= 3600
-
             out_data[user] = usage
 
         return out_data
@@ -188,6 +193,8 @@ class SlurmAccount:
     def get_cluster_usage_total(
         self,
         cluster: Optional[Union[str, Collection[str]]] = None,
+        start = date,
+        end = date,
         in_hours: bool = True) -> int:
 
         """Return the raw account usage total on one or more clusters

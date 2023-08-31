@@ -693,7 +693,10 @@ class AccountServices:
                     floating_su_remaining = floating_su_total - floating_su_usage
                     continue
 
-                usage_data = slurm_acct.get_cluster_usage_per_user(allocation.cluster_name, in_hours=True)
+                usage_data = slurm_acct.get_cluster_usage_per_user(cluster=allocation.cluster_name,
+                                                                   start=proposal.start_date,
+                                                                   end=proposal.end_date,
+                                                                   in_hours=True)
 
                 # Skip if usage data is empty on the cluster
                 if not usage_data:
@@ -829,7 +832,8 @@ class AccountServices:
     def _notify_proposal(self, proposal):
         # Determine the next usage percentage that an email is scheduled to be sent out
         slurm_acct = SlurmAccount(self._account_name)
-        usage = slurm_acct.get_cluster_usage_total()
+        usage = slurm_acct.get_cluster_usage_total(start=proposal.start_date,
+                                                   end=proposal.end_date)
         total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
         next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
@@ -863,7 +867,7 @@ class AccountServices:
                 ffrom=settings.from_address,
                 subject=subject)
 
-    def update_status(self) -> None:
+    def update_status(self, run_interval: int) -> None:
         """Update the Bank database entries for an unlocked account given the usage values from SLURM,
         and lock the account if necessary
 
@@ -877,6 +881,8 @@ class AccountServices:
         Makes sure any recently expired investments are closed out if no active investments are found.
         """
 
+        end_date = date.today()
+        start_date = end - relativedelta(days=run_inverval)
         slurm_acct = SlurmAccount(self._account_name)
         with DBConnection.session() as session:
 
@@ -884,18 +890,23 @@ class AccountServices:
             # This will not find a recently expired proposal/investment
             proposal = session.execute(self._active_proposal_query).scalars().first()
             investment = session.execute(self._active_investment_query).scalars().first()
+
             lock_clusters = []
 
             investment_sus = 0
             if investment:
                 investment_sus = investment.current_sus
 
+            # Get Total usage since last run of update status
+            total_usage_since_last_run = slurm_acc.get_cluster_usage_total(start=start_date,
+                                                                           end=end_date,
+                                                                           in_hours=True)
+
             # No active proposal (in date range with SUs to spend), lock on all clusters if there are not investment
             # SUs to use
             if not proposal:
-                # Try to cover current raw usage with investment service units
-                total_usage = slurm_acct.get_cluster_usage_total(in_hours=True)
-                if investment and (total_usage <= investment_sus):
+                # Try to cover reported usage with investment service units
+                if investment and (usage_since_last_run <= investment_sus):
                     LOG.debug(f"Using investment service units to cover usage with no active proposal "
                               f"for {self._account_name}")
                     investment.current_sus -= total_usage
@@ -915,8 +926,11 @@ class AccountServices:
                         floating_sus_remaining = alloc.service_units_total - alloc.service_units_used
                         continue
 
-                    # Update service units used from raw usage, skipping if cluster is unreachable
-                    alloc.service_units_used += slurm_acct.get_cluster_usage_total(alloc.cluster_name, in_hours=True)
+                    # Update service units used from reported usage, skipping if cluster is unreachable
+                    alloc.service_units_used += slurm_acct.get_cluster_usage_total(cluster=alloc.cluster_name,
+                                                                                   start=start_date,
+                                                                                   end=end_date,
+                                                                                   in_hours=True)
 
                     # `proposal.allocations` up to date with usage, mark for locking based on whether they exceed their
                     # within-cluster limits
