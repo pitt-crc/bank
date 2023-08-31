@@ -674,13 +674,13 @@ class AccountServices:
             investments = session.execute(self._active_investment_query).scalars().all()
 
             if not proposal:
-                recent_proposals = session.execute(self._recent_proposals_query).scalars().all()
-                if not recent_proposals:
+                recent_proposal = session.execute(self._recent_proposals_query).scalars().first()
+                if not recent_proposal:
                     raise MissingProposalError('This account has never had a proposal')
                 raise MissingProposalError('\nMost recent proposal end date:\n'
-                                           f'    {recent_proposals[0].end_date.strftime(settings.date_format)}\n'
+                                           f'    {recent_proposal.end_date.strftime(settings.date_format)}\n'
                                            'Most recent proposal allocation status:\n'
-                                           f'    {[f"{alloc.cluster_name}:{alloc.service_units_used}/{alloc.service_units_total}" for alloc in recent_proposals[0].allocations]}')
+                                           f'    {[f"{alloc.cluster_name}:{alloc.service_units_used}/{alloc.service_units_total}" for alloc in recent_proposal.allocations]}')
 
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
