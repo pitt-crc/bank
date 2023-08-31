@@ -677,10 +677,14 @@ class AccountServices:
                 recent_proposal = session.execute(self._recent_proposals_query).scalars().first()
                 if not recent_proposal:
                     raise MissingProposalError('This account has never had a proposal')
+                recent_proposal_end = recent_proposal.end_date.strftime(settings.date_format)
+                recent_proposal_alloc_status = (
+                [f'{alloc.cluster_name}:{alloc.service_units_used}/{alloc.service_units_total}' for alloc in
+                recent_proposal.allocations])
                 raise MissingProposalError('\nMost recent proposal end date:\n'
-                                           f'    {recent_proposal.end_date.strftime(settings.date_format)}\n'
+                                           f'    {recent_proposal_end}\n'
                                            'Most recent proposal allocation status:\n'
-                                           f'    {[f"{alloc.cluster_name}:{alloc.service_units_used}/{alloc.service_units_total}" for alloc in recent_proposal.allocations]}')
+                                           f'    {recent_proposal_alloc_status}')
 
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
