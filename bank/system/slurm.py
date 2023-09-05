@@ -167,7 +167,7 @@ class SlurmAccount:
             ClusterNotFoundError: If the given slurm cluster does not exist
         """
 
-        if cluster not in Slurm.cluster_names():
+        if cluster not in Slurm.cluster_names() and cluster != 'all_clusters':
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         time = 'Hours'
@@ -178,7 +178,7 @@ class SlurmAccount:
                        f"Account={self.account_name} start={start} end={end} format=Proper,Used")
 
         try:
-            header, *data = cmd.out.split('\n')[1:]
+            account_total, *data = cmd.out.split('\n')
         except ValueError:
             return None
 
@@ -215,7 +215,7 @@ class SlurmAccount:
 
         total = 0
         for cluster_name in clusters:
-            user_usage = self.get_cluster_usage_per_user(cluster_name, in_hours)
+            user_usage = self.get_cluster_usage_per_user(cluster_name, start, end, in_hours)
             try:
                 total += sum(user_usage.values())
             except AttributeError:
