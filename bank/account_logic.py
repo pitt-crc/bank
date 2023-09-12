@@ -16,10 +16,10 @@ from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
 from sqlalchemy import delete, and_, not_, select
 
-from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
-from .system import EmailTemplate, Slurm, SlurmAccount
+from .settings import ApplicationSettings
+from .system import Slurm, SlurmAccount
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -72,7 +72,7 @@ class ProposalServices:
 
         query = select(Proposal) \
             .join(Account) \
-            .where(Account.name == self._account_name)\
+            .where(Account.name == self._account_name) \
             .where(Proposal.id == proposal_id)
 
         with DBConnection.session() as session:
@@ -91,17 +91,17 @@ class ProposalServices:
         """
 
         for cluster, sus in clusters_sus.items():
-            if cluster not in settings.clusters and cluster != "all_clusters":
+            if cluster not in ApplicationSettings.get('clusters') and cluster != "all_clusters":
                 raise ValueError(f'{cluster} is not a valid cluster name.')
 
             if sus < 0:
                 raise ValueError('Service units cannot be negative.')
 
     def create(
-            self,
-            start: Optional[date] = date.today(),
-            end: Optional[date] = None,
-            **clusters_sus: int
+        self,
+        start: Optional[date] = date.today(),
+        end: Optional[date] = None,
+        **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
 
@@ -121,15 +121,15 @@ class ProposalServices:
         with DBConnection.session() as session:
             # Make sure new proposal does not overlap with existing proposals
             overlapping_proposal_sub_1 = select(Account.id) \
-                                     .where(Account.name == self._account_name)
+                .where(Account.name == self._account_name)
             overlapping_proposal_query = select(Proposal) \
-                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
-                    .where(
-                           and_(
-                               not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
-                               not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
-                          )
-                    )
+                .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                .where(
+                and_(
+                    not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
+                    not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
+                )
+            )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
@@ -174,10 +174,10 @@ class ProposalServices:
             LOG.info(f"Deleted proposal {proposal_id} for {self._account_name}")
 
     def modify_date(
-            self,
-            proposal_id: Optional[int] = None,
-            start: Optional[date] = None,
-            end: Optional[date] = None
+        self,
+        proposal_id: Optional[int] = None,
+        start: Optional[date] = None,
+        end: Optional[date] = None
     ) -> None:
         """Overwrite the date of an account proposal
 
@@ -213,15 +213,15 @@ class ProposalServices:
 
             # Find any overlapping proposals (not including the proposal being modified)
             overlapping_proposal_sub_1 = select(Account.id) \
-                                     .where(Account.name == self._account_name)
+                .where(Account.name == self._account_name)
             overlapping_proposal_query = select(Proposal) \
-                    .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
-                    .where(
-                            and_(
-                               not_(and_(start < Proposal.start_date, end  <= Proposal.start_date)),
-                               not_(and_(start >= Proposal.end_date, end  > Proposal.end_date))
-                            )
-                          )
+                .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
+                .where(
+                and_(
+                    not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
+                    not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
+                )
+            )
 
             if session.execute(overlapping_proposal_query).scalars().first():
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
@@ -365,11 +365,11 @@ class InvestmentServices:
             raise ValueError('Service units must be greater than zero.')
 
     def create(
-            self,
-            sus: int,
-            start: Optional[date] = date.today(),
-            end: Optional[date] = None,
-            num_inv: int = 1) -> None:
+        self,
+        sus: int,
+        start: Optional[date] = date.today(),
+        end: Optional[date] = None,
+        num_inv: int = 1) -> None:
         """Add a new investment or series of investments to the given account
 
         Args:
@@ -445,10 +445,10 @@ class InvestmentServices:
             LOG.info(f"Deleted investment {inv_id} for {self._account_name}")
 
     def modify_date(
-            self,
-            inv_id: Optional[int] = None,
-            start: Optional[date] = None,
-            end: Optional[date] = None) -> None:
+        self,
+        inv_id: Optional[int] = None,
+        start: Optional[date] = None,
+        end: Optional[date] = None) -> None:
         """Overwrite the start or end date of a given investment
 
         Args:
@@ -674,9 +674,8 @@ class AccountServices:
                 raise MissingProposalError('Account has no proposal')
 
             # Proposal End Date as first row
-            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
-                                 divider=True)
-
+            date_fmt = ApplicationSettings.get('date_format')
+            output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(date_fmt), ""], divider=True)
             output_table.add_row(['Proposal ID:', proposal.id, ""], divider=True)
             output_table.add_row(["", "", ""], divider=True)
 
@@ -707,7 +706,7 @@ class AccountServices:
                     continue
 
                 output_table.add_row([f"Cluster: {cluster_name}",
-                                     f"Available SUs: {allocation.service_units_total}",""], divider=True)
+                                      f"Available SUs: {allocation.service_units_total}", ""], divider=True)
 
                 # Build a list of individual user usage on the current cluster
                 output_table.add_row(["User", "SUs Used", "Percentage of Total"], divider=True)
@@ -746,11 +745,11 @@ class AccountServices:
                 investment_percentage = self._calculate_percentage(aggregate_usage_total,
                                                                    allocation_total + investment_total)
 
-                output_table.add_row(['Investments Total', str(investment_total)+f"\N{ASTERISK}", ""])
+                output_table.add_row(['Investments Total', str(investment_total) + f"\N{ASTERISK}", ""])
                 output_table.add_row(['Aggregate Usage (excluding investments)', usage_percentage, ""])
                 output_table.add_row(['Aggregate Usage', investment_percentage, ""])
-                output_table.add_row([f'\N{ASTERISK}Investment SUs are applied to cover usage ', "",""], divider=True)
-                output_table.add_row([f'exceeding proposal limits across any cluster',"",""])
+                output_table.add_row([f'\N{ASTERISK}Investment SUs are applied to cover usage ', "", ""], divider=True)
+                output_table.add_row([f'exceeding proposal limits across any cluster', "", ""])
 
             return output_table
 
@@ -777,7 +776,7 @@ class AccountServices:
                 table.add_row([
                     inv.id,
                     inv.service_units,
-                    inv.start_date.strftime(settings.date_format),
+                    inv.start_date.strftime(ApplicationSettings.get('date_format')),
                     inv.current_sus,
                     inv.withdrawn_sus,
                     inv.withdrawn_sus])
@@ -832,35 +831,40 @@ class AccountServices:
         usage = slurm_acct.get_cluster_usage_total()
         total_allocated = sum(alloc.service_units_total for alloc in proposal.allocations)
         usage_perc = min(int(usage / total_allocated * 100), 100)
-        next_notify_perc = next((perc for perc in sorted(settings.notify_levels) if perc >= usage_perc), 100)
+        notify_levels = ApplicationSettings.get('usage_notify_levels')
+        next_notify_perc = next((perc for perc in sorted(notify_levels) if perc >= usage_perc), 100)
 
         email = None
         days_until_expire = (proposal.end_date - date.today()).days
         if days_until_expire <= 0:
-            email = EmailTemplate(settings.expired_proposal_notice)
+            email = ApplicationSettings.get('expired_proposal_template')
             subject = f'The account for {self._account_name} has reached its end date'
 
-        elif days_until_expire in settings.warning_days:
-            email = EmailTemplate(settings.expiration_warning)
+        elif days_until_expire in ApplicationSettings.get('expiration_notify_days'):
+            email = ApplicationSettings.get('expiration_warning_template')
             subject = f'Your proposal expiry reminder for account: {self._account_name}'
 
         elif proposal.percent_notified < next_notify_perc <= usage_perc:
             proposal.percent_notified = next_notify_perc
-            email = EmailTemplate(settings.usage_warning)
+            email = ApplicationSettings.get('usage_warning_template')
             subject = f"Your account {self._account_name} has exceeded a proposal threshold"
 
         if email:
+            date_fmt = ApplicationSettings.get('date_format')
+            email_suffix = ApplicationSettings.get('email_domain')
+            email_from = ApplicationSettings.get('email_from')
+
             email.format(
                 account_name=self._account_name,
-                start=proposal.start_date.strftime(settings.date_format),
-                end=proposal.end_date.strftime(settings.date_format),
+                start=proposal.start_date.strftime(date_fmt),
+                end=proposal.end_date.strftime(date_fmt),
                 exp_in_days=days_until_expire,
                 perc=usage_perc,
                 usage=self._build_usage_table(),
                 investment=self._build_investment_table()
             ).send_to(
-                to=f'{self._account_name}{settings.user_email_suffix}',
-                ffrom=settings.from_address,
+                to=f'{self._account_name}{email_suffix}',
+                ffrom=email_from,
                 subject=subject)
 
     def update_status(self) -> None:
@@ -970,10 +974,10 @@ class AccountServices:
         slurm_acct.reset_raw_usage()
 
     def _set_account_lock(
-            self,
-            lock_state: bool,
-            clusters: Optional[Collection[str]] = None,
-            all_clusters: bool = False
+        self,
+        lock_state: bool,
+        clusters: Optional[Collection[str]] = None,
+        all_clusters: bool = False
     ) -> None:
         """Update the lock/unlocked states for the current account, only lock account if it has no purchased partitions
         within a cluster
@@ -1053,7 +1057,6 @@ class AdminServices:
                     yield account
             except AccountNotFoundError:
                 continue
-
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:

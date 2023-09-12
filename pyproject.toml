@@ -38,6 +38,8 @@ python-environ = "0.4.54"
 SQLAlchemy = "2.0.19"
 sqlalchemy-utils = "0.41.1"
 time-machine = "2.11.0"
+pydantic = "^2.3.0"
+pydantic-settings = "^2.0.3"
 
 [tool.poetry.group.tests]
 optional = true
