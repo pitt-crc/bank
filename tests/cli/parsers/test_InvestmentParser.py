@@ -83,11 +83,11 @@ class Create(CLIAsserts, TestCase):
 
         # Create an investment using a start date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--start', '09/01/2500'])
+            InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--start', '09/01/25'])
 
         # Create an investment using an end date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--end', '09/01/2500'])
+            InvestmentParser().parse_args([f'create', TEST_ACCOUNT, '--sus', '100', '--end', '09/01/25'])
 
 
 class Delete(TestCase, CLIAsserts):
@@ -275,11 +275,12 @@ class Modify(TestCase, CLIAsserts):
 
         # Modify the start date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/2500'])
+            InvestmentParser().parse_args(['modify_date', TEST_ACCOUNT, '--start', '09/01/25'
+                                                                                   ''])
 
         # Modify the end date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            InvestmentParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/2500'])
+            InvestmentParser().parse_args(['modify_date', TEST_ACCOUNT, '--end', '09/01/25'])
 
 
 class Advance(TestCase, CLIAsserts):
