@@ -375,7 +375,7 @@ class InvestmentServices:
 
     def create(
             self,
-            sus: int,
+            sus: int = 0,
             start: Optional[date] = date.today(),
             end: Optional[date] = None,
             num_inv: int = 1) -> None:
@@ -891,13 +891,14 @@ class AccountServices:
         start_date = end_date - relativedelta(days=1)
 
         slurm_acct = SlurmAccount(self._account_name)
-        total_usage = slurm_acct.get_cluser_usage_total(start=start_date, end=end_date, in_hours=True)
+        total_usage = slurm_acct.get_cluster_usage_total(start=start_date, end=end_date, in_hours=True)
 
         with DBConnection.session() as session:
 
             proposal = None
             investment = None
             floating_alloc = None
+            lock_clusters = []
 
             # Gather the account's active proposal and investments if they exist
             proposal = session.execute(self._active_proposal_query).scalars().first()
@@ -912,14 +913,14 @@ class AccountServices:
 
                 # Update within cluster usage
                 for alloc in proposal.allocations:
-                    if alloc.cluser_name == 'all_clusters':
+                    if alloc.cluster_name == 'all_clusters':
                         floating_alloc = alloc
                         continue
                     else:
                         alloc.service_units_used += slurm_acct.get_cluster_usage_total(cluster=alloc.cluster_name,
-                                                                                      start = start_date,
-                                                                                      end = end_date,
-                                                                                      in_hours = True)
+                                                                                       start=start_date,
+                                                                                       end=end_date,
+                                                                                       in_hours=True)
 
                         sus_remaining = alloc.service_units_total - alloc.service_units_used
 
@@ -927,7 +928,6 @@ class AccountServices:
                             total_usage_exceeding_limits -= sus_remaining
                             alloc.service_units_used = alloc.service_units_total
                             lock_clusters.append(alloc.cluster_name)
-
 
                 # Handle usage exceeding limits
                 if total_usage_exceeding_limits > 0:
@@ -945,7 +945,7 @@ class AccountServices:
                             if investment.current_sus < 0:
                                 # TODO: Implement check for other investments + withdraw and cover
                                 investment.current_sus = 0
-                                LOG.info(f"Locked {self._account_name} on {lock_cluster} due to insufficent floating "
+                                LOG.info(f"Locked {self._account_name} on {lock_clusters} due to insufficient floating "
                                          f"or investment SUs to cover usage")
                                 self.lock(clusters=lock_clusters)
                             else:
@@ -961,7 +961,7 @@ class AccountServices:
                         if investment.current_sus < 0:
                             # TODO: Implement check for other investments + withdraw and cover
                             investment.current_sus = 0
-                            LOG.info(f"Locked {self._account_name} on {lock_clusters} due to insufficent investment")
+                            LOG.info(f"Locked {self._account_name} on {lock_clusters} due to insufficient investment")
                             self.lock(clusters=lock_clusters)
                         else:
                             LOG.debug(f"Using investment SUs to cover usage for {self._account_name} on "
@@ -1069,12 +1069,10 @@ class AdminServices:
         # Build a generator for account names that match the lock state
         for account in account_names:
             try:
-                yield account
-                #if SlurmAccount(account).get_locked_state(cluster) == status:
-                #    yield account
+                if SlurmAccount(account).get_locked_state(cluster) == status:
+                    yield account
             except AccountNotFoundError:
                 continue
-
 
     @classmethod
     def list_locked_accounts(cls, cluster: str) -> None:
@@ -1122,8 +1120,9 @@ class AdminServices:
             account_names = account_names.union(name_set)
 
         # Update the status of any unlocked account
-        for name in ["root","sam","clcgenomics"]:#account_names:
-            if name in ["root","clcgenomics"]:
+        for name in account_names:
+            #TODO: maintain this whitelist in settings?
+            if name in ["root", "clcgenomics"]:
                 continue
             try:
                 account = AccountServices(name)
