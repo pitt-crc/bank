@@ -11,6 +11,7 @@ from datetime import date, datetime
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
+from warnings import warn
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
@@ -132,9 +133,15 @@ class ProposalServices:
                                not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                           )
                     )
-
-            if session.execute(overlapping_proposal_query).scalars().first() and not force:
-                raise ProposalExistsError('Proposals for a given account cannot overlap.')
+            overlapping_proposal = session.execute(overlapping_proposal_query).scalars().first()
+            if overlapping_proposal:
+                if force:
+                    warn("Creating the proposal despite overlap with an existing proposal")
+                else:
+                    raise ProposalExistsError(f'Proposals for a given account cannot overlap: \n'
+                                              f'    existing range {overlapping_proposal.start_date} '
+                                              f'- {overlapping_proposal.end_date} \n'
+                                              f'    provided range {start} - {end}')
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
@@ -193,6 +200,8 @@ class ProposalServices:
             MissingProposalError: If the proposal ID does not match the account
             ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
             chronological order with amongst themselves or with the existing DB values.
+            ProposalExistsError: If the proposal being created would otherwise overlap with an existing proposal,
+            and the force flag is not provided.
         """
 
         proposal_id = proposal_id or self._get_active_proposal_id()
@@ -226,9 +235,15 @@ class ProposalServices:
                                not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                             )
                           )
-
-            if session.execute(overlapping_proposal_query).scalars().first() and not force:
-                raise ProposalExistsError('Proposals for a given account cannot overlap.')
+            overlapping_proposal = session.execute(overlapping_proposal_query).scalars().first()
+            if overlapping_proposal:
+                if force:
+                    warn("Modifying the proposal dates despite overlap with an existing proposal")
+                else:
+                    raise ProposalExistsError(f'Proposals for a given account cannot overlap: \n'
+                                              f'    existing range {overlapping_proposal.start_date} '
+                                              f'- {overlapping_proposal.end_date} \n'
+                                              f'    provided range {start} - {end}')
 
             # Update the proposal record
             if start != proposal.start_date:
