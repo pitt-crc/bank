@@ -631,6 +631,9 @@ class AccountServices:
             .where(Proposal.account_id.in_(subquery)) \
             .where(Proposal.is_active)
 
+        self._recent_proposals_query = select(Proposal) \
+            .where(Proposal.account_id.in_(subquery))
+
         self._active_investment_query = select(Investment) \
             .where(Investment.account_id.in_(subquery)) \
             .where(Investment.is_active)
@@ -680,7 +683,17 @@ class AccountServices:
             investments = session.execute(self._active_investment_query).scalars().all()
 
             if not proposal:
-                raise MissingProposalError('Account has no proposal')
+                recent_proposal = session.execute(self._recent_proposals_query).scalars().first()
+                if not recent_proposal:
+                    raise MissingProposalError('This account has never had a proposal')
+                recent_proposal_end = recent_proposal.end_date.strftime(settings.date_format)
+                recent_proposal_alloc_status = (
+                [f'{alloc.cluster_name}:{alloc.service_units_used}/{alloc.service_units_total}' for alloc in
+                recent_proposal.allocations])
+                raise MissingProposalError('\nMost recent proposal end date:\n'
+                                           f'    {recent_proposal_end}\n'
+                                           'Most recent proposal allocation status:\n'
+                                           f'    {recent_proposal_alloc_status}')
 
             # Proposal End Date as first row
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
@@ -802,8 +815,8 @@ class AccountServices:
         try:
             print(self._build_usage_table())
 
-        except MissingProposalError:
-            print(f'Account {self._account_name} has no current proposal')
+        except MissingProposalError as e:
+            print(f'Account {self._account_name} has no active proposal: {str(e)}')
 
         try:
             print(self._build_investment_table())
