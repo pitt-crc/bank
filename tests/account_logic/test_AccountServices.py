@@ -330,10 +330,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
     @patch.object(SlurmAccount,
                   "get_cluster_usage_per_user",
-<<<<<<< Updated upstream
-                  lambda self, cluster, start, end, in_hours: {'account1': 50, 'account2': 50})
-=======
-                  lambda self, cluster, in_hours: {'account1': 100, 'account2': 100})
+                  lambda self, cluster, start, end, in_hours: {'account1': 100, 'account2': 100})
     def test_status_unlocked_with_floating_sus_exhausted(self) -> None:
         """Test that update_status attempts to use floating SUs to cover usage over limits, but exhausts them
         and ends up using investment SUs instead """
@@ -360,7 +357,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
-            investment.current_sus = 600
+            investment.current_sus = 700
             investment.withdrawn_sus = investment.service_units
 
             session.commit()
@@ -382,8 +379,7 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
     @patch.object(SlurmAccount,
                   "get_cluster_usage_per_user",
-                  lambda self, cluster, in_hours: {'account1': 50, 'account2': 50})
->>>>>>> Stashed changes
+                  lambda self, cluster, start, end, in_hours: {'account1': 50, 'account2': 50})
     def test_status_unlocked_with_floating_sus_applied_multiple_clusters(self) -> None:
         """Test that update_status uses floating SUs to cover usage over limits"""
 
@@ -432,6 +428,36 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
                   lambda self, cluster, start, end, in_hours: {'account1': 50, 'account2': 50})
     def test_status_unlocked_with_investment_sus_applied(self) -> None:
         """Test that update_status uses investment SUs to cover usage over limits"""
+
+        self.slurm_account.set_locked_state(False, cluster=settings.test_cluster)
+
+        with DBConnection.session() as session:
+            # Proposal is expired
+            proposal = session.execute(active_proposal_query).scalars().first()
+            proposal.allocations[0].service_units_total = 10_000
+            proposal.allocations[0].service_units_used = 35_000
+
+            # Investment is expired
+            investment = session.execute(active_investment_query).scalars().first()
+            investment.current_sus = 1000
+
+            session.commit()
+
+        self.account.update_status()
+
+        # cluster should be unlocked due to exceeding usage being covered by investment
+        self.assertFalse(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
+
+        with DBConnection.session() as session:
+            # check that investment SUs were used to cover usage
+            investment = session.execute(active_investment_query).scalars().first()
+
+            self.assertEqual(900, investment.current_sus)
+
+    @skip('TODO: The withdraw/forward functionality has not been fully implemented in update_status yet.')
+    def test_status_unlocked_with_multiple_investments_sus_applied(self) -> None:
+        """Test that update_status uses investment SUs to cover usage over limits, exhausting the first investment
+        and withdrawing from a future investment"""
 
         self.slurm_account.set_locked_state(False, cluster=settings.test_cluster)
 
