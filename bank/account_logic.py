@@ -945,12 +945,17 @@ class AccountServices:
                             if investment.current_sus < 0:
                                 # TODO: Implement check for other investments + withdraw and cover
                                 investment.current_sus = 0
-                                LOG.info(f"Locked {self._account_name} on {lock_clusters} due to insufficient floating "
+                                LOG.info(f"Locked {self._account_name} on all clusters due to insufficient floating "
                                          f"or investment SUs to cover usage")
                                 self.lock(clusters=lock_clusters)
                             else:
                                 LOG.debug(f"Using investment SUs to cover usage for {self._account_name} on "
                                           f" {lock_clusters}")
+
+                        elif floating_sus_remaining < 0:
+                            floating_alloc.service_units_used = floating_alloc.service_units_total
+                            self.lock(clusters=lock_clusters)
+
                         else:
                             floating_alloc.service_units_used += total_usage_exceeding_limits
                             LOG.debug(f"Using floating SUs to cover usage for {self._account_name} on {lock_clusters}")
