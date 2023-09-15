@@ -18,6 +18,7 @@ sus_query = select(Allocation.service_units_total) \
     .where(Allocation.cluster_name == settings.test_cluster) \
     .where(Proposal.is_active)
 
+
 class InitExceptions(EmptyAccountSetup, TestCase):
     """Tests to ensure proposals report that provided account does not exist"""
 
@@ -246,7 +247,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
             self.account.subtract_sus(**{settings.test_cluster: 1})
 
 
-class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
+class OverlappingProposals(EmptyAccountSetup, TestCase):
     """Tests to ensure proposals cannot overlap in time"""
 
     def setUp(self) -> None:
@@ -281,10 +282,33 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
             self.account.create()
 
     def test_error_on_proposal_modification(self):
-        """Test existing proposals can not be modified to overlap with other proposals"""
+        """Test existing proposals can not be modified to overlap with other proposals by default"""
 
         self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
-        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create(start=DAY_AFTER_TOMORROW,
+                            end=DAY_AFTER_TOMORROW+timedelta(days=2),
+                            **{settings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
             self.account.modify_date(end=DAY_AFTER_TOMORROW)
+
+    def test_success_on_proposal_forced_create(self):
+        """Test existing proposals can be created to overlap with other proposals, when force flag is provided"""
+
+        self.account.create(start=YESTERDAY, end=DAY_AFTER_TOMORROW, **{settings.test_cluster: 100})
+        with self.assertWarns(UserWarning):
+            self.account.create(start=TOMORROW,
+                                end=DAY_AFTER_TOMORROW+timedelta(days=2),
+                                force=True,
+                                **{settings.test_cluster: 100})
+
+    def test_success_on_proposal_forced_modify_date(self):
+        """Test existing proposals can be modified to overlap with other proposals, when force flag is provided"""
+
+        self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
+        self.account.create(start=DAY_AFTER_TOMORROW,
+                            end=DAY_AFTER_TOMORROW+timedelta(days=2),
+                            **{settings.test_cluster: 100})
+
+        with self.assertWarns(UserWarning):
+            self.account.modify_date(end=DAY_AFTER_TOMORROW, force=True)
