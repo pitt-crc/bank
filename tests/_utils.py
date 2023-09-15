@@ -26,11 +26,13 @@ account_investment_ids_query = select(Investment.id) \
 
 active_proposal_query = select(Proposal) \
                         .where(Proposal.account_id.in_(account_subquery)) \
-                        .where(Proposal.is_active)
+                        .where(Proposal.is_active) \
+                        .order_by(Proposal.start_date.desc())
 
 active_investment_query = select(Investment) \
                         .where(Investment.account_id.in_(account_subquery)) \
-                        .where(Investment.is_active)
+                        .where(Investment.is_active) \
+                        .order_by(Investment.start_date.desc())
 
 
 def add_proposal_to_test_account(proposal: Proposal) -> None:
