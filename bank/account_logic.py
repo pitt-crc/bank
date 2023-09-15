@@ -40,8 +40,9 @@ class ProposalServices:
         self._account_name = account.account_name
         AccountServices.setup_db_account_entry(self._account_name)
 
-    def _get_active_proposal_id(self) -> None:
-        """Return the active proposal ID for the current account
+    def _get_active_proposal_id(self) -> int:
+        """Return the active proposal ID for the current account. If there are multiple "active" proposals,
+        return the ID of the proposal with the most recent start date
 
         Raises:
             MissingProposalError: If no active proposal is found
@@ -51,7 +52,8 @@ class ProposalServices:
 
         active_proposal_id_query = select(Proposal.id) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active)
+            .where(Proposal.is_active) \
+            .order_by(Proposal.start_date.desc())
 
         with DBConnection.session() as session:
             proposal_id = session.execute(active_proposal_id_query).scalars().first()
@@ -649,14 +651,16 @@ class AccountServices:
 
         self._active_proposal_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active)
+            .where(Proposal.is_active) \
+            .order_by(Proposal.start_date.desc())
 
         self._recent_proposals_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery))
 
         self._active_investment_query = select(Investment) \
             .where(Investment.account_id.in_(subquery)) \
-            .where(Investment.is_active)
+            .where(Investment.is_active) \
+            .order_by(Investment.start_date.desc())
 
         self._investments_query = select(Investment) \
             .where(Investment.account_id.in_(subquery))
@@ -939,6 +943,7 @@ class AccountServices:
 
             # Gather the account's active proposal and investments if they exist
             proposal = session.execute(self._active_proposal_query).scalars().first()
+            # TODO: utilize all investments (scalars().all())
             investment = session.execute(self._active_investment_query).scalars().first()
 
         # Update proposal or investment usage
