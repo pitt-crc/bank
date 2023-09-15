@@ -101,6 +101,7 @@ class ProposalServices:
             self,
             start: Optional[date] = date.today(),
             end: Optional[date] = None,
+            force: Optional[bool] = False,
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
@@ -108,6 +109,7 @@ class ProposalServices:
         Args:
             start: The start date of the proposal, default is today
             end: Date of the proposal expiration, default is 1 year
+            force: Optionally replace current active proposal with provided values, default is false
             **clusters_sus: Service units to allocate to each cluster
         """
 
@@ -131,7 +133,7 @@ class ProposalServices:
                           )
                     )
 
-            if session.execute(overlapping_proposal_query).scalars().first():
+            if session.execute(overlapping_proposal_query).scalars().first() and not force:
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
             # Create the new proposal and allocations
@@ -177,7 +179,8 @@ class ProposalServices:
             self,
             proposal_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None
+            end: Optional[date] = None,
+            force: Optional[bool] = False
     ) -> None:
         """Overwrite the date of an account proposal
 
@@ -185,6 +188,7 @@ class ProposalServices:
             proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
+            force: Optionally overwrite dates even if it would cause overlap with another proposal
         Raises:
             MissingProposalError: If the proposal ID does not match the account
             ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
@@ -218,12 +222,12 @@ class ProposalServices:
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
                             and_(
-                               not_(and_(start < Proposal.start_date, end  <= Proposal.start_date)),
-                               not_(and_(start >= Proposal.end_date, end  > Proposal.end_date))
+                               not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
+                               not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                             )
                           )
 
-            if session.execute(overlapping_proposal_query).scalars().first():
+            if session.execute(overlapping_proposal_query).scalars().first() and not force:
                 raise ProposalExistsError('Proposals for a given account cannot overlap.')
 
             # Update the proposal record
@@ -286,10 +290,11 @@ class ProposalServices:
         self._verify_proposal_id(proposal_id)
         self._verify_cluster_values(**clusters_sus)
 
-        query = select(Allocation).join(Proposal).where(Proposal.id == proposal_id)
+        query = select(Proposal).where(Proposal.id == proposal_id)
         with DBConnection.session() as session:
-            allocations = session.execute(query).scalars().all()
-            for allocation in allocations:
+            proposal = session.execute(query).scalars().first()
+
+            for allocation in proposal.allocations:
                 allocation.service_units_total -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
