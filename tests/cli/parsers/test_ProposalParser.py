@@ -63,11 +63,11 @@ class Create(ProposalSetup, CLIAsserts, TestCase):
 
         # Create a proposal using a start date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            ProposalParser().parse_args([f'create', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '100', '--start', '09/01/2500'])
+            ProposalParser().parse_args([f'create', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '100', '--start', '09/01/25'])
 
         # Create a proposal using an end date with the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            ProposalParser().parse_args([f'create', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '100', '--end', '09/01/2500'])
+            ProposalParser().parse_args([f'create', TEST_ACCOUNT, f'--{TEST_CLUSTER}', '100', '--end', '09/01/25'])
 
 
 class Delete(CLIAsserts, TestCase):
@@ -246,8 +246,8 @@ class Modify(TestCase, CLIAsserts):
 
         # Modify the start date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/2500'])
+            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--start', '09/01/25'])
 
         # Modify the end date using the wrong format
         with self.assertRaisesRegex(SystemExit, 'Could not parse the given date'):
-            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/2500'])
+            ProposalParser().parse_args(['create', TEST_ACCOUNT, '--id', '0', '--start', '09/01/25'])

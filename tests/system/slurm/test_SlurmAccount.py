@@ -1,5 +1,6 @@
 """Tests for the ``SlurmAccount`` class."""
 
+from datetime import date
 from unittest import TestCase, skip
 from unittest.mock import patch
 
@@ -110,15 +111,19 @@ class GetClusterUsage(TestCase):
         """Test a ``ClusterNotFoundError`` error is raised when passed a nonexistent cluster"""
 
         account = SlurmAccount(settings.test_accounts[0])
+        start = date.today()
+        end = date.today()
         with self.assertRaises(ClusterNotFoundError):
-            account.get_cluster_usage_per_user('fake_cluster')
+            account.get_cluster_usage_per_user('fake_cluster', start, end)
 
     def test_error_blank_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when passed a blank cluster name"""
 
         account = SlurmAccount(settings.test_accounts[0])
+        start = date.today()
+        end = date.today()
         with self.assertRaises(ClusterNotFoundError):
-            account.get_cluster_usage_per_user('')
+            account.get_cluster_usage_per_user('', start, end)
 
     @skip('This functionality relies on setting up SLURM account with non-zero usage in the DB.')
     def test_get_usage_hours(self) -> None:

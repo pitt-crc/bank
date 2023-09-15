@@ -142,7 +142,7 @@ def upgrade():
             if total_sus <= 25000:
                 allocs = [{'proposal_id': prop.id,
                            'cluster_name': 'all_clusters',
-                           'service_units_total': getattr(prop, cluster_name)}]
+                           'service_units_total': 25000}]
 
             new_proposal = {'id': prop.id,
                             'account_id': account.id,
