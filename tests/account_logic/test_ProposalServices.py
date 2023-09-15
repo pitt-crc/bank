@@ -8,8 +8,8 @@ from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError, AccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
-from tests._utils import account_proposals_query, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
-    ProposalSetup, TODAY, TOMORROW, YESTERDAY
+from tests._utils import active_proposal_query, account_proposals_query, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, \
+    EmptyAccountSetup, ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units_total) \
@@ -296,19 +296,32 @@ class OverlappingProposals(EmptyAccountSetup, TestCase):
         """Test existing proposals can be created to overlap with other proposals, when force flag is provided"""
 
         self.account.create(start=YESTERDAY, end=DAY_AFTER_TOMORROW, **{settings.test_cluster: 100})
+        first_id = self.account._get_active_proposal_id()
+
         with self.assertWarns(UserWarning):
-            self.account.create(start=TOMORROW,
+            self.account.create(start=TODAY,
                                 end=DAY_AFTER_TOMORROW+timedelta(days=2),
                                 force=True,
                                 **{settings.test_cluster: 100})
+        second_id = self.account._get_active_proposal_id()
+
+        # The new active proposal ID should be that of the second proposal
+        self.assertNotEqual(first_id, second_id)
 
     def test_success_on_proposal_forced_modify_date(self):
         """Test existing proposals can be modified to overlap with other proposals, when force flag is provided"""
 
-        self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
-        self.account.create(start=DAY_AFTER_TOMORROW,
+        self.account.create(start=DAY_BEFORE_YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
+        first_id = self.account._get_active_proposal_id()
+
+        self.account.create(start=YESTERDAY,
                             end=DAY_AFTER_TOMORROW+timedelta(days=2),
+                            force=True,
                             **{settings.test_cluster: 100})
+        second_id = self.account._get_active_proposal_id()
+        self.assertNotEqual(first_id, second_id)
 
         with self.assertWarns(UserWarning):
-            self.account.modify_date(end=DAY_AFTER_TOMORROW, force=True)
+            self.account.modify_date(proposal_id=first_id, start=TODAY, force=True)
+
+        self.assertEqual(first_id, self.account._get_active_proposal_id())
