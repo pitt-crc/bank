@@ -140,10 +140,11 @@ class ProposalServices:
                 if force:
                     warn("Creating the proposal despite overlap with an existing proposal")
                 else:
-                    raise ProposalExistsError(f'Proposals for a given account cannot overlap: \n'
+                    raise ProposalExistsError(f'By default, proposals for a given account cannot overlap: \n'
                                               f'    existing range {overlapping_proposal.start_date} '
                                               f'- {overlapping_proposal.end_date} \n'
-                                              f'    provided range {start} - {end}')
+                                              f'    provided range {start} - {end} \n'
+                                              f'This can be overridden with the `--force` flag')
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
@@ -242,10 +243,11 @@ class ProposalServices:
                 if force:
                     warn("Modifying the proposal dates despite overlap with an existing proposal")
                 else:
-                    raise ProposalExistsError(f'Proposals for a given account cannot overlap: \n'
+                    raise ProposalExistsError(f'By default, proposals for a given account cannot overlap: \n'
                                               f'    existing range {overlapping_proposal.start_date} '
                                               f'- {overlapping_proposal.end_date} \n'
-                                              f'    provided range {start} - {end}')
+                                              f'    provided range {start} - {end} \n'
+                                              f'This can be overridden with the `--force` flag')
 
             # Update the proposal record
             if start != proposal.start_date:
