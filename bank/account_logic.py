@@ -904,8 +904,9 @@ class AccountServices:
 
         """
 
-        end_date = date.today()
-        start_date = end_date - relativedelta(days=1)
+        # Update status runs daily
+        start_date = date.today()
+        end_date = start_date + relativedelta(days=1)
 
         slurm_acct = SlurmAccount(self._account_name)
         total_usage = slurm_acct.get_cluster_usage_total(start=start_date, end=end_date, in_hours=True)

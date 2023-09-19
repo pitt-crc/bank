@@ -175,7 +175,7 @@ class SlurmAccount:
             time = 'Seconds'
 
         cmd = ShellCmd(f"sreport cluster AccountUtilizationByUser -Pn -T Billing -t {time} cluster={cluster} "
-                       f"Account={self.account_name} start={start} end={end} format=Proper,Used")
+                       f"Account={self.account_name} start={start.strftime('%Y-%m-%d')} end={end.strftime('%Y-%m-%d')} format=Proper,Used")
 
         try:
             account_total, *data = cmd.out.split('\n')
