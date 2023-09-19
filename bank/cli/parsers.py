@@ -2,9 +2,8 @@
 application's commandline interface. Individual parsers are designed around
 different services provided by the banking app.
 """
-
 import sys
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, BooleanOptionalAction, Namespace
 from datetime import datetime
 from typing import List, Tuple
 
@@ -190,6 +189,12 @@ class ProposalParser(BaseParser):
             metavar='date',
             type=Date,
             help=f'proposal end date ({safe_date_format}) - defaults to 1 year from today')
+        create_parser.add_argument(
+            '--force',
+            action=BooleanOptionalAction,
+            help=f"boolean flag for whether or not to set the existing proposal to inactive and substitute a proposal "
+                 f"with the provided values in it's place - default is False"
+        )
         self._add_cluster_args(create_parser)
 
         # Proposal deletion
@@ -231,6 +236,12 @@ class ProposalParser(BaseParser):
             metavar='date',
             type=Date,
             help=f'set a new proposal end date ({safe_date_format})')
+        modify_date_parser.add_argument(
+            '--force',
+            action=BooleanOptionalAction,
+            help=f"boolean flag for whether or not to overwrite the existing proposal's dates, even if it "
+                 f"would otherwise cause date range overlap - default is False"
+        )
 
     @staticmethod
     def _add_cluster_args(parser: ArgumentParser) -> None:
@@ -344,6 +355,7 @@ class InvestmentParser(BaseParser):
             type=Date,
             help=f'set a new investment end date ({safe_date_format})')
 
+        # Advance investment SUs
         advance_parser = subparsers.add_parser(
             name='advance',
             help='forward service units from future investments to a given investment')

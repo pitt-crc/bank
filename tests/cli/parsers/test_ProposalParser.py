@@ -20,6 +20,12 @@ class Create(ProposalSetup, CLIAsserts, TestCase):
 
         self.assert_parser_matches_func_signature(ProposalParser(), f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100')
 
+    def test_create_proposal_force(self) -> None:
+        """Test proposal creation providing the force argument"""
+
+        self.assert_parser_matches_func_signature(ProposalParser(),
+                                                  f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100 --force')
+
     def test_missing_account_name_error(self) -> None:
         """Test a ``SystemExit`` error is raised for a missing ``account`` argument"""
 
@@ -212,6 +218,11 @@ class Modify(TestCase, CLIAsserts):
         # Modify the start and end dates
         self.assert_parser_matches_func_signature(
             ProposalParser(), f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str}')
+
+        # Modify the start and end dates, forcing
+        self.assert_parser_matches_func_signature(
+            ProposalParser(),
+            f'modify_date {TEST_ACCOUNT} --start {self.start_date_str} --end {self.end_date_str} --force')
 
     def test_modify_specific_proposal(self) -> None:
         """Test changing the dates while specifying a proposal ID"""

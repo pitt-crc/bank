@@ -11,6 +11,7 @@ from datetime import date, datetime
 from logging import getLogger
 from math import ceil
 from typing import Collection, Iterable, Optional, Union
+from warnings import warn
 
 from dateutil.relativedelta import relativedelta
 from prettytable import PrettyTable
@@ -39,8 +40,9 @@ class ProposalServices:
         self._account_name = account.account_name
         AccountServices.setup_db_account_entry(self._account_name)
 
-    def _get_active_proposal_id(self) -> None:
-        """Return the active proposal ID for the current account
+    def _get_active_proposal_id(self) -> int:
+        """Return the active proposal ID for the current account. If there are multiple "active" proposals,
+        return the ID of the proposal with the most recent start date
 
         Raises:
             MissingProposalError: If no active proposal is found
@@ -50,7 +52,8 @@ class ProposalServices:
 
         active_proposal_id_query = select(Proposal.id) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active)
+            .where(Proposal.is_active) \
+            .order_by(Proposal.start_date.desc())
 
         with DBConnection.session() as session:
             proposal_id = session.execute(active_proposal_id_query).scalars().first()
@@ -101,6 +104,7 @@ class ProposalServices:
             self,
             start: Optional[date] = date.today(),
             end: Optional[date] = None,
+            force: Optional[bool] = False,
             **clusters_sus: int
     ) -> None:
         """Create a new proposal for the account
@@ -108,6 +112,7 @@ class ProposalServices:
         Args:
             start: The start date of the proposal, default is today
             end: Date of the proposal expiration, default is 1 year
+            force: Optionally replace current active proposal with provided values, default is false
             **clusters_sus: Service units to allocate to each cluster
         """
 
@@ -130,9 +135,16 @@ class ProposalServices:
                                not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                           )
                     )
-
-            if session.execute(overlapping_proposal_query).scalars().first():
-                raise ProposalExistsError('Proposals for a given account cannot overlap.')
+            overlapping_proposal = session.execute(overlapping_proposal_query).scalars().first()
+            if overlapping_proposal:
+                if force:
+                    warn("Creating the proposal despite overlap with an existing proposal")
+                else:
+                    raise ProposalExistsError(f'By default, proposals for a given account cannot overlap: \n'
+                                              f'    existing range {overlapping_proposal.start_date} '
+                                              f'- {overlapping_proposal.end_date} \n'
+                                              f'    provided range {start} - {end} \n'
+                                              f'This can be overridden with the `--force` flag')
 
             # Create the new proposal and allocations
             new_proposal = Proposal(
@@ -177,7 +189,8 @@ class ProposalServices:
             self,
             proposal_id: Optional[int] = None,
             start: Optional[date] = None,
-            end: Optional[date] = None
+            end: Optional[date] = None,
+            force: Optional[bool] = False
     ) -> None:
         """Overwrite the date of an account proposal
 
@@ -185,10 +198,13 @@ class ProposalServices:
             proposal_id: Modify a specific proposal by its inv_id (Defaults to currently active proposal)
             start: Optionally set a new start date for the proposal
             end: Optionally set a new end date for the proposal
+            force: Optionally overwrite dates even if it would cause overlap with another proposal
         Raises:
             MissingProposalError: If the proposal ID does not match the account
             ValueError: If neither a start date nor end date are provided, and if provided start/end dates are not in
             chronological order with amongst themselves or with the existing DB values.
+            ProposalExistsError: If the proposal being created would otherwise overlap with an existing proposal,
+            and the force flag is not provided.
         """
 
         proposal_id = proposal_id or self._get_active_proposal_id()
@@ -218,13 +234,20 @@ class ProposalServices:
                     .where(Proposal.account_id.in_(overlapping_proposal_sub_1)) \
                     .where(
                             and_(
-                               not_(and_(start < Proposal.start_date, end  <= Proposal.start_date)),
-                               not_(and_(start >= Proposal.end_date, end  > Proposal.end_date))
+                               not_(and_(start < Proposal.start_date, end <= Proposal.start_date)),
+                               not_(and_(start >= Proposal.end_date, end > Proposal.end_date))
                             )
                           )
-
-            if session.execute(overlapping_proposal_query).scalars().first():
-                raise ProposalExistsError('Proposals for a given account cannot overlap.')
+            overlapping_proposal = session.execute(overlapping_proposal_query).scalars().first()
+            if overlapping_proposal:
+                if force:
+                    warn("Modifying the proposal dates despite overlap with an existing proposal")
+                else:
+                    raise ProposalExistsError(f'By default, proposals for a given account cannot overlap: \n'
+                                              f'    existing range {overlapping_proposal.start_date} '
+                                              f'- {overlapping_proposal.end_date} \n'
+                                              f'    provided range {start} - {end} \n'
+                                              f'This can be overridden with the `--force` flag')
 
             # Update the proposal record
             if start != proposal.start_date:
@@ -286,10 +309,11 @@ class ProposalServices:
         self._verify_proposal_id(proposal_id)
         self._verify_cluster_values(**clusters_sus)
 
-        query = select(Allocation).join(Proposal).where(Proposal.id == proposal_id)
+        query = select(Proposal).where(Proposal.id == proposal_id)
         with DBConnection.session() as session:
-            allocations = session.execute(query).scalars().all()
-            for allocation in allocations:
+            proposal = session.execute(query).scalars().first()
+
+            for allocation in proposal.allocations:
                 allocation.service_units_total -= clusters_sus.get(allocation.cluster_name, 0)
 
             session.commit()
@@ -629,14 +653,16 @@ class AccountServices:
 
         self._active_proposal_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery)) \
-            .where(Proposal.is_active)
+            .where(Proposal.is_active) \
+            .order_by(Proposal.start_date.desc())
 
         self._recent_proposals_query = select(Proposal) \
             .where(Proposal.account_id.in_(subquery))
 
         self._active_investment_query = select(Investment) \
             .where(Investment.account_id.in_(subquery)) \
-            .where(Investment.is_active)
+            .where(Investment.is_active) \
+            .order_by(Investment.start_date.desc())
 
         self._investments_query = select(Investment) \
             .where(Investment.account_id.in_(subquery))
@@ -929,6 +955,7 @@ class AccountServices:
 
             # Gather the account's active proposal and investments if they exist
             proposal = session.execute(self._active_proposal_query).scalars().first()
+            # TODO: utilize all investments (scalars().all())
             investment = session.execute(self._active_investment_query).scalars().first()
 
         # Update proposal or investment usage
