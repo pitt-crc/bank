@@ -735,28 +735,38 @@ class AccountServices:
             floating_su_remaining = 0
 
             for allocation in proposal.allocations:
+
+                # Skip any cluster that does not have service units awarded on it
+                if not allocation.service_units_total:
+                    continue
+
+                cluster_name = str.upper(allocation.cluster_name)
+
+                # Determine whether or not there is a floating allocation
                 if allocation.cluster_name == 'all_clusters':
                     floating_su_usage = allocation.service_units_used
                     floating_su_total = allocation.service_units_total
                     floating_su_remaining = floating_su_total - floating_su_usage
                     continue
 
+                # Gather usage data from sreport
                 usage_data = slurm_acct.get_cluster_usage_per_user(cluster=allocation.cluster_name,
                                                                    start=proposal.start_date,
                                                                    end=proposal.end_date,
                                                                    in_hours=True)
 
-                # Skip if usage data is empty on the cluster
+                
+
+                # Skip displaying usage data if there is none, just show cluster total
                 if not usage_data:
+                    output_table.add_row([f"Cluster: {cluster_name}",
+                                          f"Total SUs: {allocation.service_units_total}",""], divider=True)
+                    output_table.add_row(["", "", ""], divider=True)
                     continue
 
                 total_usage_on_cluster = sum(usage_data.values())
                 total_cluster_percent = self._calculate_percentage(total_usage_on_cluster,
                                                                    allocation.service_units_total)
-                cluster_name = str.upper(allocation.cluster_name)
-                if not allocation.service_units_total:
-                    continue
-
                 output_table.add_row([f"Cluster: {cluster_name}",
                                      f"Total SUs: {allocation.service_units_total}",""], divider=True)
 
