@@ -905,8 +905,8 @@ class AccountServices:
         """
 
         # Update status runs daily
-        start_date = date.today()
-        end_date = start_date + relativedelta(days=1)
+        end_date = date.today()
+        start_date = end_date - relativedelta(days=1)
 
         slurm_acct = SlurmAccount(self._account_name)
         total_usage = slurm_acct.get_cluster_usage_total(start=start_date, end=end_date, in_hours=True)
@@ -920,7 +920,7 @@ class AccountServices:
 
             # Gather the account's active proposal and investments if they exist
             proposal = session.execute(self._active_proposal_query).scalars().first()
-            investment = session.execute(self._active_investment_query).scalars().first()
+            investments = session.execute(self._active_investment_query).scalars().all()
 
         # Update proposal or investment usage
 
@@ -929,7 +929,7 @@ class AccountServices:
 
                 total_usage_exceeding_limits = 0
 
-                # Update within cluster usage
+                # Update within-cluster usage, building a list of clusters to potentially lock on
                 for alloc in proposal.allocations:
                     if alloc.cluster_name == 'all_clusters':
                         floating_alloc = alloc
@@ -947,28 +947,54 @@ class AccountServices:
                             alloc.service_units_used = alloc.service_units_total
                             lock_clusters.append(alloc.cluster_name)
 
-                # Handle usage exceeding limits
-                if total_usage_exceeding_limits > 0:
+                # Handle usage exceeding limits, firstly applying floating SUs
+                if total_usage_exceeding_limits > 0 and floating_alloc:
+                    floating_sus_remaining = floating_alloc.service_units_total - floating_alloc.service_units_used
+                    total_usage_exceeding_limits -= floating_sus_remaining
 
-                    # Attempt to cover with floating SUs
-                    if floating_alloc:
+                    # Floating SUs alone cannot cover
+                    if total_usage_exceeding_limits > 0:
+                        # Exhaust floating SUs
+                        floating_alloc.service_units_used = floating_alloc.service_units_total
+                    else:
+                        # Clear clusters to lock on
+                        lock_clusters = []
 
-                        floating_sus = floating_alloc.service_units_total - floating_alloc.service_units_used
-                        floating_sus_remaining = floating_sus - total_usage_exceeding_limits
 
-                        # Floating SUs alone cannot cover, try using investment SUs
-                        if floating_sus_remaining < 0 and investment:
-                            investment.current_sus += floating_sus_remaining
-                            floating_alloc.service_units_used = floating_alloc.service_units_total
-                            if investment.current_sus < 0:
-                                # TODO: Implement check for other investments + withdraw and cover
-                                investment.current_sus = 0
-                                LOG.info(f"Locked {self._account_name} on all clusters due to insufficient floating "
-                                         f"or investment SUs to cover usage")
-                                self.lock(clusters=lock_clusters)
-                            else:
-                                LOG.debug(f"Using investment SUs to cover usage for {self._account_name} on "
+                # Try using investments to cover if there is still usage
+                if total_usage_exceeding_limits > 0 and investments:
+                    for investment in investments:
+                        investment.current_sus -= total_usage_exceeding_limits
+                        # Current investment cannot cover
+                        if investment.current_sus < 0:
+                            # Attempt to withdraw SUs
+                            investment.current_sus = investment.service_units - investment.withdrawn
+                            investment.withdrawn = investment.service_units
+                                        investment.current_sus -= total_usage_exceeding_limits
+                                        if investment.current_sus < 0:
+                                            total_usage_exceeding_limts = -1 * investment.current_sus
+                                            investment.current_sus = 0
+                                            continue
+                                        else:
+                                            LOG.debug(f"Using investment SUs to cover usage for {self._account_name} on "
                                           f" {lock_clusters}")
+                                            break
+
+                                    # Current investment can cover
+                                    else:
+                                        LOG.debug(f"Using investment SUs to cover usage for {self._account_name} on "
+                                          f" {lock_clusters}")
+                                        break
+
+                                # No investments could cover 
+                                if total_usage_exceeding_limits >0:
+                                    LOG.info(f"Locked {self._account_name} on all clusters due to insufficient floating "
+                                         f"or investment SUs to cover usage")
+                                    self.lock(clusters=lock_clusters)
+
+                            else:
+
+
 
                         elif floating_sus_remaining < 0:
                             floating_alloc.service_units_used = floating_alloc.service_units_total
@@ -979,7 +1005,8 @@ class AccountServices:
                             LOG.debug(f"Using floating SUs to cover usage for {self._account_name} on {lock_clusters}")
 
                     # No floating alloc, attempt to cover with investment SUs
-                    elif investment:
+                    elif investments:
+
                         investment.current_sus -= total_usage_exceeding_limits
                         if investment.current_sus < 0:
                             # TODO: Implement check for other investments + withdraw and cover
@@ -995,15 +1022,16 @@ class AccountServices:
                                  f"floating or investment SUs")
 
             # Investment covers all usage
-            elif not proposal and investment:
-                investment.current_sus -= total_usage
-                if investment.current_sus > 0:
-                    LOG.debug(f"Using investment service units to cover usage with no active proposal "
-                              f" for {self._account_name}")
-                else:
-                    investment.current_sus = 0
-                    self.lock(all_clusters=True)
-                    LOG.info(f"Locked {self._account_name} on all clusters, no proposal and investment exhausted")
+            elif investment:
+                
+                #investment.current_sus -= total_usage
+                #if investment.current_sus > 0:
+                #    LOG.debug(f"Using investment service units to cover usage with no active proposal "
+                #              f" for {self._account_name}")
+                #else:
+                #    investment.current_sus = 0
+                #    self.lock(all_clusters=True)
+                #    LOG.info(f"Locked {self._account_name} on all clusters, no proposal and investment exhausted")
 
             # No proposal or investment to cover usage
             else:
@@ -1125,8 +1153,13 @@ class AdminServices:
         """
 
         unlocked_accounts_by_cluster = {}
+        numclusters = len(Slurm.cluster_names())
+        cluster_progress = 0
         for cluster in Slurm.cluster_names():
+            cluster_progress += 1
+            LOG.info(f"Gathering unlocked accounts on {cluster}")
             unlocked_accounts_by_cluster[cluster] = set(cls._iter_accounts_by_lock_state(False, cluster))
+            LOG.info(f"Gathered unlocked accounts progress {cluster_progress}/{numclusters}")
 
         return unlocked_accounts_by_cluster
 
@@ -1134,7 +1167,12 @@ class AdminServices:
     def update_account_status(cls) -> None:
         """Update account usage information and lock any expired or overdrawn accounts"""
 
+        # Log start of update status
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        LOG.info(f"STARTING Update_status {now}")
+
         # Gather all account names that are currently unlocked on some cluster
+        LOG.info(f"Gathering unlocked accounts...")
         unlocked_accounts_by_cluster = cls.find_unlocked_account_names()
 
         # Build set of account names that are unlocked on any cluster
@@ -1142,14 +1180,27 @@ class AdminServices:
         for name_set in unlocked_accounts_by_cluster.values():
             account_names = account_names.union(name_set)
 
+        # Set up progress indicator for log
+        num_accounts = len(account_names)
+        progress = 0
+
         # Update the status of any unlocked account
         for name in account_names:
+            progress += 1
             #TODO: maintain this whitelist in settings?
             if name in ["root", "clcgenomics"]:
                 continue
             try:
+                LOG.info(f"Updating status for {name}...")
                 account = AccountServices(name)
                 account.update_status()
             except AccountNotFoundError:
                 LOG.info(f"SLURM Account does not exist for {name}")
                 continue
+
+            LOG.info(f"Update status: {progress}/{num_accounts} updated")
+
+        # Log end of update status
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        LOG.info(f"FINISHED Update_status {now}")
+
