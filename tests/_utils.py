@@ -124,6 +124,7 @@ class InvestmentSetup(EmptyAccountSetup):
         """Ensure there exists a user investment for the test user account"""
 
         super().setUp()
+
         investments = []
         for i in range(3):
             start = TODAY + ((i - 1) * timedelta(days=365))
@@ -137,10 +138,5 @@ class InvestmentSetup(EmptyAccountSetup):
                 withdrawn_sus=0,
                 rollover_sus=0
             )
-            investments.append(inv)
 
-        with DBConnection.session() as session:
-            result = session.execute(select(Account).where(Account.name == settings.test_accounts[0]))
-            account = result.scalars().first()
-            account.investments.extend(investments)
-            session.commit()
+            add_investment_to_test_account(inv)
