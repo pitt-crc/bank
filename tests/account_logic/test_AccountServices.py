@@ -7,9 +7,10 @@ from sqlalchemy import join, select
 
 from bank import settings
 from bank.account_logic import AccountServices
-from bank.orm import Account, Allocation, DBConnection, Proposal
+from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
 from bank.system.slurm import SlurmAccount, Slurm
-from tests._utils import active_proposal_query, active_investment_query, InvestmentSetup, ProposalSetup
+from tests._utils import active_proposal_query, active_investment_query, add_investment_to_test_account, \
+    InvestmentSetup, ProposalSetup
 
 
 class CalculatePercentage(TestCase):
@@ -454,10 +455,12 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
 
             self.assertEqual(900, investment.current_sus)
 
-    @skip('TODO: The withdraw/forward functionality has not been fully implemented in update_status yet.')
-    def test_status_unlocked_with_multiple_investments_sus_applied(self) -> None:
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, start, end, in_hours: {'account1': 550, 'account2': 550})
+    def test_status_unlocked_with_multiple_investments_disbursements_applied(self) -> None:
         """Test that update_status uses investment SUs to cover usage over limits, exhausting the first investment
-        and withdrawing from a future investment"""
+        and withdrawing from a future disbursement of the investment"""
 
         self.slurm_account.set_locked_state(False, cluster=settings.test_cluster)
 
@@ -470,6 +473,8 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             # Investment is expired
             investment = session.execute(active_investment_query).scalars().first()
             investment.current_sus = 1000
+            investment.withdrawn_sus = 1000
+            investment.service_units = 2000
 
             session.commit()
 
@@ -483,3 +488,105 @@ class UpdateStatus(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(active_investment_query).scalars().first()
 
             self.assertEqual(900, investment.current_sus)
+            self.assertEqual(investment.withdrawn_sus, investment.service_units)
+
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, start, end, in_hours: {'account1': 550, 'account2': 550})
+    def test_status_unlocked_with_multiple_investments_applied(self) -> None:
+        """Test that update_status uses investment SUs to cover usage over limits, exhausting the first investment
+        and utilizing another investment"""
+
+        self.slurm_account.set_locked_state(False, cluster=settings.test_cluster)
+
+        start = date.today()
+        end = start + (1 * timedelta(days=365))
+
+        inv = Investment(
+            start_date=start,
+            end_date=end,
+            service_units=1000,
+            current_sus=1000,
+            withdrawn_sus=1000,
+            rollover_sus=0
+        )
+
+        add_investment_to_test_account(inv)
+
+        with DBConnection.session() as session:
+            # Proposal is expired
+            proposal = session.execute(active_proposal_query).scalars().first()
+            proposal.allocations[0].service_units_total = 10_000
+            proposal.allocations[0].service_units_used = 35_000
+
+            # Investment is expired
+            investments = session.execute(active_investment_query).scalars().all()
+            investments[0].current_sus = 1000
+            investments[0].withdrawn_sus = 2000
+            investments[0].service_units = 2000
+
+            session.commit()
+
+        self.account.update_status()
+
+        with DBConnection.session() as session:
+            # check that investment SUs were used to cover usage
+            investments = session.execute(active_investment_query).scalars().all()
+
+            self.assertEqual(0, investments[0].current_sus)
+            self.assertEqual(investments[0].withdrawn_sus, investments[0].service_units)
+            self.assertEqual(investments[1].withdrawn_sus, investments[1].service_units)
+            self.assertEqual(900, investments[1].current_sus)
+
+        # cluster should be unlocked due to exceeding usage being covered by investment
+        self.assertFalse(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
+
+    @patch.object(SlurmAccount,
+                  "get_cluster_usage_per_user",
+                  lambda self, cluster, start, end, in_hours: {'account1': 550, 'account2': 550})
+    def test_status_locked_with_multiple_sources_exhausted(self) -> None:
+        """Test that update_status attempts to use floating and investment SUs to cover usage over limits,
+        exhausting the floating SUs and investments"""
+
+        self.slurm_account.set_locked_state(False, cluster=settings.test_cluster)
+
+        start = date.today()
+        end = start + (1 * timedelta(days=365))
+
+        inv = Investment(
+            start_date=start,
+            end_date=end,
+            service_units=1000,
+            current_sus=1000,
+            withdrawn_sus=1000,
+            rollover_sus=0
+        )
+
+        add_investment_to_test_account(inv)
+
+        with DBConnection.session() as session:
+            # Proposal is expired
+            proposal = session.execute(active_proposal_query).scalars().first()
+            proposal.allocations[0].service_units_total = 10_000
+            proposal.allocations[0].service_units_used = 36_000
+
+            # Investment is expired
+            investments = session.execute(active_investment_query).scalars().all()
+            investments[0].current_sus = 1000
+            investments[0].withdrawn_sus = 2000
+            investments[0].service_units = 2000
+
+            session.commit()
+
+        self.account.update_status()
+
+        with DBConnection.session() as session:
+            # check that investment SUs were used to cover usage
+            investments = session.execute(active_investment_query).scalars().all()
+
+            self.assertEqual(0, investments[1].current_sus)
+            self.assertEqual(investments[1].withdrawn_sus, investments[1].service_units)
+            self.assertEqual(0, investments[0].current_sus)
+
+        # cluster should be unlocked due to exceeding usage being covered by investment
+        self.assertTrue(self.slurm_account.get_locked_state(cluster=settings.test_cluster))
