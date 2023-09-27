@@ -174,11 +174,14 @@ class SlurmAccount:
         if not in_hours:
             time = 'Seconds'
 
-        cmd = ShellCmd(f"sreport cluster AccountUtilizationByUser -Pn -T Billing -t {time} cluster={cluster} "
+        cmd1 = ShellCmd(f"sreport cluster AccountUtilizationByUser -Pn -T Billing -t {time} cluster={cluster} "
                        f"Account={self.account_name} start={start.strftime('%Y-%m-%d')} end={end.strftime('%Y-%m-%d')} format=Proper,Used")
 
+        cmd2 = ShellCmd(f"sacctmgr -nP show association where Account={self.account_name} Cluster={cluster} Format=User")
+
         try:
-            account_total, *data = cmd.out.split('\n')
+            account_total, *data = cmd1.out.split('\n')
+            users = cmd2.out.split('\n')
         except ValueError:
             return None
 
@@ -187,6 +190,12 @@ class SlurmAccount:
             user, usage = line.split('|')
             usage = int(usage)
             out_data[user] = usage
+
+        for user in users:
+            if user in out_data.keys():
+                continue
+            else:
+                out_data[user] = 0
 
         return out_data
 
