@@ -4,24 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 100
     ignore:
       - dependency-name: "sphinx-jsonschema"  # Newer versions of sphinx-jsonschema have compatibility issues
-    groups:
-      python-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "sphinx*"
-      documentation-dependencies:
-        patterns:
-          - "sphinx*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 100
     groups:
       actions-dependencies:
         patterns:
