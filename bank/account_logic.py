@@ -1019,26 +1019,13 @@ class AccountServices:
                             continue
 
                         investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-                        # Investment can not cover, attempt to withdraw remaining SUs in the investment
+                        # Investment can not cover
                         if investment_sus_remaining < 0:
                             total_usage_exceeding_limits -= source.current_sus
+                            source.current_sus = 0
+                            continue
 
-                            # TODO: This is the full amount, should it be less?
-                            #  Could use total divided by 5 to represent 5 year investment,
-                            #  while disbursement available and total_usage_exceeding_limits > 0,
-                            #  determine if usage covered like below.
-                            source.current_sus = source.service_units - source.withdrawn_sus
-                            source.withdrawn_sus = source.service_units
-
-                            investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-
-                            # Still can not cover after withdrawal
-                            if investment_sus_remaining < 0:
-                                total_usage_exceeding_limits -= source.current_sus
-                                source.current_sus = 0
-                                continue
-
-                        if investment_sus_remaining >= 0:
+                        else:
                             source.current_sus -= total_usage_exceeding_limits
                             lock_clusters = []
                             total_usage_exceeding_limits = 0
