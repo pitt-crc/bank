@@ -806,13 +806,14 @@ class AccountServices:
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""], divider=True)
             else:
                 investment_total = sum(inv.service_units for inv in investments)
-                investment_percentage = self._calculate_percentage(aggregate_usage_total,
-                                                                   allocation_total + investment_total)
+                investment_remaining =  sum(inv.current_sus for inv in investments)
+                investment_used = investment_total - investment_remaining
+                investment_percentage = self._calculate_percentage(investment_used, investment_total)
 
                 output_table.add_row(['Investment SUs', "SUs Remaining", "% Used"], divider=True)
                 output_table.add_row([f'**Investment SUs', "",""])
                 output_table.add_row([f'are applied on', "", ""])
-                output_table.add_row([f'any cluster to', str(investment_total)+"**", investment_percentage])
+                output_table.add_row([f'any cluster to', str(investment_remaining)+"**", investment_percentage])
                 output_table.add_row([f'cover usage above',"",""])
                 output_table.add_row([f'Total SUs', "", ""], divider=True)
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""])
