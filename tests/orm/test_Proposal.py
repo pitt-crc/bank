@@ -6,8 +6,8 @@ from unittest import TestCase
 
 from sqlalchemy import select
 
-from bank import settings
 from bank.orm import Account, Allocation, DBConnection, Proposal
+from tests import TestSettings
 from tests._utils import account_proposal_ids_query, account_proposals_query, active_proposal_query, add_proposal_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
 
 # Start and End date values to use with time_machine
@@ -131,7 +131,7 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
@@ -189,10 +189,10 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
@@ -249,10 +249,10 @@ class ExpiredProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)

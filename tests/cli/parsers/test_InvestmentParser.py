@@ -3,11 +3,11 @@
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from bank import settings
 from bank.cli.parsers import InvestmentParser
+from tests import TestSettings
 from tests.cli.parsers._utils import CLIAsserts
 
-TEST_ACCOUNT = settings.test_accounts[0]
+TEST_ACCOUNT = TestSettings.test_accounts[0]
 
 
 class Create(CLIAsserts, TestCase):
@@ -64,13 +64,13 @@ class Create(CLIAsserts, TestCase):
 
         # Create an investment using a custom start date
         start_date = datetime.now()
-        start_date_str = start_date.strftime(settings.date_format)
+        start_date_str = start_date.strftime(TestSettings.date_format)
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --start {start_date_str}')
 
         # Create an investment using a custom end date
         end_date = start_date + timedelta(days=180)
-        end_date_str = end_date.strftime(settings.date_format)
+        end_date_str = end_date.strftime(TestSettings.date_format)
         self.assert_parser_matches_func_signature(
             InvestmentParser(), f'create {TEST_ACCOUNT} --sus 100 --end {end_date_str}')
 
@@ -223,9 +223,9 @@ class Modify(TestCase, CLIAsserts):
     """Test the ``modify`` subparser"""
 
     start_date = datetime.now()
-    start_date_str = start_date.strftime(settings.date_format)
+    start_date_str = start_date.strftime(TestSettings.date_format)
     end_date = start_date + timedelta(days=180)
-    end_date_str = end_date.strftime(settings.date_format)
+    end_date_str = end_date.strftime(TestSettings.date_format)
 
     def test_modify_active_investment(self) -> None:
         """Test changing the dates of the currently active proposal"""

@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
-from bank import settings
+from tests import TestSettings
 from bank.orm import Account, Allocation, DBConnection, Investment, Proposal
 
 TODAY = date.today()
@@ -11,7 +11,7 @@ YESTERDAY = TODAY - timedelta(days=1)
 DAY_AFTER_TOMORROW = TODAY + timedelta(days=2)
 DAY_BEFORE_YESTERDAY = TODAY - timedelta(days=2)
 
-account_subquery = select(Account.id).where(Account.name == settings.test_accounts[0])
+account_subquery = select(Account.id).where(Account.name == TestSettings.test_accounts[0])
 account_proposals_query = select(Proposal) \
                           .where(Proposal.account_id.in_(account_subquery))
 
@@ -37,7 +37,7 @@ def add_proposal_to_test_account(proposal: Proposal) -> None:
     """Add a Proposal to the test account and commit the addition to the database """
 
     with DBConnection.session() as session:
-        account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+        account = session.execute(select(Account).where(Account.name == TestSettings.test_accounts[0])).scalars().first()
         account.proposals.extend([proposal])
         session.commit()
 
@@ -46,7 +46,7 @@ def add_investment_to_test_account(investment: Investment) -> None:
     """Add an Investment to the test account and commit the addition to the database """
 
     with DBConnection.session() as session:
-        account = session.execute(select(Account).where(Account.name == settings.test_accounts[0])).scalars().first()
+        account = session.execute(select(Account).where(Account.name == TestSettings.test_accounts[0])).scalars().first()
         account.investments.extend([investment])
         session.commit()
 
@@ -67,7 +67,7 @@ class EmptyAccountSetup:
             session.commit()
 
             # Create new (empty) accounts
-            for account in settings.test_accounts:
+            for account in TestSettings.test_accounts:
                 session.add(Account(name=account))
 
             session.commit()
@@ -95,7 +95,7 @@ class ProposalSetup(EmptyAccountSetup):
             start = TODAY + ((i - 1) * timedelta(days=365))
             end = TODAY + (i * timedelta(days=365))
 
-            allocations = [Allocation(cluster_name=settings.test_cluster,
+            allocations = [Allocation(cluster_name=TestSettings.test_cluster,
                                       service_units_used=0,
                                       service_units_total=self.num_proposal_sus),
                            Allocation(cluster_name='all_clusters',
@@ -138,7 +138,7 @@ class InvestmentSetup(EmptyAccountSetup):
             investments.append(inv)
 
         with DBConnection.session() as session:
-            result = session.execute(select(Account).where(Account.name == settings.test_accounts[0]))
+            result = session.execute(select(Account).where(Account.name == TestSettings.test_accounts[0]))
             account = result.scalars().first()
             account.investments.extend(investments)
             session.commit()

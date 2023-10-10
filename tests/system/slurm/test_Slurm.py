@@ -3,9 +3,8 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from bank import settings
 from bank.system.slurm import Slurm
-
+from tests import TestSettings
 
 class ClusterNames(TestCase):
     """Tests for the ``cluster_names`` method"""
@@ -13,7 +12,7 @@ class ClusterNames(TestCase):
     def test_names_match_test_env(self) -> None:
         """Test returned cluster names match the clusters configured in the test environment"""
 
-        self.assertEqual(Slurm.cluster_names(), {settings.test_cluster, })
+        self.assertEqual(Slurm.cluster_names(), {TestSettings.test_cluster, })
 
 
 class IsInstalled(TestCase):

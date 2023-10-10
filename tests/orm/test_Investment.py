@@ -4,11 +4,9 @@ from datetime import date, timedelta
 import time_machine
 from unittest import TestCase
 
-from sqlalchemy import select
-
-from bank import settings
-from bank.orm import Account, DBConnection, Investment
-from tests._utils import account_investment_ids_query, account_investments_query, add_investment_to_test_account, DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
+from bank.orm import DBConnection, Investment
+from tests._utils import account_investment_ids_query, account_investments_query, add_investment_to_test_account, \
+    DAY_AFTER_TOMORROW, EmptyAccountSetup, TODAY
 
 # Start and End date values to use with time_machine
 start = TODAY

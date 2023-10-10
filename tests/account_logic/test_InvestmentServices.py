@@ -3,15 +3,15 @@ from unittest import TestCase
 
 from sqlalchemy import select
 
-from bank import settings
 from bank.account_logic import InvestmentServices
 from bank.exceptions import MissingInvestmentError, MissingProposalError, AccountNotFoundError
 from bank.orm import Account, DBConnection, Investment
+from tests import TestSettings
 from tests._utils import InvestmentSetup, ProposalSetup
 
 investments_query = select(Investment) \
     .join(Account) \
-    .where(Account.name == settings.test_accounts[0])
+    .where(Account.name == TestSettings.test_accounts[0])
 
 primary_investment_query = investments_query.where(Investment.is_active)
 
@@ -22,13 +22,13 @@ class InitExceptions(InvestmentSetup, TestCase):
     def test_error_on_non_existent_account(self) -> None:
         # Attempt to create an investment for a nonexistent slurm account
         with self.assertRaises(AccountNotFoundError):
-            self.account = InvestmentServices(account_name=settings.nonexistent_account)
+            self.account = InvestmentServices(account_name=TestSettings.nonexistent_account)
 
     def test_error_on_missing_proposal(self) -> None:
         """Test a ``MissingProposalError`` exception is raised if the account has no proposal"""
 
         with self.assertRaises(MissingProposalError):
-            InvestmentServices(account_name=settings.test_accounts[0])
+            InvestmentServices(account_name=TestSettings.test_accounts[0])
 
 
 class CreateInvestment(ProposalSetup, TestCase):
@@ -37,7 +37,7 @@ class CreateInvestment(ProposalSetup, TestCase):
     def test_investment_is_created(self) -> None:
         """Test a new investment is added to the account after the function call"""
 
-        account = InvestmentServices(settings.test_accounts[0])
+        account = InvestmentServices(TestSettings.test_accounts[0])
         account.create(sus=12345)
 
         with DBConnection.session() as session:
@@ -49,26 +49,26 @@ class CreateInvestment(ProposalSetup, TestCase):
         """Test an error is raised when creating an investment with negative sus"""
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).create(sus=0)
+            InvestmentServices(TestSettings.test_accounts[0]).create(sus=0)
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).create(sus=-1)
+            InvestmentServices(TestSettings.test_accounts[0]).create(sus=-1)
 
     def test_error_on_negative_repeat(self) -> None:
         """Test an error is raised when creating an investment with less than one repeat"""
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).create(sus=1000, num_inv=0)
+            InvestmentServices(TestSettings.test_accounts[0]).create(sus=1000, num_inv=0)
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).create(sus=1000, num_inv=-1)
+            InvestmentServices(TestSettings.test_accounts[0]).create(sus=1000, num_inv=-1)
 
     def test_investment_is_repeated(self) -> None:
         """Test the given number of investments are created successively"""
 
         test_sus = 2000
         repeats = 2
-        account = InvestmentServices(settings.test_accounts[0])
+        account = InvestmentServices(TestSettings.test_accounts[0])
         account.create(sus=test_sus, num_inv=repeats)
 
         with DBConnection.session() as session:
@@ -92,7 +92,7 @@ class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
             investment = session.execute(primary_investment_query).scalars().first()
             primary_id = investment.id
 
-        InvestmentServices(settings.test_accounts[0]).delete(primary_id)
+        InvestmentServices(TestSettings.test_accounts[0]).delete(primary_id)
         with DBConnection.session() as session:
             investment = session.execute(primary_investment_query).scalars().first()
 
@@ -102,7 +102,7 @@ class DeleteInvestment(ProposalSetup, InvestmentSetup, TestCase):
         """Test that deleting a non-existent investment yields a MissingInvestmentError"""
 
         with self.assertRaises(MissingInvestmentError):
-            InvestmentServices(settings.test_accounts[0]).delete(inv_id=1000)
+            InvestmentServices(TestSettings.test_accounts[0]).delete(inv_id=1000)
 
 
 class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
@@ -112,7 +112,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
         """Test start and end dates are overwritten in the investment"""
 
         investment_query = select(Investment).join(Account) \
-            .where(Account.name == settings.test_accounts[0]) \
+            .where(Account.name == TestSettings.test_accounts[0]) \
             .where(Investment.is_active)
 
         with DBConnection.session() as session:

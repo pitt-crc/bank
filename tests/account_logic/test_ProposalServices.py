@@ -4,18 +4,18 @@ from unittest import TestCase
 from sqlalchemy import join, select
 from dateutil.relativedelta import relativedelta
 
-from bank import settings
 from bank.account_logic import ProposalServices
 from bank.exceptions import MissingProposalError, ProposalExistsError, AccountNotFoundError
 from bank.orm import Account, Allocation, DBConnection, Proposal
+from tests import TestSettings
 from tests._utils import account_proposals_query, DAY_AFTER_TOMORROW, DAY_BEFORE_YESTERDAY, EmptyAccountSetup, \
     ProposalSetup, TODAY, TOMORROW, YESTERDAY
 
 joined_tables = join(join(Allocation, Proposal), Account)
 sus_query = select(Allocation.service_units_total) \
     .select_from(joined_tables) \
-    .where(Account.name == settings.test_accounts[0]) \
-    .where(Allocation.cluster_name == settings.test_cluster) \
+    .where(Account.name == TestSettings.test_accounts[0]) \
+    .where(Allocation.cluster_name == TestSettings.test_cluster) \
     .where(Proposal.is_active)
 
 class InitExceptions(EmptyAccountSetup, TestCase):
@@ -24,7 +24,7 @@ class InitExceptions(EmptyAccountSetup, TestCase):
     def test_error_on_non_existent_account(self) -> None:
         super().setUp()
         with self.assertRaises(AccountNotFoundError):
-            self.account = ProposalServices(settings.nonexistent_account)
+            self.account = ProposalServices(TestSettings.nonexistent_account)
 
 
 class CreateProposal(EmptyAccountSetup, TestCase):
@@ -32,7 +32,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_default_sus_are_zero(self) -> None:
         """Test proposals are created with zero service units by default"""
@@ -49,7 +49,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
     def test_non_default_sus_are_set(self) -> None:
         """Test proposals are assigned the number of sus specified by kwargs"""
 
-        self.account.create(**{settings.test_cluster: 1000})
+        self.account.create(**{TestSettings.test_cluster: 1000})
         with DBConnection.session() as session:
             service_units = session.execute(sus_query).scalars().first()
             self.assertEqual(1000, service_units)
@@ -65,7 +65,7 @@ class CreateProposal(EmptyAccountSetup, TestCase):
         """Test an error is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.create(**{settings.test_cluster: -1})
+            self.account.create(**{TestSettings.test_cluster: -1})
 
 
 class DeleteProposal(ProposalSetup, TestCase):
@@ -73,7 +73,7 @@ class DeleteProposal(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_delete_by_id(self) -> None:
         """Test a specific proposal is deleted when an id is given"""
@@ -92,14 +92,14 @@ class ModifyDate(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_dates_are_modified(self) -> None:
         """Test start and end dates are overwritten in the proposal"""
 
         proposal_query = select(Proposal) \
             .join(Account) \
-            .where(Account.name == settings.test_accounts[0]) \
+            .where(Account.name == TestSettings.test_accounts[0]) \
             .order_by(Proposal.start_date.desc())
 
         with DBConnection.session() as session:
@@ -127,7 +127,7 @@ class AddSus(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_sus_are_added(self) -> None:
         """Test SUs are added to the proposal"""
@@ -136,7 +136,7 @@ class AddSus(ProposalSetup, TestCase):
             original_sus = session.execute(sus_query).scalars().first()
 
         sus_to_add = 1000
-        self.account.add_sus(**{settings.test_cluster: sus_to_add})
+        self.account.add_sus(**{TestSettings.test_cluster: sus_to_add})
 
         with DBConnection.session() as session:
             new_sus = session.execute(sus_query).scalars().first()

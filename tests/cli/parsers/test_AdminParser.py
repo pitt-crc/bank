@@ -2,12 +2,11 @@
 
 from unittest import TestCase
 
-from bank import settings
 from bank.cli.parsers import AdminParser
-from bank.settings import test_cluster
+from tests import TestSettings
 from tests.cli.parsers._utils import CLIAsserts
 
-TEST_CLUSTER = settings.test_cluster
+TEST_CLUSTER = TestSettings.test_cluster
 
 
 class UpdateStatus(CLIAsserts, TestCase):

@@ -2,13 +2,13 @@
 
 from unittest import TestCase
 
-from bank import settings
 from bank.cli.parsers import AccountParser
+from tests import TestSettings
 from tests._utils import ProposalSetup
 from tests.cli.parsers._utils import CLIAsserts
 
-TEST_ACCOUNT = settings.test_accounts[0]
-TEST_CLUSTER = settings.test_cluster
+TEST_ACCOUNT = TestSettings.test_accounts[0]
+TEST_CLUSTER = TestSettings.test_cluster
 
 
 class Info(ProposalSetup, CLIAsserts, TestCase):

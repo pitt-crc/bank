@@ -3,10 +3,9 @@
 from unittest import TestCase, skip
 from unittest.mock import patch
 
-from bank import settings
 from bank.exceptions import AccountNotFoundError, ClusterNotFoundError
 from bank.system.slurm import Slurm, SlurmAccount
-
+from tests import TestSettings
 
 class Instantiation(TestCase):
     """Test the instantiation of new instances"""
@@ -20,7 +19,7 @@ class Instantiation(TestCase):
     def test_valid_account_name(self) -> None:
         """Test an instance is created successfully for a valid account name"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         self.assertEqual(settings.test_accounts[0], account.account_name)
 
     def test_error_if_slurm_not_installed(self) -> None:

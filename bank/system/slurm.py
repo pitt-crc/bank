@@ -205,7 +205,7 @@ class SlurmAccount:
 
         else:
             clusters = (cluster,)
-        # Default to all clusters in settings.clusters if not specified as an argument
+        # Default to all clusters in ApplicationSettings.clusters if not specified as an argument
 
         total = 0
         for cluster_name in clusters:

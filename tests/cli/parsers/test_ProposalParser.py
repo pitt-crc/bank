@@ -3,13 +3,13 @@
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from bank import settings
 from bank.cli.parsers import ProposalParser
+from tests import TestSettings
 from tests._utils import ProposalSetup
 from tests.cli.parsers._utils import CLIAsserts
 
-TEST_ACCOUNT = settings.test_accounts[0]
-TEST_CLUSTER = settings.test_cluster
+TEST_ACCOUNT = TestSettings.test_accounts[0]
+TEST_CLUSTER = TestSettings.test_cluster
 
 
 class Create(ProposalSetup, CLIAsserts, TestCase):
@@ -43,13 +43,13 @@ class Create(ProposalSetup, CLIAsserts, TestCase):
 
         # Create a proposal using a custom start date
         start_date = datetime.now()
-        start_date_str = start_date.strftime(settings.date_format)
+        start_date_str = start_date.strftime(TestSettings.date_format)
         self.assert_parser_matches_func_signature(
             ProposalParser(), f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100 --start {start_date_str}')
 
         # Create a proposal using a custom end date
         end_date = start_date + timedelta(days=180)
-        end_date_str = end_date.strftime(settings.date_format)
+        end_date_str = end_date.strftime(TestSettings.date_format)
         self.assert_parser_matches_func_signature(
             ProposalParser(), f'create {TEST_ACCOUNT} --{TEST_CLUSTER} 100 --end {end_date_str}')
 

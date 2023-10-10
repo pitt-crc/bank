@@ -2,9 +2,8 @@
 
 from unittest import TestCase
 
-from bank import settings
 from bank.orm import Allocation
-
+from tests import TestSettings
 
 class TotalServiceUnitsValidation(TestCase):
     """Tests for the validation of the ``service_units_total`` column"""
@@ -54,8 +53,8 @@ class ClusterNameValidation(TestCase):
     def test_value_is_assigned(self) -> None:
         """Test the validated value is assigned to the database instance"""
 
-        allocation = Allocation(cluster_name=settings.test_cluster)
-        self.assertEqual(settings.test_cluster, allocation.cluster_name)
+        allocation = Allocation(cluster_name=TestSettings.test_cluster)
+        self.assertEqual(TestSettings.test_cluster, allocation.cluster_name)
 
 
 # TODO: add isExhausted test

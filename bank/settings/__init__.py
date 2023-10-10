@@ -83,7 +83,7 @@ class SettingsSchema(BaseSettings):
         default=(60,),
         description='Notify users when their proposal is given number of days from expiration.')
 
-    def _load_tempalte_file(self, template_file):
+    def _load_template_file(self, template_file):
         try:
             return EmailTemplate((CUSTOM_SETTINGS_DIR / template_file).read_text())
 

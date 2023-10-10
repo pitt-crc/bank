@@ -5,9 +5,8 @@ from argparse import ArgumentTypeError
 from datetime import date
 from unittest import TestCase
 
-from bank import settings
 from bank.cli.types import Date
-
+from tests import TestSettings
 
 class BlankArgument(TestCase):
     """Test type casting behavior for blank strings"""
@@ -41,7 +40,7 @@ class DateCasting(TestCase):
         test_date = date(2000, 11, 12)
         test_format = '%b %d %Y'
 
-        self.assertNotEqual(test_format, settings.date_format)
+        self.assertNotEqual(test_format, TestSettings.date_format)
         with self.assertRaises(ArgumentTypeError):
             Date(test_date.strftime(test_format))
 
@@ -49,5 +48,5 @@ class DateCasting(TestCase):
         """Test date strings matching the format in application settings are returned as date objects"""
 
         test_date = date(2000, 11, 12)
-        test_date_str = test_date.strftime(settings.date_format)
+        test_date_str = test_date.strftime(TestSettings.date_format)
         self.assertEqual(test_date, Date(test_date_str))
