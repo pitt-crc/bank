@@ -35,7 +35,7 @@ pandas = "2.0.3"
 prettytable = "3.9.0"
 python = ">=3.8, <4.0"
 python-environ = "0.4.54"
-SQLAlchemy = "2.0.19"
+SQLAlchemy = "2.0.21"
 sqlalchemy-utils = "0.41.1"
 time-machine = "2.11.0"
 
