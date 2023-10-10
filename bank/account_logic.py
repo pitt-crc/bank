@@ -722,6 +722,7 @@ class AccountServices:
                                            f'    {recent_proposal_alloc_status}')
 
             # Proposal End Date as first row
+            output_table.title = f"{self._account_name} Proposal Information"
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
                                  divider=True)
 
@@ -805,13 +806,14 @@ class AccountServices:
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""], divider=True)
             else:
                 investment_total = sum(inv.service_units for inv in investments)
-                investment_percentage = self._calculate_percentage(aggregate_usage_total,
-                                                                   allocation_total + investment_total)
+                investment_remaining =  sum(inv.current_sus for inv in investments)
+                investment_used = investment_total - investment_remaining
+                investment_percentage = self._calculate_percentage(investment_used, investment_total)
 
                 output_table.add_row(['Investment SUs', "SUs Remaining", "% Used"], divider=True)
                 output_table.add_row([f'**Investment SUs', "",""])
                 output_table.add_row([f'are applied on', "", ""])
-                output_table.add_row([f'any cluster to', str(investment_total)+"**", investment_percentage])
+                output_table.add_row([f'any cluster to', str(investment_remaining)+"**", investment_percentage])
                 output_table.add_row([f'cover usage above',"",""])
                 output_table.add_row([f'Total SUs', "", ""], divider=True)
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""])
@@ -830,23 +832,16 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(header=False, padding_width=5)
-            table.add_row(['Investment ID',
-                           'Total Investment SUs',
-                           'Start Date',
-                           'Current SUs',
-                           'Withdrawn SUs',
-                           'Rollover SUs'])
+            table = PrettyTable(header=False, padding_width=5, max_width=80)
+            table.title =f"{self._account_name} Investment Information"
 
-            for inv in investments:
-                table.add_row([
-                    inv.id,
-                    inv.service_units,
-                    inv.start_date.strftime(settings.date_format),
-                    inv.current_sus,
-                    inv.withdrawn_sus,
-                    inv.withdrawn_sus])
+            for inv in investments: 
+                table.add_row(['Investment ID','Start Date','End Date'], divider=True)
+                table.add_row([inv.id, inv.start_date.strftime(settings.date_format), inv.end_date.strftime(settings.date_format)], divider=True)
 
+                table.add_row(['Total Service Units', 'Current SUs', 'Withdrawn SUs'], divider=True)
+                table.add_row([inv.service_units, inv.current_sus, inv.withdrawn_sus], divider=True)
+                table.add_row(['','',''], divider=True)
         return table
 
     def info(self) -> None:
@@ -854,6 +849,7 @@ class AccountServices:
 
         try:
             print(self._build_usage_table())
+            print("\n")
 
         except MissingProposalError as e:
             print(f'Account {self._account_name} has no active proposal: {str(e)}')
@@ -1024,26 +1020,13 @@ class AccountServices:
                             continue
 
                         investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-                        # Investment can not cover, attempt to withdraw remaining SUs in the investment
+                        # Investment can not cover
                         if investment_sus_remaining < 0:
                             total_usage_exceeding_limits -= source.current_sus
+                            source.current_sus = 0
+                            continue
 
-                            # TODO: This is the full amount, should it be less?
-                            #  Could use total divided by 5 to represent 5 year investment,
-                            #  while disbursement available and total_usage_exceeding_limits > 0,
-                            #  determine if usage covered like below.
-                            source.current_sus = source.service_units - source.withdrawn_sus
-                            source.withdrawn_sus = source.service_units
-
-                            investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-
-                            # Still can not cover after withdrawal
-                            if investment_sus_remaining < 0:
-                                total_usage_exceeding_limits -= source.current_sus
-                                source.current_sus = 0
-                                continue
-
-                        if investment_sus_remaining >= 0:
+                        else:
                             source.current_sus -= total_usage_exceeding_limits
                             lock_clusters = []
                             total_usage_exceeding_limits = 0
