@@ -180,7 +180,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         lock_state = mock_locked_state.call_args.args[0]
         self.assertTrue(lock_state, 'Account was not locked')
 
-    @patch.object(settings, "warning_days", (10,))
+    @patch.object(TestSettings, "warning_days", (10,))
     def test_email_sent_for_warning_day(self, mock_send_message) -> None:
         """Test a warning email is sent if the account has reached an expiration warning limit"""
 
@@ -192,7 +192,7 @@ class NotifyAccount(ProposalSetup, InvestmentSetup, TestCase):
         sent_email = mock_send_message.call_args[0][0]
         self.assertEqual(f'Your proposal expiry reminder for account: {self.account._account_name}', sent_email['subject'])
 
-    @patch.object(settings, "notify_levels", (1,))  # Ensure a notification is sent after small usage percentage
+    @patch.object(TestSettings, "notify_levels", (1,))  # Ensure a notification is sent after small usage percentage
     @patch.object(SlurmAccount, "get_total_usage", lambda self: 100)  # Ensure account usage is a reproducible value for testing
     def test_email_sent_for_percentage(self, mock_send_message) -> None:
         """Test a warning email is sent if the account exceeds a certain usage percentage"""

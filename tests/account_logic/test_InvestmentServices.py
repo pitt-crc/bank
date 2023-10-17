@@ -121,10 +121,10 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
             new_start_date = old_investment.start_date + timedelta(days=5)
             new_end_date = old_investment.end_date + timedelta(days=10)
 
-        InvestmentServices(settings.test_accounts[0]).modify_date(investment_id, start=new_start_date, end=new_end_date)
+        InvestmentServices(TestSettings.test_accounts[0]).modify_date(investment_id, start=new_start_date, end=new_end_date)
 
         investment_query = select(Investment).join(Account) \
-            .where(Account.name == settings.test_accounts[0]) \
+            .where(Account.name == TestSettings.test_accounts[0]) \
             .where(Investment.id == investment_id)
 
         with DBConnection.session() as session:
@@ -136,7 +136,7 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
         """Test a ``ValueError`` is raised when assigning chronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
-            .where(Account.name == settings.test_accounts[0]) \
+            .where(Account.name == TestSettings.test_accounts[0]) \
             .where(Investment.is_active)
 
         with DBConnection.session() as session:
@@ -149,26 +149,26 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
 
         # No start or end date
         self.assertFalse(
-            InvestmentServices(settings.test_accounts[0]).modify_date()
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date()
         )
 
         # Start date after end date
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).modify_date(start=bad_start_date, end=end_date)
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(start=bad_start_date, end=end_date)
 
         # Start date after end date, providing start date alone
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).modify_date(start=bad_start_date)
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(start=bad_start_date)
 
         # End date before start date, providing end date alone
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).modify_date(end=bad_end_date)
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(end=bad_end_date)
 
     def test_error_on_bad_dates_with_id(self) -> None:
         """Test a ``ValueError`` is raised when assigning chronologically wrong start/end dates"""
 
         investment_query = select(Investment).join(Account) \
-            .where(Account.name == settings.test_accounts[0]) \
+            .where(Account.name == TestSettings.test_accounts[0]) \
             .where(Investment.is_active)
 
         with DBConnection.session() as session:
@@ -181,18 +181,18 @@ class ModifyDate(ProposalSetup, InvestmentSetup, TestCase):
 
         # Attempt to modify date without specifying a date
         self.assertFalse(
-            InvestmentServices(settings.test_accounts[0]).modify_date(investment_id)
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(investment_id)
         )
 
         # Start date after end date
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).modify_date(
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(
                 investment_id,
                 bad_start_date, end_date)
 
         # End date before start date
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).modify_date(
+            InvestmentServices(TestSettings.test_accounts[0]).modify_date(
                 investment_id,
                 start_date, bad_end_date)
 
@@ -205,7 +205,7 @@ class AddSus(ProposalSetup, InvestmentSetup, TestCase):
 
         inv_id = 1
         sus_to_add = 1000
-        InvestmentServices(settings.test_accounts[0]).add_sus(inv_id, sus_to_add)
+        InvestmentServices(TestSettings.test_accounts[0]).add_sus(inv_id, sus_to_add)
 
         inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
         with DBConnection.session() as session:
@@ -215,7 +215,7 @@ class AddSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
-        account = InvestmentServices(settings.test_accounts[0])
+        account = InvestmentServices(TestSettings.test_accounts[0])
         with self.assertRaises(ValueError):
             account.add_sus(1, -1)
 
@@ -230,7 +230,7 @@ class SetupDBAccountEntry(TestCase):
         """Test the account has an entry in the DB upon InvestmentServices object creation"""
 
         # Create an account services object for an existing SLURM account
-        acct = InvestmentServices(settings.test_accounts[0])
+        acct = InvestmentServices(TestSettings.test_accounts[0])
 
         with DBConnection.session() as session:
             # Query the DB for the account
@@ -249,7 +249,7 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
 
         inv_id = 1
         sus_to_subtract = 100
-        InvestmentServices(settings.test_accounts[0]).subtract_sus(inv_id, sus_to_subtract)
+        InvestmentServices(TestSettings.test_accounts[0]).subtract_sus(inv_id, sus_to_subtract)
 
         inv_sus_query = select(Investment.service_units).where(Investment.id == inv_id)
         with DBConnection.session() as session:
@@ -259,7 +259,7 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
     def test_error_on_negative_sus(self) -> None:
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
-        account = InvestmentServices(settings.test_accounts[0])
+        account = InvestmentServices(TestSettings.test_accounts[0])
         with self.assertRaises(ValueError):
             account.subtract_sus(1, -1)
 
@@ -270,7 +270,7 @@ class SubtractSus(ProposalSetup, InvestmentSetup, TestCase):
         """Test for a ``ValueError`` if more service units are subtracted than available"""
 
         with self.assertRaises(ValueError):
-            InvestmentServices(settings.test_accounts[0]).subtract_sus(1, self.num_inv_sus + 1000)
+            InvestmentServices(TestSettings.test_accounts[0]).subtract_sus(1, self.num_inv_sus + 1000)
 
 
 class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
@@ -278,7 +278,7 @@ class AdvanceInvestmentSus(ProposalSetup, InvestmentSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = InvestmentServices(settings.test_accounts[0])
+        self.account = InvestmentServices(TestSettings.test_accounts[0])
         self.inv_id = self.account._get_active_investment_id()
 
     def test_investment_is_advanced(self) -> None:
@@ -323,7 +323,7 @@ class MissingInvestmentErrors(ProposalSetup, TestCase):
         """Delete any investments that may already exist for the test account"""
 
         super().setUp()
-        self.account = InvestmentServices(settings.test_accounts[0])
+        self.account = InvestmentServices(TestSettings.test_accounts[0])
 
     def test_error_on_delete(self) -> None:
         """Test for a ``MissingInvestmentError`` error when deleting a missing investment"""

@@ -52,4 +52,4 @@ class FindUnlockedAccounts(EmptyAccountSetup, TestCase):
         # The unlocked account should be in the list of unlocked accounts, while the locked account should not
         unlocked_accounts_by_cluster = self.admin_services.find_unlocked_account_names()
         self.assertNotIn(self.slurm_account1.account_name, unlocked_accounts_by_cluster[TestSettings.test_cluster])
-        self.assertIn(self.slurm_account2.account_name, unlocked_accounts_by_cluster[settings.test_cluster])
+        self.assertIn(self.slurm_account2.account_name, unlocked_accounts_by_cluster[TestSettings.test_cluster])

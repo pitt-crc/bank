@@ -36,7 +36,7 @@ class ListLocked(CLIAsserts, TestCase):
     def test_single_clusters_argument(self) -> None:
         """Test the ``--cluster`` argument accepts at least one cluster name"""
 
-        self.assert_parser_matches_func_signature(AdminParser(), f'list_locked --cluster {test_cluster}')
+        self.assert_parser_matches_func_signature(AdminParser(), f'list_locked --cluster {TEST_CLUSTER}')
 
         # Test the clusters are parsed into the `cluster` attribute
         args = AdminParser().parse_args(['list_locked', '--cluster', TEST_CLUSTER])

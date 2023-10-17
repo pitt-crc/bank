@@ -153,7 +153,7 @@ class AddSus(ProposalSetup, TestCase):
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.add_sus(**{settings.test_cluster: -1})
+            self.account.add_sus(**{TestSettings.test_cluster: -1})
 
 
 class SetupDBAccountEntry(TestCase):
@@ -163,7 +163,7 @@ class SetupDBAccountEntry(TestCase):
         """Test the account has an entry in the DB upon InvestmentServices object creation"""
 
         # Create an account services object for an existing SLURM account
-        acct = ProposalServices(settings.test_accounts[0])
+        acct = ProposalServices(TestSettings.test_accounts[0])
 
         with DBConnection.session() as session:
             # Query the DB for the account
@@ -180,7 +180,7 @@ class SubtractSus(ProposalSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_sus_are_subtracted(self) -> None:
         """Test SUs are removed from the proposal"""
@@ -189,7 +189,7 @@ class SubtractSus(ProposalSetup, TestCase):
             original_sus = session.execute(sus_query).scalars().first()
 
         sus_to_subtract = 1000
-        self.account.subtract_sus(**{settings.test_cluster: sus_to_subtract})
+        self.account.subtract_sus(**{TestSettings.test_cluster: sus_to_subtract})
 
         with DBConnection.session() as session:
             new_sus = session.execute(sus_query).scalars().first()
@@ -205,13 +205,13 @@ class SubtractSus(ProposalSetup, TestCase):
         """Test a ``ValueError`` is raised when assigning negative service units"""
 
         with self.assertRaises(ValueError):
-            self.account.subtract_sus(**{settings.test_cluster: -1})
+            self.account.subtract_sus(**{TestSettings.test_cluster: -1})
 
     def test_error_on_over_subtraction(self) -> None:
         """Test a value error is raised for subtraction resulting in negative sus"""
 
         with self.assertRaises(ValueError):
-            self.account.subtract_sus(**{settings.test_cluster: self.num_proposal_sus + 100})
+            self.account.subtract_sus(**{TestSettings.test_cluster: self.num_proposal_sus + 100})
 
 
 class MissingProposalErrors(EmptyAccountSetup, TestCase):
@@ -219,7 +219,7 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_error_on_delete(self) -> None:
         """Test for a ``MissingProposalError`` error when deleting without a proposal ID"""
@@ -237,13 +237,13 @@ class MissingProposalErrors(EmptyAccountSetup, TestCase):
         """Test a ``MissingProposalError`` error is raised when adding to a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.add_sus(**{settings.test_cluster: 1})
+            self.account.add_sus(**{TestSettings.test_cluster: 1})
 
     def test_error_on_subtract(self) -> None:
         """Test a ``MissingProposalError`` error is raised when subtracting from a missing proposal"""
 
         with self.assertRaises(MissingProposalError):
-            self.account.subtract_sus(**{settings.test_cluster: 1})
+            self.account.subtract_sus(**{TestSettings.test_cluster: 1})
 
 
 class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
@@ -251,13 +251,13 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.account = ProposalServices(settings.test_accounts[0])
+        self.account = ProposalServices(TestSettings.test_accounts[0])
 
     def test_neighboring_proposals_are_allowed(self):
         """Test that proposals with neighboring durations are allowed"""
 
-        self.account.create(start=TODAY, end=TOMORROW, **{settings.test_cluster: 100})
-        self.account.create(start=TOMORROW, end=DAY_AFTER_TOMORROW, **{settings.test_cluster: 100})
+        self.account.create(start=TODAY, end=TOMORROW, **{TestSettings.test_cluster: 100})
+        self.account.create(start=TOMORROW, end=DAY_AFTER_TOMORROW, **{TestSettings.test_cluster: 100})
 
     def test_error_on_proposal_creation_same_start(self):
         """Test new proposals are not allowed to overlap with existing proposals"""
@@ -283,8 +283,8 @@ class PreventOverlappingProposals(EmptyAccountSetup, TestCase):
     def test_error_on_proposal_modification(self):
         """Test existing proposals can not be modified to overlap with other proposals"""
 
-        self.account.create(start=YESTERDAY, end=TOMORROW, **{settings.test_cluster: 100})
-        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2), **{settings.test_cluster: 100})
+        self.account.create(start=YESTERDAY, end=TOMORROW, **{TestSettings.test_cluster: 100})
+        self.account.create(start=DAY_AFTER_TOMORROW, end=DAY_AFTER_TOMORROW+timedelta(days=2), **{TestSettings.test_cluster: 100})
 
         with self.assertRaises(ProposalExistsError):
             self.account.modify_date(end=DAY_AFTER_TOMORROW)

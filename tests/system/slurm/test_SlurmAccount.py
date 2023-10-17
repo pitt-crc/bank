@@ -20,7 +20,7 @@ class Instantiation(TestCase):
         """Test an instance is created successfully for a valid account name"""
 
         account = SlurmAccount(TestSettings.test_accounts[0])
-        self.assertEqual(settings.test_accounts[0], account.account_name)
+        self.assertEqual(TestSettings.test_accounts[0], account.account_name)
 
     def test_error_if_slurm_not_installed(self) -> None:
         """Test a ``SystemError`` is raised if ``sacctmgr`` is not installed"""
@@ -35,7 +35,7 @@ class CheckAccountExists(TestCase):
     def test_valid_account(self) -> None:
         """Test the return value is ``True`` for an existing account"""
 
-        self.assertTrue(SlurmAccount.check_account_exists(settings.test_accounts[0]))
+        self.assertTrue(SlurmAccount.check_account_exists(TestSettings.test_accounts[0]))
 
     def test_invalid_account(self) -> None:
         """Test the return value is ``False`` for a non-existent account"""
@@ -49,15 +49,15 @@ class AccountLocking(TestCase):
     def test_account_status_updated(self) -> None:
         """Test the account is successfully locked/unlocked"""
 
-        account = SlurmAccount(settings.test_accounts[0])
-        account.set_locked_state(False, settings.test_cluster)
-        self.assertFalse(account.get_locked_state(settings.test_cluster))
+        account = SlurmAccount(TestSettings.test_accounts[0])
+        account.set_locked_state(False, TestSettings.test_cluster)
+        self.assertFalse(account.get_locked_state(TestSettings.test_cluster))
 
-        account.set_locked_state(True, settings.test_cluster)
-        self.assertTrue(account.get_locked_state(settings.test_cluster))
+        account.set_locked_state(True, TestSettings.test_cluster)
+        self.assertTrue(account.get_locked_state(TestSettings.test_cluster))
 
-        account.set_locked_state(False, settings.test_cluster)
-        self.assertFalse(account.get_locked_state(settings.test_cluster))
+        account.set_locked_state(False, TestSettings.test_cluster)
+        self.assertFalse(account.get_locked_state(TestSettings.test_cluster))
 
 
 class SetLockedState(TestCase):
@@ -66,7 +66,7 @@ class SetLockedState(TestCase):
     def test_set_invalid_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when setting a nonexistent cluster"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.set_locked_state(True, 'fake_cluster')
 
@@ -76,7 +76,7 @@ class SetLockedState(TestCase):
     def test_set_blank_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when setting a blank cluster name"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.set_locked_state(True, '')
 
@@ -90,14 +90,14 @@ class GetLockedState(TestCase):
     def test_get_invalid_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when getting a nonexistent cluster"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.get_locked_state('fake_cluster')
 
     def test_get_blank_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when getting a blank cluster name"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.get_locked_state('')
 
@@ -108,14 +108,14 @@ class GetClusterUsage(TestCase):
     def test_error_invalid_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when passed a nonexistent cluster"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.get_cluster_usage_per_user('fake_cluster')
 
     def test_error_blank_cluster(self) -> None:
         """Test a ``ClusterNotFoundError`` error is raised when passed a blank cluster name"""
 
-        account = SlurmAccount(settings.test_accounts[0])
+        account = SlurmAccount(TestSettings.test_accounts[0])
         with self.assertRaises(ClusterNotFoundError):
             account.get_cluster_usage_per_user('')
 
@@ -123,8 +123,8 @@ class GetClusterUsage(TestCase):
     def test_get_usage_hours(self) -> None:
         """Test the recovered account usage in hours matches the value in seconds"""
 
-        account = SlurmAccount(settings.test_accounts[0])
-        cluster = settings.test_cluster
+        account = SlurmAccount(TestSettings.test_accounts[0])
+        cluster = TestSettings.test_cluster
         usage_seconds = account.get_cluster_usage_per_user(cluster)
         usage_hours = account.get_cluster_usage_per_user(cluster, in_hours=True)
 

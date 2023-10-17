@@ -308,14 +308,14 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
         # Create inactive Proposal and add it to DB
         inactive_proposal = Proposal(start_date=end + timedelta(5), end_date=end + timedelta(365))
-        inactive_proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        inactive_proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
         add_proposal_to_test_account(inactive_proposal)
 
         # Create Active Proposal and add it to DB
         active_proposal = Proposal(start_date=start, end_date=end)
-        active_proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        active_proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
         add_proposal_to_test_account(active_proposal)
@@ -399,7 +399,7 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
@@ -457,10 +457,10 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=0,
                                                service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
@@ -517,10 +517,10 @@ class ActiveProperty(EmptyAccountSetup, TestCase):
 
         # Create Proposal and add it to DB
         proposal = Proposal(start_date=start, end_date=end)
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
-        proposal.allocations.append(Allocation(cluster_name=settings.test_cluster,
+        proposal.allocations.append(Allocation(cluster_name=TestSettings.test_cluster,
                                                service_units_used=10_000,
                                                service_units_total=10_000))
         add_proposal_to_test_account(proposal)
