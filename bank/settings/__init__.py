@@ -9,7 +9,6 @@ from typing import Optional, Literal, Tuple, Any
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from bank.system import EmailTemplate
 
 DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / 'templates'
 CUSTOM_SETTINGS_DIR = Path('/etc/crc_bank')
@@ -37,7 +36,7 @@ class SettingsSchema(BaseSettings):
     # Database Settings
     db_url: str = Field(
         title='Database Path',
-        description='URI for the application database.')
+        description='URL for the application database.')
 
     # SMTP settings
     email_from: str = Field(
@@ -84,6 +83,7 @@ class SettingsSchema(BaseSettings):
         description='Notify users when their proposal is given number of days from expiration.')
 
     def _load_template_file(self, template_file):
+        from bank.system import EmailTemplate
         try:
             return EmailTemplate((CUSTOM_SETTINGS_DIR / template_file).read_text())
 
@@ -92,11 +92,11 @@ class SettingsSchema(BaseSettings):
 
     @property
     def usage_warning_template(self) -> EmailTemplate:
-        return self._load_tempalte_file('usage_warning_email.html')
+        return self._load_template_file('usage_warning_email.html')
 
     @property
     def expiration_warning_template(self) -> EmailTemplate:
-        return self._load_tempalte_file('expiration_warning_email.html')
+        return self._load_template_file('expiration_warning_email.html')
 
     @property
     def expired_proposal_template(self) -> EmailTemplate:
