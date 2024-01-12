@@ -252,7 +252,7 @@ class ProposalParser(BaseParser):
         """
 
         su_argument = dict(metavar='su', type=NonNegativeInt, default=0)
-        parser.add_argument('--all-clusters', **su_argument, help='service units awarded/added/subtracted across all clusters, depending on invoked proposal operation')
+        parser.add_argument('--all-clusters', **su_argument, help='service units awarded/added/subtracted from all-clusters allocation, depending on invoked proposal operation')
 
         # Add per-cluster arguments for setting service units
         for cluster in settings.clusters:
