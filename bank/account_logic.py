@@ -21,6 +21,7 @@ from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
 from .system import EmailTemplate, Slurm, SlurmAccount
+from os import geteuid
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -1092,10 +1093,13 @@ class AccountServices:
         """Unlock the account on the given clusters
 
         Args:
-            clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
+            clusters: Name of the clusters to unlock the account on. Defaults to all clusters. Must have sudo privileges to execute.
             all_clusters: Lock the user on all clusters
         """
 
+        if geteuid() != 0:
+           exit("ERROR: `unlock` must be run with sudo privileges!")
+        
         self._set_account_lock(False, clusters, all_clusters)
 
 
