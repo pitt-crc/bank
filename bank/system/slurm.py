@@ -128,7 +128,7 @@ class SlurmAccount:
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         cmd = f'sacctmgr -n -P show assoc account={self.account_name} format=GrpTresRunMins clusters={cluster}'
-        return 'cpu=0' in ShellCmd(cmd).out
+        return 'billing=0' in ShellCmd(cmd).out
 
     def set_locked_state(self, lock_state: bool, cluster: str) -> None:
         """Lock or unlock the current slurm account
