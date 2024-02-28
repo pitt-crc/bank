@@ -146,10 +146,7 @@ class SlurmAccount:
             raise ClusterNotFoundError(f'Cluster {cluster} is not configured with Slurm')
 
         lock_state_int = 0 if lock_state else -1
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
-                 f'set GrpTresRunMins=cpu={lock_state_int}').raise_if_err()
-        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} '
-                 f'set GrpTresRunMins=gres/gpu={lock_state_int}').raise_if_err()
+        ShellCmd(f'sacctmgr -i modify account where account={self.account_name} cluster={cluster} set GrpTresRunMins=billing={lock_state_int}').raise_if_err()
 
     def get_cluster_usage_per_user(self, cluster: str, start: date, end: date, in_hours: bool = True) -> Dict[str, int]:
         """Return the raw account usage per user on a given cluster
