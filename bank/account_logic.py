@@ -792,28 +792,33 @@ class AccountServices:
             usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
             floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
-            output_table.add_row(['Floating SUs', "SUs Remaining", "% Used"], divider=True)
-            output_table.add_row([f'*Floating SUs', "", ""])
-            output_table.add_row([f'are applied on', "", ""])
-            output_table.add_row([f'any cluster to', str(floating_su_remaining)+'*', floating_su_percent])
-            output_table.add_row([f'cover usage above', "", ""])
-            output_table.add_row([f'Total SUs', "", ""], divider=True)
+            output_table.add_row(["Floating SUs",       "",              ""], divider=True)
+            output_table.add_row(["Floating SUs",       "",              ""])
+            output_table.add_row(["are applied on",     "",              ""])
+            output_table.add_row(["any cluster to",     "",              ""])
+            output_table.add_row(["cover usage above",  "",              ""])
+            output_table.add_row(["Total Proposal SUs", "",              ""])
+            output_table.add_row(["Total",              "SUs Remaining", "% Used"])
+            output_table.add_row([floating_su_total, floating_su_remaining, floating_su_percent], divider=True)
 
             # Add another inner table describing aggregate usage
             if not investments:
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""], divider=True)
             else:
                 investment_total = sum(inv.service_units for inv in investments)
-                investment_remaining =  sum(inv.current_sus for inv in investments)
+                investment_remaining = sum(inv.current_sus for inv in investments)
                 investment_used = investment_total - investment_remaining
                 investment_percentage = self._calculate_percentage(investment_used, investment_total)
 
-                output_table.add_row(['Investment SUs', "SUs Remaining", "% Used"], divider=True)
-                output_table.add_row([f'**Investment SUs', "",""])
-                output_table.add_row([f'are applied on', "", ""])
-                output_table.add_row([f'any cluster to', str(investment_remaining)+"**", investment_percentage])
-                output_table.add_row([f'cover usage above',"",""])
-                output_table.add_row([f'Total SUs', "", ""], divider=True)
+                output_table.add_row(["Investment SUs",         "SUs Remaining", "% Used"], divider=True)
+                output_table.add_row(["Investment SUs",         "",              ""])
+                output_table.add_row(["are applied on",         "",              ""])
+                output_table.add_row(["any cluster to",         "",              ""])
+                output_table.add_row(["cover usage above",      "",              ""])
+                output_table.add_row(["Total Proposal SUs",     "",              ""])
+                output_table.add_row(["Total",                  "SUs Remaining", "% Used"])
+                output_table.add_row([investment_total, investment_remaining, investment_percentage])
+
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""])
                 output_table.add_row(['(no investments)', "", ""])
 
