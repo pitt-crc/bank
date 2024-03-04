@@ -810,7 +810,7 @@ class AccountServices:
                 investment_used = investment_total - investment_remaining
                 investment_percentage = self._calculate_percentage(investment_used, investment_total)
 
-                output_table.add_row(["Investment SUs",         "SUs Remaining", "% Used"], divider=True)
+                output_table.add_row(["Investment SUs",         "",              ""], divider=True)
                 output_table.add_row(["Investment SUs",         "",              ""])
                 output_table.add_row(["are applied on",         "",              ""])
                 output_table.add_row(["any cluster to",         "",              ""])
