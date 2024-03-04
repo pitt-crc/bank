@@ -817,7 +817,7 @@ class AccountServices:
                 output_table.add_row(["cover usage above",      "",              ""])
                 output_table.add_row(["Total Proposal SUs",     "",              ""])
                 output_table.add_row(["Total",                  "SUs Remaining", "% Used"])
-                output_table.add_row([investment_total, investment_remaining, investment_percentage])
+                output_table.add_row([investment_total, investment_remaining, investment_percentage], divider=True)
 
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""])
                 output_table.add_row(['(no investments)', "", ""])
