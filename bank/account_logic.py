@@ -543,7 +543,6 @@ class InvestmentServices:
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             investment.service_units += sus
-            investment.current_sus += sus
 
             session.commit()
 
@@ -573,7 +572,6 @@ class InvestmentServices:
                     f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
-            investment.current_sus -= sus
 
             session.commit()
 
