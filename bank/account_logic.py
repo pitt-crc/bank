@@ -21,6 +21,7 @@ from . import settings
 from .exceptions import *
 from .orm import Account, Allocation, DBConnection, Investment, Proposal
 from .system import EmailTemplate, Slurm, SlurmAccount
+from os import geteuid
 
 Numeric = Union[int, float]
 LOG = getLogger('bank.account_services')
@@ -543,7 +544,6 @@ class InvestmentServices:
         with DBConnection.session() as session:
             investment = session.execute(query).scalars().first()
             investment.service_units += sus
-            investment.current_sus += sus
 
             session.commit()
 
@@ -573,7 +573,6 @@ class InvestmentServices:
                     f'Cannot subtract {sus}. Investment {inv_id} only has {investment.current_sus} available.')
 
             investment.service_units -= sus
-            investment.current_sus -= sus
 
             session.commit()
 
@@ -722,6 +721,7 @@ class AccountServices:
                                            f'    {recent_proposal_alloc_status}')
 
             # Proposal End Date as first row
+            output_table.title = f"{self._account_name} Proposal Information"
             output_table.add_row(['Proposal End Date:', proposal.end_date.strftime(settings.date_format), ""],
                                  divider=True)
 
@@ -793,27 +793,33 @@ class AccountServices:
             usage_percentage = self._calculate_percentage(aggregate_usage_total, allocation_total)
 
             floating_su_percent = self._calculate_percentage(floating_su_usage, floating_su_total)
-            output_table.add_row(['Floating SUs', "SUs Remaining", "% Used"], divider=True)
-            output_table.add_row([f'*Floating SUs', "", ""])
-            output_table.add_row([f'are applied on', "", ""])
-            output_table.add_row([f'any cluster to', str(floating_su_remaining)+'*', floating_su_percent])
-            output_table.add_row([f'cover usage above', "", ""])
-            output_table.add_row([f'Total SUs', "", ""], divider=True)
+            output_table.add_row(["Floating SUs",       "",              ""], divider=True)
+            output_table.add_row(["Floating SUs",       "",              ""])
+            output_table.add_row(["are applied on",     "",              ""])
+            output_table.add_row(["any cluster to",     "",              ""])
+            output_table.add_row(["cover usage above",  "",              ""])
+            output_table.add_row(["Total Proposal SUs", "",              ""])
+            output_table.add_row(["Total",              "SUs Remaining", "% Used"])
+            output_table.add_row([floating_su_total, floating_su_remaining, floating_su_percent], divider=True)
 
             # Add another inner table describing aggregate usage
             if not investments:
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""], divider=True)
             else:
                 investment_total = sum(inv.service_units for inv in investments)
-                investment_percentage = self._calculate_percentage(aggregate_usage_total,
-                                                                   allocation_total + investment_total)
+                investment_remaining = sum(inv.current_sus for inv in investments)
+                investment_used = investment_total - investment_remaining
+                investment_percentage = self._calculate_percentage(investment_used, investment_total)
 
-                output_table.add_row(['Investment SUs', "SUs Remaining", "% Used"], divider=True)
-                output_table.add_row([f'**Investment SUs', "",""])
-                output_table.add_row([f'are applied on', "", ""])
-                output_table.add_row([f'any cluster to', str(investment_total)+"**", investment_percentage])
-                output_table.add_row([f'cover usage above',"",""])
-                output_table.add_row([f'Total SUs', "", ""], divider=True)
+                output_table.add_row(["Investment SUs",         "",              ""], divider=True)
+                output_table.add_row(["Investment SUs",         "",              ""])
+                output_table.add_row(["are applied on",         "",              ""])
+                output_table.add_row(["any cluster to",         "",              ""])
+                output_table.add_row(["cover usage above",      "",              ""])
+                output_table.add_row(["Total Proposal SUs",     "",              ""])
+                output_table.add_row(["Total",                  "SUs Remaining", "% Used"])
+                output_table.add_row([investment_total, investment_remaining, investment_percentage], divider=True)
+
                 output_table.add_row(['Aggregate Usage', usage_percentage, ""])
                 output_table.add_row(['(no investments)', "", ""])
 
@@ -830,23 +836,16 @@ class AccountServices:
             if not investments:
                 raise MissingInvestmentError('Account has no investments')
 
-            table = PrettyTable(header=False, padding_width=5)
-            table.add_row(['Investment ID',
-                           'Total Investment SUs',
-                           'Start Date',
-                           'Current SUs',
-                           'Withdrawn SUs',
-                           'Rollover SUs'])
+            table = PrettyTable(header=False, padding_width=5, max_width=80)
+            table.title =f"{self._account_name} Investment Information"
 
-            for inv in investments:
-                table.add_row([
-                    inv.id,
-                    inv.service_units,
-                    inv.start_date.strftime(settings.date_format),
-                    inv.current_sus,
-                    inv.withdrawn_sus,
-                    inv.withdrawn_sus])
+            for inv in investments: 
+                table.add_row(['Investment ID','Start Date','End Date'], divider=True)
+                table.add_row([inv.id, inv.start_date.strftime(settings.date_format), inv.end_date.strftime(settings.date_format)], divider=True)
 
+                table.add_row(['Total Service Units', 'Current SUs', 'Withdrawn SUs'], divider=True)
+                table.add_row([inv.service_units, inv.current_sus, inv.withdrawn_sus], divider=True)
+                table.add_row(['','',''], divider=True)
         return table
 
     def info(self) -> None:
@@ -854,6 +853,7 @@ class AccountServices:
 
         try:
             print(self._build_usage_table())
+            print("\n")
 
         except MissingProposalError as e:
             print(f'Account {self._account_name} has no active proposal: {str(e)}')
@@ -1024,26 +1024,13 @@ class AccountServices:
                             continue
 
                         investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-                        # Investment can not cover, attempt to withdraw remaining SUs in the investment
+                        # Investment can not cover
                         if investment_sus_remaining < 0:
                             total_usage_exceeding_limits -= source.current_sus
+                            source.current_sus = 0
+                            continue
 
-                            # TODO: This is the full amount, should it be less?
-                            #  Could use total divided by 5 to represent 5 year investment,
-                            #  while disbursement available and total_usage_exceeding_limits > 0,
-                            #  determine if usage covered like below.
-                            source.current_sus = source.service_units - source.withdrawn_sus
-                            source.withdrawn_sus = source.service_units
-
-                            investment_sus_remaining = source.current_sus - total_usage_exceeding_limits
-
-                            # Still can not cover after withdrawal
-                            if investment_sus_remaining < 0:
-                                total_usage_exceeding_limits -= source.current_sus
-                                source.current_sus = 0
-                                continue
-
-                        if investment_sus_remaining >= 0:
+                        else:
                             source.current_sus -= total_usage_exceeding_limits
                             lock_clusters = []
                             total_usage_exceeding_limits = 0
@@ -1109,10 +1096,13 @@ class AccountServices:
         """Unlock the account on the given clusters
 
         Args:
-            clusters: Name of the clusters to unlock the account on. Defaults to all clusters.
+            clusters: Name of the clusters to unlock the account on. Defaults to all clusters. Must have sudo privileges to execute.
             all_clusters: Lock the user on all clusters
         """
 
+        if geteuid() != 0:
+           exit("ERROR: `unlock` must be run with sudo privileges!")
+        
         self._set_account_lock(False, clusters, all_clusters)
 
 
